@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "piet",
+    "piet-direct2d",
+]

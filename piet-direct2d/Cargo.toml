@@ -1,0 +1,21 @@
+[package]
+name = "piet-direct2d"
+version = "0.1.0"
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "Direct2D backend for piet 2D graphics abstraction."
+license = "MIT/Apache-2.0"
+edition = "2018"
+keywords = ["graphics", "2d"]
+categories = ["rendering::graphics-api"]
+
+[dependencies]
+# TODO: don't check anything in with this dep
+kurbo = "0.1.0"
+piet = { path = "../piet" }
+
+direct2d = "0.2.0"
+
+[dev-dependencies]
+direct3d11 = "0.1.7"
+dxgi = "0.1.7"
+image = "0.20.1"
