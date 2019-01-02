@@ -89,10 +89,15 @@ impl<'a> WebRenderContext<'a> {
                 let rgb = rgba >> 8;
                 let a = rgba & 0xff;
                 let color_str = if a == 0xff {
-                    format!("#{:06x}",rgba >> 8)
+                    format!("#{:06x}", rgba >> 8)
                 } else {
-                    format!("rgba({},{},{},{:.3})", (rgb >> 16) & 0xff,
-                       (rgb >> 8) & 0xff, rgb & 0xff, byte_to_frac(a))
+                    format!(
+                        "rgba({},{},{},{:.3})",
+                        (rgb >> 16) & 0xff,
+                        (rgb >> 8) & 0xff,
+                        rgb & 0xff,
+                        byte_to_frac(a)
+                    )
                 };
                 if is_fill {
                     self.ctx.set_fill_style_color(&color_str);
@@ -123,7 +128,9 @@ impl<'a> WebRenderContext<'a> {
                 PathEl::Moveto(p) => self.ctx.move_to(p.x, p.y),
                 PathEl::Lineto(p) => self.ctx.line_to(p.x, p.y),
                 PathEl::Quadto(p1, p2) => self.ctx.quadratic_curve_to(p1.x, p1.y, p2.x, p2.y),
-                PathEl::Curveto(p1, p2, p3) => self.ctx.bezier_curve_to(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y),
+                PathEl::Curveto(p1, p2, p3) => {
+                    self.ctx.bezier_curve_to(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
+                }
                 PathEl::Closepath => self.ctx.close_path(),
             }
         }

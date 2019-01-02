@@ -4,10 +4,7 @@ use kurbo::BezPath;
 
 use stdweb::traits::*;
 use stdweb::unstable::TryInto;
-use stdweb::web::{
-    document,
-    CanvasRenderingContext2d,
-};
+use stdweb::web::{document, CanvasRenderingContext2d};
 
 use stdweb::web::html_element::CanvasElement;
 
@@ -36,9 +33,13 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
 fn main() {
     stdweb::initialize();
 
-    let canvas: CanvasElement = document().query_selector("#canvas").unwrap().unwrap().try_into().unwrap();
+    let canvas: CanvasElement = document()
+        .query_selector("#canvas")
+        .unwrap()
+        .unwrap()
+        .try_into()
+        .unwrap();
     let mut context: CanvasRenderingContext2d = canvas.get_context().unwrap();
-
 
     canvas.set_width(canvas.offset_width() as u32);
     canvas.set_height(canvas.offset_height() as u32);
