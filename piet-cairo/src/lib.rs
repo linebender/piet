@@ -22,6 +22,8 @@ pub enum Brush {
     Solid(u32),
 }
 
+// TODO: This cannot be used yet because the `piet::RenderContext` trait
+// needs to expose a way to create stroke styles.
 pub struct StrokeStyle {
     line_join: Option<LineJoin>,
     line_cap: Option<LineCap>,
@@ -88,7 +90,6 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         width: C,
         style: Option<&Self::StrokeStyle>,
     ) {
-        self.ctx.save();
         self.ctx.new_path();
         let p0 = p0.round_into();
         let p1 = p1.round_into();
@@ -97,7 +98,6 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush);
         self.ctx.stroke();
-        self.ctx.restore();
     }
 
     fn fill_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I, brush: &Self::Brush) {
@@ -139,19 +139,23 @@ impl<'a> CairoRenderContext<'a> {
     /// Set the stroke parameters.
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
         self.ctx.set_line_width(width);
-        if let Some(style) = style {
-            if let Some(line_join) = style.line_join {
-                self.ctx.set_line_join(line_join);
-            }
-            if let Some(line_cap) = style.line_cap {
-                self.ctx.set_line_cap(line_cap);
-            }
-            if let Some((dashes, offset)) = &style.dash {
-                self.ctx.set_dash(&dashes, *offset);
-            }
-            if let Some(miter_limit) = style.miter_limit {
-                self.ctx.set_miter_limit(miter_limit);
-            }
+
+        let line_join = style
+            .and_then(|style| style.line_join)
+            .unwrap_or(LineJoin::Miter);
+        self.ctx.set_line_join(line_join);
+
+        let line_cap = style
+            .and_then(|style| style.line_cap)
+            .unwrap_or(LineCap::Butt);
+        self.ctx.set_line_cap(line_cap);
+
+        let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
+        self.ctx.set_miter_limit(miter_limit);
+
+        match style.and_then(|style| style.dash.as_ref()) {
+            None => self.ctx.set_dash(&[], 0.0),
+            Some((dashes, offset)) => self.ctx.set_dash(dashes, *offset),
         }
     }
 
