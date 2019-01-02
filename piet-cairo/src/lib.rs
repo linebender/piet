@@ -1,6 +1,6 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
-use cairo::Context;
+use cairo::{Context, LineCap, LineJoin};
 
 use kurbo::{PathEl, QuadBez, Vec2};
 
@@ -22,9 +22,44 @@ pub enum Brush {
     Solid(u32),
 }
 
-pub enum StrokeStyle {
-    // TODO: actual stroke style options
-    Default,
+// TODO: This cannot be used yet because the `piet::RenderContext` trait
+// needs to expose a way to create stroke styles.
+pub struct StrokeStyle {
+    line_join: Option<LineJoin>,
+    line_cap: Option<LineCap>,
+    dash: Option<(Vec<f64>, f64)>,
+    miter_limit: Option<f64>,
+}
+
+impl StrokeStyle {
+    pub fn new() -> StrokeStyle {
+        StrokeStyle {
+            line_join: None,
+            line_cap: None,
+            dash: None,
+            miter_limit: None,
+        }
+    }
+
+    pub fn line_join(mut self, line_join: LineJoin) -> Self {
+        self.line_join = Some(line_join);
+        self
+    }
+
+    pub fn line_cap(mut self, line_cap: LineCap) -> Self {
+        self.line_cap = Some(line_cap);
+        self
+    }
+
+    pub fn dash(mut self, dashes: Vec<f64>, offset: f64) -> Self {
+        self.dash = Some((dashes, offset));
+        self
+    }
+
+    pub fn miter_limit(mut self, miter_limit: f64) -> Self {
+        self.miter_limit = Some(miter_limit);
+        self
+    }
 }
 
 impl<'a> RenderContext for CairoRenderContext<'a> {
@@ -35,7 +70,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type StrokeStyle = StrokeStyle;
 
     fn clear(&mut self, rgb: u32) {
-        self.ctx.set_source_rgb(byte_to_frac(rgb >> 16), byte_to_frac(rgb >> 8), byte_to_frac(rgb));
+        self.ctx.set_source_rgb(
+            byte_to_frac(rgb >> 16),
+            byte_to_frac(rgb >> 8),
+            byte_to_frac(rgb),
+        );
         self.ctx.paint();
     }
 
@@ -88,20 +127,35 @@ impl<'a> CairoRenderContext<'a> {
     /// This is part of the impedance matching.
     fn set_brush(&mut self, brush: &Brush) {
         match *brush {
-            Brush::Solid(rgba) =>
-                self.ctx.set_source_rgba(byte_to_frac(rgba >> 24), byte_to_frac(rgba >> 16),
-                    byte_to_frac(rgba >> 8), byte_to_frac(rgba))
+            Brush::Solid(rgba) => self.ctx.set_source_rgba(
+                byte_to_frac(rgba >> 24),
+                byte_to_frac(rgba >> 16),
+                byte_to_frac(rgba >> 8),
+                byte_to_frac(rgba),
+            ),
         }
     }
 
     /// Set the stroke parameters.
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
         self.ctx.set_line_width(width);
-        if let Some(style) = style {
-            match style {
-                // TODO: actual stroke style parameters
-                StrokeStyle::Default => (),
-            }
+
+        let line_join = style
+            .and_then(|style| style.line_join)
+            .unwrap_or(LineJoin::Miter);
+        self.ctx.set_line_join(line_join);
+
+        let line_cap = style
+            .and_then(|style| style.line_cap)
+            .unwrap_or(LineCap::Butt);
+        self.ctx.set_line_cap(line_cap);
+
+        let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
+        self.ctx.set_miter_limit(miter_limit);
+
+        match style.and_then(|style| style.dash.as_ref()) {
+            None => self.ctx.set_dash(&[], 0.0),
+            Some((dashes, offset)) => self.ctx.set_dash(dashes, *offset),
         }
     }
 
@@ -123,7 +177,8 @@ impl<'a> CairoRenderContext<'a> {
                 PathEl::Quadto(p1, p2) => {
                     let q = QuadBez::new(last, p1, p2);
                     let c = q.raise();
-                    self.ctx.curve_to(c.p1.x, c.p1.y, c.p2.x, c.p2.y, p2.x, p2.y);
+                    self.ctx
+                        .curve_to(c.p1.x, c.p1.y, c.p2.x, c.p2.y, p2.x, p2.y);
                     last = p2;
                 }
                 PathEl::Curveto(p1, p2, p3) => {
