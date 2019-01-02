@@ -8,8 +8,11 @@ This repo is structured as a core API crate, "piet" and a separate crate for eac
 
 A companion for Bézier path representation and geometry is [kurbo].
 
+The library is of course named after [Piet Mondrian]. It's abstract and hopefully will be used for drawing lots of rectangles.
+
 Contributions are welcome! It's in early stages, so there are lots of opportunities to fill things out.
 
 [blog post]: https://raphlinus.github.io/rust/graphics/2018/10/11/2d-graphics.html
 [druid]: https://github.com/xi-editor/druid
 [kurbo]: https://github.com/linebender/kurbo
+[Piet Mondrian]: https://en.wikipedia.org/wiki/Piet_Mondrian

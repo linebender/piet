@@ -4,4 +4,5 @@ members = [
     "piet",
     "piet-cairo",
     "piet-direct2d",
+    "piet-web",
 ]
