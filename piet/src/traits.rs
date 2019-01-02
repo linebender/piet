@@ -51,9 +51,11 @@ pub trait RenderContext {
     /// I'm also thinking of retained paths. But do we want to have a separate object for
     /// retained paths, or do we want to have a lightweight display list abstraction, so
     /// at worst you record a single `fill_path` into that?
+    ///
+    /// TODO: this is missing fill rule.
     fn fill_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I, brush: &Self::Brush);
 
-    fn stroke_path<I: IntoIterator<Item = PathEl>, C: RoundInto<f32>>(
+    fn stroke_path<I: IntoIterator<Item = PathEl>, C: RoundInto<Self::Coord>>(
         &mut self,
         iter: I,
         brush: &Self::Brush,

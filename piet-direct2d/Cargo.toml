@@ -9,7 +9,6 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-# TODO: don't check anything in with this dep
 kurbo = "0.1.0"
 piet = { path = "../piet" }
 
