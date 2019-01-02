@@ -1,23 +1,30 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
-use direct2d::brush::SolidColorBrush;
-use direct2d::math::Point2F;
+use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
+use direct2d::enums::{FigureBegin, FigureEnd};
+use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
+use direct2d::geometry::Path;
+use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
-use kurbo::Vec2;
+use kurbo::{PathEl, Vec2};
 
 use piet::{RenderContext, RoundFrom, RoundInto};
 
-/// It is an interesting question, whether to wrap, or whether this should move into
-/// piet proper under a feature. (We want to impl RenderContext for this, but we can't
-/// impl RenderContext for GenericRenderTarget directly here due to coherence).
-pub struct D2DRenderContext {
+pub struct D2DRenderContext<'a> {
+    factory: &'a direct2d::Factory,
+    // This is an owned clone, but after some direct2d refactor, it's likely we'll
+    // hold a mutable reference.
     rt: GenericRenderTarget,
 }
 
-impl D2DRenderContext {
-    pub fn new<RT: RenderTarget>(rt: &RT) -> D2DRenderContext {
+impl<'a> D2DRenderContext<'a> {
+    pub fn new<RT: RenderTarget>(
+        factory: &'a direct2d::Factory,
+        rt: &'a mut RT,
+    ) -> D2DRenderContext<'a> {
         D2DRenderContext {
+            factory,
             rt: rt.as_generic(),
         }
     }
@@ -51,6 +58,13 @@ impl RoundFrom<(f32, f32)> for Point2 {
     }
 }
 
+impl RoundFrom<(f64, f64)> for Point2 {
+    #[inline]
+    fn round_from(vec: (f64, f64)) -> Point2 {
+        Point2(Point2F::new(vec.0 as f32, vec.1 as f32))
+    }
+}
+
 impl RoundFrom<Vec2> for Point2 {
     #[inline]
     fn round_from(vec: Vec2) -> Point2 {
@@ -65,25 +79,129 @@ impl From<Point2> for Vec2 {
     }
 }
 
-impl RenderContext for D2DRenderContext {
+enum PathBuilder<'a> {
+    Geom(GeometryBuilder<'a>),
+    Fig(FigureBuilder<'a>),
+}
+
+impl<'a> PathBuilder<'a> {
+    fn finish_figure(self) -> GeometryBuilder<'a> {
+        match self {
+            PathBuilder::Geom(g) => g,
+            PathBuilder::Fig(f) => f.end(),
+        }
+    }
+}
+
+fn to_point2f<P: RoundInto<Point2>>(p: P) -> Point2F {
+    p.round_into().0
+}
+
+fn path_from_iterator<I: IntoIterator<Item = PathEl>>(
+    d2d: &direct2d::Factory,
+    is_filled: bool,
+    i: I,
+) -> Path {
+    let mut path = Path::create(d2d).unwrap();
+    {
+        let mut builder = Some(PathBuilder::Geom(path.open().unwrap()));
+        for el in i.into_iter() {
+            match el {
+                PathEl::Moveto(p) => {
+                    // TODO: we don't know this now. Will get fixed in direct2d crate.
+                    let is_closed = is_filled;
+                    if let Some(b) = builder.take() {
+                        let g = b.finish_figure();
+                        let begin = if is_filled {
+                            FigureBegin::Filled
+                        } else {
+                            FigureBegin::Hollow
+                        };
+                        let end = if is_closed {
+                            FigureEnd::Closed
+                        } else {
+                            FigureEnd::Open
+                        };
+                        let f = g.begin_figure(to_point2f(p), begin, end);
+                        builder = Some(PathBuilder::Fig(f));
+                    }
+                }
+                PathEl::Lineto(p) => {
+                    if let Some(PathBuilder::Fig(f)) = builder.take() {
+                        let f = f.add_line(to_point2f(p));
+                        builder = Some(PathBuilder::Fig(f));
+                    }
+                }
+                PathEl::Quadto(p1, p2) => {
+                    if let Some(PathBuilder::Fig(f)) = builder.take() {
+                        let q = QuadBezierSegment::new(to_point2f(p1), to_point2f(p2));
+                        let f = f.add_quadratic_bezier(&q);
+                        builder = Some(PathBuilder::Fig(f));
+                    }
+                }
+                PathEl::Curveto(p1, p2, p3) => {
+                    if let Some(PathBuilder::Fig(f)) = builder.take() {
+                        let c = BezierSegment::new(to_point2f(p1), to_point2f(p2), to_point2f(p3));
+                        let f = f.add_bezier(&c);
+                        builder = Some(PathBuilder::Fig(f));
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+    path
+}
+
+impl<'a> RenderContext for D2DRenderContext<'a> {
     type Point = Point2;
     type Coord = f32;
+    type Brush = GenericBrush;
+    type StrokeStyle = direct2d::stroke_style::StrokeStyle;
 
-    fn clear(&mut self, rgb_color: u32) {
-        self.rt.clear(rgb_color);
+    fn clear(&mut self, rgb: u32) {
+        self.rt.clear(rgb);
     }
 
-    fn line<V: RoundInto<Point2>, C: RoundInto<f32>>(&mut self, p0: V, p1: V, width: C) {
-        let brush = SolidColorBrush::create(&self.rt)
-            .with_color(0x00_00_80)
+    fn solid_brush(&mut self, rgba: u32) -> GenericBrush {
+        SolidColorBrush::create(&self.rt)
+            .with_color((rgba >> 8, ((rgba & 255) as f32) * (1.0 / 255.0)))
             .build()
-            .unwrap();
+            .unwrap()
+            .to_generic() // This does an extra COM clone; avoid somehow?
+    }
+
+    fn line<V: RoundInto<Point2>, C: RoundInto<f32>>(
+        &mut self,
+        p0: V,
+        p1: V,
+        brush: &Self::Brush,
+        width: C,
+        style: Option<&Self::StrokeStyle>,
+    ) {
         self.rt.draw_line(
             p0.round_into().0,
             p1.round_into().0,
-            &brush,
+            brush,
             width.round_into(),
-            None,
+            style,
         );
+    }
+
+    fn fill_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I, brush: &Self::Brush) {
+        let path = path_from_iterator(self.factory, true, iter);
+        self.rt.fill_geometry(&path, brush);
+    }
+
+    fn stroke_path<I: IntoIterator<Item = PathEl>, C: RoundInto<f32>>(
+        &mut self,
+        iter: I,
+        brush: &Self::Brush,
+        width: C,
+        style: Option<&Self::StrokeStyle>,
+    ) {
+        let path = path_from_iterator(self.factory, false, iter);
+        self.rt
+            .draw_geometry(&path, brush, width.round_into(), style);
     }
 }

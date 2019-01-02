@@ -9,6 +9,8 @@ use direct3d11::flags::{BindFlags, CreateDeviceFlags};
 use direct3d11::helpers::ComWrapper;
 use dxgi::flags::Format;
 
+use kurbo::BezPath;
+
 use piet::RenderContext;
 use piet_direct2d::D2DRenderContext;
 
@@ -19,6 +21,25 @@ const TEXTURE_WIDTH_S: usize = TEXTURE_WIDTH as usize;
 const TEXTURE_HEIGHT_S: usize = TEXTURE_HEIGHT as usize;
 
 const HIDPI: f32 = 2.0;
+
+fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
+    rc.clear(0xFF_FF_FF);
+    let brush = rc.solid_brush(0x00_00_80_FF);
+    rc.line((10.0, 10.0), (100.0, 50.0), &brush, 1.0, None);
+
+    let mut path = BezPath::new();
+    path.moveto((50.0, 10.0));
+    path.quadto((60.0, 50.0), (100.0, 90.0));
+    let brush = rc.solid_brush(0x00_80_00_FF);
+    rc.stroke_path(path.elements().iter().cloned(), &brush, 1.0, None);
+
+    let mut path = BezPath::new();
+    path.moveto((10.0, 20.0));
+    path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
+    let brush = rc.solid_brush(0x00_00_80_C0);
+    // We'll make this `&path` by fixing kurbo.
+    rc.fill_path(path.elements().iter().cloned(), &brush);
+}
 
 fn main() {
     // Create the D2D factory
@@ -53,9 +74,8 @@ fn main() {
     context.set_target(&target);
     context.set_dpi(96.0 * HIDPI, 96.0 * HIDPI);
     context.begin_draw();
-    let mut piet_context = D2DRenderContext::new(&context);
-    piet_context.clear(0xFF_FF_FF);
-    piet_context.line((10.0, 10.0), (100.0, 50.0), 1.0);
+    let mut piet_context = D2DRenderContext::new(&d2d, &mut context);
+    draw_pretty_picture(&mut piet_context);
     context.end_draw().unwrap();
 
     let temp_texture = direct3d11::texture2d::Texture2D::create(&d3d)
