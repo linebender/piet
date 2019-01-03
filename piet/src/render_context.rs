@@ -6,6 +6,15 @@ use kurbo::{PathEl, Vec2};
 
 use crate::{RoundFrom, RoundInto};
 
+/// A fill rule for resolving winding numbers.
+#[derive(Clone, Copy, PartialEq)]
+pub enum FillRule {
+    /// Fill everything with a non-zero winding number.
+    NonZero,
+    /// Fill everything with an odd winding number.
+    EvenOdd,
+}
+
 pub trait RenderContext {
     /// The type of a 2D point, for this backend.
     ///
@@ -53,12 +62,11 @@ pub trait RenderContext {
     /// I'm also thinking of retained paths. But do we want to have a separate object for
     /// retained paths, or do we want to have a lightweight display list abstraction, so
     /// at worst you record a single `fill_path` into that?
-    ///
-    /// TODO: this is missing fill rule.
     fn fill_path(
         &mut self,
         iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
+        fill_rule: FillRule,
     );
 
     fn stroke_path(

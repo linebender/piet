@@ -6,7 +6,7 @@ use cairo::{Context, LineCap, LineJoin};
 
 use kurbo::{PathEl, QuadBez, Vec2};
 
-use piet::{RenderContext, RoundInto};
+use piet::{FillRule, RenderContext, RoundInto};
 
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
@@ -64,6 +64,13 @@ impl StrokeStyle {
     }
 }
 
+fn convert_fill_rule(fill_rule: piet::FillRule) -> cairo::FillRule {
+    match fill_rule {
+        piet::FillRule::NonZero => cairo::FillRule::Winding,
+        piet::FillRule::EvenOdd => cairo::FillRule::EvenOdd,
+    }
+}
+
 impl<'a> RenderContext for CairoRenderContext<'a> {
     /// Cairo mostly uses raw f64, so this is as convenient as anything.
     type Point = Vec2;
@@ -106,9 +113,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self,
         iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
+        fill_rule: FillRule,
     ) {
         self.set_path(iter);
         self.set_brush(brush);
+        self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.fill();
     }
 

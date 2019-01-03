@@ -3,7 +3,7 @@
 use std::borrow::Borrow;
 
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
-use direct2d::enums::{FigureBegin, FigureEnd};
+use direct2d::enums::{FigureBegin, FigureEnd, FillMode};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
 use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment};
@@ -11,7 +11,7 @@ use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
 use kurbo::{PathEl, Vec2};
 
-use piet::{RenderContext, RoundFrom, RoundInto};
+use piet::{FillRule, RenderContext, RoundFrom, RoundInto};
 
 pub struct D2DRenderContext<'a> {
     factory: &'a direct2d::Factory,
@@ -103,10 +103,15 @@ fn path_from_iterator(
     d2d: &direct2d::Factory,
     is_filled: bool,
     i: impl IntoIterator<Item = impl Borrow<PathEl>>,
+    fill_rule: FillRule,
 ) -> Path {
     let mut path = Path::create(d2d).unwrap();
     {
-        let mut builder = Some(PathBuilder::Geom(path.open().unwrap()));
+        let mut g = path.open().unwrap();
+        if fill_rule == FillRule::NonZero {
+            g = g.fill_mode(FillMode::Winding);
+        }
+        let mut builder = Some(PathBuilder::Geom(g));
         for el in i.into_iter() {
             match *el.borrow() {
                 PathEl::Moveto(p) => {
@@ -194,8 +199,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self,
         iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
+        fill_rule: FillRule,
     ) {
-        let path = path_from_iterator(self.factory, true, iter);
+        let path = path_from_iterator(self.factory, true, iter, fill_rule);
         self.rt.fill_geometry(&path, brush);
     }
 
@@ -206,7 +212,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
-        let path = path_from_iterator(self.factory, false, iter);
+        let path = path_from_iterator(self.factory, false, iter, FillRule::EvenOdd);
         self.rt
             .draw_geometry(&path, brush, width.round_into(), style);
     }

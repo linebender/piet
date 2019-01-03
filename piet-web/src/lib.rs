@@ -27,6 +27,13 @@ pub enum StrokeStyle {
     Default,
 }
 
+fn convert_fill_rule(fill_rule: piet::FillRule) -> FillRule {
+    match fill_rule {
+        piet::FillRule::NonZero => FillRule::NonZero,
+        piet::FillRule::EvenOdd => FillRule::EvenOdd,
+    }
+}
+
 impl<'a> RenderContext for WebRenderContext<'a> {
     /// stdweb doesn't have a native Point type, so use kurbo's.
     type Point = Vec2;
@@ -64,10 +71,11 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         &mut self,
         iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
+        fill_rule: piet::FillRule,
     ) {
         self.set_path(iter);
         self.set_brush(brush, true);
-        self.ctx.fill(FillRule::NonZero);
+        self.ctx.fill(convert_fill_rule(fill_rule));
     }
 
     fn stroke_path(

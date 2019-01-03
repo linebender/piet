@@ -11,7 +11,7 @@ use dxgi::flags::Format;
 
 use kurbo::BezPath;
 
-use piet::RenderContext;
+use piet::{FillRule, RenderContext};
 use piet_direct2d::D2DRenderContext;
 
 const TEXTURE_WIDTH: u32 = 400;
@@ -38,7 +38,7 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
     let brush = rc.solid_brush(0x00_00_80_C0);
     // We'll make this `&path` by fixing kurbo.
-    rc.fill_path(path.elements().iter().cloned(), &brush);
+    rc.fill_path(path.elements(), &brush, FillRule::NonZero);
 }
 
 fn main() {
