@@ -1,5 +1,7 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
+use std::borrow::Borrow;
+
 use cairo::{Context, LineCap, LineJoin};
 
 use kurbo::{PathEl, QuadBez, Vec2};
@@ -82,12 +84,12 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn line<V: RoundInto<Vec2>, C: RoundInto<f64>>(
+    fn line(
         &mut self,
-        p0: V,
-        p1: V,
+        p0: impl RoundInto<Self::Point>,
+        p1: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-        width: C,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
         self.ctx.new_path();
@@ -100,17 +102,21 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.stroke();
     }
 
-    fn fill_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I, brush: &Self::Brush) {
+    fn fill_path(
+        &mut self,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        brush: &Self::Brush,
+    ) {
         self.set_path(iter);
         self.set_brush(brush);
         self.ctx.fill();
     }
 
-    fn stroke_path<I: IntoIterator<Item = PathEl>, C: RoundInto<f64>>(
+    fn stroke_path(
         &mut self,
-        iter: I,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
-        width: C,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
         self.set_path(iter);
@@ -159,13 +165,13 @@ impl<'a> CairoRenderContext<'a> {
         }
     }
 
-    fn set_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I) {
+    fn set_path(&mut self, iter: impl IntoIterator<Item = impl Borrow<PathEl>>) {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.new_path();
         let mut last = Vec2::default();
         for el in iter.into_iter() {
-            match el {
+            match *el.borrow() {
                 PathEl::Moveto(p) => {
                     self.ctx.move_to(p.x, p.y);
                     last = p;

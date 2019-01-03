@@ -1,5 +1,7 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
+use std::borrow::Borrow;
+
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
 use direct2d::enums::{FigureBegin, FigureEnd};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
@@ -97,16 +99,16 @@ fn to_point2f<P: RoundInto<Point2>>(p: P) -> Point2F {
     p.round_into().0
 }
 
-fn path_from_iterator<I: IntoIterator<Item = PathEl>>(
+fn path_from_iterator(
     d2d: &direct2d::Factory,
     is_filled: bool,
-    i: I,
+    i: impl IntoIterator<Item = impl Borrow<PathEl>>,
 ) -> Path {
     let mut path = Path::create(d2d).unwrap();
     {
         let mut builder = Some(PathBuilder::Geom(path.open().unwrap()));
         for el in i.into_iter() {
-            match el {
+            match *el.borrow() {
                 PathEl::Moveto(p) => {
                     // TODO: we don't know this now. Will get fixed in direct2d crate.
                     let is_closed = is_filled;
@@ -171,12 +173,12 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn line<V: RoundInto<Point2>, C: RoundInto<f32>>(
+    fn line(
         &mut self,
-        p0: V,
-        p1: V,
+        p0: impl RoundInto<Self::Point>,
+        p1: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-        width: C,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
         self.rt.draw_line(
@@ -188,16 +190,20 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         );
     }
 
-    fn fill_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I, brush: &Self::Brush) {
+    fn fill_path(
+        &mut self,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        brush: &Self::Brush,
+    ) {
         let path = path_from_iterator(self.factory, true, iter);
         self.rt.fill_geometry(&path, brush);
     }
 
-    fn stroke_path<I: IntoIterator<Item = PathEl>, C: RoundInto<f32>>(
+    fn stroke_path(
         &mut self,
-        iter: I,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
-        width: C,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
         let path = path_from_iterator(self.factory, false, iter);

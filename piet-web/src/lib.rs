@@ -1,5 +1,7 @@
 //! The Web Canvas backend for the Piet 2D graphics abstraction.
 
+use std::borrow::Borrow;
+
 use stdweb::web::{CanvasRenderingContext2d, FillRule};
 
 use kurbo::{PathEl, Vec2};
@@ -40,12 +42,12 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn line<V: RoundInto<Vec2>, C: RoundInto<f64>>(
+    fn line(
         &mut self,
-        p0: V,
-        p1: V,
+        p0: impl RoundInto<Self::Point>,
+        p1: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-        width: C,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
         self.ctx.begin_path();
@@ -58,17 +60,21 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         self.ctx.stroke();
     }
 
-    fn fill_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I, brush: &Self::Brush) {
+    fn fill_path(
+        &mut self,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        brush: &Self::Brush,
+    ) {
         self.set_path(iter);
         self.set_brush(brush, true);
         self.ctx.fill(FillRule::NonZero);
     }
 
-    fn stroke_path<I: IntoIterator<Item = PathEl>, C: RoundInto<f64>>(
+    fn stroke_path(
         &mut self,
-        iter: I,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
-        width: C,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
         self.set_path(iter);
@@ -119,12 +125,12 @@ impl<'a> WebRenderContext<'a> {
         }
     }
 
-    fn set_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I) {
+    fn set_path(&mut self, iter: impl IntoIterator<Item = impl Borrow<PathEl>>) {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.begin_path();
         for el in iter.into_iter() {
-            match el {
+            match *el.borrow() {
                 PathEl::Moveto(p) => self.ctx.move_to(p.x, p.y),
                 PathEl::Lineto(p) => self.ctx.line_to(p.x, p.y),
                 PathEl::Quadto(p1, p2) => self.ctx.quadratic_curve_to(p1.x, p1.y, p2.x, p2.y),

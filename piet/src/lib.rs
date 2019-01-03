@@ -1,7 +1,7 @@
 //! A 2D graphics abstraction.
 
 mod conv;
-mod traits;
+mod render_context;
 
 pub use crate::conv::*;
-pub use crate::traits::*;
+pub use crate::render_context::*;

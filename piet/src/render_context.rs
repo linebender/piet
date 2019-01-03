@@ -1,5 +1,7 @@
 //! Fundamental graphics traits.
 
+use std::borrow::Borrow;
+
 use kurbo::{PathEl, Vec2};
 
 use crate::{RoundFrom, RoundInto};
@@ -37,12 +39,12 @@ pub trait RenderContext {
     /// Clear the canvas with the given color.
     fn clear(&mut self, rgb: u32);
 
-    fn line<V: RoundInto<Self::Point>, C: RoundInto<Self::Coord>>(
+    fn line(
         &mut self,
-        p0: V,
-        p1: V,
+        p0: impl RoundInto<Self::Point>,
+        p1: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-        width: C,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     );
 
@@ -53,13 +55,17 @@ pub trait RenderContext {
     /// at worst you record a single `fill_path` into that?
     ///
     /// TODO: this is missing fill rule.
-    fn fill_path<I: IntoIterator<Item = PathEl>>(&mut self, iter: I, brush: &Self::Brush);
-
-    fn stroke_path<I: IntoIterator<Item = PathEl>, C: RoundInto<Self::Coord>>(
+    fn fill_path(
         &mut self,
-        iter: I,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
         brush: &Self::Brush,
-        width: C,
+    );
+
+    fn stroke_path(
+        &mut self,
+        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        brush: &Self::Brush,
+        width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     );
 }
