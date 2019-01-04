@@ -2,9 +2,10 @@
 
 members = [
     "piet",
-    "piet-cairo",
+    #"piet-cairo",
     "piet-common",
-    "piet-direct2d",
+    "piet-coregraphics",
+    #"piet-direct2d",
     "piet-test",
     "piet-web",
     "piet-web/examples/basic"

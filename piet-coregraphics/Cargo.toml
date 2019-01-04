@@ -1,0 +1,14 @@
+[package]
+name = "piet-coregraphics"
+version = "0.1.0"
+authors = ["Jeff Muizelaar <jrmuizel@gmail.com>"]
+description = "CoreGraphics backend for piet 2D graphics abstraction."
+license = "MIT/Apache-2.0"
+edition = "2018"
+keywords = ["graphics", "2d"]
+categories = ["rendering::graphics-api"]
+
+[dependencies]
+kurbo = "0.1.0"
+piet = { path = "../piet" }
+core-graphics = { git = "https://github.com/servo/core-foundation-rs" }
