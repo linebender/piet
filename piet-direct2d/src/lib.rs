@@ -7,24 +7,43 @@ use direct2d::geometry::Path;
 use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
+use directwrite::TextFormat;
+use directwrite::text_format::TextFormatBuilder;
+
 use kurbo::{PathEl, Shape, Vec2};
 
-use piet::{FillRule, RenderContext, RoundFrom, RoundInto};
+use piet::{
+    FillRule, Font, FontBuilder, RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
+};
 
 pub struct D2DRenderContext<'a> {
     factory: &'a direct2d::Factory,
+    dwrite: &'a directwrite::Factory,
     // This is an owned clone, but after some direct2d refactor, it's likely we'll
     // hold a mutable reference.
     rt: GenericRenderTarget,
 }
 
+pub struct D2DFont(TextFormat);
+
+pub struct D2DFontBuilder {
+    dwrite: directwrite::Factory,
+    name: String,
+}
+
+pub struct D2DTextLayout {}
+
+pub struct D2DTextLayoutBuilder {}
+
 impl<'a> D2DRenderContext<'a> {
     pub fn new<RT: RenderTarget>(
         factory: &'a direct2d::Factory,
+        dwrite: &'a directwrite::Factory,
         rt: &'a mut RT,
     ) -> D2DRenderContext<'a> {
         D2DRenderContext {
             factory,
+            dwrite,
             rt: rt.as_generic(),
         }
     }
@@ -158,11 +177,28 @@ fn path_from_shape(
     path
 }
 
+fn clone_dwrite(dwrite: &directwrite::Factory) -> directwrite::Factory {
+    // Cloning the dwrite factory is a very hackish way to get around the lack
+    // of GAT so that the D2DFontBuilder could hold a lifetime reference.
+    //
+    // TODO: reconsider life decisions.
+    unsafe {
+        let ptr = dwrite.get_raw();
+        (*ptr).AddRef();
+        directwrite::Factory::from_raw(ptr)
+    }
+}
+
 impl<'a> RenderContext for D2DRenderContext<'a> {
     type Point = Point2;
     type Coord = f32;
     type Brush = GenericBrush;
     type StrokeStyle = direct2d::stroke_style::StrokeStyle;
+
+    type F = D2DFont;
+    type FBuilder = D2DFontBuilder;
+    type TL = D2DTextLayout;
+    type TLBuilder = D2DTextLayoutBuilder;
 
     fn clear(&mut self, rgb: u32) {
         self.rt.clear(rgb);
@@ -176,12 +212,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn fill(
-        &mut self,
-        shape: &impl Shape,
-        brush: &Self::Brush,
-        fill_rule: FillRule,
-    ) {
+    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
         // TODO: various special-case shapes, for efficiency
         let path = path_from_shape(self.factory, true, shape, fill_rule);
         self.rt.fill_geometry(&path, brush);
@@ -199,4 +230,47 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         self.rt
             .draw_geometry(&path, brush, width.round_into(), style);
     }
+
+    fn new_font_by_name(&mut self, name: &str) -> Self::FBuilder {
+        D2DFontBuilder {
+            dwrite: clone_dwrite(&self.dwrite),
+            name: name.to_owned(),
+        }
+    }
+
+    fn new_text_layout(
+        &mut self,
+        size: impl RoundInto<Self::Coord>,
+        text: &str,
+    ) -> Self::TLBuilder {
+        D2DTextLayoutBuilder {}
+    }
+
+    fn fill_text(
+        &mut self,
+        layout: &Self::TL,
+        pos: impl RoundInto<Self::Point>,
+        brush: &Self::Brush,
+    ) {}
+}
+
+impl FontBuilder for D2DFontBuilder {
+    type Out = D2DFont;
+
+    fn build(self) -> Self::Out {
+        D2DFont(unimplemented!())
+    }
+}
+
+impl Font for D2DFont {}
+
+impl TextLayoutBuilder for D2DTextLayoutBuilder {
+    type Out = D2DTextLayout;
+
+    fn build(self) -> Self::Out {
+        D2DTextLayout {}
+    }
+}
+
+impl TextLayout for D2DTextLayout {
 }

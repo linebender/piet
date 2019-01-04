@@ -9,7 +9,7 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-kurbo = "0.1.2"
+kurbo = {path = "/Users/raphl/github/kurbo"}
 piet = { path = "../piet" }
 
 [dependencies.cairo-rs]

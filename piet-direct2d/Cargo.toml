@@ -9,10 +9,11 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-kurbo = "0.1.2"
+kurbo = {path = "/Users/raphl/github/kurbo"}
 piet = { path = "../piet" }
 
 direct2d = "0.2.0"
+directwrite = "0.1.4"
 
 [dev-dependencies]
 direct3d11 = "0.1.7"
