@@ -1,10 +1,8 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
-use std::borrow::Borrow;
-
 use cairo::{Context, LineCap, LineJoin};
 
-use kurbo::{PathEl, QuadBez, Vec2};
+use kurbo::{PathEl, QuadBez, Shape, Vec2};
 
 use piet::{FillRule, RenderContext, RoundInto};
 
@@ -91,44 +89,26 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn line(
+    fn fill(
         &mut self,
-        p0: impl RoundInto<Self::Point>,
-        p1: impl RoundInto<Self::Point>,
-        brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
-    ) {
-        self.ctx.new_path();
-        let p0 = p0.round_into();
-        let p1 = p1.round_into();
-        self.ctx.move_to(p0.x, p0.y);
-        self.ctx.line_to(p1.x, p1.y);
-        self.set_stroke(width.round_into(), style);
-        self.set_brush(brush);
-        self.ctx.stroke();
-    }
-
-    fn fill_path(
-        &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         fill_rule: FillRule,
     ) {
-        self.set_path(iter);
+        self.set_path(shape);
         self.set_brush(brush);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.fill();
     }
 
-    fn stroke_path(
+    fn stroke(
         &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
-        self.set_path(iter);
+        self.set_path(shape);
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush);
         self.ctx.stroke();
@@ -174,13 +154,13 @@ impl<'a> CairoRenderContext<'a> {
         }
     }
 
-    fn set_path(&mut self, iter: impl IntoIterator<Item = impl Borrow<PathEl>>) {
+    fn set_path(&mut self, shape: &impl Shape) {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.new_path();
         let mut last = Vec2::default();
-        for el in iter.into_iter() {
-            match *el.borrow() {
+        for el in shape.to_bez_path(1e-3) {
+            match el {
                 PathEl::Moveto(p) => {
                     self.ctx.move_to(p.x, p.y);
                     last = p;
