@@ -4,7 +4,7 @@ use kurbo::{BezPath, Line};
 
 use stdweb::traits::*;
 use stdweb::unstable::TryInto;
-use stdweb::web::{document, CanvasRenderingContext2d};
+use stdweb::web::{document, window, CanvasRenderingContext2d};
 
 use stdweb::web::html_element::CanvasElement;
 
@@ -44,11 +44,11 @@ fn main() {
         .try_into()
         .unwrap();
     let mut context: CanvasRenderingContext2d = canvas.get_context().unwrap();
-    let hidpi = 2; // TODO: fetch this from environment.
+    let dpr = window().device_pixel_ratio();
 
-    canvas.set_width(hidpi * canvas.offset_width() as u32);
-    canvas.set_height(hidpi * canvas.offset_height() as u32);
-    context.scale(hidpi as f64, hidpi as f64);
+    canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
+    canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
+    context.scale(dpr, dpr);
 
     let mut piet_context = WebRenderContext::new(&mut context);
     draw_pretty_picture(&mut piet_context);
