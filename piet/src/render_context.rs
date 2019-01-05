@@ -1,8 +1,6 @@
 //! Fundamental graphics traits.
 
-use std::borrow::Borrow;
-
-use kurbo::{PathEl, Vec2};
+use kurbo::{Shape, Vec2};
 
 use crate::{RoundFrom, RoundInto};
 
@@ -48,32 +46,20 @@ pub trait RenderContext {
     /// Clear the canvas with the given color.
     fn clear(&mut self, rgb: u32);
 
-    fn line(
+    /// Stroke a shape.
+    fn stroke(
         &mut self,
-        p0: impl RoundInto<Self::Point>,
-        p1: impl RoundInto<Self::Point>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     );
 
-    /// Fill a path given as an iterator.
-    ///
-    /// I'm also thinking of retained paths. But do we want to have a separate object for
-    /// retained paths, or do we want to have a lightweight display list abstraction, so
-    /// at worst you record a single `fill_path` into that?
-    fn fill_path(
+    /// Fill a shape.
+    fn fill(
         &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         fill_rule: FillRule,
-    );
-
-    fn stroke_path(
-        &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
-        brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
     );
 }

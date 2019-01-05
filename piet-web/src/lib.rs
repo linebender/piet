@@ -1,10 +1,8 @@
 //! The Web Canvas backend for the Piet 2D graphics abstraction.
 
-use std::borrow::Borrow;
-
 use stdweb::web::{CanvasRenderingContext2d, FillRule};
 
-use kurbo::{PathEl, Vec2};
+use kurbo::{PathEl, Shape, Vec2};
 
 use piet::{RenderContext, RoundInto};
 
@@ -49,43 +47,25 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn line(
+    fn fill(
         &mut self,
-        p0: impl RoundInto<Self::Point>,
-        p1: impl RoundInto<Self::Point>,
-        brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
-    ) {
-        self.ctx.begin_path();
-        let p0 = p0.round_into();
-        let p1 = p1.round_into();
-        self.ctx.move_to(p0.x, p0.y);
-        self.ctx.line_to(p1.x, p1.y);
-        self.set_stroke(width.round_into(), style);
-        self.set_brush(brush, false);
-        self.ctx.stroke();
-    }
-
-    fn fill_path(
-        &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         fill_rule: piet::FillRule,
     ) {
-        self.set_path(iter);
+        self.set_path(shape);
         self.set_brush(brush, true);
         self.ctx.fill(convert_fill_rule(fill_rule));
     }
 
-    fn stroke_path(
+    fn stroke(
         &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
-        self.set_path(iter);
+        self.set_path(shape);
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush, false);
         self.ctx.stroke();
@@ -133,12 +113,12 @@ impl<'a> WebRenderContext<'a> {
         }
     }
 
-    fn set_path(&mut self, iter: impl IntoIterator<Item = impl Borrow<PathEl>>) {
+    fn set_path(&mut self, shape: &impl Shape) {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.begin_path();
-        for el in iter.into_iter() {
-            match *el.borrow() {
+        for el in shape.to_bez_path(1e-3) {
+            match el {
                 PathEl::Moveto(p) => self.ctx.move_to(p.x, p.y),
                 PathEl::Lineto(p) => self.ctx.line_to(p.x, p.y),
                 PathEl::Quadto(p1, p2) => self.ctx.quadratic_curve_to(p1.x, p1.y, p2.x, p2.y),

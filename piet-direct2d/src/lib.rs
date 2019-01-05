@@ -1,7 +1,5 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
-use std::borrow::Borrow;
-
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
 use direct2d::enums::{FigureBegin, FigureEnd, FillMode};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
@@ -9,7 +7,7 @@ use direct2d::geometry::Path;
 use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
-use kurbo::{PathEl, Vec2};
+use kurbo::{PathEl, Shape, Vec2};
 
 use piet::{FillRule, RenderContext, RoundFrom, RoundInto};
 
@@ -99,10 +97,10 @@ fn to_point2f<P: RoundInto<Point2>>(p: P) -> Point2F {
     p.round_into().0
 }
 
-fn path_from_iterator(
+fn path_from_shape(
     d2d: &direct2d::Factory,
     is_filled: bool,
-    i: impl IntoIterator<Item = impl Borrow<PathEl>>,
+    shape: &impl Shape,
     fill_rule: FillRule,
 ) -> Path {
     let mut path = Path::create(d2d).unwrap();
@@ -112,8 +110,8 @@ fn path_from_iterator(
             g = g.fill_mode(FillMode::Winding);
         }
         let mut builder = Some(PathBuilder::Geom(g));
-        for el in i.into_iter() {
-            match *el.borrow() {
+        for el in shape.to_bez_path(1e-3) {
+            match el {
                 PathEl::Moveto(p) => {
                     // TODO: we don't know this now. Will get fixed in direct2d crate.
                     let is_closed = is_filled;
@@ -178,41 +176,26 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn line(
+    fn fill(
         &mut self,
-        p0: impl RoundInto<Self::Point>,
-        p1: impl RoundInto<Self::Point>,
-        brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
-    ) {
-        self.rt.draw_line(
-            p0.round_into().0,
-            p1.round_into().0,
-            brush,
-            width.round_into(),
-            style,
-        );
-    }
-
-    fn fill_path(
-        &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         fill_rule: FillRule,
     ) {
-        let path = path_from_iterator(self.factory, true, iter, fill_rule);
+        // TODO: various special-case shapes, for efficiency
+        let path = path_from_shape(self.factory, true, shape, fill_rule);
         self.rt.fill_geometry(&path, brush);
     }
 
-    fn stroke_path(
+    fn stroke(
         &mut self,
-        iter: impl IntoIterator<Item = impl Borrow<PathEl>>,
+        shape: &impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
     ) {
-        let path = path_from_iterator(self.factory, false, iter, FillRule::EvenOdd);
+        // TODO: various special-case shapes, for efficiency
+        let path = path_from_shape(self.factory, false, shape, FillRule::EvenOdd);
         self.rt
             .draw_geometry(&path, brush, width.round_into(), style);
     }
