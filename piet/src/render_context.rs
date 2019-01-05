@@ -80,6 +80,10 @@ pub trait RenderContext {
 
     fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder;
 
+    /// Draw a text layout.
+    ///
+    /// The `pos` parameter specifies the baseline of the left starting place of
+    /// the text. Note: this is true even if the text is right-to-left.
     fn draw_text(
         &mut self,
         layout: &Self::TL,

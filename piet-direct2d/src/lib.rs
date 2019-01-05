@@ -4,7 +4,7 @@ use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
 use direct2d::enums::{DrawTextOptions, FigureBegin, FigureEnd, FillMode};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
-use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment};
+use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment, Vector2F};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
 use directwrite::text_format::TextFormatBuilder;
@@ -254,9 +254,19 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         brush: &Self::Brush,
     ) {
         // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
+        let mut line_metrics = Vec::with_capacity(1);
+        layout.0.get_line_metrics(&mut line_metrics);
+        if line_metrics.is_empty() {
+            // Layout is empty, don't bother drawing.
+            return;
+        }
+        // Direct2D takes upper-left, so adjust for baseline.
+        let pos = pos.round_into().0;
+        let pos = pos - Vector2F::new(0.0, line_metrics[0].baseline());
         let text_options = DrawTextOptions::NONE;
+
         self.rt
-            .draw_text_layout(pos.round_into().0, &layout.0, brush, text_options);
+            .draw_text_layout(pos, &layout.0, brush, text_options);
     }
 }
 
