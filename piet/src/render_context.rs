@@ -75,13 +75,10 @@ pub trait RenderContext {
     /// Fill a shape.
     fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule);
 
-    fn new_font_by_name(&mut self, name: &str) -> Self::FBuilder;
+    fn new_font_by_name(&mut self, name: &str, size: impl RoundInto<Self::Coord>)
+        -> Self::FBuilder;
 
-    fn new_text_layout(
-        &mut self,
-        size: impl RoundInto<Self::Coord>,
-        text: &str,
-    ) -> Self::TLBuilder;
+    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder;
 
     fn fill_text(
         &mut self,

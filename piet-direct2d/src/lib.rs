@@ -1,14 +1,15 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
-use direct2d::enums::{FigureBegin, FigureEnd, FillMode};
+use direct2d::enums::{DrawTextOptions, FigureBegin, FigureEnd, FillMode};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
 use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
-use directwrite::TextFormat;
 use directwrite::text_format::TextFormatBuilder;
+use directwrite::text_layout;
+use directwrite::TextFormat;
 
 use kurbo::{PathEl, Shape, Vec2};
 
@@ -26,14 +27,18 @@ pub struct D2DRenderContext<'a> {
 
 pub struct D2DFont(TextFormat);
 
-pub struct D2DFontBuilder {
-    dwrite: directwrite::Factory,
+pub struct D2DFontBuilder<'a> {
+    builder: TextFormatBuilder<'a>,
     name: String,
 }
 
-pub struct D2DTextLayout {}
+pub struct D2DTextLayout(text_layout::TextLayout);
 
-pub struct D2DTextLayoutBuilder {}
+pub struct D2DTextLayoutBuilder<'a> {
+    builder: text_layout::TextLayoutBuilder<'a>,
+    format: TextFormat,
+    text: String,
+}
 
 impl<'a> D2DRenderContext<'a> {
     pub fn new<RT: RenderTarget>(
@@ -177,18 +182,6 @@ fn path_from_shape(
     path
 }
 
-fn clone_dwrite(dwrite: &directwrite::Factory) -> directwrite::Factory {
-    // Cloning the dwrite factory is a very hackish way to get around the lack
-    // of GAT so that the D2DFontBuilder could hold a lifetime reference.
-    //
-    // TODO: reconsider life decisions.
-    unsafe {
-        let ptr = dwrite.get_raw();
-        (*ptr).AddRef();
-        directwrite::Factory::from_raw(ptr)
-    }
-}
-
 impl<'a> RenderContext for D2DRenderContext<'a> {
     type Point = Point2;
     type Coord = f32;
@@ -196,9 +189,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     type StrokeStyle = direct2d::stroke_style::StrokeStyle;
 
     type F = D2DFont;
-    type FBuilder = D2DFontBuilder;
+    type FBuilder = D2DFontBuilder<'a>;
     type TL = D2DTextLayout;
-    type TLBuilder = D2DTextLayoutBuilder;
+    type TLBuilder = D2DTextLayoutBuilder<'a>;
 
     fn clear(&mut self, rgb: u32) {
         self.rt.clear(rgb);
@@ -231,19 +224,27 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .draw_geometry(&path, brush, width.round_into(), style);
     }
 
-    fn new_font_by_name(&mut self, name: &str) -> Self::FBuilder {
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Self::FBuilder {
+        // Note: the name is cloned here, rather than applied using `with_family` for
+        // lifetime reasons. Maybe there's a better approach.
         D2DFontBuilder {
-            dwrite: clone_dwrite(&self.dwrite),
+            builder: TextFormat::create(self.dwrite).with_size(size.round_into()),
             name: name.to_owned(),
         }
     }
 
-    fn new_text_layout(
-        &mut self,
-        size: impl RoundInto<Self::Coord>,
-        text: &str,
-    ) -> Self::TLBuilder {
-        D2DTextLayoutBuilder {}
+    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
+        // Same consideration as above, we clone the font and text for lifetime
+        // reasons.
+        D2DTextLayoutBuilder {
+            builder: text_layout::TextLayout::create(self.dwrite),
+            format: font.0.clone(),
+            text: text.to_owned(),
+        }
     }
 
     fn fill_text(
@@ -251,26 +252,38 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         layout: &Self::TL,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) {}
+    ) {
+        // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
+        let text_options = DrawTextOptions::NONE;
+        self.rt
+            .draw_text_layout(pos.round_into().0, &layout.0, brush, text_options);
+    }
 }
 
-impl FontBuilder for D2DFontBuilder {
+impl<'a> FontBuilder for D2DFontBuilder<'a> {
     type Out = D2DFont;
 
     fn build(self) -> Self::Out {
-        D2DFont(unimplemented!())
+        D2DFont(self.builder.with_family(&self.name).build().unwrap())
     }
 }
 
 impl Font for D2DFont {}
 
-impl TextLayoutBuilder for D2DTextLayoutBuilder {
+impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
     type Out = D2DTextLayout;
 
     fn build(self) -> Self::Out {
-        D2DTextLayout {}
+        D2DTextLayout(
+            self.builder
+                .with_text(&self.text)
+                .with_font(&self.format)
+                .with_width(1e6) // TODO: probably want to support wrapping
+                .with_height(1e6)
+                .build()
+                .unwrap(),
+        )
     }
 }
 
-impl TextLayout for D2DTextLayout {
-}
+impl TextLayout for D2DTextLayout {}
