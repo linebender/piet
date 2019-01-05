@@ -247,7 +247,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn fill_text(
+    fn draw_text(
         &mut self,
         layout: &Self::TL,
         pos: impl RoundInto<Self::Point>,

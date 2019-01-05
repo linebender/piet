@@ -2,7 +2,7 @@
 
 members = [
     "piet",
-#    "piet-cairo",
+    "piet-cairo",
     "piet-direct2d",
 #    "piet-web",
 ]

@@ -42,7 +42,7 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     let font = rc.new_font_by_name("Segoe UI", 12.0).build();
     let layout = rc.new_text_layout(&font, "Hello piet!").build();
     let brush = rc.solid_brush(0x80_00_00_C0);
-    rc.fill_text(&layout, (80.0, 10.0), &brush);
+    rc.draw_text(&layout, (80.0, 10.0), &brush);
 }
 
 fn main() {

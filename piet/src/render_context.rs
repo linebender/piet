@@ -80,7 +80,7 @@ pub trait RenderContext {
 
     fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder;
 
-    fn fill_text(
+    fn draw_text(
         &mut self,
         layout: &Self::TL,
         pos: impl RoundInto<Self::Point>,
