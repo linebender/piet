@@ -40,9 +40,14 @@ pub struct WebFontBuilder(WebFont);
 pub struct WebTextLayout {
     font: WebFont,
     text: String,
+    width: f64,
 }
 
-pub struct WebTextLayoutBuilder(WebTextLayout);
+pub struct WebTextLayoutBuilder {
+    ctx: CanvasRenderingContext2d,
+    font: WebFont,
+    text: String,
+}
 
 fn convert_fill_rule(fill_rule: piet::FillRule) -> CanvasWindingRule {
     match fill_rule {
@@ -106,11 +111,13 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 
     fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
-        let text_layout = WebTextLayout {
+        WebTextLayoutBuilder {
+            // TODO: it's very likely possible to do this without cloning ctx, but
+            // I couldn't figure out the lifetime errors from a `&'a` reference.
+            ctx: self.ctx.clone(),
             font: font.clone(),
             text: text.to_owned(),
-        };
-        WebTextLayoutBuilder(text_layout)
+        }
     }
 
     fn draw_text(
@@ -119,11 +126,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
     ) {
-        let font_str = format!(
-            "{} {} {}px \"{}\"",
-            layout.font.style, layout.font.weight, layout.font.size, layout.font.family
-        );
-        self.ctx.set_font(&font_str);
+        self.ctx.set_font(&layout.font.get_font_string());
         self.set_brush(brush, true);
         let pos = pos.round_into();
         // TODO: should we be tracking errors, or just ignoring them?
@@ -204,12 +207,37 @@ impl FontBuilder for WebFontBuilder {
 
 impl Font for WebFont {}
 
+impl WebFont {
+    fn get_font_string(&self) -> String {
+        format!(
+            "{} {} {}px \"{}\"",
+            self.style, self.weight, self.size, self.family
+        )
+    }
+}
+
 impl TextLayoutBuilder for WebTextLayoutBuilder {
     type Out = WebTextLayout;
 
     fn build(self) -> Self::Out {
-        self.0
+        self.ctx.set_font(&self.font.get_font_string());
+        let width = self
+            .ctx
+            .measure_text(&self.text)
+            .map(|m| m.get_width())
+            .unwrap_or(0.0);
+        WebTextLayout {
+            font: self.font,
+            text: self.text,
+            width,
+        }
     }
 }
 
-impl TextLayout for WebTextLayout {}
+impl TextLayout for WebTextLayout {
+    type Coord = f64;
+
+    fn width(&self) -> f64 {
+        self.width
+    }
+}

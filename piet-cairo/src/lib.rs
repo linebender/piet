@@ -276,4 +276,10 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 }
 
-impl TextLayout for CairoTextLayout {}
+impl TextLayout for CairoTextLayout {
+    type Coord = f64;
+
+    fn width(&self) -> f64 {
+        self.font.text_extents(&self.text).width
+    }
+}
