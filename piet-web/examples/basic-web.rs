@@ -8,7 +8,7 @@ use stdweb::web::{document, CanvasRenderingContext2d};
 
 use stdweb::web::html_element::CanvasElement;
 
-use piet::{FillRule, RenderContext};
+use piet::{FillRule, FontBuilder, RenderContext, TextLayoutBuilder};
 use piet_web::WebRenderContext;
 
 fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
@@ -27,6 +27,11 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
     let brush = rc.solid_brush(0x00_00_80_C0);
     rc.fill(&path, &brush, FillRule::NonZero);
+
+    let font = rc.new_font_by_name("Segoe UI", 12.0).build();
+    let layout = rc.new_text_layout(&font, "Hello piet-web!").build();
+    let brush = rc.solid_brush(0x80_00_00_C0);
+    rc.draw_text(&layout, (80.0, 10.0), &brush);
 }
 
 fn main() {
@@ -39,9 +44,11 @@ fn main() {
         .try_into()
         .unwrap();
     let mut context: CanvasRenderingContext2d = canvas.get_context().unwrap();
+    let hidpi = 2; // TODO: fetch this from environment.
 
-    canvas.set_width(canvas.offset_width() as u32);
-    canvas.set_height(canvas.offset_height() as u32);
+    canvas.set_width(hidpi * canvas.offset_width() as u32);
+    canvas.set_height(hidpi * canvas.offset_height() as u32);
+    context.scale(hidpi as f64, hidpi as f64);
 
     let mut piet_context = WebRenderContext::new(&mut context);
     draw_pretty_picture(&mut piet_context);

@@ -242,27 +242,24 @@ fn byte_to_frac(byte: u32) -> f64 {
     ((byte & 255) as f64) * (1.0 / 255.0)
 }
 
+fn scale_matrix(scale: f64) -> Matrix {
+    Matrix {
+        xx: scale,
+        yx: 0.0,
+        xy: 0.0,
+        yy: scale,
+        x0: 0.0,
+        y0: 0.0,
+    }
+}
+
 impl FontBuilder for CairoFontBuilder {
     type Out = CairoFont;
 
     fn build(self) -> Self::Out {
         let font_face = FontFace::toy_create(&self.family, self.slant, self.weight);
-        let font_matrix = Matrix {
-            xx: self.size,
-            yx: 0.0,
-            xy: 0.0,
-            yy: self.size,
-            x0: 0.0,
-            y0: 0.0,
-        };
-        let ctm = Matrix {
-            xx: 1.0,
-            yx: 0.0,
-            xy: 0.0,
-            yy: 1.0,
-            x0: 0.0,
-            y0: 0.0,
-        };
+        let font_matrix = scale_matrix(self.size);
+        let ctm = scale_matrix(1.0);
         let options = FontOptions::default();
         let scaled_font = ScaledFont::new(&font_face, &font_matrix, &ctm, &options);
         CairoFont(scaled_font)

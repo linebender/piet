@@ -4,7 +4,7 @@ use stdweb::web::{CanvasRenderingContext2d, FillRule};
 
 use kurbo::{PathEl, Shape, Vec2};
 
-use piet::{RenderContext, RoundInto};
+use piet::{Font, FontBuilder, RenderContext, RoundInto, TextLayout, TextLayoutBuilder};
 
 pub struct WebRenderContext<'a> {
     ctx: &'a mut CanvasRenderingContext2d,
@@ -25,6 +25,24 @@ pub enum StrokeStyle {
     Default,
 }
 
+#[derive(Clone)]
+pub struct WebFont {
+    family: String,
+    weight: u32,
+    // Maybe this should be enum? Everything is stringly typed...
+    style: &'static str,
+    size: f64,
+}
+
+pub struct WebFontBuilder(WebFont);
+
+pub struct WebTextLayout {
+    font: WebFont,
+    text: String,
+}
+
+pub struct WebTextLayoutBuilder(WebTextLayout);
+
 fn convert_fill_rule(fill_rule: piet::FillRule) -> FillRule {
     match fill_rule {
         piet::FillRule::NonZero => FillRule::NonZero,
@@ -39,6 +57,11 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     type Brush = Brush;
     type StrokeStyle = StrokeStyle;
 
+    type F = WebFont;
+    type FBuilder = WebFontBuilder;
+    type TL = WebTextLayout;
+    type TLBuilder = WebTextLayoutBuilder;
+
     fn clear(&mut self, _rgb: u32) {
         // TODO: we might need to know the size of the canvas to do this.
     }
@@ -47,12 +70,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn fill(
-        &mut self,
-        shape: &impl Shape,
-        brush: &Self::Brush,
-        fill_rule: piet::FillRule,
-    ) {
+    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
         self.set_path(shape);
         self.set_brush(brush, true);
         self.ctx.fill(convert_fill_rule(fill_rule));
@@ -69,6 +87,44 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush, false);
         self.ctx.stroke();
+    }
+
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Self::FBuilder {
+        let font = WebFont {
+            family: name.to_owned(),
+            size: size.round_into(),
+            weight: 400,
+            style: "normal",
+        };
+        WebFontBuilder(font)
+    }
+
+    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
+        let text_layout = WebTextLayout {
+            font: font.clone(),
+            text: text.to_owned(),
+        };
+        WebTextLayoutBuilder(text_layout)
+    }
+
+    fn draw_text(
+        &mut self,
+        layout: &Self::TL,
+        pos: impl RoundInto<Self::Point>,
+        brush: &Self::Brush,
+    ) {
+        let font_str = format!(
+            "{} {} {}px \"{}\"",
+            layout.font.style, layout.font.weight, layout.font.size, layout.font.family
+        );
+        self.ctx.set_font(&font_str);
+        self.set_brush(brush, true);
+        let pos = pos.round_into();
+        self.ctx.fill_text(&layout.text, pos.x, pos.y, None);
     }
 }
 
@@ -134,3 +190,23 @@ impl<'a> WebRenderContext<'a> {
 fn byte_to_frac(byte: u32) -> f64 {
     ((byte & 255) as f64) * (1.0 / 255.0)
 }
+
+impl FontBuilder for WebFontBuilder {
+    type Out = WebFont;
+
+    fn build(self) -> Self::Out {
+        self.0
+    }
+}
+
+impl Font for WebFont {}
+
+impl TextLayoutBuilder for WebTextLayoutBuilder {
+    type Out = WebTextLayout;
+
+    fn build(self) -> Self::Out {
+        self.0
+    }
+}
+
+impl TextLayout for WebTextLayout {}
