@@ -12,4 +12,8 @@ categories = ["rendering::graphics-api", "wasm"]
 kurbo = "0.1.2"
 piet = { path = "../piet" }
 
-stdweb = "0.4.12"
+wasm-bindgen = "0.2.29"
+
+[dependencies.web-sys]
+version = "0.3.6"
+features = ["CanvasRenderingContext2d", "CanvasWindingRule"]
