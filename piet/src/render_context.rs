@@ -1,6 +1,6 @@
 //! The main render context trait.
 
-use kurbo::{Shape, Vec2};
+use kurbo::{Affine, Shape, Vec2};
 
 use crate::{Font, FontBuilder, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder};
 
@@ -73,7 +73,16 @@ pub trait RenderContext {
     );
 
     /// Fill a shape.
+
+    // TODO: switch last two argument order to be more similar to clip? Maybe we
+    // should have a convention, geometry first.
     fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule);
+
+    /// Clip to a shape.
+    ///
+    /// All subsequent drawing operations up to the next [`restore`](#method.restore)
+    /// are clipped by the shape.
+    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule) {}
 
     fn new_font_by_name(
         &mut self,
@@ -93,4 +102,32 @@ pub trait RenderContext {
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
     );
+
+    /// Save the context state.
+    ///
+    /// Pushes the current context state onto a stack, to be popped by
+    /// [`restore`](#method.restore).
+    ///
+    /// The context state currently consists of a clip region and an affine
+    /// transform, but is expected to grow in the near future.
+    fn save(&mut self) {}
+
+    /// Restore the context state.
+    ///
+    /// Pop a context state that was pushed by [`save`](#method.save). See
+    /// that method for details.
+    fn restore(&mut self) {}
+
+    /// Finish any pending operations.
+    ///
+    /// This will generally be called by a shell after all user drawing
+    /// operations but before presenting. Not all back-ends will handle this
+    /// the same way.
+    fn finish(&mut self) {}
+
+    /// Apply a transform.
+    ///
+    /// Apply an affine transformation. The transformation remains in effect
+    /// until a [`restore`](#method.restore) operation.
+    fn transform(&mut self, transform: Affine) {}
 }
