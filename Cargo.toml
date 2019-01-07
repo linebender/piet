@@ -5,4 +5,5 @@ members = [
     "piet-cairo",
     "piet-direct2d",
     "piet-web",
+    "piet-web/examples/basic"
 ]

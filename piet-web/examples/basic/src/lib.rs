@@ -2,11 +2,9 @@
 
 use kurbo::{BezPath, Line};
 
-use stdweb::traits::*;
-use stdweb::unstable::TryInto;
-use stdweb::web::{document, CanvasRenderingContext2d};
-
-use stdweb::web::html_element::CanvasElement;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::{window, HtmlCanvasElement};
 
 use piet::{FillRule, RenderContext};
 use piet_web::WebRenderContext;
@@ -29,22 +27,26 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     rc.fill(&path, &brush, FillRule::NonZero);
 }
 
-fn main() {
-    stdweb::initialize();
-
-    let canvas: CanvasElement = document()
-        .query_selector("#canvas")
+#[wasm_bindgen]
+pub fn run() {
+    let canvas = window()
         .unwrap()
+        .document()
         .unwrap()
-        .try_into()
+        .get_element_by_id("canvas")
+        .unwrap()
+        .dyn_into::<HtmlCanvasElement>()
         .unwrap();
-    let mut context: CanvasRenderingContext2d = canvas.get_context().unwrap();
+    let mut context = canvas
+        .get_context("2d")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .unwrap();
 
     canvas.set_width(canvas.offset_width() as u32);
     canvas.set_height(canvas.offset_height() as u32);
 
     let mut piet_context = WebRenderContext::new(&mut context);
     draw_pretty_picture(&mut piet_context);
-
-    stdweb::event_loop();
 }

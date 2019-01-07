@@ -1,11 +1,11 @@
 # Running the examples
 
-Generally follow the directions at [stdweb].
+Ensure both cargo and [npm] are installed.
 
-`$ cargo install -f cargo-web`
+`$ cargo install -f wasm-bindgen`
 
-`$ cargo web start --target=wasm32-unknown-unknown --example basic-web`
+`$ cd examples/basic && ./build.sh`
 
 Then navigate browser to local web server.
 
-[stdweb]: https://github.com/koute/stdweb
+[npm]: https://www.npmjs.com/get-npm
