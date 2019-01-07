@@ -2,11 +2,9 @@
 
 use kurbo::{BezPath, Line};
 
-use stdweb::traits::*;
-use stdweb::unstable::TryInto;
-use stdweb::web::{document, window, CanvasRenderingContext2d};
-
-use stdweb::web::html_element::CanvasElement;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use web_sys::{window, HtmlCanvasElement};
 
 use piet::{FillRule, FontBuilder, RenderContext, TextLayoutBuilder};
 use piet_web::WebRenderContext;
@@ -34,24 +32,28 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     rc.draw_text(&layout, (80.0, 10.0), &brush);
 }
 
-fn main() {
-    stdweb::initialize();
-
-    let canvas: CanvasElement = document()
-        .query_selector("#canvas")
+#[wasm_bindgen]
+pub fn run() {
+    let canvas = window()
         .unwrap()
+        .document()
         .unwrap()
-        .try_into()
+        .get_element_by_id("canvas")
+        .unwrap()
+        .dyn_into::<HtmlCanvasElement>()
         .unwrap();
-    let mut context: CanvasRenderingContext2d = canvas.get_context().unwrap();
-    let dpr = window().device_pixel_ratio();
+    let mut context = canvas
+        .get_context("2d")
+        .unwrap()
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .unwrap();
 
+    let dpr = window().map(|w| w.device_pixel_ratio()).unwrap_or(1.0);
     canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
     canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
-    context.scale(dpr, dpr);
+    let _ = context.scale(dpr, dpr);
 
     let mut piet_context = WebRenderContext::new(&mut context);
     draw_pretty_picture(&mut piet_context);
-
-    stdweb::event_loop();
 }

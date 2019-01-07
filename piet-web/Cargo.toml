@@ -8,8 +8,15 @@ edition = "2018"
 keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api", "wasm"]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 kurbo = "0.1.2"
 piet = { path = "../piet" }
 
-stdweb = "0.4.12"
+wasm-bindgen = "0.2.30"
+
+[dependencies.web-sys]
+version = "0.3.6"
+features = ["CanvasRenderingContext2d", "CanvasWindingRule"]

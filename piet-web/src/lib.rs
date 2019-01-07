@@ -1,6 +1,7 @@
 //! The Web Canvas backend for the Piet 2D graphics abstraction.
 
-use stdweb::web::{CanvasRenderingContext2d, FillRule};
+use wasm_bindgen::JsValue;
+use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
 
 use kurbo::{PathEl, Shape, Vec2};
 
@@ -43,15 +44,15 @@ pub struct WebTextLayout {
 
 pub struct WebTextLayoutBuilder(WebTextLayout);
 
-fn convert_fill_rule(fill_rule: piet::FillRule) -> FillRule {
+fn convert_fill_rule(fill_rule: piet::FillRule) -> CanvasWindingRule {
     match fill_rule {
-        piet::FillRule::NonZero => FillRule::NonZero,
-        piet::FillRule::EvenOdd => FillRule::EvenOdd,
+        piet::FillRule::NonZero => CanvasWindingRule::Nonzero,
+        piet::FillRule::EvenOdd => CanvasWindingRule::Evenodd,
     }
 }
 
 impl<'a> RenderContext for WebRenderContext<'a> {
-    /// stdweb doesn't have a native Point type, so use kurbo's.
+    /// wasm-bindgen doesn't have a native Point type, so use kurbo's.
     type Point = Vec2;
     type Coord = f64;
     type Brush = Brush;
@@ -73,7 +74,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
         self.set_path(shape);
         self.set_brush(brush, true);
-        self.ctx.fill(convert_fill_rule(fill_rule));
+        self.ctx
+            .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
     }
 
     fn stroke(
@@ -124,7 +126,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         self.ctx.set_font(&font_str);
         self.set_brush(brush, true);
         let pos = pos.round_into();
-        self.ctx.fill_text(&layout.text, pos.x, pos.y, None);
+        // TODO: should we be tracking errors, or just ignoring them?
+        let _ = self.ctx.fill_text(&layout.text, pos.x, pos.y);
     }
 }
 
@@ -150,9 +153,9 @@ impl<'a> WebRenderContext<'a> {
                     )
                 };
                 if is_fill {
-                    self.ctx.set_fill_style_color(&color_str);
+                    self.ctx.set_fill_style(&JsValue::from_str(&color_str));
                 } else {
-                    self.ctx.set_stroke_style_color(&color_str);
+                    self.ctx.set_stroke_style(&JsValue::from_str(&color_str));
                 }
             }
         }
