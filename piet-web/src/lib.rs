@@ -224,7 +224,7 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
         let width = self
             .ctx
             .measure_text(&self.text)
-            .map(|m| m.get_width())
+            .map(|m| m.width())
             .unwrap_or(0.0);
         WebTextLayout {
             font: self.font,
