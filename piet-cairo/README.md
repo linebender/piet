@@ -18,6 +18,12 @@ The need for text shaping will be common to many low-level renderers that are no
 
 Cairo is quite portable, and it is quite feasible to build on other systems. However, the [cairo-rs] crate seems to expect a library to be provided, rather than building it from sources. On Windows, I've been using prebuilt binary releases from [cairo-windows].
 
+See the [Gtk-rs requirements] page for more detailed instructions how to get it properly installed. On macOS with Homebrew, the following should work:
+
+```shell
+brew install gtk+3
+```
+
 TODO: nicer installation instructions (contributions welcome)
 
 [Cairo]: https://www.cairographics.org/
@@ -27,3 +33,4 @@ TODO: nicer installation instructions (contributions welcome)
 [pango]: https://github.com/gtk-rs/pango
 [rust-harfbuzz]: https://github.com/servo/rust-harfbuzz
 [libTXT]: https://github.com/flutter/flutter/issues/11092
+[Gtk-rs requirements]: http://gtk-rs.org/docs/requirements.html
