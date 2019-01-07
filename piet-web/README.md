@@ -1,11 +1,14 @@
 # Running the examples
 
-Generally follow the directions at [stdweb].
+Ensure both cargo and [npm] are installed.
 
-`$ cargo install -f cargo-web`
+Make sure that wasm-bindgen is installed. This needs to be the same version of
+wasm-bindgen used by piet-web.
 
-`$ cargo web start --target=wasm32-unknown-unknown --example basic-web`
+`$ cargo install -f wasm-bindgen-cli`
+
+`$ cd examples/basic && ./build.sh`
 
 Then navigate browser to local web server.
 
-[stdweb]: https://github.com/koute/stdweb
+[npm]: https://www.npmjs.com/get-npm
