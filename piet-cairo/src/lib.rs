@@ -1,10 +1,12 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
-use cairo::{Context, LineCap, LineJoin};
+use cairo::{
+    Context, FontFace, FontOptions, FontSlant, FontWeight, LineCap, LineJoin, Matrix, ScaledFont,
+};
 
 use kurbo::{PathEl, QuadBez, Shape, Vec2};
 
-use piet::{FillRule, RenderContext, RoundInto};
+use piet::{FillRule, Font, FontBuilder, RenderContext, RoundInto, TextLayout, TextLayoutBuilder};
 
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
@@ -30,6 +32,22 @@ pub struct StrokeStyle {
     dash: Option<(Vec<f64>, f64)>,
     miter_limit: Option<f64>,
 }
+
+pub struct CairoFont(ScaledFont);
+
+pub struct CairoFontBuilder {
+    family: String,
+    weight: FontWeight,
+    slant: FontSlant,
+    size: f64,
+}
+
+pub struct CairoTextLayout {
+    font: ScaledFont,
+    text: String,
+}
+
+pub struct CairoTextLayoutBuilder(CairoTextLayout);
 
 impl StrokeStyle {
     pub fn new() -> StrokeStyle {
@@ -76,6 +94,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Brush = Brush;
     type StrokeStyle = StrokeStyle;
 
+    type F = CairoFont;
+    type FBuilder = CairoFontBuilder;
+    type TL = CairoTextLayout;
+    type TLBuilder = CairoTextLayoutBuilder;
+
     fn clear(&mut self, rgb: u32) {
         self.ctx.set_source_rgb(
             byte_to_frac(rgb >> 16),
@@ -89,12 +112,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn fill(
-        &mut self,
-        shape: &impl Shape,
-        brush: &Self::Brush,
-        fill_rule: FillRule,
-    ) {
+    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
         self.set_path(shape);
         self.set_brush(brush);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
@@ -112,6 +130,40 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush);
         self.ctx.stroke();
+    }
+
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Self::FBuilder {
+        CairoFontBuilder {
+            family: name.to_owned(),
+            size: size.round_into(),
+            weight: FontWeight::Normal,
+            slant: FontSlant::Normal,
+        }
+    }
+
+    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
+        let text_layout = CairoTextLayout {
+            font: font.0.clone(),
+            text: text.to_owned(),
+        };
+        CairoTextLayoutBuilder(text_layout)
+    }
+
+    fn draw_text(
+        &mut self,
+        layout: &Self::TL,
+        pos: impl RoundInto<Self::Point>,
+        brush: &Self::Brush,
+    ) {
+        self.ctx.set_scaled_font(&layout.font);
+        self.set_brush(brush);
+        let pos = pos.round_into();
+        self.ctx.move_to(pos.x, pos.y);
+        self.ctx.show_text(&layout.text);
     }
 }
 
@@ -189,3 +241,39 @@ impl<'a> CairoRenderContext<'a> {
 fn byte_to_frac(byte: u32) -> f64 {
     ((byte & 255) as f64) * (1.0 / 255.0)
 }
+
+fn scale_matrix(scale: f64) -> Matrix {
+    Matrix {
+        xx: scale,
+        yx: 0.0,
+        xy: 0.0,
+        yy: scale,
+        x0: 0.0,
+        y0: 0.0,
+    }
+}
+
+impl FontBuilder for CairoFontBuilder {
+    type Out = CairoFont;
+
+    fn build(self) -> Self::Out {
+        let font_face = FontFace::toy_create(&self.family, self.slant, self.weight);
+        let font_matrix = scale_matrix(self.size);
+        let ctm = scale_matrix(1.0);
+        let options = FontOptions::default();
+        let scaled_font = ScaledFont::new(&font_face, &font_matrix, &ctm, &options);
+        CairoFont(scaled_font)
+    }
+}
+
+impl Font for CairoFont {}
+
+impl TextLayoutBuilder for CairoTextLayoutBuilder {
+    type Out = CairoTextLayout;
+
+    fn build(self) -> Self::Out {
+        self.0
+    }
+}
+
+impl TextLayout for CairoTextLayout {}

@@ -1,30 +1,54 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
-use direct2d::enums::{FigureBegin, FigureEnd, FillMode};
+use direct2d::enums::{DrawTextOptions, FigureBegin, FigureEnd, FillMode};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
-use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment};
+use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment, Vector2F};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
+
+use directwrite::text_format::TextFormatBuilder;
+use directwrite::text_layout;
+use directwrite::TextFormat;
 
 use kurbo::{PathEl, Shape, Vec2};
 
-use piet::{FillRule, RenderContext, RoundFrom, RoundInto};
+use piet::{
+    FillRule, Font, FontBuilder, RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
+};
 
 pub struct D2DRenderContext<'a> {
     factory: &'a direct2d::Factory,
+    dwrite: &'a directwrite::Factory,
     // This is an owned clone, but after some direct2d refactor, it's likely we'll
     // hold a mutable reference.
     rt: GenericRenderTarget,
 }
 
+pub struct D2DFont(TextFormat);
+
+pub struct D2DFontBuilder<'a> {
+    builder: TextFormatBuilder<'a>,
+    name: String,
+}
+
+pub struct D2DTextLayout(text_layout::TextLayout);
+
+pub struct D2DTextLayoutBuilder<'a> {
+    builder: text_layout::TextLayoutBuilder<'a>,
+    format: TextFormat,
+    text: String,
+}
+
 impl<'a> D2DRenderContext<'a> {
     pub fn new<RT: RenderTarget>(
         factory: &'a direct2d::Factory,
+        dwrite: &'a directwrite::Factory,
         rt: &'a mut RT,
     ) -> D2DRenderContext<'a> {
         D2DRenderContext {
             factory,
+            dwrite,
             rt: rt.as_generic(),
         }
     }
@@ -164,6 +188,11 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     type Brush = GenericBrush;
     type StrokeStyle = direct2d::stroke_style::StrokeStyle;
 
+    type F = D2DFont;
+    type FBuilder = D2DFontBuilder<'a>;
+    type TL = D2DTextLayout;
+    type TLBuilder = D2DTextLayoutBuilder<'a>;
+
     fn clear(&mut self, rgb: u32) {
         self.rt.clear(rgb);
     }
@@ -176,12 +205,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn fill(
-        &mut self,
-        shape: &impl Shape,
-        brush: &Self::Brush,
-        fill_rule: FillRule,
-    ) {
+    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
         // TODO: various special-case shapes, for efficiency
         let path = path_from_shape(self.factory, true, shape, fill_rule);
         self.rt.fill_geometry(&path, brush);
@@ -199,4 +223,77 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         self.rt
             .draw_geometry(&path, brush, width.round_into(), style);
     }
+
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Self::FBuilder {
+        // Note: the name is cloned here, rather than applied using `with_family` for
+        // lifetime reasons. Maybe there's a better approach.
+        D2DFontBuilder {
+            builder: TextFormat::create(self.dwrite).with_size(size.round_into()),
+            name: name.to_owned(),
+        }
+    }
+
+    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
+        // Same consideration as above, we clone the font and text for lifetime
+        // reasons.
+        D2DTextLayoutBuilder {
+            builder: text_layout::TextLayout::create(self.dwrite),
+            format: font.0.clone(),
+            text: text.to_owned(),
+        }
+    }
+
+    fn draw_text(
+        &mut self,
+        layout: &Self::TL,
+        pos: impl RoundInto<Self::Point>,
+        brush: &Self::Brush,
+    ) {
+        // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
+        let mut line_metrics = Vec::with_capacity(1);
+        layout.0.get_line_metrics(&mut line_metrics);
+        if line_metrics.is_empty() {
+            // Layout is empty, don't bother drawing.
+            return;
+        }
+        // Direct2D takes upper-left, so adjust for baseline.
+        let pos = pos.round_into().0;
+        let pos = pos - Vector2F::new(0.0, line_metrics[0].baseline());
+        let text_options = DrawTextOptions::NONE;
+
+        self.rt
+            .draw_text_layout(pos, &layout.0, brush, text_options);
+    }
 }
+
+impl<'a> FontBuilder for D2DFontBuilder<'a> {
+    type Out = D2DFont;
+
+    fn build(self) -> Self::Out {
+        D2DFont(self.builder.with_family(&self.name).build().unwrap())
+    }
+}
+
+impl Font for D2DFont {}
+
+impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
+    type Out = D2DTextLayout;
+
+    fn build(self) -> Self::Out {
+        D2DTextLayout(
+            self.builder
+                .with_text(&self.text)
+                .with_font(&self.format)
+                .with_width(1e6) // TODO: probably want to support wrapping
+                .with_height(1e6)
+                .build()
+                .unwrap(),
+        )
+    }
+}
+
+impl TextLayout for D2DTextLayout {}

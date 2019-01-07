@@ -6,7 +6,7 @@ use kurbo::{BezPath, Line};
 
 use cairo::{Context, Format, ImageSurface};
 
-use piet::{FillRule, RenderContext};
+use piet::{FillRule, FontBuilder, RenderContext, TextLayoutBuilder};
 use piet_cairo::CairoRenderContext;
 
 const TEXTURE_WIDTH: i32 = 400;
@@ -30,6 +30,11 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
     let brush = rc.solid_brush(0x00_00_80_C0);
     rc.fill(&path, &brush, FillRule::NonZero);
+
+    let font = rc.new_font_by_name("Segoe UI", 12.0).build();
+    let layout = rc.new_text_layout(&font, "Hello piet-cairo!").build();
+    let brush = rc.solid_brush(0x80_00_00_C0);
+    rc.draw_text(&layout, (80.0, 10.0), &brush);
 }
 
 fn main() {

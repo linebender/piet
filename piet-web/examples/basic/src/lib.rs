@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlCanvasElement};
 
-use piet::{FillRule, RenderContext};
+use piet::{FillRule, FontBuilder, RenderContext, TextLayoutBuilder};
 use piet_web::WebRenderContext;
 
 fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
@@ -25,6 +25,11 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
     let brush = rc.solid_brush(0x00_00_80_C0);
     rc.fill(&path, &brush, FillRule::NonZero);
+
+    let font = rc.new_font_by_name("Segoe UI", 12.0).build();
+    let layout = rc.new_text_layout(&font, "Hello piet-web!").build();
+    let brush = rc.solid_brush(0x80_00_00_C0);
+    rc.draw_text(&layout, (80.0, 10.0), &brush);
 }
 
 #[wasm_bindgen]
@@ -44,8 +49,10 @@ pub fn run() {
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
 
-    canvas.set_width(canvas.offset_width() as u32);
-    canvas.set_height(canvas.offset_height() as u32);
+    let dpr = window().map(|w| w.device_pixel_ratio()).unwrap_or(1.0);
+    canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
+    canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
+    let _ = context.scale(dpr, dpr);
 
     let mut piet_context = WebRenderContext::new(&mut context);
     draw_pretty_picture(&mut piet_context);

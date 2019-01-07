@@ -11,7 +11,7 @@ use dxgi::flags::Format;
 
 use kurbo::{BezPath, Line};
 
-use piet::{FillRule, RenderContext};
+use piet::{FillRule, FontBuilder, RenderContext, TextLayoutBuilder};
 use piet_direct2d::D2DRenderContext;
 
 const TEXTURE_WIDTH: u32 = 400;
@@ -38,11 +38,17 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
     let brush = rc.solid_brush(0x00_00_80_C0);
     rc.fill(&path, &brush, FillRule::NonZero);
+
+    let font = rc.new_font_by_name("Segoe UI", 12.0).build();
+    let layout = rc.new_text_layout(&font, "Hello piet!").build();
+    let brush = rc.solid_brush(0x80_00_00_C0);
+    rc.draw_text(&layout, (80.0, 10.0), &brush);
 }
 
 fn main() {
     // Create the D2D factory
     let d2d = direct2d::factory::Factory::new().unwrap();
+    let dwrite = directwrite::factory::Factory::new().unwrap();
 
     // Initialize a D3D Device
     let (_, d3d, d3d_ctx) = direct3d11::device::Device::create()
@@ -73,7 +79,7 @@ fn main() {
     context.set_target(&target);
     context.set_dpi(96.0 * HIDPI, 96.0 * HIDPI);
     context.begin_draw();
-    let mut piet_context = D2DRenderContext::new(&d2d, &mut context);
+    let mut piet_context = D2DRenderContext::new(&d2d, &dwrite, &mut context);
     draw_pretty_picture(&mut piet_context);
     context.end_draw().unwrap();
 
