@@ -8,11 +8,26 @@ This repo is structured as a core API crate, "piet" and a separate crate for eac
 
 A companion for Bézier path representation and geometry is [kurbo].
 
-The library is of course named after [Piet Mondrian]. It's abstract and hopefully will be used for drawing lots of rectangles.
+## Roadmap
+
+Since the project is in its infant stages, there's not currently a set roadmap. For a good idea of what the library will eventually be capable of see [this list] of requirements to be a backend 2D graphics library for the SVG rendering library resvg.
+
+## Contributing
 
 Contributions are welcome! It's in early stages, so there are lots of opportunities to fill things out.
+
+## Inspirations
+
+Piet's interface is largely inspired by the [Skia Graphics Library] as well as the [C++ 2D graphics api proposal] although piet aims to be much more lightweight and modular.
+
+## The Name
+
+The library is of course named after [Piet Mondrian]. It's abstract and hopefully will be used for drawing lots of rectangles.
 
 [blog post]: https://raphlinus.github.io/rust/graphics/2018/10/11/2d-graphics.html
 [druid]: https://github.com/xi-editor/druid
 [kurbo]: https://github.com/linebender/kurbo
+[this list]: https://github.com/RazrFalcon/resvg/blob/master/docs/backend_requirements.md
+[Skia Graphics Library]: https://skia.org
+[C++ 2D graphics api proposal]: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0267r8.pdf
 [Piet Mondrian]: https://en.wikipedia.org/wiki/Piet_Mondrian
