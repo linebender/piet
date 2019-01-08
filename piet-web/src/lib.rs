@@ -72,10 +72,10 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     type Brush = Brush;
     type StrokeStyle = StrokeStyle;
 
-    type F = WebFont;
-    type FBuilder = WebFontBuilder;
-    type TL = WebTextLayout;
-    type TLBuilder = WebTextLayoutBuilder;
+    type Font = WebFont;
+    type FontBuilder = WebFontBuilder;
+    type TextLayout = WebTextLayout;
+    type TextLayoutBuilder = WebTextLayoutBuilder;
 
     fn clear(&mut self, _rgb: u32) {
         // TODO: we might need to know the size of the canvas to do this.
@@ -109,7 +109,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         &mut self,
         name: &str,
         size: impl RoundInto<Self::Coord>,
-    ) -> Self::FBuilder {
+    ) -> Self::FontBuilder {
         let font = WebFont {
             family: name.to_owned(),
             size: size.round_into(),
@@ -119,7 +119,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         WebFontBuilder(font)
     }
 
-    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TLBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
@@ -131,7 +131,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
 
     fn draw_text(
         &mut self,
-        layout: &Self::TL,
+        layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
     ) {

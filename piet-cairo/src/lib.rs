@@ -94,10 +94,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Brush = Brush;
     type StrokeStyle = StrokeStyle;
 
-    type F = CairoFont;
-    type FBuilder = CairoFontBuilder;
-    type TL = CairoTextLayout;
-    type TLBuilder = CairoTextLayoutBuilder;
+    type Font = CairoFont;
+    type FontBuilder = CairoFontBuilder;
+    type TextLayout = CairoTextLayout;
+    type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     fn clear(&mut self, rgb: u32) {
         self.ctx.set_source_rgb(
@@ -136,7 +136,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self,
         name: &str,
         size: impl RoundInto<Self::Coord>,
-    ) -> Self::FBuilder {
+    ) -> Self::FontBuilder {
         CairoFontBuilder {
             family: name.to_owned(),
             size: size.round_into(),
@@ -145,7 +145,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
     }
 
-    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
         let text_layout = CairoTextLayout {
             font: font.0.clone(),
             text: text.to_owned(),
@@ -155,7 +155,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn draw_text(
         &mut self,
-        layout: &Self::TL,
+        layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
     ) {

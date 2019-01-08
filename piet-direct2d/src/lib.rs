@@ -188,10 +188,10 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     type Brush = GenericBrush;
     type StrokeStyle = direct2d::stroke_style::StrokeStyle;
 
-    type F = D2DFont;
-    type FBuilder = D2DFontBuilder<'a>;
-    type TL = D2DTextLayout;
-    type TLBuilder = D2DTextLayoutBuilder<'a>;
+    type Font = D2DFont;
+    type FontBuilder = D2DFontBuilder<'a>;
+    type TextLayout = D2DTextLayout;
+    type TextLayoutBuilder = D2DTextLayoutBuilder<'a>;
 
     fn clear(&mut self, rgb: u32) {
         self.rt.clear(rgb);

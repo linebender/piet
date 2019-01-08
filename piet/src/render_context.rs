@@ -45,11 +45,11 @@ pub trait RenderContext {
     /// Parameters for the style of stroke operations.
     type StrokeStyle;
 
-    type FBuilder: FontBuilder<Out = Self::F>;
-    type F: Font;
+    type FontBuilder: FontBuilder<Out = Self::Font>;
+    type Font: Font;
 
-    type TLBuilder: TextLayoutBuilder<Out = Self::TL>;
-    type TL: TextLayout;
+    type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
+    type TextLayout: TextLayout;
 
     /// Create a new brush resource.
     ///
@@ -75,10 +75,13 @@ pub trait RenderContext {
     /// Fill a shape.
     fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule);
 
-    fn new_font_by_name(&mut self, name: &str, size: impl RoundInto<Self::Coord>)
-        -> Self::FBuilder;
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Self::FontBuilder;
 
-    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder;
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder;
 
     /// Draw a text layout.
     ///
@@ -86,7 +89,7 @@ pub trait RenderContext {
     /// the text. Note: this is true even if the text is right-to-left.
     fn draw_text(
         &mut self,
-        layout: &Self::TL,
+        layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
     );
