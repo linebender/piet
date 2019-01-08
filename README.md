@@ -1,4 +1,5 @@
 # Piet: a 2D graphics abstraction
+[![Build Status](https://travis-ci.com/linebender/piet.svg?branch=master)](https://travis-ci.com/linebender/piet)
 
 This repo holds an API for 2D graphics drawing.
 
