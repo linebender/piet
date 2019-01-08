@@ -228,7 +228,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self,
         name: &str,
         size: impl RoundInto<Self::Coord>,
-    ) -> Self::FBuilder {
+    ) -> Self::FontBuilder {
         // Note: the name is cloned here, rather than applied using `with_family` for
         // lifetime reasons. Maybe there's a better approach.
         D2DFontBuilder {
@@ -237,7 +237,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn new_text_layout(&mut self, font: &Self::F, text: &str) -> Self::TLBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
         // Same consideration as above, we clone the font and text for lifetime
         // reasons.
         D2DTextLayoutBuilder {
@@ -249,7 +249,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn draw_text(
         &mut self,
-        layout: &Self::TL,
+        layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
     ) {
