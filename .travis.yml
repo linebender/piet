@@ -1,0 +1,19 @@
+os:
+  - windows
+
+language: rust
+
+rust:
+  - 1.31.1
+  - stable
+  - beta
+  - nightly
+
+cache: cargo
+before_script:
+  - rustup component add rustfmt
+script:
+  - if [[ "$TRAVIS_RUST_VERSION" = stable ]]; then cargo fmt --all -- --check; fi
+  - RUSTFLAGS="-D warnings" cargo check --all || exit
+  - cargo build
+  - cargo test
