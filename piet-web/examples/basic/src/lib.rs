@@ -57,7 +57,7 @@ pub fn run() {
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
 
-    let dpr = window().map(|w| w.device_pixel_ratio()).unwrap_or(1.0);
+    let dpr = window().unwrap().device_pixel_ratio();
     canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
     canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
     let _ = context.scale(dpr, dpr);

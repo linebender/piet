@@ -1,5 +1,7 @@
 //! The Web Canvas backend for the Piet 2D graphics abstraction.
 
+use std::fmt;
+
 use wasm_bindgen::JsValue;
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
 
@@ -30,8 +32,7 @@ pub enum StrokeStyle {
 pub struct WebFont {
     family: String,
     weight: u32,
-    // Maybe this should be enum? Everything is stringly typed...
-    style: &'static str,
+    style: FontStyle,
     size: f64,
 }
 
@@ -47,6 +48,25 @@ pub struct WebTextLayoutBuilder {
     ctx: CanvasRenderingContext2d,
     font: WebFont,
     text: String,
+}
+
+/// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
+#[derive(Clone)]
+enum FontStyle {
+    Normal,
+    Italic,
+    Oblique(Option<f64>),
+}
+
+impl fmt::Display for FontStyle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            FontStyle::Normal => write!(f, "normal"),
+            FontStyle::Italic => write!(f, "italic"),
+            FontStyle::Oblique(None) => write!(f, "oblique"),
+            FontStyle::Oblique(Some(angle)) => write!(f, "oblique {}deg", angle),
+        }
+    }
 }
 
 fn convert_fill_rule(fill_rule: piet::FillRule) -> CanvasWindingRule {
@@ -105,7 +125,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             family: name.to_owned(),
             size: size.round_into(),
             weight: 400,
-            style: "normal",
+            style: FontStyle::Normal,
         };
         WebFontBuilder(font)
     }
