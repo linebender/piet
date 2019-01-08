@@ -1,6 +1,6 @@
 //! The Web Canvas backend for the Piet 2D graphics abstraction.
 
-use std::fmt;
+use std::borrow::Cow;
 
 use wasm_bindgen::JsValue;
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
@@ -56,17 +56,6 @@ enum FontStyle {
     Normal,
     Italic,
     Oblique(Option<f64>),
-}
-
-impl fmt::Display for FontStyle {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            FontStyle::Normal => write!(f, "normal"),
-            FontStyle::Italic => write!(f, "italic"),
-            FontStyle::Oblique(None) => write!(f, "oblique"),
-            FontStyle::Oblique(Some(angle)) => write!(f, "oblique {}deg", angle),
-        }
-    }
 }
 
 fn convert_fill_rule(fill_rule: piet::FillRule) -> CanvasWindingRule {
@@ -229,9 +218,15 @@ impl Font for WebFont {}
 
 impl WebFont {
     fn get_font_string(&self) -> String {
+        let style_str = match self.style {
+            FontStyle::Normal => Cow::from("normal"),
+            FontStyle::Italic => Cow::from("italic"),
+            FontStyle::Oblique(None) => Cow::from("italic"),
+            FontStyle::Oblique(Some(angle)) => Cow::from(format!("oblique {}deg", angle)),
+        };
         format!(
             "{} {} {}px \"{}\"",
-            self.style, self.weight, self.size, self.family
+            style_str, self.weight, self.size, self.family
         )
     }
 }
