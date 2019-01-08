@@ -1,5 +1,7 @@
 os:
   - windows
+  - linux
+  - osx
 
 language: rust
 
@@ -13,7 +15,9 @@ cache: cargo
 before_script:
   - rustup component add rustfmt
 script:
+  - TO_RUN=(--all --exclude piet-direct2d)
+  - [[ "$TRAVIS_OS_NAME" = "windows" ]] && TO_RUN=(--all)
   - if [[ "$TRAVIS_RUST_VERSION" = stable ]]; then cargo fmt --all -- --check; fi
-  - RUSTFLAGS="-D warnings" cargo check --all || exit
-  - cargo build
-  - cargo test
+  - RUSTFLAGS="-D warnings" cargo check $TO_RUN || exit
+  - cargo build $TO_RUN
+  - cargo test $TO_RUN

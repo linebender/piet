@@ -51,6 +51,7 @@ pub struct WebTextLayoutBuilder {
 }
 
 /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
+#[allow(dead_code)] // TODO: Remove
 #[derive(Clone)]
 enum FontStyle {
     Normal,
