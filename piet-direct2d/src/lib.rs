@@ -296,4 +296,10 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
     }
 }
 
-impl TextLayout for D2DTextLayout {}
+impl TextLayout for D2DTextLayout {
+    type Coord = f32;
+
+    fn width(&self) -> f32 {
+        self.0.get_metrics().width()
+    }
+}

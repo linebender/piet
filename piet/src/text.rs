@@ -1,5 +1,7 @@
 //! Traits for fonts and text handling.
 
+use crate::RoundFrom;
+
 pub trait FontBuilder {
     type Out: Font;
 
@@ -16,4 +18,9 @@ pub trait TextLayoutBuilder {
     fn build(self) -> Self::Out;
 }
 
-pub trait TextLayout {}
+pub trait TextLayout {
+    type Coord: Into<f64> + RoundFrom<f64>;
+
+    /// Measure the advance width of the text.
+    fn width(&self) -> Self::Coord;
+}
