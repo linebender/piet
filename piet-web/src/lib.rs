@@ -51,6 +51,7 @@ pub struct WebTextLayoutBuilder {
 }
 
 /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
+#[allow(dead_code)] // TODO: Remove
 #[derive(Clone)]
 enum FontStyle {
     Normal,
@@ -119,7 +120,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         WebFontBuilder(font)
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TLBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.

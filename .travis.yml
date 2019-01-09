@@ -1,0 +1,19 @@
+os:
+  - linux
+
+language: rust
+
+rust:
+  - 1.31.1
+  - stable
+  - beta
+  - nightly
+
+cache: cargo
+before_script:
+  - rustup component add rustfmt
+script:
+  - if [[ "$TRAVIS_RUST_VERSION" = stable ]]; then cargo fmt --all -- --check; fi
+  - RUSTFLAGS="-D warnings" cargo check --all --exclude piet-direct2d || exit
+  - cargo build --all --exclude piet-direct2d
+  - cargo test --all --exclude piet-direct2d
