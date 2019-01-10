@@ -10,11 +10,13 @@ A companion for Bézier path representation and geometry is [kurbo].
 
 ## Roadmap
 
-Since the project is in its infant stages, there's not currently a set roadmap. For a good idea of what the library will eventually be capable of see [this list] of requirements to be a backend 2D graphics library for the SVG rendering library resvg.
+Since the project is in its infant stages, there's not currently a set roadmap. For a good idea of what the library will eventually be capable of see [this list][resvg backend requirements] of requirements to be a backend 2D graphics library for the SVG rendering library resvg.
 
 ## Contributing
 
 Contributions are welcome! It's in early stages, so there are lots of opportunities to fill things out.
+
+You can find other collaborators at [xi.zulipchat.com][zulip] under the #druid stream.
 
 ## Inspirations
 
@@ -27,7 +29,8 @@ The library is of course named after [Piet Mondrian]. It's abstract and hopefull
 [blog post]: https://raphlinus.github.io/rust/graphics/2018/10/11/2d-graphics.html
 [druid]: https://github.com/xi-editor/druid
 [kurbo]: https://github.com/linebender/kurbo
-[this list]: https://github.com/RazrFalcon/resvg/blob/master/docs/backend_requirements.md
+[resvg backend requirements]: https://github.com/RazrFalcon/resvg/blob/master/docs/backend_requirements.md
+[zulip]: https://xi.zulipchat.com
 [Skia Graphics Library]: https://skia.org
 [C++ 2D graphics api proposal]: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0267r8.pdf
 [Piet Mondrian]: https://en.wikipedia.org/wiki/Piet_Mondrian
