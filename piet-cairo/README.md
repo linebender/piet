@@ -16,12 +16,14 @@ The need for text shaping will be common to many low-level renderers that are no
 
 ## Building on non-Linux
 
-Cairo is quite portable, and it is quite feasible to build on other systems. However, the [cairo-rs] crate seems to expect a library to be provided, rather than building it from sources. On Windows, I've been using prebuilt binary releases from [cairo-windows].
+Cairo is quite portable, and it is quite feasible to build on other systems. However, the [cairo-rs] crate seems to expect a library to be provided, rather than building it from sources.
 
-See the [Gtk-rs requirements] page for more detailed instructions how to get it properly installed. On macOS with Homebrew, the following should work:
+On Windows, I've been using prebuilt binary releases from [cairo-windows].
+
+On macOS with Homebrew, the following should work:
 
 ```shell
-brew install gtk+3
+brew install cairo
 ```
 
 TODO: nicer installation instructions (contributions welcome)
