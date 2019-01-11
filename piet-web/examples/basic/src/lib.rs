@@ -91,4 +91,5 @@ pub fn run() {
 
     let mut piet_context = WebRenderContext::new(&mut context);
     draw_pretty_picture(&mut piet_context);
+    piet_context.finish();
 }

@@ -79,6 +79,7 @@ fn main() {
     cr.scale(HIDPI, HIDPI);
     let mut piet_context = CairoRenderContext::new(&mut cr);
     draw_pretty_picture(&mut piet_context);
+    piet_context.finish();
     let mut file = File::create("temp-cairo.png").expect("Couldn't create 'file.png'");
     surface
         .write_to_png(&mut file)
