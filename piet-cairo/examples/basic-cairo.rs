@@ -14,7 +14,6 @@ const TEXTURE_HEIGHT: i32 = 200;
 
 const HIDPI: f64 = 2.0;
 
-
 fn main() {
     // TODO: make selectable
     let test_picture_number = 0;

@@ -46,12 +46,7 @@ fn draw_picture_0(rc: &mut impl RenderContext) {
     let brush = rc.solid_brush(0x80_00_00_C0);
     rc.draw_text(&layout, (80.0, 10.0), &brush);
 
-    rc.stroke(
-        Line::new((80.0, 12.0), (80.0 + w, 12.0)),
-        &brush,
-        1.0,
-        None,
-    );
+    rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0, None);
 
     rc.save();
     rc.transform(Affine::rotate(0.1));
@@ -70,6 +65,9 @@ fn draw_picture_0(rc: &mut impl RenderContext) {
 pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) {
     match number {
         0 => draw_picture_0(rc),
-        _ => eprintln!("Don't have test picture {} yet. Why don't you make it?", number),
+        _ => eprintln!(
+            "Don't have test picture {} yet. Why don't you make it?",
+            number
+        ),
     }
 }
