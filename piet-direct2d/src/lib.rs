@@ -160,7 +160,7 @@ fn to_point2f<P: RoundInto<Point2>>(p: P) -> Point2F {
 fn path_from_shape(
     d2d: &direct2d::Factory,
     is_filled: bool,
-    shape: &impl Shape,
+    shape: impl Shape,
     fill_rule: FillRule,
 ) -> Path {
     let mut path = Path::create(d2d).unwrap();
@@ -245,7 +245,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
         // TODO: various special-case shapes, for efficiency
         let path = path_from_shape(self.factory, true, shape, fill_rule);
         self.rt.fill_geometry(&path, brush);
@@ -253,7 +253,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn stroke(
         &mut self,
-        shape: &impl Shape,
+        shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
@@ -264,7 +264,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .draw_geometry(&path, brush, width.round_into(), style);
     }
 
-    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule) {
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
         // TODO: set size based on bbox of shape.
         if let Ok(layer) = Layer::create(&mut self.rt, None) {
             let path = path_from_shape(self.factory, true, shape, fill_rule);

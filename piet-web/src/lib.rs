@@ -86,14 +86,14 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
         self.set_path(shape);
         self.set_brush(brush, true);
         self.ctx
             .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
     }
 
-    fn clip(&mut self, shape: &impl Shape, fill_rule: piet::FillRule) {
+    fn clip(&mut self, shape: impl Shape, fill_rule: piet::FillRule) {
         self.set_path(shape);
         self.ctx
             .clip_with_canvas_winding_rule(convert_fill_rule(fill_rule));
@@ -101,7 +101,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
 
     fn stroke(
         &mut self,
-        shape: &impl Shape,
+        shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
@@ -206,7 +206,7 @@ impl<'a> WebRenderContext<'a> {
         }
     }
 
-    fn set_path(&mut self, shape: &impl Shape) {
+    fn set_path(&mut self, shape: impl Shape) {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.begin_path();
