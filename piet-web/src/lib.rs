@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use wasm_bindgen::JsValue;
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
 
-use kurbo::{PathEl, Shape, Vec2};
+use kurbo::{Affine, PathEl, Shape, Vec2};
 
 use piet::{Font, FontBuilder, RenderContext, RoundInto, TextLayout, TextLayoutBuilder};
 

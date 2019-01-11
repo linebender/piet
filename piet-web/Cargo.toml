@@ -12,7 +12,7 @@ categories = ["rendering::graphics-api", "wasm"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-kurbo = {path = "/Users/raphl/github/kurbo"}
+kurbo = "0.2.0"
 piet = { path = "../piet" }
 
 wasm-bindgen = "0.2.30"
