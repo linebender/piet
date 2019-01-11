@@ -82,7 +82,7 @@ pub trait RenderContext {
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
-    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule) {}
+    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule);
 
     fn new_font_by_name(
         &mut self,
@@ -110,24 +110,24 @@ pub trait RenderContext {
     ///
     /// The context state currently consists of a clip region and an affine
     /// transform, but is expected to grow in the near future.
-    fn save(&mut self) {}
+    fn save(&mut self);
 
     /// Restore the context state.
     ///
     /// Pop a context state that was pushed by [`save`](#method.save). See
     /// that method for details.
-    fn restore(&mut self) {}
+    fn restore(&mut self);
 
     /// Finish any pending operations.
     ///
     /// This will generally be called by a shell after all user drawing
     /// operations but before presenting. Not all back-ends will handle this
     /// the same way.
-    fn finish(&mut self) {}
+    fn finish(&mut self);
 
     /// Apply a transform.
     ///
     /// Apply an affine transformation. The transformation remains in effect
     /// until a [`restore`](#method.restore) operation.
-    fn transform(&mut self, transform: Affine) {}
+    fn transform(&mut self, transform: Affine);
 }

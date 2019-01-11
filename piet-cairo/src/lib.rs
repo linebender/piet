@@ -180,8 +180,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.restore();
     }
 
-    fn finish(&mut self) {
-    }
+    fn finish(&mut self) {}
 
     fn transform(&mut self, transform: Affine) {
         self.ctx.transform(affine_to_matrix(transform));
