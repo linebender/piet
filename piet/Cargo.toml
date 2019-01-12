@@ -9,4 +9,4 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-kurbo = "0.1.2"
+kurbo = "0.2.0"

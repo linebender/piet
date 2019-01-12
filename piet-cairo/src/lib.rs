@@ -4,7 +4,7 @@ use cairo::{
     Context, FontFace, FontOptions, FontSlant, FontWeight, LineCap, LineJoin, Matrix, ScaledFont,
 };
 
-use kurbo::{PathEl, QuadBez, Shape, Vec2};
+use kurbo::{Affine, PathEl, QuadBez, Shape, Vec2};
 
 use piet::{FillRule, Font, FontBuilder, RenderContext, RoundInto, TextLayout, TextLayoutBuilder};
 
@@ -119,6 +119,12 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.fill();
     }
 
+    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule) {
+        self.set_path(shape);
+        self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
+        self.ctx.clip();
+    }
+
     fn stroke(
         &mut self,
         shape: &impl Shape,
@@ -164,6 +170,20 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let pos = pos.round_into();
         self.ctx.move_to(pos.x, pos.y);
         self.ctx.show_text(&layout.text);
+    }
+
+    fn save(&mut self) {
+        self.ctx.save();
+    }
+
+    fn restore(&mut self) {
+        self.ctx.restore();
+    }
+
+    fn finish(&mut self) {}
+
+    fn transform(&mut self, transform: Affine) {
+        self.ctx.transform(affine_to_matrix(transform));
     }
 }
 
@@ -240,6 +260,19 @@ impl<'a> CairoRenderContext<'a> {
 
 fn byte_to_frac(byte: u32) -> f64 {
     ((byte & 255) as f64) * (1.0 / 255.0)
+}
+
+/// Can't implement RoundFrom here because both types belong to other crates.
+fn affine_to_matrix(affine: Affine) -> Matrix {
+    let a = affine.as_coeffs();
+    Matrix {
+        xx: a[0],
+        yx: a[1],
+        xy: a[2],
+        yy: a[3],
+        x0: a[4],
+        y0: a[5],
+    }
 }
 
 fn scale_matrix(scale: f64) -> Matrix {

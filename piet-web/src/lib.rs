@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use wasm_bindgen::JsValue;
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
 
-use kurbo::{PathEl, Shape, Vec2};
+use kurbo::{Affine, PathEl, Shape, Vec2};
 
 use piet::{Font, FontBuilder, RenderContext, RoundInto, TextLayout, TextLayoutBuilder};
 
@@ -93,6 +93,12 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
     }
 
+    fn clip(&mut self, shape: &impl Shape, fill_rule: piet::FillRule) {
+        self.set_path(shape);
+        self.ctx
+            .clip_with_canvas_winding_rule(convert_fill_rule(fill_rule));
+    }
+
     fn stroke(
         &mut self,
         shape: &impl Shape,
@@ -141,6 +147,21 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         let pos = pos.round_into();
         // TODO: should we be tracking errors, or just ignoring them?
         let _ = self.ctx.fill_text(&layout.text, pos.x, pos.y);
+    }
+
+    fn save(&mut self) {
+        self.ctx.save();
+    }
+
+    fn restore(&mut self) {
+        self.ctx.restore();
+    }
+
+    fn finish(&mut self) {}
+
+    fn transform(&mut self, transform: Affine) {
+        let a = transform.as_coeffs();
+        let _ = self.ctx.transform(a[0], a[1], a[2], a[3], a[4], a[5]);
     }
 }
 

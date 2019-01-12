@@ -2,7 +2,7 @@
 
 use std::fs::File;
 
-use kurbo::{BezPath, Line};
+use kurbo::{Affine, BezPath, Line, Vec2};
 
 use cairo::{Context, Format, ImageSurface};
 
@@ -13,6 +13,23 @@ const TEXTURE_WIDTH: i32 = 400;
 const TEXTURE_HEIGHT: i32 = 200;
 
 const HIDPI: f64 = 2.0;
+
+// Note: this could be a Shape.
+fn star(center: Vec2, inner: f64, outer: f64, n: usize) -> BezPath {
+    let mut result = BezPath::new();
+    let d_th = std::f64::consts::PI / (n as f64);
+    for i in 0..n {
+        let outer_pt = center + outer * Vec2::from_angle(d_th * ((i * 2) as f64));
+        if i == 0 {
+            result.moveto(outer_pt);
+        } else {
+            result.lineto(outer_pt);
+        }
+        result.lineto(center + inner * Vec2::from_angle(d_th * ((i * 2 + 1) as f64)));
+    }
+    result.closepath();
+    result
+}
 
 fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
     rc.clear(0xFF_FF_FF);
@@ -43,6 +60,16 @@ fn draw_pretty_picture<R: RenderContext>(rc: &mut R) {
         1.0,
         None,
     );
+
+    rc.save();
+    rc.transform(Affine::rotate(0.1));
+    rc.draw_text(&layout, (80.0, 10.0), &brush);
+    rc.restore();
+
+    let clip_path = star(Vec2::new(90.0, 45.0), 10.0, 30.0, 24);
+    rc.clip(&clip_path, FillRule::NonZero);
+    let layout = rc.new_text_layout(&font, "Clipped text").build();
+    rc.draw_text(&layout, (80.0, 50.0), &brush);
 }
 
 fn main() {
@@ -52,6 +79,7 @@ fn main() {
     cr.scale(HIDPI, HIDPI);
     let mut piet_context = CairoRenderContext::new(&mut cr);
     draw_pretty_picture(&mut piet_context);
+    piet_context.finish();
     let mut file = File::create("temp-cairo.png").expect("Couldn't create 'file.png'");
     surface
         .write_to_png(&mut file)

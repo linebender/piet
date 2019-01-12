@@ -4,14 +4,15 @@ use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
 use direct2d::enums::{DrawTextOptions, FigureBegin, FigureEnd, FillMode};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
-use direct2d::math::{BezierSegment, Point2F, QuadBezierSegment, Vector2F};
+use direct2d::layer::Layer;
+use direct2d::math::{BezierSegment, Matrix3x2F, Point2F, QuadBezierSegment, Vector2F};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
 use directwrite::text_format::TextFormatBuilder;
 use directwrite::text_layout;
 use directwrite::TextFormat;
 
-use kurbo::{PathEl, Shape, Vec2};
+use kurbo::{Affine, PathEl, Shape, Vec2};
 
 use piet::{
     FillRule, Font, FontBuilder, RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
@@ -23,6 +24,9 @@ pub struct D2DRenderContext<'a> {
     // This is an owned clone, but after some direct2d refactor, it's likely we'll
     // hold a mutable reference.
     rt: GenericRenderTarget,
+
+    /// The context state stack. There is always at least one, until finishing.
+    ctx_stack: Vec<CtxState>,
 }
 
 pub struct D2DFont(TextFormat);
@@ -40,6 +44,15 @@ pub struct D2DTextLayoutBuilder<'a> {
     text: String,
 }
 
+#[derive(Default)]
+struct CtxState {
+    transform: Affine,
+
+    // Note: when we start pushing both layers and axis aligned clips, this will
+    // need to keep track of which is which. But for now, keep it simple.
+    n_layers_pop: usize,
+}
+
 impl<'a> D2DRenderContext<'a> {
     pub fn new<RT: RenderTarget>(
         factory: &'a direct2d::Factory,
@@ -50,6 +63,18 @@ impl<'a> D2DRenderContext<'a> {
             factory,
             dwrite,
             rt: rt.as_generic(),
+            ctx_stack: vec![CtxState::default()],
+        }
+    }
+
+    fn current_transform(&self) -> Affine {
+        self.ctx_stack.last().unwrap().transform
+    }
+
+    fn pop_state(&mut self) {
+        let old_state = self.ctx_stack.pop().unwrap();
+        for _ in 0..old_state.n_layers_pop {
+            self.rt.pop_layer();
         }
     }
 }
@@ -101,6 +126,17 @@ impl From<Point2> for Vec2 {
     fn from(vec: Point2) -> Vec2 {
         Vec2::new(vec.0.x as f64, vec.0.y as f64)
     }
+}
+
+/// Can't implement RoundFrom here because both types belong to other
+/// crates. Consider moving to kurbo (with windows feature).
+fn affine_to_matrix3x2f(affine: Affine) -> Matrix3x2F {
+    let a = affine.as_coeffs();
+    Matrix3x2F::new([
+        [a[0] as f32, a[1] as f32],
+        [a[2] as f32, a[3] as f32],
+        [a[4] as f32, a[5] as f32],
+    ])
 }
 
 enum PathBuilder<'a> {
@@ -178,6 +214,10 @@ fn path_from_shape(
                 _ => (),
             }
         }
+        if let Some(b) = builder.take() {
+            // TODO: think about what to do on error
+            let _ = b.finish_figure().close();
+        }
     }
     path
 }
@@ -224,6 +264,25 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .draw_geometry(&path, brush, width.round_into(), style);
     }
 
+    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule) {
+        // TODO: set size based on bbox of shape.
+        if let Ok(layer) = Layer::create(&mut self.rt, None) {
+            let path = path_from_shape(self.factory, true, shape, fill_rule);
+            // TODO: we get a use-after-free crash if we don't do this. Almost certainly
+            // this will be fixed in direct2d 0.3, so remove workaround when upgrading.
+            let _clone = path.clone();
+            let transform = affine_to_matrix3x2f(self.current_transform());
+            self.rt
+                .push_layer(&layer)
+                .with_mask(path)
+                .with_mask_transform(transform)
+                .push();
+            self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
+        } else {
+            // TODO: error handling. Very unlikely to happen but maybe?
+        }
+    }
+
     fn new_font_by_name(
         &mut self,
         name: &str,
@@ -267,6 +326,40 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
         self.rt
             .draw_text_layout(pos, &layout.0, brush, text_options);
+    }
+
+    fn save(&mut self) {
+        let new_state = CtxState {
+            transform: self.current_transform(),
+            n_layers_pop: 0,
+        };
+        self.ctx_stack.push(new_state);
+    }
+
+    fn restore(&mut self) {
+        if self.ctx_stack.len() <= 1 {
+            panic!("restore without corresponding save");
+        }
+        self.pop_state();
+        // Move this code into impl to avoid duplication with transform?
+        self.rt
+            .set_transform(&affine_to_matrix3x2f(self.current_transform()));
+    }
+
+    // TODO: should we panic on unbalanced stack? Maybe warn? Maybe have an
+    // error result that reports the problem?
+    //
+    // Discussion question: should this subsume EndDraw, with BeginDraw on
+    // D2DRenderContext creation? I'm thinking not, as the shell might want
+    // to do other stuff, possibly related to incremental paint.
+    fn finish(&mut self) {
+        self.pop_state();
+    }
+
+    fn transform(&mut self, transform: Affine) {
+        self.ctx_stack.last_mut().unwrap().transform *= transform;
+        self.rt
+            .set_transform(&affine_to_matrix3x2f(self.current_transform()));
     }
 }
 
