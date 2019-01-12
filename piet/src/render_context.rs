@@ -120,6 +120,9 @@ pub trait RenderContext {
     /// Pushes the current context state onto a stack, to be popped by
     /// [`restore`](#method.restore).
     ///
+    /// Prefer [`with_save`](#method.with_save) if possible, as that statically
+    /// enforces balance of save/restore pairs.
+    ///
     /// The context state currently consists of a clip region and an affine
     /// transform, but is expected to grow in the near future.
     fn save(&mut self);
@@ -129,6 +132,16 @@ pub trait RenderContext {
     /// Pop a context state that was pushed by [`save`](#method.save). See
     /// that method for details.
     fn restore(&mut self);
+
+    /// Do graphics operations with the context state saved and then restored.
+    ///
+    /// Equivalent to [`save`](#method.save), calling `f`, then
+    /// [`restore`](#method.restore). See those methods for more details.
+    fn with_save(&mut self, f: impl FnOnce(&mut Self)) {
+        self.save();
+        f(self);
+        self.restore();
+    }
 
     /// Finish any pending operations.
     ///

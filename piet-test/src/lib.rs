@@ -64,10 +64,10 @@ fn draw_picture_0(rc: &mut impl RenderContext) {
 
     rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0, None);
 
-    rc.save();
-    rc.transform(Affine::rotate(0.1));
-    rc.draw_text(&layout, (80.0, 10.0), &brush);
-    rc.restore();
+    rc.with_save(|rc| {
+        rc.transform(Affine::rotate(0.1));
+        rc.draw_text(&layout, (80.0, 10.0), &brush);
+    });
 
     let image_data = make_image_data(256, 256);
     let image = rc.make_rgba_image(256, 256, &image_data);
