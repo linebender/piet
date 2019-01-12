@@ -1,6 +1,6 @@
 //! The main render context trait.
 
-use kurbo::{Affine, Shape, Vec2};
+use kurbo::{Affine, Rect, Shape, Vec2};
 
 use crate::{Font, FontBuilder, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder};
 
@@ -11,6 +11,15 @@ pub enum FillRule {
     NonZero,
     /// Fill everything with an odd winding number.
     EvenOdd,
+}
+
+/// A requested interpolation mode for drawing images.
+#[derive(Clone, Copy, PartialEq)]
+pub enum InterpolationMode {
+    /// Don't interpolate, use nearest neighbor.
+    NearestNeighbor,
+    /// Use bilinear interpolation.
+    Bilinear,
 }
 
 /// The main trait for rendering graphics.
@@ -50,6 +59,9 @@ pub trait RenderContext {
 
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
+
+    /// The associated type of an image.
+    type Image;
 
     /// Create a new brush resource.
     ///
@@ -130,4 +142,15 @@ pub trait RenderContext {
     /// Apply an affine transformation. The transformation remains in effect
     /// until a [`restore`](#method.restore) operation.
     fn transform(&mut self, transform: Affine);
+
+    /// Create a new image from RGBA data.
+    ///
+    /// The alpha is interpreted as premultiplied.
+    fn make_rgba_image(&mut self, width: usize, height: usize, buf: &[u8]) -> Self::Image;
+
+    /// Draw an image.
+    ///
+    /// The image is scaled to the provided `rect`. It will be squashed if
+    /// aspect ratios don't match.
+    fn draw_image(&mut self, image: &Self::Image, rect: impl Into<Rect>, interp: InterpolationMode);
 }

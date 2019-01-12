@@ -1,21 +1,30 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
+use winapi::shared::basetsd::UINT32;
+use winapi::um::dcommon::D2D_SIZE_U;
+
+use dxgi::Format;
+
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
-use direct2d::enums::{DrawTextOptions, FigureBegin, FigureEnd, FillMode};
+use direct2d::enums::{BitmapInterpolationMode, DrawTextOptions, FigureBegin, FigureEnd, FillMode};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
+use direct2d::image::Bitmap;
 use direct2d::layer::Layer;
-use direct2d::math::{BezierSegment, Matrix3x2F, Point2F, QuadBezierSegment, Vector2F};
+use direct2d::math::{
+    BezierSegment, Matrix3x2F, Point2F, QuadBezierSegment, RectF, SizeU, Vector2F,
+};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
 use directwrite::text_format::TextFormatBuilder;
 use directwrite::text_layout;
 use directwrite::TextFormat;
 
-use kurbo::{Affine, PathEl, Shape, Vec2};
+use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    FillRule, Font, FontBuilder, RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
+    FillRule, Font, FontBuilder, InterpolationMode, RenderContext, RoundFrom, RoundInto,
+    TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -139,6 +148,17 @@ fn affine_to_matrix3x2f(affine: Affine) -> Matrix3x2F {
     ])
 }
 
+// TODO: consider adding to kurbo.
+fn rect_to_rectf(rect: Rect) -> RectF {
+    (
+        rect.x0 as f32,
+        rect.y0 as f32,
+        rect.x1 as f32,
+        rect.y1 as f32,
+    )
+        .into()
+}
+
 enum PathBuilder<'a> {
     Geom(GeometryBuilder<'a>),
     Fig(FigureBuilder<'a>),
@@ -232,6 +252,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     type FontBuilder = D2DFontBuilder<'a>;
     type TextLayout = D2DTextLayout;
     type TextLayoutBuilder = D2DTextLayoutBuilder<'a>;
+
+    type Image = Bitmap;
 
     fn clear(&mut self, rgb: u32) {
         self.rt.clear(rgb);
@@ -360,6 +382,38 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         self.ctx_stack.last_mut().unwrap().transform *= transform;
         self.rt
             .set_transform(&affine_to_matrix3x2f(self.current_transform()));
+    }
+
+    fn make_rgba_image(&mut self, width: usize, height: usize, buf: &[u8]) -> Self::Image {
+        // TODO: this method _really_ needs error checking, so much can go wrong...
+        Bitmap::create(&self.rt)
+            .with_raw_data(
+                SizeU(D2D_SIZE_U {
+                    width: width as UINT32,
+                    height: height as UINT32,
+                }),
+                buf,
+                width as UINT32 * 4,
+            )
+            .with_format(Format::R8G8B8A8Unorm)
+            .build()
+            .expect("error creating bitmap")
+    }
+
+    fn draw_image(
+        &mut self,
+        image: &Self::Image,
+        rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    ) {
+        let interp = match interp {
+            InterpolationMode::NearestNeighbor => BitmapInterpolationMode::NearestNeighbor,
+            InterpolationMode::Bilinear => BitmapInterpolationMode::Linear,
+        };
+        let src_size = image.get_size();
+        let src_rect = (0.0, 0.0, src_size.0.width, src_size.0.height);
+        self.rt
+            .draw_bitmap(&image, rect_to_rectf(rect.into()), 1.0, interp, src_rect);
     }
 }
 

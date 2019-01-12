@@ -5,9 +5,11 @@ use std::borrow::Cow;
 use wasm_bindgen::JsValue;
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
 
-use kurbo::{Affine, PathEl, Shape, Vec2};
+use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
-use piet::{Font, FontBuilder, RenderContext, RoundInto, TextLayout, TextLayoutBuilder};
+use piet::{
+    Font, FontBuilder, InterpolationMode, RenderContext, RoundInto, TextLayout, TextLayoutBuilder,
+};
 
 pub struct WebRenderContext<'a> {
     ctx: &'a mut CanvasRenderingContext2d,
@@ -77,6 +79,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     type FontBuilder = WebFontBuilder;
     type TextLayout = WebTextLayout;
     type TextLayoutBuilder = WebTextLayoutBuilder;
+
+    type Image = ();
 
     fn clear(&mut self, _rgb: u32) {
         // TODO: we might need to know the size of the canvas to do this.
@@ -162,6 +166,16 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     fn transform(&mut self, transform: Affine) {
         let a = transform.as_coeffs();
         let _ = self.ctx.transform(a[0], a[1], a[2], a[3], a[4], a[5]);
+    }
+
+    fn make_rgba_image(&mut self, _width: usize, _height: usize, _buf: &[u8]) -> Self::Image {}
+
+    fn draw_image(
+        &mut self,
+        _image: &Self::Image,
+        _rect: impl Into<Rect>,
+        _interp: InterpolationMode,
+    ) {
     }
 }
 
