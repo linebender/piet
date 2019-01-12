@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 
 use wasm_bindgen::JsValue;
-use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
+use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, Window};
 
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
@@ -13,11 +13,13 @@ use piet::{
 
 pub struct WebRenderContext<'a> {
     ctx: &'a mut CanvasRenderingContext2d,
+    /// Used for creating image bitmaps and possibly other resources.
+    window: &'a Window,
 }
 
 impl<'a> WebRenderContext<'a> {
-    pub fn new(ctx: &mut CanvasRenderingContext2d) -> WebRenderContext {
-        WebRenderContext { ctx }
+    pub fn new(ctx: &'a mut CanvasRenderingContext2d, window: &'a Window) -> WebRenderContext<'a> {
+        WebRenderContext { ctx, window }
     }
 }
 
