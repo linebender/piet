@@ -66,7 +66,7 @@ pub trait RenderContext {
     /// Stroke a shape.
     fn stroke(
         &mut self,
-        shape: &impl Shape,
+        shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
@@ -76,13 +76,13 @@ pub trait RenderContext {
 
     // TODO: switch last two argument order to be more similar to clip? Maybe we
     // should have a convention, geometry first.
-    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule);
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule);
 
     /// Clip to a shape.
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
-    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule);
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule);
 
     fn new_font_by_name(
         &mut self,

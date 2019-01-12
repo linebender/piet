@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 piet = { path = "../../../piet" }
 piet-web = { path = "../.." }
+piet-test = { path = "../../../piet-test" }
 wasm-bindgen = "0.2.30"
 kurbo = "0.2.0"
 

@@ -112,14 +112,14 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Brush::Solid(rgba)
     }
 
-    fn fill(&mut self, shape: &impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
         self.set_path(shape);
         self.set_brush(brush);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.fill();
     }
 
-    fn clip(&mut self, shape: &impl Shape, fill_rule: FillRule) {
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
         self.set_path(shape);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.clip();
@@ -127,7 +127,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn stroke(
         &mut self,
-        shape: &impl Shape,
+        shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
@@ -226,7 +226,7 @@ impl<'a> CairoRenderContext<'a> {
         }
     }
 
-    fn set_path(&mut self, shape: &impl Shape) {
+    fn set_path(&mut self, shape: impl Shape) {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.new_path();
