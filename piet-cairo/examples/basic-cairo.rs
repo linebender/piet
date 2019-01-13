@@ -15,8 +15,11 @@ const TEXTURE_HEIGHT: i32 = 200;
 const HIDPI: f64 = 2.0;
 
 fn main() {
-    // TODO: make selectable
-    let test_picture_number = 0;
+    let test_picture_number = std::env::args()
+        .skip(1)
+        .next()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(0);
 
     let surface = ImageSurface::create(Format::ARgb32, TEXTURE_WIDTH, TEXTURE_HEIGHT)
         .expect("Can't create surface");
