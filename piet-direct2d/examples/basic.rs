@@ -23,8 +23,11 @@ const TEXTURE_HEIGHT_S: usize = TEXTURE_HEIGHT as usize;
 const HIDPI: f32 = 2.0;
 
 fn main() {
-    // TODO: make selectable
-    let test_picture_number = 0;
+    let test_picture_number = std::env::args()
+        .skip(1)
+        .next()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(0);
 
     // Create the D2D factory
     let d2d = direct2d::factory::Factory::new().unwrap();
