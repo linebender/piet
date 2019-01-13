@@ -10,6 +10,13 @@ cache: cargo
 before_script:
   - rustup component add rustfmt
 script:
+  - ls ~/.rustup/
+  - ls ~/.rustup/toolchains
+  - ls ~/.rustup/toolchains/stable-x86_64-pc-windows-msvc/
+  - ls ~/.rustup/toolchains/stable-x86_64-pc-windows-msvc/lib/
+  - ls ~/.rustup/toolchains/stable-x86_64-pc-windows-msvc/lib/rustlib/
+  - ls ~/.rustup/toolchains/stable-x86_64-pc-windows-msvc/lib/rustlib/x86_64-pc-windows-msvc/
+  - ls ~/.rustup/toolchains/stable-x86_64-pc-windows-msvc/lib/rustlib/x86_64-pc-windows-msvc/lib
   - if [[ "$TRAVIS_OS_NAME" = "windows" ]]; then wget https://github.com/preshing/cairo-windows/releases/download/1.15.12/cairo-windows-1.15.12.zip; unzip -o cairo-windows-1.15.12.zip; cp cairo-windows-1.15.12/lib/x64/* ~/.rustup/toolchains/stable-x86_64-pc-windows-msvc/lib/rustlib/x86_64-pc-windows-msvc/lib; fi
   - if [[ "$TRAVIS_RUST_VERSION" = stable ]]; then cargo fmt --all -- --check; fi
   - RUSTFLAGS="-D warnings" cargo check --all || exit
