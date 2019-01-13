@@ -1,21 +1,17 @@
 os:
-  - osx
-  - linux
+  - windows
 
 language: rust
 
 rust:
   - 1.31.1
-  - stable
-  - beta
-  - nightly
 
 cache: cargo
 before_script:
   - rustup component add rustfmt
 script:
-  - if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then brew update; brew install cairo; fi
+  - if [[ "$TRAVIS_OS_NAME" = "windows" ]]; then wget https://github.com/preshing/cairo-windows/releases/download/1.15.12/cairo-windows-1.15.12.zip; 7z e cairo-windows-1.15.12.zip; cp cairo-windows-1.15.12/include/lib/x64/* ~/.rustup/toolchains/stable-x86_64-pc-windows-msvc/lib/rustlib/x86_64-pc-windows-msvc/lib; fi
   - if [[ "$TRAVIS_RUST_VERSION" = stable ]]; then cargo fmt --all -- --check; fi
-  - RUSTFLAGS="-D warnings" cargo check --all --exclude piet-direct2d || exit
-  - cargo build --all --exclude piet-direct2d
-  - cargo test --all --exclude piet-direct2d
+  - RUSTFLAGS="-D warnings" cargo check --all || exit
+  - cargo build
+  - cargo test
