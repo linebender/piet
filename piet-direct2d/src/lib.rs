@@ -1,12 +1,16 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
+use std::borrow::Cow;
+
 use winapi::shared::basetsd::UINT32;
 use winapi::um::dcommon::D2D_SIZE_U;
 
 use dxgi::Format;
 
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
-use direct2d::enums::{BitmapInterpolationMode, DrawTextOptions, FigureBegin, FigureEnd, FillMode};
+use direct2d::enums::{
+    AlphaMode, BitmapInterpolationMode, DrawTextOptions, FigureBegin, FigureEnd, FillMode,
+};
 use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
 use direct2d::image::Bitmap;
@@ -23,8 +27,8 @@ use directwrite::TextFormat;
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    FillRule, Font, FontBuilder, InterpolationMode, RenderContext, RoundFrom, RoundInto,
-    TextLayout, TextLayoutBuilder,
+    FillRule, Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundFrom,
+    RoundInto, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -384,18 +388,59 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .set_transform(&affine_to_matrix3x2f(self.current_transform()));
     }
 
-    fn make_rgba_image(&mut self, width: usize, height: usize, buf: &[u8]) -> Self::Image {
+    fn make_image(
+        &mut self,
+        width: usize,
+        height: usize,
+        buf: &[u8],
+        format: ImageFormat,
+    ) -> Self::Image {
         // TODO: this method _really_ needs error checking, so much can go wrong...
+        let alpha_mode = match format {
+            ImageFormat::Rgb => AlphaMode::Ignore,
+            ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => AlphaMode::Premultiplied,
+            _ => panic!("Unexpected image format {:?}", format),
+        };
+        let buf = match format {
+            ImageFormat::Rgb => {
+                let mut new_buf = vec![255; width * height * 4];
+                for i in 0..width * height {
+                    new_buf[i * 4 + 0] = buf[i * 3 + 0];
+                    new_buf[i * 4 + 1] = buf[i * 3 + 1];
+                    new_buf[i * 4 + 2] = buf[i * 3 + 2];
+                }
+                Cow::from(new_buf)
+            }
+            ImageFormat::RgbaSeparate => {
+                let mut new_buf = vec![255; width * height * 4];
+                // TODO (performance): this would be soooo much faster with SIMD
+                fn premul(x: u8, a: u8) -> u8 {
+                    let y = (x as u16) * (a as u16);
+                    ((y + (y >> 8) + 0x80) >> 8) as u8
+                }
+                for i in 0..width * height {
+                    let a = buf[i * 4 + 3];
+                    new_buf[i * 4 + 0] = premul(buf[i * 4 + 0], a);
+                    new_buf[i * 4 + 1] = premul(buf[i * 4 + 1], a);
+                    new_buf[i * 4 + 2] = premul(buf[i * 4 + 2], a);
+                    new_buf[i * 4 + 3] = a;
+                }
+                Cow::from(new_buf)
+            }
+            ImageFormat::RgbaPremul => Cow::from(buf),
+            _ => panic!("Unexpected image format {:?}", format),
+        };
         Bitmap::create(&self.rt)
             .with_raw_data(
                 SizeU(D2D_SIZE_U {
                     width: width as UINT32,
                     height: height as UINT32,
                 }),
-                buf,
+                &buf,
                 width as UINT32 * 4,
             )
             .with_format(Format::R8G8B8A8Unorm)
+            .with_alpha_mode(alpha_mode)
             .build()
             .expect("error creating bitmap")
     }

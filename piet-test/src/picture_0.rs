@@ -3,7 +3,8 @@
 use kurbo::{Affine, BezPath, Line, Vec2};
 
 use piet::{
-    FillRule, FontBuilder, InterpolationMode, RenderContext, TextLayout, TextLayoutBuilder,
+    FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub fn draw(rc: &mut impl RenderContext) {
@@ -37,7 +38,7 @@ pub fn draw(rc: &mut impl RenderContext) {
     });
 
     let image_data = make_image_data(256, 256);
-    let image = rc.make_rgba_image(256, 256, &image_data);
+    let image = rc.make_image(256, 256, &image_data, ImageFormat::RgbaSeparate);
     rc.draw_image(
         &image,
         ((150.0, 50.0), (180.0, 80.0)),
@@ -75,7 +76,7 @@ fn make_image_data(width: usize, height: usize) -> Vec<u8> {
             result[ix + 0] = x as u8;
             result[ix + 1] = y as u8;
             result[ix + 2] = !(x as u8);
-            result[ix + 3] = 255;
+            result[ix + 3] = 127;
         }
     }
     result

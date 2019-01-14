@@ -22,6 +22,30 @@ pub enum InterpolationMode {
     Bilinear,
 }
 
+/// The pixel format for bitmap images.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ImageFormat {
+    /// 3 bytes per pixel, in RGB order.
+    Rgb,
+    /// 4 bytes per pixel, in RGBA order, with separate alpha.
+    RgbaSeparate,
+    /// 4 bytes per pixel, in RGBA order, with premultiplied alpha.
+    RgbaPremul,
+    /// More formats may be added later.
+    #[doc(hidden)]
+    _NonExhaustive,
+}
+
+impl ImageFormat {
+    pub fn bytes_per_pixel(&self) -> usize {
+        match *self {
+            ImageFormat::Rgb => 3,
+            ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => 4,
+            _ => panic!(),
+        }
+    }
+}
+
 /// The main trait for rendering graphics.
 ///
 /// This trait provides an API for drawing 2D graphics. In basic usage, it
@@ -156,10 +180,14 @@ pub trait RenderContext {
     /// until a [`restore`](#method.restore) operation.
     fn transform(&mut self, transform: Affine);
 
-    /// Create a new image from RGBA data.
-    ///
-    /// The alpha is interpreted as premultiplied.
-    fn make_rgba_image(&mut self, width: usize, height: usize, buf: &[u8]) -> Self::Image;
+    /// Create a new image from a pixel buffer.
+    fn make_image(
+        &mut self,
+        width: usize,
+        height: usize,
+        buf: &[u8],
+        format: ImageFormat,
+    ) -> Self::Image;
 
     /// Draw an image.
     ///

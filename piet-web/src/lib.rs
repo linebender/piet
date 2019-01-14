@@ -8,7 +8,8 @@ use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, Im
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    Font, FontBuilder, InterpolationMode, RenderContext, RoundInto, TextLayout, TextLayoutBuilder,
+    Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -178,14 +179,54 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         let _ = self.ctx.transform(a[0], a[1], a[2], a[3], a[4], a[5]);
     }
 
-    fn make_rgba_image(&mut self, width: usize, height: usize, buf: &[u8]) -> Self::Image {
+    fn make_image(
+        &mut self,
+        width: usize,
+        height: usize,
+        buf: &[u8],
+        format: ImageFormat,
+    ) -> Self::Image {
         let document = self.window.document().unwrap();
         let element = document.create_element("canvas").unwrap();
         let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();
         canvas.set_width(width as u32);
         canvas.set_height(height as u32);
-        // Discussion topic: if buf were mut here, we could probably avoid this clone.
-        let mut buf = buf.to_vec();
+        let mut buf = match format {
+            // Discussion topic: if buf were mut here, we could probably avoid this clone.
+            // See https://github.com/rustwasm/wasm-bindgen/issues/1005 for an issue that might
+            // also resolve the need to clone.
+            ImageFormat::RgbaSeparate => buf.to_vec(),
+            ImageFormat::RgbaPremul => {
+                fn unpremul(x: u8, a: u8) -> u8 {
+                    if a == 0 {
+                        0
+                    } else {
+                        let y = (x as u32 * 255 + (a as u32 / 2)) / (a as u32);
+                        y.min(255) as u8
+                    }
+                }
+                let mut new_buf = vec![0; width * height * 4];
+                for i in 0..width * height {
+                    let a = buf[i * 4 + 3];
+                    new_buf[i * 4 + 0] = unpremul(buf[i * 4 + 0], a);
+                    new_buf[i * 4 + 1] = unpremul(buf[i * 4 + 1], a);
+                    new_buf[i * 4 + 2] = unpremul(buf[i * 4 + 2], a);
+                    new_buf[i * 4 + 3] = a;
+                }
+                new_buf
+            }
+            ImageFormat::Rgb => {
+                let mut new_buf = vec![0; width * height * 4];
+                for i in 0..width * height {
+                    new_buf[i * 4 + 0] = buf[i * 3 + 0];
+                    new_buf[i * 4 + 1] = buf[i * 3 + 1];
+                    new_buf[i * 4 + 2] = buf[i * 3 + 2];
+                    new_buf[i * 4 + 3] = 255;
+                }
+                new_buf
+            }
+            _ => Vec::new(),
+        };
         let image_data =
             ImageData::new_with_u8_clamped_array(Clamped(&mut buf), width as u32).unwrap();
         let context = canvas
