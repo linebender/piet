@@ -2,8 +2,8 @@
 
 use std::borrow::Cow;
 
-use wasm_bindgen::JsValue;
-use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, Window};
+use wasm_bindgen::{Clamped, JsCast, JsValue};
+use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData, Window};
 
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
@@ -54,6 +54,14 @@ pub struct WebTextLayoutBuilder {
     text: String,
 }
 
+pub struct WebImage {
+    /// We use a canvas element for now, but could be ImageData or ImageBitmap,
+    /// so consider an enum.
+    inner: HtmlCanvasElement,
+    width: u32,
+    height: u32,
+}
+
 /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
 #[allow(dead_code)] // TODO: Remove
 #[derive(Clone)]
@@ -82,7 +90,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     type TextLayout = WebTextLayout;
     type TextLayoutBuilder = WebTextLayoutBuilder;
 
-    type Image = ();
+    type Image = WebImage;
 
     fn clear(&mut self, _rgb: u32) {
         // TODO: we might need to know the size of the canvas to do this.
@@ -170,14 +178,48 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         let _ = self.ctx.transform(a[0], a[1], a[2], a[3], a[4], a[5]);
     }
 
-    fn make_rgba_image(&mut self, _width: usize, _height: usize, _buf: &[u8]) -> Self::Image {}
+    fn make_rgba_image(&mut self, width: usize, height: usize, buf: &[u8]) -> Self::Image {
+        let document = self.window.document().unwrap();
+        let element = document.create_element("canvas").unwrap();
+        let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();
+        canvas.set_width(width as u32);
+        canvas.set_height(height as u32);
+        // Discussion topic: if buf were mut here, we could probably avoid this clone.
+        let mut buf = buf.to_vec();
+        let image_data =
+            ImageData::new_with_u8_clamped_array(Clamped(&mut buf), width as u32).unwrap();
+        let context = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+            .unwrap();
+        let _ = context.put_image_data(&image_data, 0.0, 0.0);
+        WebImage {
+            inner: canvas,
+            width: width as u32,
+            height: height as u32,
+        }
+    }
 
     fn draw_image(
         &mut self,
-        _image: &Self::Image,
-        _rect: impl Into<Rect>,
+        image: &Self::Image,
+        rect: impl Into<Rect>,
         _interp: InterpolationMode,
     ) {
+        let rect = rect.into();
+        self.ctx.save();
+        // TODO: handle error
+        let _ = self.ctx.translate(rect.x0, rect.y0);
+        let _ = self.ctx.scale(
+            rect.width() / (image.width as f64),
+            rect.height() / (image.height as f64),
+        );
+        let _ = self
+            .ctx
+            .draw_image_with_html_canvas_element(&image.inner, 0.0, 0.0);
+        self.ctx.restore();
     }
 }
 
