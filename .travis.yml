@@ -1,5 +1,7 @@
 os:
   - linux
+  - windows
+  - osx
 
 language: rust
 
