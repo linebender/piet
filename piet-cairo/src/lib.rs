@@ -1,15 +1,18 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
+use std::fmt;
+
 use cairo::{
-    Context, Filter, FontFace, FontOptions, FontSlant, FontWeight, Format, ImageSurface, LineCap,
-    LineJoin, Matrix, Pattern, PatternTrait, ScaledFont, SurfacePattern,
+    BorrowError, Context, Filter, FontFace, FontOptions, FontSlant, FontWeight, Format,
+    ImageSurface, LineCap, LineJoin, Matrix, Pattern, PatternTrait, ScaledFont, Status,
+    SurfacePattern,
 };
 
 use kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
-    Error, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto,
-    TextLayout, TextLayoutBuilder,
+    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
+    RenderContext, RoundInto, TextLayout, TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -52,6 +55,41 @@ pub struct CairoTextLayout {
 }
 
 pub struct CairoTextLayoutBuilder(CairoTextLayout);
+
+#[derive(Debug)]
+struct WrappedStatus(Status);
+
+impl fmt::Display for WrappedStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Cairo error: {:?}", self.0)
+    }
+}
+
+impl std::error::Error for WrappedStatus {}
+
+trait WrapError<T> {
+    fn wrap(self) -> Result<T, Error>;
+}
+
+// Discussion question: a blanket impl here should be pretty doable.
+
+impl<T> WrapError<T> for Result<T, BorrowError> {
+    fn wrap(self) -> Result<T, Error> {
+        self.map_err(|e| {
+            let e: Box<dyn std::error::Error> = Box::new(e);
+            e.into()
+        })
+    }
+}
+
+impl<T> WrapError<T> for Result<T, Status> {
+    fn wrap(self) -> Result<T, Error> {
+        self.map_err(|e| {
+            let e: Box<dyn std::error::Error> = Box::new(WrappedStatus(e));
+            e.into()
+        })
+    }
+}
 
 impl StrokeStyle {
     pub fn new() -> StrokeStyle {
@@ -105,30 +143,38 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     type Image = ImageSurface;
 
-    fn clear(&mut self, rgb: u32) {
+    fn clear(&mut self, rgb: u32) -> Result<(), Error> {
         self.ctx.set_source_rgb(
             byte_to_frac(rgb >> 16),
             byte_to_frac(rgb >> 8),
             byte_to_frac(rgb),
         );
         self.ctx.paint();
+        self.status()
     }
 
-    fn solid_brush(&mut self, rgba: u32) -> Brush {
-        Brush::Solid(rgba)
+    fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
+        Ok(Brush::Solid(rgba))
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
+    fn fill(
+        &mut self,
+        shape: impl Shape,
+        brush: &Self::Brush,
+        fill_rule: FillRule,
+    ) -> Result<(), Error> {
         self.set_path(shape);
         self.set_brush(brush);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.fill();
+        self.status()
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error> {
         self.set_path(shape);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.clip();
+        self.status()
     }
 
     fn stroke(
@@ -137,32 +183,37 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
-    ) {
+    ) -> Result<(), Error> {
         self.set_path(shape);
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush);
         self.ctx.stroke();
+        self.status()
     }
 
     fn new_font_by_name(
         &mut self,
         name: &str,
         size: impl RoundInto<Self::Coord>,
-    ) -> Self::FontBuilder {
-        CairoFontBuilder {
+    ) -> Result<Self::FontBuilder, Error> {
+        Ok(CairoFontBuilder {
             family: name.to_owned(),
             size: size.round_into(),
             weight: FontWeight::Normal,
             slant: FontSlant::Normal,
-        }
+        })
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+    ) -> Result<Self::TextLayoutBuilder, Error> {
         let text_layout = CairoTextLayout {
             font: font.0.clone(),
             text: text.to_owned(),
         };
-        CairoTextLayoutBuilder(text_layout)
+        Ok(CairoTextLayoutBuilder(text_layout))
     }
 
     fn draw_text(
@@ -170,24 +221,27 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) {
+    ) -> Result<(), Error> {
         self.ctx.set_scaled_font(&layout.font);
         self.set_brush(brush);
         let pos = pos.round_into();
         self.ctx.move_to(pos.x, pos.y);
         self.ctx.show_text(&layout.text);
+        self.status()
     }
 
-    fn save(&mut self) {
+    fn save(&mut self) -> Result<(), Error> {
         self.ctx.save();
+        self.status()
     }
 
-    fn restore(&mut self) {
+    fn restore(&mut self) -> Result<(), Error> {
         self.ctx.restore();
+        self.status()
     }
 
     fn finish(&mut self) -> Result<(), Error> {
-        Ok(())
+        self.status()
     }
 
     fn transform(&mut self, transform: Affine) {
@@ -200,19 +254,19 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         height: usize,
         buf: &[u8],
         format: ImageFormat,
-    ) -> Self::Image {
+    ) -> Result<Self::Image, Error> {
         let cairo_fmt = match format {
             ImageFormat::Rgb => Format::Rgb24,
             ImageFormat::RgbaSeparate | ImageFormat::RgbaPremul => Format::ARgb32,
-            _ => panic!(),
+            _ => return Err(new_error(ErrorKind::NotSupported)),
         };
-        let mut image = ImageSurface::create(cairo_fmt, width as i32, height as i32).unwrap();
+        let mut image = ImageSurface::create(cairo_fmt, width as i32, height as i32).wrap()?;
         // Confident no borrow errors because we just created it.
         let bytes_per_pixel = format.bytes_per_pixel();
         let bytes_per_row = width * bytes_per_pixel;
         let stride = image.get_stride() as usize;
         {
-            let mut data = image.get_data().unwrap();
+            let mut data = image.get_data().wrap()?;
             for y in 0..height {
                 let src_off = y * bytes_per_row;
                 let dst_off = y * stride;
@@ -248,11 +302,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                             data[dst_off + x * 4 + 3] = a;
                         }
                     }
-                    _ => panic!(),
+                    _ => return Err(new_error(ErrorKind::NotSupported)),
                 }
             }
         }
-        image
+        Ok(image)
     }
 
     fn draw_image(
@@ -260,7 +314,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         image: &Self::Image,
         rect: impl Into<Rect>,
         interp: InterpolationMode,
-    ) {
+    ) -> Result<(), Error> {
         self.with_save(|rc| {
             let surface_pattern = SurfacePattern::create(image);
             let filter = match interp {
@@ -276,6 +330,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             );
             rc.ctx.set_source(&Pattern::SurfacePattern(surface_pattern));
             rc.ctx.paint();
+            rc.status()
         })
     }
 }
@@ -349,6 +404,16 @@ impl<'a> CairoRenderContext<'a> {
             }
         }
     }
+
+    fn status(&self) -> Result<(), Error> {
+        let status = self.ctx.status();
+        if status == Status::Success {
+            Ok(())
+        } else {
+            let e: Box<dyn std::error::Error> = Box::new(WrappedStatus(status));
+            Err(e.into())
+        }
+    }
 }
 
 fn byte_to_frac(byte: u32) -> f64 {
@@ -382,13 +447,13 @@ fn scale_matrix(scale: f64) -> Matrix {
 impl FontBuilder for CairoFontBuilder {
     type Out = CairoFont;
 
-    fn build(self) -> Self::Out {
+    fn build(self) -> Result<Self::Out, Error> {
         let font_face = FontFace::toy_create(&self.family, self.slant, self.weight);
         let font_matrix = scale_matrix(self.size);
         let ctm = scale_matrix(1.0);
         let options = FontOptions::default();
         let scaled_font = ScaledFont::new(&font_face, &font_matrix, &ctm, &options);
-        CairoFont(scaled_font)
+        Ok(CairoFont(scaled_font))
     }
 }
 
@@ -397,8 +462,8 @@ impl Font for CairoFont {}
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
 
-    fn build(self) -> Self::Out {
-        self.0
+    fn build(self) -> Result<Self::Out, Error> {
+        Ok(self.0)
     }
 }
 

@@ -2,6 +2,7 @@
 
 use std::fs::File;
 
+use cairo::prelude::SurfaceExt;
 use cairo::{Context, Format, ImageSurface};
 
 use piet::RenderContext;
@@ -26,8 +27,9 @@ fn main() {
     let mut cr = Context::new(&surface);
     cr.scale(HIDPI, HIDPI);
     let mut piet_context = CairoRenderContext::new(&mut cr);
-    draw_test_picture(&mut piet_context, test_picture_number);
-    piet_context.finish();
+    draw_test_picture(&mut piet_context, test_picture_number).unwrap();
+    piet_context.finish().unwrap();
+    surface.flush();
     let mut file = File::create("temp-cairo.png").expect("Couldn't create 'file.png'");
     surface
         .write_to_png(&mut file)
