@@ -1,6 +1,7 @@
 //! The Web Canvas backend for the Piet 2D graphics abstraction.
 
 use std::borrow::Cow;
+use std::fmt;
 
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData, Window};
@@ -72,6 +73,32 @@ enum FontStyle {
     Oblique(Option<f64>),
 }
 
+#[derive(Debug)]
+struct WrappedJs(JsValue);
+
+trait WrapError<T> {
+    fn wrap(self) -> Result<T, Error>;
+}
+
+impl std::error::Error for WrappedJs {}
+
+impl fmt::Display for WrappedJs {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Canvas error: {:?}", self.0)
+    }
+}
+
+// Discussion question: a blanket impl here should be pretty doable.
+
+impl<T> WrapError<T> for Result<T, JsValue> {
+    fn wrap(self) -> Result<T, Error> {
+        self.map_err(|e| {
+            let e: Box<dyn std::error::Error> = Box::new(WrappedJs(e));
+            e.into()
+        })
+    }
+}
+
 fn convert_fill_rule(fill_rule: piet::FillRule) -> CanvasWindingRule {
     match fill_rule {
         piet::FillRule::NonZero => CanvasWindingRule::Nonzero,
@@ -93,25 +120,33 @@ impl<'a> RenderContext for WebRenderContext<'a> {
 
     type Image = WebImage;
 
-    fn clear(&mut self, _rgb: u32) {
+    fn clear(&mut self, _rgb: u32) -> Result<(), Error> {
         // TODO: we might need to know the size of the canvas to do this.
+        Ok(())
     }
 
-    fn solid_brush(&mut self, rgba: u32) -> Brush {
-        Brush::Solid(rgba)
+    fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
+        Ok(Brush::Solid(rgba))
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
+    fn fill(
+        &mut self,
+        shape: impl Shape,
+        brush: &Self::Brush,
+        fill_rule: piet::FillRule,
+    ) -> Result<(), Error> {
         self.set_path(shape);
         self.set_brush(brush, true);
         self.ctx
             .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
+        Ok(())
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: piet::FillRule) {
+    fn clip(&mut self, shape: impl Shape, fill_rule: piet::FillRule) -> Result<(), Error> {
         self.set_path(shape);
         self.ctx
             .clip_with_canvas_winding_rule(convert_fill_rule(fill_rule));
+        Ok(())
     }
 
     fn stroke(
@@ -120,35 +155,40 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
-    ) {
+    ) -> Result<(), Error> {
         self.set_path(shape);
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush, false);
         self.ctx.stroke();
+        Ok(())
     }
 
     fn new_font_by_name(
         &mut self,
         name: &str,
         size: impl RoundInto<Self::Coord>,
-    ) -> Self::FontBuilder {
+    ) -> Result<Self::FontBuilder, Error> {
         let font = WebFont {
             family: name.to_owned(),
             size: size.round_into(),
             weight: 400,
             style: FontStyle::Normal,
         };
-        WebFontBuilder(font)
+        Ok(WebFontBuilder(font))
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
-        WebTextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+    ) -> Result<Self::TextLayoutBuilder, Error> {
+        Ok(WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
             font: font.clone(),
             text: text.to_owned(),
-        }
+        })
     }
 
     fn draw_text(
@@ -156,20 +196,21 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) {
+    ) -> Result<(), Error> {
         self.ctx.set_font(&layout.font.get_font_string());
         self.set_brush(brush, true);
         let pos = pos.round_into();
-        // TODO: should we be tracking errors, or just ignoring them?
-        let _ = self.ctx.fill_text(&layout.text, pos.x, pos.y);
+        self.ctx.fill_text(&layout.text, pos.x, pos.y).wrap()
     }
 
-    fn save(&mut self) {
+    fn save(&mut self) -> Result<(), Error> {
         self.ctx.save();
+        Ok(())
     }
 
-    fn restore(&mut self) {
+    fn restore(&mut self) -> Result<(), Error> {
         self.ctx.restore();
+        Ok(())
     }
 
     fn finish(&mut self) -> Result<(), Error> {
@@ -187,7 +228,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         height: usize,
         buf: &[u8],
         format: ImageFormat,
-    ) -> Self::Image {
+    ) -> Result<Self::Image, Error> {
         let document = self.window.document().unwrap();
         let element = document.create_element("canvas").unwrap();
         let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();
@@ -230,19 +271,19 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             _ => Vec::new(),
         };
         let image_data =
-            ImageData::new_with_u8_clamped_array(Clamped(&mut buf), width as u32).unwrap();
+            ImageData::new_with_u8_clamped_array(Clamped(&mut buf), width as u32).wrap()?;
         let context = canvas
             .get_context("2d")
             .unwrap()
             .unwrap()
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .unwrap();
-        let _ = context.put_image_data(&image_data, 0.0, 0.0);
-        WebImage {
+        context.put_image_data(&image_data, 0.0, 0.0).wrap()?;
+        Ok(WebImage {
             inner: canvas,
             width: width as u32,
             height: height as u32,
-        }
+        })
     }
 
     fn draw_image(
@@ -250,19 +291,18 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         image: &Self::Image,
         rect: impl Into<Rect>,
         _interp: InterpolationMode,
-    ) {
-        let rect = rect.into();
-        self.ctx.save();
-        // TODO: handle error
-        let _ = self.ctx.translate(rect.x0, rect.y0);
-        let _ = self.ctx.scale(
-            rect.width() / (image.width as f64),
-            rect.height() / (image.height as f64),
-        );
-        let _ = self
-            .ctx
-            .draw_image_with_html_canvas_element(&image.inner, 0.0, 0.0);
-        self.ctx.restore();
+    ) -> Result<(), Error> {
+        self.with_save(|rc| {
+            let rect = rect.into();
+            let _ = rc.ctx.translate(rect.x0, rect.y0);
+            let _ = rc.ctx.scale(
+                rect.width() / (image.width as f64),
+                rect.height() / (image.height as f64),
+            );
+            rc.ctx
+                .draw_image_with_html_canvas_element(&image.inner, 0.0, 0.0)
+                .wrap()
+        })
     }
 }
 
@@ -332,8 +372,8 @@ fn byte_to_frac(byte: u32) -> f64 {
 impl FontBuilder for WebFontBuilder {
     type Out = WebFont;
 
-    fn build(self) -> Self::Out {
-        self.0
+    fn build(self) -> Result<Self::Out, Error> {
+        Ok(self.0)
     }
 }
 
@@ -357,18 +397,18 @@ impl WebFont {
 impl TextLayoutBuilder for WebTextLayoutBuilder {
     type Out = WebTextLayout;
 
-    fn build(self) -> Self::Out {
+    fn build(self) -> Result<Self::Out, Error> {
         self.ctx.set_font(&self.font.get_font_string());
         let width = self
             .ctx
             .measure_text(&self.text)
             .map(|m| m.width())
-            .unwrap_or(0.0);
-        WebTextLayout {
+            .wrap()?;
+        Ok(WebTextLayout {
             font: self.font,
             text: self.text,
             width,
-        }
+        })
     }
 }
 
