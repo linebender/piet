@@ -1,5 +1,9 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
+mod error;
+
+use crate::error::WrapError;
+
 use std::borrow::Cow;
 
 use winapi::shared::basetsd::UINT32;
@@ -27,8 +31,8 @@ use directwrite::TextFormat;
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    FillRule, Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundFrom,
-    RoundInto, TextLayout, TextLayoutBuilder,
+    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
+    RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -81,10 +85,12 @@ impl<'a> D2DRenderContext<'a> {
     }
 
     fn current_transform(&self) -> Affine {
+        // This is an unwrap because we protect the invariant.
         self.ctx_stack.last().unwrap().transform
     }
 
     fn pop_state(&mut self) {
+        // This is an unwrap because we protect the invariant.
         let old_state = self.ctx_stack.pop().unwrap();
         for _ in 0..old_state.n_layers_pop {
             self.rt.pop_layer();
@@ -186,10 +192,10 @@ fn path_from_shape(
     is_filled: bool,
     shape: impl Shape,
     fill_rule: FillRule,
-) -> Path {
-    let mut path = Path::create(d2d).unwrap();
+) -> Result<Path, Error> {
+    let mut path = Path::create(d2d).wrap()?;
     {
-        let mut g = path.open().unwrap();
+        let mut g = path.open().wrap()?;
         if fill_rule == FillRule::NonZero {
             g = g.fill_mode(FillMode::Winding);
         }
@@ -243,7 +249,7 @@ fn path_from_shape(
             let _ = b.finish_figure().close();
         }
     }
-    path
+    Ok(path)
 }
 
 impl<'a> RenderContext for D2DRenderContext<'a> {
@@ -259,22 +265,31 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     type Image = Bitmap;
 
-    fn clear(&mut self, rgb: u32) {
+    fn clear(&mut self, rgb: u32) -> Result<(), Error> {
         self.rt.clear(rgb);
+        Ok(())
     }
 
-    fn solid_brush(&mut self, rgba: u32) -> GenericBrush {
-        SolidColorBrush::create(&self.rt)
-            .with_color((rgba >> 8, ((rgba & 255) as f32) * (1.0 / 255.0)))
-            .build()
-            .unwrap()
-            .to_generic() // This does an extra COM clone; avoid somehow?
+    fn solid_brush(&mut self, rgba: u32) -> Result<GenericBrush, Error> {
+        Ok(
+            SolidColorBrush::create(&self.rt)
+                .with_color((rgba >> 8, ((rgba & 255) as f32) * (1.0 / 255.0)))
+                .build()
+                .wrap()?
+                .to_generic(), // This does an extra COM clone; avoid somehow?
+        )
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
+    fn fill(
+        &mut self,
+        shape: impl Shape,
+        brush: &Self::Brush,
+        fill_rule: FillRule,
+    ) -> Result<(), Error> {
         // TODO: various special-case shapes, for efficiency
-        let path = path_from_shape(self.factory, true, shape, fill_rule);
+        let path = path_from_shape(self.factory, true, shape, fill_rule)?;
         self.rt.fill_geometry(&path, brush);
+        Ok(())
     }
 
     fn stroke(
@@ -283,53 +298,56 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
-    ) {
+    ) -> Result<(), Error> {
         // TODO: various special-case shapes, for efficiency
-        let path = path_from_shape(self.factory, false, shape, FillRule::EvenOdd);
+        let path = path_from_shape(self.factory, false, shape, FillRule::EvenOdd)?;
         self.rt
             .draw_geometry(&path, brush, width.round_into(), style);
+        Ok(())
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error> {
         // TODO: set size based on bbox of shape.
-        if let Ok(layer) = Layer::create(&mut self.rt, None) {
-            let path = path_from_shape(self.factory, true, shape, fill_rule);
-            // TODO: we get a use-after-free crash if we don't do this. Almost certainly
-            // this will be fixed in direct2d 0.3, so remove workaround when upgrading.
-            let _clone = path.clone();
-            let transform = affine_to_matrix3x2f(self.current_transform());
-            self.rt
-                .push_layer(&layer)
-                .with_mask(path)
-                .with_mask_transform(transform)
-                .push();
-            self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
-        } else {
-            // TODO: error handling. Very unlikely to happen but maybe?
-        }
+        let layer = Layer::create(&mut self.rt, None).wrap()?;
+        let path = path_from_shape(self.factory, true, shape, fill_rule)?;
+        // TODO: we get a use-after-free crash if we don't do this. Almost certainly
+        // this will be fixed in direct2d 0.3, so remove workaround when upgrading.
+        let _clone = path.clone();
+        let transform = affine_to_matrix3x2f(self.current_transform());
+        self.rt
+            .push_layer(&layer)
+            .with_mask(path)
+            .with_mask_transform(transform)
+            .push();
+        self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
+        Ok(())
     }
 
     fn new_font_by_name(
         &mut self,
         name: &str,
         size: impl RoundInto<Self::Coord>,
-    ) -> Self::FontBuilder {
+    ) -> Result<Self::FontBuilder, Error> {
         // Note: the name is cloned here, rather than applied using `with_family` for
         // lifetime reasons. Maybe there's a better approach.
-        D2DFontBuilder {
+        Ok(D2DFontBuilder {
             builder: TextFormat::create(self.dwrite).with_size(size.round_into()),
             name: name.to_owned(),
-        }
+        })
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+    ) -> Result<Self::TextLayoutBuilder, Error> {
         // Same consideration as above, we clone the font and text for lifetime
         // reasons.
-        D2DTextLayoutBuilder {
+        Ok(D2DTextLayoutBuilder {
             builder: text_layout::TextLayout::create(self.dwrite),
             format: font.0.clone(),
             text: text.to_owned(),
-        }
+        })
     }
 
     fn draw_text(
@@ -337,13 +355,13 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) {
+    ) -> Result<(), Error> {
         // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
         let mut line_metrics = Vec::with_capacity(1);
         layout.0.get_line_metrics(&mut line_metrics);
         if line_metrics.is_empty() {
             // Layout is empty, don't bother drawing.
-            return;
+            return Ok(());
         }
         // Direct2D takes upper-left, so adjust for baseline.
         let pos = pos.round_into().0;
@@ -352,34 +370,38 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
         self.rt
             .draw_text_layout(pos, &layout.0, brush, text_options);
+        Ok(())
     }
 
-    fn save(&mut self) {
+    fn save(&mut self) -> Result<(), Error> {
         let new_state = CtxState {
             transform: self.current_transform(),
             n_layers_pop: 0,
         };
         self.ctx_stack.push(new_state);
+        Ok(())
     }
 
-    fn restore(&mut self) {
+    fn restore(&mut self) -> Result<(), Error> {
         if self.ctx_stack.len() <= 1 {
-            panic!("restore without corresponding save");
+            return Err(new_error(ErrorKind::StackUnbalance));
         }
         self.pop_state();
         // Move this code into impl to avoid duplication with transform?
         self.rt
             .set_transform(&affine_to_matrix3x2f(self.current_transform()));
+        Ok(())
     }
 
-    // TODO: should we panic on unbalanced stack? Maybe warn? Maybe have an
-    // error result that reports the problem?
-    //
     // Discussion question: should this subsume EndDraw, with BeginDraw on
     // D2DRenderContext creation? I'm thinking not, as the shell might want
     // to do other stuff, possibly related to incremental paint.
-    fn finish(&mut self) {
+    fn finish(&mut self) -> Result<(), Error> {
+        if self.ctx_stack.len() != 1 {
+            return Err(new_error(ErrorKind::StackUnbalance));
+        }
         self.pop_state();
+        Ok(())
     }
 
     fn transform(&mut self, transform: Affine) {
@@ -394,12 +416,12 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         height: usize,
         buf: &[u8],
         format: ImageFormat,
-    ) -> Self::Image {
+    ) -> Result<Self::Image, Error> {
         // TODO: this method _really_ needs error checking, so much can go wrong...
         let alpha_mode = match format {
             ImageFormat::Rgb => AlphaMode::Ignore,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => AlphaMode::Premultiplied,
-            _ => panic!("Unexpected image format {:?}", format),
+            _ => return Err(new_error(ErrorKind::NotSupported)),
         };
         let buf = match format {
             ImageFormat::Rgb => {
@@ -428,7 +450,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 Cow::from(new_buf)
             }
             ImageFormat::RgbaPremul => Cow::from(buf),
-            _ => panic!("Unexpected image format {:?}", format),
+            // This should be unreachable, we caught it above.
+            _ => return Err(new_error(ErrorKind::NotSupported)),
         };
         Bitmap::create(&self.rt)
             .with_raw_data(
@@ -442,7 +465,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .with_format(Format::R8G8B8A8Unorm)
             .with_alpha_mode(alpha_mode)
             .build()
-            .expect("error creating bitmap")
+            .wrap()
     }
 
     fn draw_image(
@@ -450,7 +473,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         image: &Self::Image,
         rect: impl Into<Rect>,
         interp: InterpolationMode,
-    ) {
+    ) -> Result<(), Error> {
         let interp = match interp {
             InterpolationMode::NearestNeighbor => BitmapInterpolationMode::NearestNeighbor,
             InterpolationMode::Bilinear => BitmapInterpolationMode::Linear,
@@ -459,14 +482,17 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let src_rect = (0.0, 0.0, src_size.0.width, src_size.0.height);
         self.rt
             .draw_bitmap(&image, rect_to_rectf(rect.into()), 1.0, interp, src_rect);
+        Ok(())
     }
 }
 
 impl<'a> FontBuilder for D2DFontBuilder<'a> {
     type Out = D2DFont;
 
-    fn build(self) -> Self::Out {
-        D2DFont(self.builder.with_family(&self.name).build().unwrap())
+    fn build(self) -> Result<Self::Out, Error> {
+        Ok(D2DFont(
+            self.builder.with_family(&self.name).build().wrap()?,
+        ))
     }
 }
 
@@ -475,16 +501,16 @@ impl Font for D2DFont {}
 impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
     type Out = D2DTextLayout;
 
-    fn build(self) -> Self::Out {
-        D2DTextLayout(
+    fn build(self) -> Result<Self::Out, Error> {
+        Ok(D2DTextLayout(
             self.builder
                 .with_text(&self.text)
                 .with_font(&self.format)
                 .with_width(1e6) // TODO: probably want to support wrapping
                 .with_height(1e6)
                 .build()
-                .unwrap(),
-        )
+                .wrap()?,
+        ))
     }
 }
 

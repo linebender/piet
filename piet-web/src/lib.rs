@@ -8,7 +8,7 @@ use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, Im
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto, TextLayout,
+    Error, Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto, TextLayout,
     TextLayoutBuilder,
 };
 
@@ -172,7 +172,9 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         self.ctx.restore();
     }
 
-    fn finish(&mut self) {}
+    fn finish(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
 
     fn transform(&mut self, transform: Affine) {
         let a = transform.as_coeffs();

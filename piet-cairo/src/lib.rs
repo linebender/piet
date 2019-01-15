@@ -8,7 +8,7 @@ use cairo::{
 use kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
-    FillRule, Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto,
+    Error, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto,
     TextLayout, TextLayoutBuilder,
 };
 
@@ -186,7 +186,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.restore();
     }
 
-    fn finish(&mut self) {}
+    fn finish(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
 
     fn transform(&mut self, transform: Affine) {
         self.ctx.transform(affine_to_matrix(transform));
