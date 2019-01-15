@@ -259,23 +259,22 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        self.ctx.save();
-        let surface_pattern = SurfacePattern::create(image);
-        let filter = match interp {
-            InterpolationMode::NearestNeighbor => Filter::Nearest,
-            InterpolationMode::Bilinear => Filter::Bilinear,
-        };
-        surface_pattern.set_filter(filter);
-        let rect = rect.into();
-        self.ctx.translate(rect.x0, rect.y0);
-        self.ctx.scale(
-            rect.width() / (image.get_width() as f64),
-            rect.height() / (image.get_height() as f64),
-        );
-        self.ctx
-            .set_source(&Pattern::SurfacePattern(surface_pattern));
-        self.ctx.paint();
-        self.ctx.restore();
+        self.with_save(|rc| {
+            let surface_pattern = SurfacePattern::create(image);
+            let filter = match interp {
+                InterpolationMode::NearestNeighbor => Filter::Nearest,
+                InterpolationMode::Bilinear => Filter::Bilinear,
+            };
+            surface_pattern.set_filter(filter);
+            let rect = rect.into();
+            rc.ctx.translate(rect.x0, rect.y0);
+            rc.ctx.scale(
+                rect.width() / (image.get_width() as f64),
+                rect.height() / (image.get_height() as f64),
+            );
+            rc.ctx.set_source(&Pattern::SurfacePattern(surface_pattern));
+            rc.ctx.paint();
+        })
     }
 }
 
