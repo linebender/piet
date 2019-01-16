@@ -44,23 +44,19 @@ impl StrokeStyle {
         }
     }
 
-    pub fn line_join(mut self, line_join: LineJoin) -> Self {
+    pub fn set_line_join(&mut self, line_join: LineJoin) {
         self.line_join = Some(line_join);
-        self
     }
 
-    pub fn line_cap(mut self, line_cap: LineCap) -> Self {
+    pub fn set_line_cap(&mut self, line_cap: LineCap) {
         self.line_cap = Some(line_cap);
-        self
     }
 
-    pub fn dash(mut self, dashes: Vec<f64>, offset: f64) -> Self {
+    pub fn set_dash(&mut self, dashes: Vec<f64>, offset: f64) {
         self.dash = Some((dashes, offset));
-        self
     }
 
-    pub fn miter_limit(mut self, miter_limit: f64) -> Self {
+    pub fn set_miter_limit(mut self, miter_limit: f64) {
         self.miter_limit = Some(miter_limit);
-        self
     }
 }
