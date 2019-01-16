@@ -1,7 +1,9 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
+mod conv;
 mod error;
 
+use crate::conv::{affine_to_matrix3x2f, convert_stroke_style, rect_to_rectf, to_point2f, Point2};
 use crate::error::WrapError;
 
 use std::borrow::Cow;
@@ -19,20 +21,18 @@ use direct2d::geometry::path::{FigureBuilder, GeometryBuilder};
 use direct2d::geometry::Path;
 use direct2d::image::Bitmap;
 use direct2d::layer::Layer;
-use direct2d::math::{
-    BezierSegment, Matrix3x2F, Point2F, QuadBezierSegment, RectF, SizeU, Vector2F,
-};
+use direct2d::math::{BezierSegment, QuadBezierSegment, SizeU, Vector2F};
 use direct2d::render_target::{GenericRenderTarget, RenderTarget};
 
 use directwrite::text_format::TextFormatBuilder;
 use directwrite::text_layout;
 use directwrite::TextFormat;
 
-use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
+use kurbo::{Affine, PathEl, Rect, Shape};
 
 use piet::{
     new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
-    RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
+    RenderContext, RoundInto, StrokeStyle, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -98,77 +98,6 @@ impl<'a> D2DRenderContext<'a> {
     }
 }
 
-/// This is wrapped for coherence reasons.
-///
-/// TODO: consider using Point2F instead, and moving conversions into kurbo.
-pub struct Point2(Point2F);
-
-impl From<Point2F> for Point2 {
-    #[inline]
-    fn from(vec: Point2F) -> Point2 {
-        Point2(vec.into())
-    }
-}
-
-impl From<(f32, f32)> for Point2 {
-    #[inline]
-    fn from(vec: (f32, f32)) -> Point2 {
-        Point2(Point2F::new(vec.0, vec.1))
-    }
-}
-
-// TODO: Maybe there's some blanket implementation that would cover this and
-// not cause coherence problems.
-impl RoundFrom<(f32, f32)> for Point2 {
-    #[inline]
-    fn round_from(vec: (f32, f32)) -> Point2 {
-        Point2(Point2F::new(vec.0, vec.1))
-    }
-}
-
-impl RoundFrom<(f64, f64)> for Point2 {
-    #[inline]
-    fn round_from(vec: (f64, f64)) -> Point2 {
-        Point2(Point2F::new(vec.0 as f32, vec.1 as f32))
-    }
-}
-
-impl RoundFrom<Vec2> for Point2 {
-    #[inline]
-    fn round_from(vec: Vec2) -> Point2 {
-        Point2(Point2F::new(vec.x as f32, vec.y as f32))
-    }
-}
-
-impl From<Point2> for Vec2 {
-    #[inline]
-    fn from(vec: Point2) -> Vec2 {
-        Vec2::new(vec.0.x as f64, vec.0.y as f64)
-    }
-}
-
-/// Can't implement RoundFrom here because both types belong to other
-/// crates. Consider moving to kurbo (with windows feature).
-fn affine_to_matrix3x2f(affine: Affine) -> Matrix3x2F {
-    let a = affine.as_coeffs();
-    Matrix3x2F::new([
-        [a[0] as f32, a[1] as f32],
-        [a[2] as f32, a[3] as f32],
-        [a[4] as f32, a[5] as f32],
-    ])
-}
-
-// TODO: consider adding to kurbo.
-fn rect_to_rectf(rect: Rect) -> RectF {
-    (
-        rect.x0 as f32,
-        rect.y0 as f32,
-        rect.x1 as f32,
-        rect.y1 as f32,
-    )
-        .into()
-}
-
 enum PathBuilder<'a> {
     Geom(GeometryBuilder<'a>),
     Fig(FigureBuilder<'a>),
@@ -181,10 +110,6 @@ impl<'a> PathBuilder<'a> {
             PathBuilder::Fig(f) => f.end(),
         }
     }
-}
-
-fn to_point2f<P: RoundInto<Point2>>(p: P) -> Point2F {
-    p.round_into().0
 }
 
 fn path_from_shape(
@@ -256,7 +181,6 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     type Point = Point2;
     type Coord = f32;
     type Brush = GenericBrush;
-    type StrokeStyle = direct2d::stroke_style::StrokeStyle;
 
     type Font = D2DFont;
     type FontBuilder = D2DFontBuilder<'a>;
@@ -297,12 +221,17 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
+        style: Option<&StrokeStyle>,
     ) -> Result<(), Error> {
         // TODO: various special-case shapes, for efficiency
         let path = path_from_shape(self.factory, false, shape, FillRule::EvenOdd)?;
-        self.rt
-            .draw_geometry(&path, brush, width.round_into(), style);
+        let width = width.round_into();
+        let style = if let Some(style) = style {
+            Some(convert_stroke_style(self.factory, style, width)?)
+        } else {
+            None
+        };
+        self.rt.draw_geometry(&path, brush, width, style.as_ref());
         Ok(())
     }
 
