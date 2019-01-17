@@ -2,7 +2,7 @@
 
 use kurbo::{Affine, Rect, Shape, Vec2};
 
-use crate::{Error, Font, FontBuilder, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder};
+use crate::{Error, Factory, RoundFrom, RoundInto, TextLayout};
 
 /// A fill rule for resolving winding numbers.
 #[derive(Clone, Copy, PartialEq)]
@@ -78,10 +78,8 @@ pub trait RenderContext {
     /// Parameters for the style of stroke operations.
     type StrokeStyle;
 
-    type FontBuilder: FontBuilder<Out = Self::Font>;
-    type Font: Font;
-
-    type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
+    /// An associated factory for creating text layouts and related resources.
+    type Factory: Factory<TextLayout = Self::TextLayout>;
     type TextLayout: TextLayout;
 
     /// The associated type of an image.
@@ -125,17 +123,7 @@ pub trait RenderContext {
     /// are clipped by the shape.
     fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error>;
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error>;
-
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error>;
+    fn factory(&mut self) -> &mut Self::Factory;
 
     /// Draw a text layout.
     ///

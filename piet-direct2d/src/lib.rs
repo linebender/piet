@@ -31,19 +31,23 @@ use directwrite::TextFormat;
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
-    RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
+    new_error, Error, ErrorKind, Factory, FillRule, Font, FontBuilder, ImageFormat,
+    InterpolationMode, RenderContext, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
     factory: &'a direct2d::Factory,
-    dwrite: &'a directwrite::Factory,
+    inner_factory: D2DFactory<'a>,
     // This is an owned clone, but after some direct2d refactor, it's likely we'll
     // hold a mutable reference.
     rt: GenericRenderTarget,
 
     /// The context state stack. There is always at least one, until finishing.
     ctx_stack: Vec<CtxState>,
+}
+
+pub struct D2DFactory<'a> {
+    dwrite: &'a directwrite::Factory,
 }
 
 pub struct D2DFont(TextFormat);
@@ -76,9 +80,10 @@ impl<'a> D2DRenderContext<'a> {
         dwrite: &'a directwrite::Factory,
         rt: &'a mut RT,
     ) -> D2DRenderContext<'a> {
+        let inner_factory = D2DFactory { dwrite };
         D2DRenderContext {
             factory,
-            dwrite,
+            inner_factory: inner_factory,
             rt: rt.as_generic(),
             ctx_stack: vec![CtxState::default()],
         }
@@ -258,10 +263,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     type Brush = GenericBrush;
     type StrokeStyle = direct2d::stroke_style::StrokeStyle;
 
-    type Font = D2DFont;
-    type FontBuilder = D2DFontBuilder<'a>;
+    type Factory = D2DFactory<'a>;
+
     type TextLayout = D2DTextLayout;
-    type TextLayoutBuilder = D2DTextLayoutBuilder<'a>;
 
     type Image = Bitmap;
 
@@ -323,31 +327,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         Ok(())
     }
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error> {
-        // Note: the name is cloned here, rather than applied using `with_family` for
-        // lifetime reasons. Maybe there's a better approach.
-        Ok(D2DFontBuilder {
-            builder: TextFormat::create(self.dwrite).with_size(size.round_into()),
-            name: name.to_owned(),
-        })
-    }
-
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error> {
-        // Same consideration as above, we clone the font and text for lifetime
-        // reasons.
-        Ok(D2DTextLayoutBuilder {
-            builder: text_layout::TextLayout::create(self.dwrite),
-            format: font.0.clone(),
-            text: text.to_owned(),
-        })
+    fn factory(&mut self) -> &mut Self::Factory {
+        &mut self.inner_factory
     }
 
     fn draw_text(
@@ -483,6 +464,41 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         self.rt
             .draw_bitmap(&image, rect_to_rectf(rect.into()), 1.0, interp, src_rect);
         Ok(())
+    }
+}
+
+impl<'a> Factory for D2DFactory<'a> {
+    type Coord = f32;
+    type FontBuilder = D2DFontBuilder<'a>;
+    type Font = D2DFont;
+    type TextLayoutBuilder = D2DTextLayoutBuilder<'a>;
+    type TextLayout = D2DTextLayout;
+
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Result<Self::FontBuilder, Error> {
+        // Note: the name is cloned here, rather than applied using `with_family` for
+        // lifetime reasons. Maybe there's a better approach.
+        Ok(D2DFontBuilder {
+            builder: TextFormat::create(self.dwrite).with_size(size.round_into()),
+            name: name.to_owned(),
+        })
+    }
+
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+    ) -> Result<Self::TextLayoutBuilder, Error> {
+        // Same consideration as above, we clone the font and text for lifetime
+        // reasons.
+        Ok(D2DTextLayoutBuilder {
+            builder: text_layout::TextLayout::create(self.dwrite),
+            format: font.0.clone(),
+            text: text.to_owned(),
+        })
     }
 }
 
