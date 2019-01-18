@@ -2,7 +2,10 @@
 
 use kurbo::{Affine, BezPath, Line, Vec2};
 
-use piet::{FillRule, FontBuilder, RenderContext, TextLayout, TextLayoutBuilder};
+use piet::{
+    FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, TextLayout,
+    TextLayoutBuilder,
+};
 
 pub fn draw(rc: &mut impl RenderContext) {
     rc.clear(0xFF_FF_FF);
@@ -34,6 +37,14 @@ pub fn draw(rc: &mut impl RenderContext) {
         rc.draw_text(&layout, (80.0, 10.0), &brush);
     });
 
+    let image_data = make_image_data(256, 256);
+    let image = rc.make_image(256, 256, &image_data, ImageFormat::RgbaSeparate);
+    rc.draw_image(
+        &image,
+        ((150.0, 50.0), (180.0, 80.0)),
+        InterpolationMode::Bilinear,
+    );
+
     let clip_path = star(Vec2::new(90.0, 45.0), 10.0, 30.0, 24);
     rc.clip(clip_path, FillRule::NonZero);
     let layout = rc.new_text_layout(&font, "Clipped text").build();
@@ -54,5 +65,19 @@ fn star(center: Vec2, inner: f64, outer: f64, n: usize) -> BezPath {
         result.lineto(center + inner * Vec2::from_angle(d_th * ((i * 2 + 1) as f64)));
     }
     result.closepath();
+    result
+}
+
+fn make_image_data(width: usize, height: usize) -> Vec<u8> {
+    let mut result = vec![0; width * height * 4];
+    for y in 0..height {
+        for x in 0..width {
+            let ix = (y * width + x) * 4;
+            result[ix + 0] = x as u8;
+            result[ix + 1] = y as u8;
+            result[ix + 2] = !(x as u8);
+            result[ix + 3] = 127;
+        }
+    }
     result
 }

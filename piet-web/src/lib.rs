@@ -2,20 +2,25 @@
 
 use std::borrow::Cow;
 
-use wasm_bindgen::JsValue;
-use web_sys::{CanvasRenderingContext2d, CanvasWindingRule};
+use wasm_bindgen::{Clamped, JsCast, JsValue};
+use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData, Window};
 
-use kurbo::{Affine, PathEl, Shape, Vec2};
+use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
-use piet::{Font, FontBuilder, RenderContext, RoundInto, TextLayout, TextLayoutBuilder};
+use piet::{
+    Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto, TextLayout,
+    TextLayoutBuilder,
+};
 
 pub struct WebRenderContext<'a> {
     ctx: &'a mut CanvasRenderingContext2d,
+    /// Used for creating image bitmaps and possibly other resources.
+    window: &'a Window,
 }
 
 impl<'a> WebRenderContext<'a> {
-    pub fn new(ctx: &mut CanvasRenderingContext2d) -> WebRenderContext {
-        WebRenderContext { ctx }
+    pub fn new(ctx: &'a mut CanvasRenderingContext2d, window: &'a Window) -> WebRenderContext<'a> {
+        WebRenderContext { ctx, window }
     }
 }
 
@@ -50,6 +55,14 @@ pub struct WebTextLayoutBuilder {
     text: String,
 }
 
+pub struct WebImage {
+    /// We use a canvas element for now, but could be ImageData or ImageBitmap,
+    /// so consider an enum.
+    inner: HtmlCanvasElement,
+    width: u32,
+    height: u32,
+}
+
 /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
 #[allow(dead_code)] // TODO: Remove
 #[derive(Clone)]
@@ -77,6 +90,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     type FontBuilder = WebFontBuilder;
     type TextLayout = WebTextLayout;
     type TextLayoutBuilder = WebTextLayoutBuilder;
+
+    type Image = WebImage;
 
     fn clear(&mut self, _rgb: u32) {
         // TODO: we might need to know the size of the canvas to do this.
@@ -162,6 +177,90 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     fn transform(&mut self, transform: Affine) {
         let a = transform.as_coeffs();
         let _ = self.ctx.transform(a[0], a[1], a[2], a[3], a[4], a[5]);
+    }
+
+    fn make_image(
+        &mut self,
+        width: usize,
+        height: usize,
+        buf: &[u8],
+        format: ImageFormat,
+    ) -> Self::Image {
+        let document = self.window.document().unwrap();
+        let element = document.create_element("canvas").unwrap();
+        let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();
+        canvas.set_width(width as u32);
+        canvas.set_height(height as u32);
+        let mut buf = match format {
+            // Discussion topic: if buf were mut here, we could probably avoid this clone.
+            // See https://github.com/rustwasm/wasm-bindgen/issues/1005 for an issue that might
+            // also resolve the need to clone.
+            ImageFormat::RgbaSeparate => buf.to_vec(),
+            ImageFormat::RgbaPremul => {
+                fn unpremul(x: u8, a: u8) -> u8 {
+                    if a == 0 {
+                        0
+                    } else {
+                        let y = (x as u32 * 255 + (a as u32 / 2)) / (a as u32);
+                        y.min(255) as u8
+                    }
+                }
+                let mut new_buf = vec![0; width * height * 4];
+                for i in 0..width * height {
+                    let a = buf[i * 4 + 3];
+                    new_buf[i * 4 + 0] = unpremul(buf[i * 4 + 0], a);
+                    new_buf[i * 4 + 1] = unpremul(buf[i * 4 + 1], a);
+                    new_buf[i * 4 + 2] = unpremul(buf[i * 4 + 2], a);
+                    new_buf[i * 4 + 3] = a;
+                }
+                new_buf
+            }
+            ImageFormat::Rgb => {
+                let mut new_buf = vec![0; width * height * 4];
+                for i in 0..width * height {
+                    new_buf[i * 4 + 0] = buf[i * 3 + 0];
+                    new_buf[i * 4 + 1] = buf[i * 3 + 1];
+                    new_buf[i * 4 + 2] = buf[i * 3 + 2];
+                    new_buf[i * 4 + 3] = 255;
+                }
+                new_buf
+            }
+            _ => Vec::new(),
+        };
+        let image_data =
+            ImageData::new_with_u8_clamped_array(Clamped(&mut buf), width as u32).unwrap();
+        let context = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+            .unwrap();
+        let _ = context.put_image_data(&image_data, 0.0, 0.0);
+        WebImage {
+            inner: canvas,
+            width: width as u32,
+            height: height as u32,
+        }
+    }
+
+    fn draw_image(
+        &mut self,
+        image: &Self::Image,
+        rect: impl Into<Rect>,
+        _interp: InterpolationMode,
+    ) {
+        let rect = rect.into();
+        self.ctx.save();
+        // TODO: handle error
+        let _ = self.ctx.translate(rect.x0, rect.y0);
+        let _ = self.ctx.scale(
+            rect.width() / (image.width as f64),
+            rect.height() / (image.height as f64),
+        );
+        let _ = self
+            .ctx
+            .draw_image_with_html_canvas_element(&image.inner, 0.0, 0.0);
+        self.ctx.restore();
     }
 }
 

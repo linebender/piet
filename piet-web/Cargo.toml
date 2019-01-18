@@ -19,4 +19,5 @@ wasm-bindgen = "0.2.30"
 
 [dependencies.web-sys]
 version = "0.3.6"
-features = ["CanvasRenderingContext2d", "CanvasWindingRule", "TextMetrics"]
+features = ["CanvasRenderingContext2d", "CanvasWindingRule", "Document", "Element",
+    "HtmlCanvasElement", "ImageBitmap", "ImageData", "TextMetrics"]
