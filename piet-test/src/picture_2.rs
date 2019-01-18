@@ -1,9 +1,9 @@
 //! A bunch of image test cases.
 
-use piet::{ImageFormat, InterpolationMode, RenderContext};
+use piet::{Error, ImageFormat, InterpolationMode, RenderContext};
 
-pub fn draw(rc: &mut impl RenderContext) {
-    rc.clear(0xFF_FF_FF);
+pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
+    rc.clear(0xFF_FF_FF)?;
 
     let mut y = 5.0;
     for &mode in &[
@@ -17,12 +17,13 @@ pub fn draw(rc: &mut impl RenderContext) {
             ImageFormat::Rgb,
         ] {
             let image_data = make_image_data(16, 16, format);
-            let image = rc.make_image(16, 16, &image_data, format);
-            rc.draw_image(&image, ((x, y), (x + 40.0, y + 40.0)), mode);
+            let image = rc.make_image(16, 16, &image_data, format)?;
+            rc.draw_image(&image, ((x, y), (x + 40.0, y + 40.0)), mode)?;
             x += 50.0;
         }
         y += 50.0;
     }
+    Ok(())
 }
 
 fn make_image_data(width: usize, height: usize, format: ImageFormat) -> Vec<u8> {

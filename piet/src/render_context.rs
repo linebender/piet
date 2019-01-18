@@ -2,7 +2,7 @@
 
 use kurbo::{Affine, Rect, Shape, Vec2};
 
-use crate::{Font, FontBuilder, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder};
+use crate::{Error, Font, FontBuilder, RoundFrom, RoundInto, TextLayout, TextLayoutBuilder};
 
 /// A fill rule for resolving winding numbers.
 #[derive(Clone, Copy, PartialEq)]
@@ -94,10 +94,10 @@ pub trait RenderContext {
     /// responsiblity? We could have a cache that is flushed when the Direct2D
     /// render target is rebuilt. Solid brushes are super lightweight, but
     /// other potentially retained objects will be heavier.
-    fn solid_brush(&mut self, rgba: u32) -> Self::Brush;
+    fn solid_brush(&mut self, rgba: u32) -> Result<Self::Brush, Error>;
 
     /// Clear the canvas with the given color.
-    fn clear(&mut self, rgb: u32);
+    fn clear(&mut self, rgb: u32) -> Result<(), Error>;
 
     /// Stroke a shape.
     fn stroke(
@@ -106,27 +106,36 @@ pub trait RenderContext {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&Self::StrokeStyle>,
-    );
+    ) -> Result<(), Error>;
 
     /// Fill a shape.
 
     // TODO: switch last two argument order to be more similar to clip? Maybe we
     // should have a convention, geometry first.
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule);
+    fn fill(
+        &mut self,
+        shape: impl Shape,
+        brush: &Self::Brush,
+        fill_rule: FillRule,
+    ) -> Result<(), Error>;
 
     /// Clip to a shape.
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule);
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error>;
 
     fn new_font_by_name(
         &mut self,
         name: &str,
         size: impl RoundInto<Self::Coord>,
-    ) -> Self::FontBuilder;
+    ) -> Result<Self::FontBuilder, Error>;
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder;
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+    ) -> Result<Self::TextLayoutBuilder, Error>;
 
     /// Draw a text layout.
     ///
@@ -137,7 +146,7 @@ pub trait RenderContext {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    );
+    ) -> Result<(), Error>;
 
     /// Save the context state.
     ///
@@ -149,22 +158,22 @@ pub trait RenderContext {
     ///
     /// The context state currently consists of a clip region and an affine
     /// transform, but is expected to grow in the near future.
-    fn save(&mut self);
+    fn save(&mut self) -> Result<(), Error>;
 
     /// Restore the context state.
     ///
     /// Pop a context state that was pushed by [`save`](#method.save). See
     /// that method for details.
-    fn restore(&mut self);
+    fn restore(&mut self) -> Result<(), Error>;
 
     /// Do graphics operations with the context state saved and then restored.
     ///
     /// Equivalent to [`save`](#method.save), calling `f`, then
     /// [`restore`](#method.restore). See those methods for more details.
-    fn with_save(&mut self, f: impl FnOnce(&mut Self)) {
-        self.save();
-        f(self);
-        self.restore();
+    fn with_save(&mut self, f: impl FnOnce(&mut Self) -> Result<(), Error>) -> Result<(), Error> {
+        self.save()?;
+        // Always try to restore the stack, even if `f` errored.
+        f(self).and(self.restore())
     }
 
     /// Finish any pending operations.
@@ -172,7 +181,7 @@ pub trait RenderContext {
     /// This will generally be called by a shell after all user drawing
     /// operations but before presenting. Not all back-ends will handle this
     /// the same way.
-    fn finish(&mut self);
+    fn finish(&mut self) -> Result<(), Error>;
 
     /// Apply a transform.
     ///
@@ -187,11 +196,16 @@ pub trait RenderContext {
         height: usize,
         buf: &[u8],
         format: ImageFormat,
-    ) -> Self::Image;
+    ) -> Result<Self::Image, Error>;
 
     /// Draw an image.
     ///
     /// The image is scaled to the provided `rect`. It will be squashed if
     /// aspect ratios don't match.
-    fn draw_image(&mut self, image: &Self::Image, rect: impl Into<Rect>, interp: InterpolationMode);
+    fn draw_image(
+        &mut self,
+        image: &Self::Image,
+        rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    ) -> Result<(), Error>;
 }

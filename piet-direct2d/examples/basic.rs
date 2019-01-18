@@ -63,8 +63,9 @@ fn main() {
     context.set_dpi(96.0 * HIDPI, 96.0 * HIDPI);
     context.begin_draw();
     let mut piet_context = D2DRenderContext::new(&d2d, &dwrite, &mut context);
-    draw_test_picture(&mut piet_context, test_picture_number);
-    piet_context.finish();
+    // TODO: report errors more nicely than these unwraps.
+    draw_test_picture(&mut piet_context, test_picture_number).unwrap();
+    piet_context.finish().unwrap();
     context.end_draw().unwrap();
 
     let temp_texture = direct3d11::texture2d::Texture2D::create(&d3d)

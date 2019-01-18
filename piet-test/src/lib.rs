@@ -2,7 +2,7 @@
 
 // Right now, this is just code to generate sample images.
 
-use piet::RenderContext;
+use piet::{Error, RenderContext};
 mod picture_0;
 mod picture_1;
 mod picture_2;
@@ -15,14 +15,18 @@ use crate::picture_2::draw as draw_picture_2;
 ///
 /// There are a few test pictures here now, and hopefully it will grow into
 /// a full suite, suitable for both benchmarking and correctness testing.
-pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) {
+pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) -> Result<(), Error> {
     match number {
         0 => draw_picture_0(rc),
         1 => draw_picture_1(rc),
         2 => draw_picture_2(rc),
-        _ => eprintln!(
-            "Don't have test picture {} yet. Why don't you make it?",
-            number
-        ),
+        _ => {
+            eprintln!(
+                "Don't have test picture {} yet. Why don't you make it?",
+                number
+            );
+            // TODO: error?
+            Ok(())
+        }
     }
 }

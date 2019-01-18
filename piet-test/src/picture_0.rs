@@ -3,52 +3,53 @@
 use kurbo::{Affine, BezPath, Line, Vec2};
 
 use piet::{
-    FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, TextLayout,
+    Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, TextLayout,
     TextLayoutBuilder,
 };
 
-pub fn draw(rc: &mut impl RenderContext) {
-    rc.clear(0xFF_FF_FF);
-    let brush = rc.solid_brush(0x00_00_80_FF);
-    rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0, None);
+pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
+    rc.clear(0xFF_FF_FF)?;
+    let brush = rc.solid_brush(0x00_00_80_FF)?;
+    rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0, None)?;
 
     let mut path = BezPath::new();
     path.moveto((50.0, 10.0));
     path.quadto((60.0, 50.0), (100.0, 90.0));
-    let brush = rc.solid_brush(0x00_80_00_FF);
-    rc.stroke(path, &brush, 1.0, None);
+    let brush = rc.solid_brush(0x00_80_00_FF)?;
+    rc.stroke(path, &brush, 1.0, None)?;
 
     let mut path = BezPath::new();
     path.moveto((10.0, 20.0));
     path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
-    let brush = rc.solid_brush(0x00_00_80_C0);
-    rc.fill(path, &brush, FillRule::NonZero);
+    let brush = rc.solid_brush(0x00_00_80_C0)?;
+    rc.fill(path, &brush, FillRule::NonZero)?;
 
-    let font = rc.new_font_by_name("Segoe UI", 12.0).build();
-    let layout = rc.new_text_layout(&font, "Hello piet!").build();
+    let font = rc.new_font_by_name("Segoe UI", 12.0)?.build()?;
+    let layout = rc.new_text_layout(&font, "Hello piet!")?.build()?;
     let w: f64 = layout.width().into();
-    let brush = rc.solid_brush(0x80_00_00_C0);
-    rc.draw_text(&layout, (80.0, 10.0), &brush);
+    let brush = rc.solid_brush(0x80_00_00_C0)?;
+    rc.draw_text(&layout, (80.0, 10.0), &brush)?;
 
-    rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0, None);
+    rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0, None)?;
 
     rc.with_save(|rc| {
         rc.transform(Affine::rotate(0.1));
-        rc.draw_text(&layout, (80.0, 10.0), &brush);
-    });
+        rc.draw_text(&layout, (80.0, 10.0), &brush)
+    })?;
 
     let image_data = make_image_data(256, 256);
-    let image = rc.make_image(256, 256, &image_data, ImageFormat::RgbaSeparate);
+    let image = rc.make_image(256, 256, &image_data, ImageFormat::RgbaSeparate)?;
     rc.draw_image(
         &image,
         ((150.0, 50.0), (180.0, 80.0)),
         InterpolationMode::Bilinear,
-    );
+    )?;
 
     let clip_path = star(Vec2::new(90.0, 45.0), 10.0, 30.0, 24);
-    rc.clip(clip_path, FillRule::NonZero);
-    let layout = rc.new_text_layout(&font, "Clipped text").build();
-    rc.draw_text(&layout, (80.0, 50.0), &brush);
+    rc.clip(clip_path, FillRule::NonZero)?;
+    let layout = rc.new_text_layout(&font, "Clipped text")?.build()?;
+    rc.draw_text(&layout, (80.0, 50.0), &brush)?;
+    Ok(())
 }
 
 // Note: this could be a Shape.
