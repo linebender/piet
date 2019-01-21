@@ -11,7 +11,7 @@ use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
     Error, Font, FontBuilder, ImageFormat, InterpolationMode, LineCap, LineJoin, RenderContext,
-    RoundInto, StrokeStyle, TextLayout, TextLayoutBuilder,
+    RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -124,10 +124,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     type Coord = f64;
     type Brush = Brush;
 
-    type Font = WebFont;
-    type FontBuilder = WebFontBuilder;
+    type Text = Self;
     type TextLayout = WebTextLayout;
-    type TextLayoutBuilder = WebTextLayoutBuilder;
 
     type Image = WebImage;
 
@@ -174,32 +172,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Ok(())
     }
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error> {
-        let font = WebFont {
-            family: name.to_owned(),
-            size: size.round_into(),
-            weight: 400,
-            style: FontStyle::Normal,
-        };
-        Ok(WebFontBuilder(font))
-    }
-
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error> {
-        Ok(WebTextLayoutBuilder {
-            // TODO: it's very likely possible to do this without cloning ctx, but
-            // I couldn't figure out the lifetime errors from a `&'a` reference.
-            ctx: self.ctx.clone(),
-            font: font.clone(),
-            text: text.to_owned(),
-        })
+    fn text(&mut self) -> &mut Self::Text {
+        self
     }
 
     fn draw_text(
@@ -313,6 +287,43 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             rc.ctx
                 .draw_image_with_html_canvas_element(&image.inner, 0.0, 0.0)
                 .wrap()
+        })
+    }
+}
+
+impl<'a> Text for WebRenderContext<'a> {
+    type Coord = f64;
+
+    type Font = WebFont;
+    type FontBuilder = WebFontBuilder;
+    type TextLayout = WebTextLayout;
+    type TextLayoutBuilder = WebTextLayoutBuilder;
+
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Result<Self::FontBuilder, Error> {
+        let font = WebFont {
+            family: name.to_owned(),
+            size: size.round_into(),
+            weight: 400,
+            style: FontStyle::Normal,
+        };
+        Ok(WebFontBuilder(font))
+    }
+
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+    ) -> Result<Self::TextLayoutBuilder, Error> {
+        Ok(WebTextLayoutBuilder {
+            // TODO: it's very likely possible to do this without cloning ctx, but
+            // I couldn't figure out the lifetime errors from a `&'a` reference.
+            ctx: self.ctx.clone(),
+            font: font.clone(),
+            text: text.to_owned(),
         })
     }
 }

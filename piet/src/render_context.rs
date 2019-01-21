@@ -2,10 +2,7 @@
 
 use kurbo::{Affine, Rect, Shape, Vec2};
 
-use crate::{
-    Error, FillRule, Font, FontBuilder, RoundFrom, RoundInto, StrokeStyle, TextLayout,
-    TextLayoutBuilder,
-};
+use crate::{Error, FillRule, RoundFrom, RoundInto, StrokeStyle, Text, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -69,10 +66,8 @@ pub trait RenderContext {
     /// Initially just a solid RGBA color, but will probably expand to gradients.
     type Brush;
 
-    type FontBuilder: FontBuilder<Out = Self::Font>;
-    type Font: Font;
-
-    type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
+    /// An associated factory for creating text layouts and related resources.
+    type Text: Text<TextLayout = Self::TextLayout>;
     type TextLayout: TextLayout;
 
     /// The associated type of an image.
@@ -116,17 +111,7 @@ pub trait RenderContext {
     /// are clipped by the shape.
     fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error>;
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error>;
-
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error>;
+    fn text(&mut self) -> &mut Self::Text;
 
     /// Draw a text layout.
     ///

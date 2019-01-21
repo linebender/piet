@@ -11,24 +11,37 @@ use kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
     new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
-    LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, TextLayout, TextLayoutBuilder,
+    LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
     ctx: &'a mut Context,
+    text: CairoText,
 }
 
 impl<'a> CairoRenderContext<'a> {
+    /// Create a new Cairo back-end.
+    ///
+    /// At the moment, it uses the "toy text API" for text layout, but when
+    /// we change to a more sophisticated text layout approach, we'll probably
+    /// need a factory for that as an additional argument.
     pub fn new(ctx: &mut Context) -> CairoRenderContext {
-        CairoRenderContext { ctx }
+        CairoRenderContext {
+            ctx,
+            text: CairoText,
+        }
     }
 }
 
 pub enum Brush {
     Solid(u32),
 }
+
+/// Right now, we don't need any state, as the "toy text API" treats the
+/// access to system font information as a global. This will change.
+pub struct CairoText;
 
 pub struct CairoFont(ScaledFont);
 
@@ -94,10 +107,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Coord = f64;
     type Brush = Brush;
 
-    type Font = CairoFont;
-    type FontBuilder = CairoFontBuilder;
+    type Text = CairoText;
     type TextLayout = CairoTextLayout;
-    type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     type Image = ImageSurface;
 
@@ -149,29 +160,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.status()
     }
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error> {
-        Ok(CairoFontBuilder {
-            family: name.to_owned(),
-            size: size.round_into(),
-            weight: FontWeight::Normal,
-            slant: FontSlant::Normal,
-        })
-    }
-
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error> {
-        let text_layout = CairoTextLayout {
-            font: font.0.clone(),
-            text: text.to_owned(),
-        };
-        Ok(CairoTextLayoutBuilder(text_layout))
+    fn text(&mut self) -> &mut Self::Text {
+        &mut self.text
     }
 
     fn draw_text(
@@ -290,6 +280,40 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             rc.ctx.paint();
             rc.status()
         })
+    }
+}
+
+impl Text for CairoText {
+    type Coord = f64;
+
+    type Font = CairoFont;
+    type FontBuilder = CairoFontBuilder;
+    type TextLayout = CairoTextLayout;
+    type TextLayoutBuilder = CairoTextLayoutBuilder;
+
+    fn new_font_by_name(
+        &mut self,
+        name: &str,
+        size: impl RoundInto<Self::Coord>,
+    ) -> Result<Self::FontBuilder, Error> {
+        Ok(CairoFontBuilder {
+            family: name.to_owned(),
+            size: size.round_into(),
+            weight: FontWeight::Normal,
+            slant: FontSlant::Normal,
+        })
+    }
+
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+    ) -> Result<Self::TextLayoutBuilder, Error> {
+        let text_layout = CairoTextLayout {
+            font: font.0.clone(),
+            text: text.to_owned(),
+        };
+        Ok(CairoTextLayoutBuilder(text_layout))
     }
 }
 
