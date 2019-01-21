@@ -6,10 +6,12 @@ use piet::{Error, RenderContext};
 mod picture_0;
 mod picture_1;
 mod picture_2;
+mod picture_3;
 
 use crate::picture_0::draw as draw_picture_0;
 use crate::picture_1::draw as draw_picture_1;
 use crate::picture_2::draw as draw_picture_2;
+use crate::picture_3::draw as draw_picture_3;
 
 /// Draw a test picture, by number.
 ///
@@ -20,6 +22,7 @@ pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) -> Result<(
         0 => draw_picture_0(rc),
         1 => draw_picture_1(rc),
         2 => draw_picture_2(rc),
+        3 => draw_picture_3(rc),
         _ => {
             eprintln!(
                 "Don't have test picture {} yet. Why don't you make it?",

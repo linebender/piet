@@ -3,14 +3,15 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use js_sys::{Float64Array, Reflect};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData, Window};
 
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    Error, Font, FontBuilder, ImageFormat, InterpolationMode, RenderContext, RoundInto, TextLayout,
-    TextLayoutBuilder,
+    Error, Font, FontBuilder, ImageFormat, InterpolationMode, LineCap, LineJoin, RenderContext,
+    RoundInto, StrokeStyle, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -27,11 +28,6 @@ impl<'a> WebRenderContext<'a> {
 
 pub enum Brush {
     Solid(u32),
-}
-
-pub enum StrokeStyle {
-    // TODO: actual stroke style options
-    Default,
 }
 
 #[derive(Clone)]
@@ -106,12 +102,27 @@ fn convert_fill_rule(fill_rule: piet::FillRule) -> CanvasWindingRule {
     }
 }
 
+fn convert_line_cap(line_cap: LineCap) -> &'static str {
+    match line_cap {
+        LineCap::Butt => "butt",
+        LineCap::Round => "round",
+        LineCap::Square => "square",
+    }
+}
+
+fn convert_line_join(line_join: LineJoin) -> &'static str {
+    match line_join {
+        LineJoin::Miter => "miter",
+        LineJoin::Round => "round",
+        LineJoin::Bevel => "bevel",
+    }
+}
+
 impl<'a> RenderContext for WebRenderContext<'a> {
     /// wasm-bindgen doesn't have a native Point type, so use kurbo's.
     type Point = Vec2;
     type Coord = f64;
     type Brush = Brush;
-    type StrokeStyle = StrokeStyle;
 
     type Font = WebFont;
     type FontBuilder = WebFontBuilder;
@@ -154,7 +165,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
+        style: Option<&StrokeStyle>,
     ) -> Result<(), Error> {
         self.set_path(shape);
         self.set_stroke(width.round_into(), style);
@@ -337,14 +348,44 @@ impl<'a> WebRenderContext<'a> {
     }
 
     /// Set the stroke parameters.
+    ///
+    /// TODO(performance): this is probably expensive enough it makes sense
+    /// to at least store the last version and only reset if it's changed.
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
         self.ctx.set_line_width(width);
-        if let Some(style) = style {
-            match style {
-                // TODO: actual stroke style parameters
-                StrokeStyle::Default => (),
-            }
-        }
+
+        let line_join = style
+            .and_then(|style| style.line_join)
+            .unwrap_or(LineJoin::Miter);
+        self.ctx.set_line_join(convert_line_join(line_join));
+
+        let line_cap = style
+            .and_then(|style| style.line_cap)
+            .unwrap_or(LineCap::Butt);
+        self.ctx.set_line_cap(convert_line_cap(line_cap));
+
+        let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
+        self.ctx.set_miter_limit(miter_limit);
+
+        let (dash_segs, dash_offset) = style
+            .and_then(|style| style.dash.as_ref())
+            .map(|dash| {
+                let len = dash.0.len() as u32;
+                let array = Float64Array::new_with_length(len);
+                for (i, elem) in dash.0.iter().enumerate() {
+                    Reflect::set(
+                        array.as_ref(),
+                        &JsValue::from(i as u32),
+                        &JsValue::from(*elem),
+                    )
+                    .unwrap();
+                }
+                (array, dash.1)
+            })
+            .unwrap_or((Float64Array::new_with_length(0), 0.0));
+
+        self.ctx.set_line_dash(dash_segs.as_ref()).unwrap();
+        self.ctx.set_line_dash_offset(dash_offset);
     }
 
     fn set_path(&mut self, shape: impl Shape) {
