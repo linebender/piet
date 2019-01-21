@@ -4,15 +4,15 @@ use std::fmt;
 
 use cairo::{
     BorrowError, Context, Filter, FontFace, FontOptions, FontSlant, FontWeight, Format,
-    ImageSurface, LineCap, LineJoin, Matrix, Pattern, PatternTrait, ScaledFont, Status,
-    SurfacePattern,
+    ImageSurface, Matrix, Pattern, PatternTrait, ScaledFont, Status, SurfacePattern,
 };
 
 use kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
     new_error, Error, ErrorKind, Factory, FillRule, Font, FontBuilder, ImageFormat,
-    InterpolationMode, RenderContext, RoundInto, TextLayout, TextLayoutBuilder,
+    InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -38,15 +38,6 @@ impl<'a> CairoRenderContext<'a> {
 
 pub enum Brush {
     Solid(u32),
-}
-
-// TODO: This cannot be used yet because the `piet::RenderContext` trait
-// needs to expose a way to create stroke styles.
-pub struct StrokeStyle {
-    line_join: Option<LineJoin>,
-    line_cap: Option<LineCap>,
-    dash: Option<(Vec<f64>, f64)>,
-    miter_limit: Option<f64>,
 }
 
 /// Right now, we don't need any state, as the "toy text API" treats the
@@ -104,37 +95,6 @@ impl<T> WrapError<T> for Result<T, Status> {
     }
 }
 
-impl StrokeStyle {
-    pub fn new() -> StrokeStyle {
-        StrokeStyle {
-            line_join: None,
-            line_cap: None,
-            dash: None,
-            miter_limit: None,
-        }
-    }
-
-    pub fn line_join(mut self, line_join: LineJoin) -> Self {
-        self.line_join = Some(line_join);
-        self
-    }
-
-    pub fn line_cap(mut self, line_cap: LineCap) -> Self {
-        self.line_cap = Some(line_cap);
-        self
-    }
-
-    pub fn dash(mut self, dashes: Vec<f64>, offset: f64) -> Self {
-        self.dash = Some((dashes, offset));
-        self
-    }
-
-    pub fn miter_limit(mut self, miter_limit: f64) -> Self {
-        self.miter_limit = Some(miter_limit);
-        self
-    }
-}
-
 fn convert_fill_rule(fill_rule: piet::FillRule) -> cairo::FillRule {
     match fill_rule {
         piet::FillRule::NonZero => cairo::FillRule::Winding,
@@ -147,7 +107,6 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Point = Vec2;
     type Coord = f64;
     type Brush = Brush;
-    type StrokeStyle = StrokeStyle;
 
     type Factory = CairoFactory;
     type TextLayout = CairoTextLayout;
@@ -193,7 +152,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
+        style: Option<&StrokeStyle>,
     ) -> Result<(), Error> {
         self.set_path(shape);
         self.set_stroke(width.round_into(), style);
@@ -359,6 +318,22 @@ impl Factory for CairoFactory {
     }
 }
 
+fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
+    match line_cap {
+        LineCap::Butt => cairo::LineCap::Butt,
+        LineCap::Round => cairo::LineCap::Round,
+        LineCap::Square => cairo::LineCap::Square,
+    }
+}
+
+fn convert_line_join(line_join: LineJoin) -> cairo::LineJoin {
+    match line_join {
+        LineJoin::Miter => cairo::LineJoin::Miter,
+        LineJoin::Round => cairo::LineJoin::Round,
+        LineJoin::Bevel => cairo::LineJoin::Bevel,
+    }
+}
+
 impl<'a> CairoRenderContext<'a> {
     /// Set the source pattern to the brush.
     ///
@@ -382,12 +357,12 @@ impl<'a> CairoRenderContext<'a> {
         let line_join = style
             .and_then(|style| style.line_join)
             .unwrap_or(LineJoin::Miter);
-        self.ctx.set_line_join(line_join);
+        self.ctx.set_line_join(convert_line_join(line_join));
 
         let line_cap = style
             .and_then(|style| style.line_cap)
             .unwrap_or(LineCap::Butt);
-        self.ctx.set_line_cap(line_cap);
+        self.ctx.set_line_cap(convert_line_cap(line_cap));
 
         let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
         self.ctx.set_miter_limit(miter_limit);

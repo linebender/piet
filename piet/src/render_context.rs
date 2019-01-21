@@ -2,16 +2,7 @@
 
 use kurbo::{Affine, Rect, Shape, Vec2};
 
-use crate::{Error, Factory, RoundFrom, RoundInto, TextLayout};
-
-/// A fill rule for resolving winding numbers.
-#[derive(Clone, Copy, PartialEq)]
-pub enum FillRule {
-    /// Fill everything with a non-zero winding number.
-    NonZero,
-    /// Fill everything with an odd winding number.
-    EvenOdd,
-}
+use crate::{Error, Factory, FillRule, RoundFrom, RoundInto, StrokeStyle, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -75,9 +66,6 @@ pub trait RenderContext {
     /// Initially just a solid RGBA color, but will probably expand to gradients.
     type Brush;
 
-    /// Parameters for the style of stroke operations.
-    type StrokeStyle;
-
     /// An associated factory for creating text layouts and related resources.
     type Factory: Factory<TextLayout = Self::TextLayout>;
     type TextLayout: TextLayout;
@@ -103,7 +91,7 @@ pub trait RenderContext {
         shape: impl Shape,
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
-        style: Option<&Self::StrokeStyle>,
+        style: Option<&StrokeStyle>,
     ) -> Result<(), Error>;
 
     /// Fill a shape.
