@@ -2,13 +2,14 @@
 
 Ensure both cargo and [npm] are installed.
 
-Make sure that wasm-bindgen is installed. This needs to be the same version of
-wasm-bindgen used by piet-web.
+Make sure that wasm-pack is installed:
 
-`$ cargo install -f wasm-bindgen-cli`
+`$ cargo install wasm-pack`
+
+Then run the following:
 
 `$ cd examples/basic && ./build.sh`
 
-Then navigate browser to local web server.
+Then navigate your browser to the local web server that was started.
 
 [npm]: https://www.npmjs.com/get-npm
