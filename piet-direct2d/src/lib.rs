@@ -31,13 +31,13 @@ use directwrite::TextFormat;
 use kurbo::{Affine, PathEl, Rect, Shape};
 
 use piet::{
-    new_error, Error, ErrorKind, Factory, FillRule, Font, FontBuilder, ImageFormat,
-    InterpolationMode, RenderContext, RoundInto, StrokeStyle, TextLayout, TextLayoutBuilder,
+    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
+    RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
     factory: &'a direct2d::Factory,
-    inner_factory: D2DFactory<'a>,
+    inner_text: D2DText<'a>,
     // This is an owned clone, but after some direct2d refactor, it's likely we'll
     // hold a mutable reference.
     rt: GenericRenderTarget,
@@ -46,7 +46,7 @@ pub struct D2DRenderContext<'a> {
     ctx_stack: Vec<CtxState>,
 }
 
-pub struct D2DFactory<'a> {
+pub struct D2DText<'a> {
     dwrite: &'a directwrite::Factory,
 }
 
@@ -80,10 +80,10 @@ impl<'a> D2DRenderContext<'a> {
         dwrite: &'a directwrite::Factory,
         rt: &'a mut RT,
     ) -> D2DRenderContext<'a> {
-        let inner_factory = D2DFactory { dwrite };
+        let inner_text = D2DText { dwrite };
         D2DRenderContext {
             factory,
-            inner_factory: inner_factory,
+            inner_text: inner_text,
             rt: rt.as_generic(),
             ctx_stack: vec![CtxState::default()],
         }
@@ -187,7 +187,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     type Coord = f32;
     type Brush = GenericBrush;
 
-    type Factory = D2DFactory<'a>;
+    type Text = D2DText<'a>;
 
     type TextLayout = D2DTextLayout;
 
@@ -256,8 +256,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         Ok(())
     }
 
-    fn factory(&mut self) -> &mut Self::Factory {
-        &mut self.inner_factory
+    fn text(&mut self) -> &mut Self::Text {
+        &mut self.inner_text
     }
 
     fn draw_text(
@@ -396,7 +396,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 }
 
-impl<'a> Factory for D2DFactory<'a> {
+impl<'a> Text for D2DText<'a> {
     type Coord = f32;
     type FontBuilder = D2DFontBuilder<'a>;
     type Font = D2DFont;

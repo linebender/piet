@@ -2,7 +2,7 @@
 
 use crate::{Error, RoundFrom, RoundInto};
 
-pub trait Factory {
+pub trait Text {
     type FontBuilder: FontBuilder<Out = Self::Font>;
     type Font: Font;
 

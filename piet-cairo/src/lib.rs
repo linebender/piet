@@ -10,16 +10,15 @@ use cairo::{
 use kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
-    new_error, Error, ErrorKind, Factory, FillRule, Font, FontBuilder, ImageFormat,
-    InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, TextLayout,
-    TextLayoutBuilder,
+    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
+    LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
     ctx: &'a mut Context,
-    factory: CairoFactory,
+    text: CairoText,
 }
 
 impl<'a> CairoRenderContext<'a> {
@@ -31,7 +30,7 @@ impl<'a> CairoRenderContext<'a> {
     pub fn new(ctx: &mut Context) -> CairoRenderContext {
         CairoRenderContext {
             ctx,
-            factory: CairoFactory,
+            text: CairoText,
         }
     }
 }
@@ -42,7 +41,7 @@ pub enum Brush {
 
 /// Right now, we don't need any state, as the "toy text API" treats the
 /// access to system font information as a global. This will change.
-pub struct CairoFactory;
+pub struct CairoText;
 
 pub struct CairoFont(ScaledFont);
 
@@ -108,7 +107,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Coord = f64;
     type Brush = Brush;
 
-    type Factory = CairoFactory;
+    type Text = CairoText;
     type TextLayout = CairoTextLayout;
 
     type Image = ImageSurface;
@@ -161,8 +160,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.status()
     }
 
-    fn factory(&mut self) -> &mut Self::Factory {
-        &mut self.factory
+    fn text(&mut self) -> &mut Self::Text {
+        &mut self.text
     }
 
     fn draw_text(
@@ -284,7 +283,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 }
 
-impl Factory for CairoFactory {
+impl Text for CairoText {
     type Coord = f64;
 
     type Font = CairoFont;

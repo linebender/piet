@@ -10,8 +10,8 @@ use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, Im
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    Error, Factory, Font, FontBuilder, ImageFormat, InterpolationMode, LineCap, LineJoin,
-    RenderContext, RoundInto, StrokeStyle, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, ImageFormat, InterpolationMode, LineCap, LineJoin, RenderContext,
+    RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -124,7 +124,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     type Coord = f64;
     type Brush = Brush;
 
-    type Factory = Self;
+    type Text = Self;
     type TextLayout = WebTextLayout;
 
     type Image = WebImage;
@@ -172,7 +172,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Ok(())
     }
 
-    fn factory(&mut self) -> &mut Self::Factory {
+    fn text(&mut self) -> &mut Self::Text {
         self
     }
 
@@ -291,7 +291,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 }
 
-impl<'a> Factory for WebRenderContext<'a> {
+impl<'a> Text for WebRenderContext<'a> {
     type Coord = f64;
 
     type Font = WebFont;

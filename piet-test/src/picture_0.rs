@@ -3,8 +3,8 @@
 use kurbo::{Affine, BezPath, Line, Vec2};
 
 use piet::{
-    Error, Factory, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext,
-    TextLayout, TextLayoutBuilder,
+    Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
@@ -24,11 +24,8 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let brush = rc.solid_brush(0x00_00_80_C0)?;
     rc.fill(path, &brush, FillRule::NonZero)?;
 
-    let font = rc.factory().new_font_by_name("Segoe UI", 12.0)?.build()?;
-    let layout = rc
-        .factory()
-        .new_text_layout(&font, "Hello piet!")?
-        .build()?;
+    let font = rc.text().new_font_by_name("Segoe UI", 12.0)?.build()?;
+    let layout = rc.text().new_text_layout(&font, "Hello piet!")?.build()?;
     let w: f64 = layout.width().into();
     let brush = rc.solid_brush(0x80_00_00_C0)?;
     rc.draw_text(&layout, (80.0, 10.0), &brush)?;
@@ -50,10 +47,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
 
     let clip_path = star(Vec2::new(90.0, 45.0), 10.0, 30.0, 24);
     rc.clip(clip_path, FillRule::NonZero)?;
-    let layout = rc
-        .factory()
-        .new_text_layout(&font, "Clipped text")?
-        .build()?;
+    let layout = rc.text().new_text_layout(&font, "Clipped text")?.build()?;
     rc.draw_text(&layout, (80.0, 50.0), &brush)?;
     Ok(())
 }

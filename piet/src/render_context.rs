@@ -2,7 +2,7 @@
 
 use kurbo::{Affine, Rect, Shape, Vec2};
 
-use crate::{Error, Factory, FillRule, RoundFrom, RoundInto, StrokeStyle, TextLayout};
+use crate::{Error, FillRule, RoundFrom, RoundInto, StrokeStyle, Text, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -67,7 +67,7 @@ pub trait RenderContext {
     type Brush;
 
     /// An associated factory for creating text layouts and related resources.
-    type Factory: Factory<TextLayout = Self::TextLayout>;
+    type Text: Text<TextLayout = Self::TextLayout>;
     type TextLayout: TextLayout;
 
     /// The associated type of an image.
@@ -111,7 +111,7 @@ pub trait RenderContext {
     /// are clipped by the shape.
     fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error>;
 
-    fn factory(&mut self) -> &mut Self::Factory;
+    fn text(&mut self) -> &mut Self::Text;
 
     /// Draw a text layout.
     ///
