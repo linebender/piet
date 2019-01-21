@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 use std::fmt;
 
+use js_sys::{Float64Array, Reflect};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData, Window};
 
@@ -366,7 +367,25 @@ impl<'a> WebRenderContext<'a> {
         let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
         self.ctx.set_miter_limit(miter_limit);
 
-        // TODO: line dashes. Waiting on set_line_dash in web_sys.
+        let (dash_segs, dash_offset) = style
+            .and_then(|style| style.dash.as_ref())
+            .map(|dash| {
+                let len = dash.0.len() as u32;
+                let array = Float64Array::new_with_length(len);
+                for (i, elem) in dash.0.iter().enumerate() {
+                    Reflect::set(
+                        array.as_ref(),
+                        &JsValue::from(i as u32),
+                        &JsValue::from(*elem),
+                    )
+                    .unwrap();
+                }
+                (array, dash.1)
+            })
+            .unwrap_or((Float64Array::new_with_length(0), 0.0));
+
+        self.ctx.set_line_dash(dash_segs.as_ref()).unwrap();
+        self.ctx.set_line_dash_offset(dash_offset);
     }
 
     fn set_path(&mut self, shape: impl Shape) {

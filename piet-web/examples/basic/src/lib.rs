@@ -1,4 +1,4 @@
-//! Basic example of rendering on Cairo.
+//! Basic example of rendering in the browser
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
