@@ -10,13 +10,13 @@ mod cairo_back;
     feature = "cairo",
     not(any(target_arch = "wasm32", target_os = "windows", feature = "direct2d"))
 ))]
-pub use cairo_back::*;
+pub use crate::cairo_back::*;
 
 #[cfg(any(feature = "d2d", all(target_os = "windows", not(feature = "cairo"))))]
 mod direct2d_back;
 
 #[cfg(any(feature = "d2d", all(target_os = "windows", not(feature = "cairo"))))]
-pub use direct2d_back::*;
+pub use crate::direct2d_back::*;
 
 #[cfg(any(feature = "web", target_arch = "wasm32"))]
 mod back {
@@ -26,4 +26,4 @@ mod back {
 }
 
 #[cfg(any(feature = "web", target_arch = "wasm32"))]
-pub use back::*;
+pub use crate::back::*;
