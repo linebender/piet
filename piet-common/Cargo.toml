@@ -9,7 +9,7 @@ keywords = ["graphics", "2d"]
 
 [features]
 d2d = ["piet-direct2d"]
-cairo = ["piet-cairo"]
+cairo = ["piet-cairo", "cairo-rs"]
 web = ["piet-web"]
 
 [dependencies]
@@ -18,6 +18,7 @@ piet = { path = "../piet" }
 piet-cairo = { path = "../piet-cairo", optional = true }
 piet-direct2d = { path = "../piet-direct2d", optional = true }
 piet-web = { path = "../piet-web", optional = true }
+cairo-rs = { version = "0.5.0", default_features = false, optional = true}
 
 [target.'cfg(not(any(target_arch="wasm32", target_os="windows")))'.dependencies]
 piet-cairo = { path = "../piet-cairo" }

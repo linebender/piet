@@ -4,17 +4,13 @@
     feature = "cairo",
     not(any(target_arch = "wasm32", target_os = "windows", feature = "direct2d"))
 ))]
-mod back {
-    pub use piet_cairo::*;
-
-    pub type Piet<'a> = CairoRenderContext<'a>;
-}
+mod cairo_back;
 
 #[cfg(any(
     feature = "cairo",
     not(any(target_arch = "wasm32", target_os = "windows", feature = "direct2d"))
 ))]
-pub use back::*;
+pub use cairo_back::*;
 
 #[cfg(any(feature = "d2d", all(target_os = "windows", not(feature = "cairo"))))]
 mod direct2d_back;

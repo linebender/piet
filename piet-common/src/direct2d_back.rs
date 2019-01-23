@@ -1,4 +1,4 @@
-//! Select Direct2D back-end for piet.
+//! Support for piet Direct2D back-end.
 
 pub use piet_direct2d::*;
 
@@ -12,7 +12,7 @@ use dxgi::flags::Format;
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
 
-/// A struct that can be used to create bitmap render contexts
+/// A struct that can be used to create bitmap render contexts.
 pub struct Device {
     d2d: direct2d::Factory,
     dwrite: directwrite::Factory,
@@ -65,7 +65,7 @@ impl Device {
         &self,
         width: usize,
         height: usize,
-        pix_scale: f32,
+        pix_scale: f64,
     ) -> Result<BitmapTarget, piet::Error> {
         let mut context = direct2d::DeviceContext::create(&self.device, false).unwrap();
 
@@ -80,7 +80,7 @@ impl Device {
         // Bind the backing texture to a D2D Bitmap
         let target = Bitmap::create(&context)
             .with_dxgi_surface(&tex.as_dxgi())
-            .with_dpi(96.0 * pix_scale, 96.0 * pix_scale)
+            .with_dpi(96.0 * pix_scale as f32, 96.0 * pix_scale as f32)
             .with_options(BitmapOptions::TARGET)
             .build()
             .unwrap();
@@ -106,11 +106,13 @@ impl<'a> BitmapTarget<'a> {
     ///
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
-    pub fn render_context<'b>(&'b mut self) -> D2DRenderContext<'a> {
+    pub fn render_context<'b>(&'b mut self) -> D2DRenderContext<'b> {
         D2DRenderContext::new(self.d2d, self.dwrite, &mut self.context)
     }
 
     /// Get raw RGBA pixels from the bitmap.
+    ///
+    /// These are in premultiplied-alpha format.
     pub fn into_raw_pixels(mut self) -> Result<Vec<u8>, piet::Error> {
         self.context.end_draw().unwrap();
         let temp_texture = direct3d11::texture2d::Texture2D::create(self.d3d)

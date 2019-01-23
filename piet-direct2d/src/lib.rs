@@ -75,11 +75,16 @@ struct CtxState {
 }
 
 impl<'b, 'a: 'b> D2DRenderContext<'a> {
+    /// Create a new Piet RenderContext for the Direct2D RenderTarget.
+    ///
+    /// Note: the signature of this function has more restrictive lifetimes than
+    /// the implementation requires, because we actually clone the RT, but this
+    /// will likely change.
     pub fn new<RT: RenderTarget>(
         factory: &'a direct2d::Factory,
         dwrite: &'a directwrite::Factory,
         rt: &'b mut RT,
-    ) -> D2DRenderContext<'a> {
+    ) -> D2DRenderContext<'b> {
         let inner_text = D2DText { dwrite };
         D2DRenderContext {
             factory,
