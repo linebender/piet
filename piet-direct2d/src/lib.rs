@@ -74,11 +74,11 @@ struct CtxState {
     n_layers_pop: usize,
 }
 
-impl<'a> D2DRenderContext<'a> {
+impl<'b, 'a: 'b> D2DRenderContext<'a> {
     pub fn new<RT: RenderTarget>(
         factory: &'a direct2d::Factory,
         dwrite: &'a directwrite::Factory,
-        rt: &'a mut RT,
+        rt: &'b mut RT,
     ) -> D2DRenderContext<'a> {
         let inner_text = D2DText { dwrite };
         D2DRenderContext {

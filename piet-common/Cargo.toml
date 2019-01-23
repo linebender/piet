@@ -1,0 +1,36 @@
+[package]
+name = "piet-common"
+version = "0.1.0"
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "Selection of a single preferred back-end for piet"
+license = "MIT/Apache-2.0"
+edition = "2018"
+keywords = ["graphics", "2d"]
+
+[features]
+d2d = ["piet-direct2d"]
+cairo = ["piet-cairo"]
+web = ["piet-web"]
+
+[dependencies]
+kurbo = "0.2.0"
+piet = { path = "../piet" }
+piet-cairo = { path = "../piet-cairo", optional = true }
+piet-direct2d = { path = "../piet-direct2d", optional = true }
+piet-web = { path = "../piet-web", optional = true }
+
+[target.'cfg(not(any(target_arch="wasm32", target_os="windows")))'.dependencies]
+piet-cairo = { path = "../piet-cairo" }
+
+[target.'cfg(target_os="windows")'.dependencies]
+piet-direct2d = { path = "../piet-direct2d" }
+direct2d = "0.2.0"
+directwrite = "0.1.4"
+dxgi = "0.1.7"
+direct3d11 = "0.1.7"
+
+[target.'cfg(target_arch="wasm32")'.dependencies]
+piet-web = { path = "../piet-web" }
+
+[dev-dependencies]
+image = "0.20.1"
