@@ -18,6 +18,6 @@ piet = { path = "../piet" }
 wasm-bindgen = "0.2.30"
 js-sys = "0.3.10"
 [dependencies.web-sys]
-version = "0.3.6"
+version = "0.3.10"
 features = ["Window", "CanvasRenderingContext2d", "CanvasWindingRule", "Document", "Element",
     "HtmlCanvasElement", "ImageBitmap", "ImageData", "TextMetrics"]
