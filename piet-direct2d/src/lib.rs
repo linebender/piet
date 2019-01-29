@@ -1,7 +1,7 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
 mod conv;
-mod error;
+pub mod error;
 
 use crate::conv::{affine_to_matrix3x2f, convert_stroke_style, rect_to_rectf, to_point2f, Point2};
 use crate::error::WrapError;
@@ -74,12 +74,17 @@ struct CtxState {
     n_layers_pop: usize,
 }
 
-impl<'a> D2DRenderContext<'a> {
+impl<'b, 'a: 'b> D2DRenderContext<'a> {
+    /// Create a new Piet RenderContext for the Direct2D RenderTarget.
+    ///
+    /// Note: the signature of this function has more restrictive lifetimes than
+    /// the implementation requires, because we actually clone the RT, but this
+    /// will likely change.
     pub fn new<RT: RenderTarget>(
         factory: &'a direct2d::Factory,
         dwrite: &'a directwrite::Factory,
-        rt: &'a mut RT,
-    ) -> D2DRenderContext<'a> {
+        rt: &'b mut RT,
+    ) -> D2DRenderContext<'b> {
         let inner_text = D2DText { dwrite };
         D2DRenderContext {
             factory,
