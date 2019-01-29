@@ -1,6 +1,6 @@
 [package]
 name = "piet-web"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Web canvas backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 kurbo = "0.2.0"
-piet = { path = "../piet" }
+piet = { version = "0.0.1", path = "../piet" }
 
 wasm-bindgen = "0.2.30"
 js-sys = "0.3.10"

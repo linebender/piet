@@ -9,4 +9,4 @@ keywords = ["graphics", "2d"]
 
 [dependencies]
 kurbo = "0.2.0"
-piet = { path = "../piet" }
+piet = { version = "0.0.1", path = "../piet" }
