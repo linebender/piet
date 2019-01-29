@@ -1,5 +1,16 @@
 //! Selection of a common back-end for piet.
 
+pub type Point = <Piet<'static> as piet::RenderContext>::Point;
+pub type Coord = <Piet<'static> as piet::RenderContext>::Coord;
+pub type Brush = <Piet<'static> as piet::RenderContext>::Brush;
+pub type Text = <Piet<'static> as piet::RenderContext>::Text;
+pub type TextLayout = <Piet<'static> as piet::RenderContext>::TextLayout;
+pub type Image = <Piet<'static> as piet::RenderContext>::Image;
+
+pub type FontBuilder = <Text as piet::Text>::FontBuilder;
+pub type Font = <Text as piet::Text>::Font;
+pub type TextLayoutBuilder = <Text as piet::Text>::TextLayoutBuilder;
+
 #[cfg(any(
     feature = "cairo",
     not(any(target_arch = "wasm32", target_os = "windows", feature = "direct2d"))
