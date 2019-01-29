@@ -1,6 +1,6 @@
 use kurbo::Line;
 
-use piet::RenderContext;
+use piet::{ImageFormat, RenderContext};
 use piet_common::Device;
 
 fn main() {
@@ -14,7 +14,7 @@ fn main() {
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0, None)
         .unwrap();
     rc.finish().unwrap();
-    let raw_pixels = bitmap.into_raw_pixels().unwrap();
+    let raw_pixels = bitmap.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
     image::save_buffer(
         "temp-image.png",
         &raw_pixels,

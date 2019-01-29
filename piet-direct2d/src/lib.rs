@@ -1,7 +1,7 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
 mod conv;
-mod error;
+pub mod error;
 
 use crate::conv::{affine_to_matrix3x2f, convert_stroke_style, rect_to_rectf, to_point2f, Point2};
 use crate::error::WrapError;

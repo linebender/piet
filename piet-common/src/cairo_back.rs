@@ -5,6 +5,8 @@ use std::marker::PhantomData;
 use cairo::prelude::SurfaceExt;
 use cairo::{Context, Format, ImageSurface};
 
+use piet::{ErrorKind, ImageFormat};
+
 pub use piet_cairo::*;
 
 /// The `RenderContext` for the Cairo backend, which is selected.
@@ -57,18 +59,21 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    ///
-    /// These are in premultiplied-alpha format.
-    ///
-    /// Possible TODO: allow different pixel formats and convert.
-    pub fn into_raw_pixels(mut self) -> Result<Vec<u8>, piet::Error> {
+    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        // TODO: convert other formats.
+        if fmt != ImageFormat::RgbaPremul {
+            return Err(piet::new_error(ErrorKind::NotSupported));
+        }
         std::mem::drop(self.cr);
         self.surface.flush();
         let stride = self.surface.get_stride() as usize;
         let width = self.surface.get_width() as usize;
         let height = self.surface.get_height() as usize;
         let mut raw_data = vec![0; width * height * 4];
-        let buf = self.surface.get_data().unwrap();
+        let buf = self
+            .surface
+            .get_data()
+            .map_err(|e| Into::<Box<dyn std::error::Error>>::into(e))?;
         for y in 0..height {
             let src_off = y * stride;
             let dst_off = y * width * 4;

@@ -1,13 +1,18 @@
 //! Support for piet Direct2D back-end.
 
-pub use piet_direct2d::*;
+use std::fmt;
 
 use direct2d::enums::BitmapOptions;
 use direct2d::image::Bitmap;
+use direct2d::render_target::RenderTag;
 use direct2d::RenderTarget;
 use direct3d11::flags::{BindFlags, CreateDeviceFlags};
 use direct3d11::helpers::ComWrapper;
 use dxgi::flags::Format;
+
+use piet::{ErrorKind, ImageFormat};
+
+pub use piet_direct2d::*;
 
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
@@ -31,6 +36,68 @@ pub struct BitmapTarget<'a> {
     d3d_ctx: &'a direct3d11::DeviceContext,
     tex: direct3d11::Texture2D,
     context: direct2d::DeviceContext,
+}
+
+trait WrapError<T> {
+    fn wrap(self) -> Result<T, piet::Error>;
+}
+
+#[derive(Debug)]
+struct WrappedD2DTag(direct2d::Error, Option<RenderTag>);
+
+#[derive(Debug)]
+struct WrappedD3D11Error(direct3d11::Error);
+
+#[derive(Debug)]
+struct WrappedDxgiError(dxgi::Error);
+
+impl std::error::Error for WrappedD2DTag {}
+impl std::error::Error for WrappedD3D11Error {}
+impl std::error::Error for WrappedDxgiError {}
+
+impl fmt::Display for WrappedD2DTag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Direct2D error: {}, tag {:?}", self.0, self.1)
+    }
+}
+
+impl fmt::Display for WrappedD3D11Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Direct3D11 error: {}", self.0)
+    }
+}
+
+impl fmt::Display for WrappedDxgiError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Dxgi error: {}", self.0)
+    }
+}
+
+impl<T> WrapError<T> for Result<T, (direct2d::Error, Option<RenderTag>)> {
+    fn wrap(self) -> Result<T, piet::Error> {
+        self.map_err(|(e, t)| {
+            let e: Box<dyn std::error::Error> = Box::new(WrappedD2DTag(e, t));
+            e.into()
+        })
+    }
+}
+
+impl<T> WrapError<T> for Result<T, direct3d11::Error> {
+    fn wrap(self) -> Result<T, piet::Error> {
+        self.map_err(|e| {
+            let e: Box<dyn std::error::Error> = Box::new(WrappedD3D11Error(e));
+            e.into()
+        })
+    }
+}
+
+impl<T> WrapError<T> for Result<T, dxgi::Error> {
+    fn wrap(self) -> Result<T, piet::Error> {
+        self.map_err(|e| {
+            let e: Box<dyn std::error::Error> = Box::new(WrappedDxgiError(e));
+            e.into()
+        })
+    }
 }
 
 impl Device {
@@ -111,10 +178,12 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    ///
-    /// These are in premultiplied-alpha format.
-    pub fn into_raw_pixels(mut self) -> Result<Vec<u8>, piet::Error> {
-        self.context.end_draw().unwrap();
+    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        // TODO: convert other formats.
+        if fmt != ImageFormat::RgbaPremul {
+            return Err(piet::new_error(ErrorKind::NotSupported));
+        }
+        self.context.end_draw().wrap()?;
         let temp_texture = direct3d11::texture2d::Texture2D::create(self.d3d)
             .with_size(self.width as u32, self.height as u32)
             .with_format(direct3d11::flags::Format::R8G8B8A8Unorm)
@@ -122,7 +191,7 @@ impl<'a> BitmapTarget<'a> {
             .with_usage(direct3d11::flags::Usage::Staging)
             .with_cpu_access_flags(direct3d11::flags::CpuAccessFlags::READ)
             .build()
-            .unwrap();
+            .wrap()?;
 
         // TODO: Have a safe way to accomplish this :D
         let mut raw_pixels: Vec<u8> = Vec::with_capacity(self.width * self.height * 4);
@@ -135,7 +204,7 @@ impl<'a> BitmapTarget<'a> {
             ctx.Flush();
 
             let surface = temp_texture.as_dxgi();
-            let map = surface.map(true, false, false).unwrap();
+            let map = surface.map(true, false, false).wrap()?;
             for y in 0..(self.height as u32) {
                 raw_pixels.extend_from_slice(&map.row(y)[..self.width * 4]);
             }
