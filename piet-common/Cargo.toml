@@ -1,6 +1,6 @@
 [package]
 name = "piet-common"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Selection of a single preferred back-end for piet"
 license = "MIT/Apache-2.0"

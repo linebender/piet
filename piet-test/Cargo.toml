@@ -1,6 +1,6 @@
 [package]
 name = "piet-test"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Utilities for testing the piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
