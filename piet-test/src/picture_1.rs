@@ -45,20 +45,20 @@ fn draw_cubic_bezier<V: Into<Vec2>>(
     path.moveto(p0);
     path.curveto(p1, p2, p3);
     let curve_brush = rc.solid_brush(0x00_80_00_FF)?;
-    rc.stroke(&path, &curve_brush, 3.0, None)?;
+    rc.stroke(&path, &curve_brush, 3.0, None);
 
     let handle_brush = rc.solid_brush(0x00_00_80_FF)?;
-    rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0, None)?;
-    rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0, None)?;
+    rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0, None);
+    rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0, None);
 
     for p in [p0, p1, p2, p3].into_iter() {
         let dot = circle(*p, 1.5, 20);
-        rc.fill(&dot, &handle_brush, FillRule::NonZero)?;
+        rc.fill(&dot, &handle_brush, FillRule::NonZero);
     }
     Ok(())
 }
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(0xFF_FF_FF)?;
+    rc.clear(0xFF_FF_FF);
     draw_cubic_bezier(rc, (70.0, 80.0), (140.0, 10.0), (60.0, 10.0), (90.0, 80.0))
 }

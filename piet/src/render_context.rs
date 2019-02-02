@@ -73,6 +73,13 @@ pub trait RenderContext {
     /// The associated type of an image.
     type Image;
 
+    /// Report an internal error.
+    ///
+    /// Drawing operations may cause internal errors, which may also occur
+    /// asynchronously after the drawing command was issued. This method reports
+    /// any such error that has been detected.
+    fn status(&mut self) -> Result<(), Error>;
+
     /// Create a new brush resource.
     ///
     /// TODO: figure out how to document lifetime and rebuilding requirements. Should
@@ -83,7 +90,7 @@ pub trait RenderContext {
     fn solid_brush(&mut self, rgba: u32) -> Result<Self::Brush, Error>;
 
     /// Clear the canvas with the given color.
-    fn clear(&mut self, rgb: u32) -> Result<(), Error>;
+    fn clear(&mut self, rgb: u32);
 
     /// Stroke a shape.
     fn stroke(
@@ -92,24 +99,19 @@ pub trait RenderContext {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&StrokeStyle>,
-    ) -> Result<(), Error>;
+    );
 
     /// Fill a shape.
 
     // TODO: switch last two argument order to be more similar to clip? Maybe we
     // should have a convention, geometry first.
-    fn fill(
-        &mut self,
-        shape: impl Shape,
-        brush: &Self::Brush,
-        fill_rule: FillRule,
-    ) -> Result<(), Error>;
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule);
 
     /// Clip to a shape.
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error>;
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule);
 
     fn text(&mut self) -> &mut Self::Text;
 
@@ -122,7 +124,7 @@ pub trait RenderContext {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) -> Result<(), Error>;
+    );
 
     /// Save the context state.
     ///
@@ -178,10 +180,5 @@ pub trait RenderContext {
     ///
     /// The image is scaled to the provided `rect`. It will be squashed if
     /// aspect ratios don't match.
-    fn draw_image(
-        &mut self,
-        image: &Self::Image,
-        rect: impl Into<Rect>,
-        interp: InterpolationMode,
-    ) -> Result<(), Error>;
+    fn draw_image(&mut self, image: &Self::Image, rect: impl Into<Rect>, interp: InterpolationMode);
 }
