@@ -3,7 +3,10 @@
 mod conv;
 pub mod error;
 
-use crate::conv::{affine_to_matrix3x2f, convert_stroke_style, rect_to_rectf, to_point2f, Point2};
+use crate::conv::{
+    affine_to_matrix3x2f, convert_stroke_style, gradient_stop_to_d2d, rect_to_rectf,
+    rgba_to_colorf, to_point2f, Point2,
+};
 use crate::error::WrapError;
 
 use std::borrow::Cow;
@@ -13,6 +16,8 @@ use winapi::um::dcommon::D2D_SIZE_U;
 
 use dxgi::Format;
 
+use direct2d::brush::gradient::linear::LinearGradientBrushBuilder;
+use direct2d::brush::gradient::radial::RadialGradientBrushBuilder;
 use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
 use direct2d::enums::{
     AlphaMode, BitmapInterpolationMode, DrawTextOptions, FigureBegin, FigureEnd, FillMode,
@@ -31,8 +36,8 @@ use directwrite::TextFormat;
 use kurbo::{Affine, PathEl, Rect, Shape};
 
 use piet::{
-    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
-    RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
+    InterpolationMode, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -206,11 +211,40 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn solid_brush(&mut self, rgba: u32) -> Result<GenericBrush, Error> {
         Ok(
             SolidColorBrush::create(&self.rt)
-                .with_color((rgba >> 8, ((rgba & 255) as f32) * (1.0 / 255.0)))
+                .with_color(rgba_to_colorf(rgba))
                 .build()
                 .wrap()?
                 .to_generic(), // This does an extra COM clone; avoid somehow?
         )
+    }
+
+    fn gradient(&mut self, gradient: Gradient) -> Result<GenericBrush, Error> {
+        match gradient {
+            Gradient::Linear(linear) => {
+                let mut builder = LinearGradientBrushBuilder::new(&self.rt)
+                    .with_start(to_point2f(linear.start))
+                    .with_end(to_point2f(linear.end));
+                for stop in &linear.stops {
+                    builder = builder.with_stop(gradient_stop_to_d2d(stop));
+                }
+                let brush = builder.build().wrap()?;
+                // Same concern about extra COM clone as above.
+                Ok(brush.to_generic())
+            }
+            Gradient::Radial(radial) => {
+                let radius = radial.radius as f32;
+                let mut builder = RadialGradientBrushBuilder::new(&self.rt)
+                    .with_center(to_point2f(radial.center))
+                    .with_origin_offset(to_point2f(radial.origin_offset))
+                    .with_radius(radius, radius);
+                for stop in &radial.stops {
+                    builder = builder.with_stop(gradient_stop_to_d2d(stop));
+                }
+                let brush = builder.build().wrap()?;
+                // Ditto
+                Ok(brush.to_generic())
+            }
+        }
     }
 
     fn fill(

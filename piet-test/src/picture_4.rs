@@ -1,0 +1,53 @@
+//! Gradients.
+
+use kurbo::{Rect, Vec2};
+
+use piet::{
+    Error, FillRule, Gradient, GradientStop, LinearGradient, RadialGradient, RenderContext,
+};
+
+pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
+    rc.clear(0xFF_FF_FF)?;
+    let stops = vec![
+        GradientStop {
+            pos: 0.0,
+            rgba: 0xff_ff_ff_ff,
+        },
+        GradientStop {
+            pos: 1.0,
+            rgba: 0x00_00_00_ff,
+        },
+    ];
+    let gradient = rc.gradient(Gradient::Radial(RadialGradient {
+        center: Vec2::new(30.0, 30.0),
+        origin_offset: Vec2::new(10.0, 10.0),
+        radius: 30.0,
+        stops,
+    }))?;
+    rc.fill(
+        Rect::new(0.0, 0.0, 60.0, 60.0),
+        &gradient,
+        FillRule::NonZero,
+    );
+    let stops2 = vec![
+        GradientStop {
+            pos: 0.0,
+            rgba: 0xff_ff_ff_ff,
+        },
+        GradientStop {
+            pos: 1.0,
+            rgba: 0x00_00_00_ff,
+        },
+    ];
+    let gradient2 = rc.gradient(Gradient::Linear(LinearGradient {
+        start: Vec2::new(0.0, 0.0),
+        end: Vec2::new(60.0, 0.0),
+        stops: stops2,
+    }))?;
+    rc.fill(
+        Rect::new(0.0, 80.0, 60.0, 100.0),
+        &gradient2,
+        FillRule::NonZero,
+    );
+    Ok(())
+}
