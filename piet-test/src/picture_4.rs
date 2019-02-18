@@ -7,7 +7,7 @@ use piet::{
 };
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(0xFF_FF_FF)?;
+    rc.clear(0xFF_FF_FF);
     let stops = vec![
         GradientStop {
             pos: 0.0,

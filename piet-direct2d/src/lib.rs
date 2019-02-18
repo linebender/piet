@@ -49,6 +49,8 @@ pub struct D2DRenderContext<'a> {
 
     /// The context state stack. There is always at least one, until finishing.
     ctx_stack: Vec<CtxState>,
+
+    err: Result<(), Error>,
 }
 
 pub struct D2DText<'a> {
@@ -96,6 +98,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
             inner_text: inner_text,
             rt: rt.as_generic(),
             ctx_stack: vec![CtxState::default()],
+            err: Ok(()),
         }
     }
 
@@ -203,9 +206,12 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     type Image = Bitmap;
 
-    fn clear(&mut self, rgb: u32) -> Result<(), Error> {
+    fn status(&mut self) -> Result<(), Error> {
+        std::mem::replace(&mut self.err, Ok(()))
+    }
+
+    fn clear(&mut self, rgb: u32) {
         self.rt.clear(rgb);
-        Ok(())
     }
 
     fn solid_brush(&mut self, rgba: u32) -> Result<GenericBrush, Error> {
@@ -247,16 +253,12 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn fill(
-        &mut self,
-        shape: impl Shape,
-        brush: &Self::Brush,
-        fill_rule: FillRule,
-    ) -> Result<(), Error> {
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
         // TODO: various special-case shapes, for efficiency
-        let path = path_from_shape(self.factory, true, shape, fill_rule)?;
-        self.rt.fill_geometry(&path, brush);
-        Ok(())
+        match path_from_shape(self.factory, true, shape, fill_rule) {
+            Ok(path) => self.rt.fill_geometry(&path, brush),
+            Err(e) => self.err = Err(e),
+        }
     }
 
     fn stroke(
@@ -265,23 +267,40 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&StrokeStyle>,
-    ) -> Result<(), Error> {
+    ) {
         // TODO: various special-case shapes, for efficiency
-        let path = path_from_shape(self.factory, false, shape, FillRule::EvenOdd)?;
+        let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+            Ok(path) => path,
+            Err(e) => {
+                self.err = Err(e);
+                return;
+            }
+        };
         let width = width.round_into();
         let style = if let Some(style) = style {
-            Some(convert_stroke_style(self.factory, style, width)?)
+            Some(convert_stroke_style(self.factory, style, width).expect("TODO"))
         } else {
             None
         };
         self.rt.draw_geometry(&path, brush, width, style.as_ref());
-        Ok(())
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error> {
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
         // TODO: set size based on bbox of shape.
-        let layer = Layer::create(&mut self.rt, None).wrap()?;
-        let path = path_from_shape(self.factory, true, shape, fill_rule)?;
+        let layer = match Layer::create(&mut self.rt, None).wrap() {
+            Ok(layer) => layer,
+            Err(e) => {
+                self.err = Err(e);
+                return;
+            }
+        };
+        let path = match path_from_shape(self.factory, false, shape, fill_rule) {
+            Ok(path) => path,
+            Err(e) => {
+                self.err = Err(e);
+                return;
+            }
+        };
         // TODO: we get a use-after-free crash if we don't do this. Almost certainly
         // this will be fixed in direct2d 0.3, so remove workaround when upgrading.
         let _clone = path.clone();
@@ -292,7 +311,6 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .with_mask_transform(transform)
             .push();
         self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
-        Ok(())
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -304,13 +322,13 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) -> Result<(), Error> {
+    ) {
         // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
         let mut line_metrics = Vec::with_capacity(1);
         layout.0.get_line_metrics(&mut line_metrics);
         if line_metrics.is_empty() {
             // Layout is empty, don't bother drawing.
-            return Ok(());
+            return;
         }
         // Direct2D takes upper-left, so adjust for baseline.
         let pos = pos.round_into().0;
@@ -319,7 +337,6 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
         self.rt
             .draw_text_layout(pos, &layout.0, brush, text_options);
-        Ok(())
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -350,7 +367,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             return Err(new_error(ErrorKind::StackUnbalance));
         }
         self.pop_state();
-        Ok(())
+        std::mem::replace(&mut self.err, Ok(()))
     }
 
     fn transform(&mut self, transform: Affine) {
@@ -422,7 +439,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         image: &Self::Image,
         rect: impl Into<Rect>,
         interp: InterpolationMode,
-    ) -> Result<(), Error> {
+    ) {
         let interp = match interp {
             InterpolationMode::NearestNeighbor => BitmapInterpolationMode::NearestNeighbor,
             InterpolationMode::Bilinear => BitmapInterpolationMode::Linear,
@@ -431,7 +448,6 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let src_rect = (0.0, 0.0, src_size.0.width, src_size.0.height);
         self.rt
             .draw_bitmap(&image, rect_to_rectf(rect.into()), 1.0, interp, src_rect);
-        Ok(())
     }
 }
 
