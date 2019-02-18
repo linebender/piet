@@ -18,11 +18,16 @@ pub struct WebRenderContext<'a> {
     ctx: &'a mut CanvasRenderingContext2d,
     /// Used for creating image bitmaps and possibly other resources.
     window: &'a Window,
+    err: Result<(), Error>,
 }
 
 impl<'a> WebRenderContext<'a> {
     pub fn new(ctx: &'a mut CanvasRenderingContext2d, window: &'a Window) -> WebRenderContext<'a> {
-        WebRenderContext { ctx, window }
+        WebRenderContext {
+            ctx,
+            window,
+            err: Ok(()),
+        }
     }
 }
 
@@ -129,33 +134,29 @@ impl<'a> RenderContext for WebRenderContext<'a> {
 
     type Image = WebImage;
 
-    fn clear(&mut self, _rgb: u32) -> Result<(), Error> {
+    fn status(&mut self) -> Result<(), Error> {
+        std::mem::replace(&mut self.err, Ok(()))
+    }
+
+    fn clear(&mut self, _rgb: u32) {
         // TODO: we might need to know the size of the canvas to do this.
-        Ok(())
     }
 
     fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
         Ok(Brush::Solid(rgba))
     }
 
-    fn fill(
-        &mut self,
-        shape: impl Shape,
-        brush: &Self::Brush,
-        fill_rule: piet::FillRule,
-    ) -> Result<(), Error> {
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
         self.set_path(shape);
         self.set_brush(brush, true);
         self.ctx
             .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
-        Ok(())
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: piet::FillRule) -> Result<(), Error> {
+    fn clip(&mut self, shape: impl Shape, fill_rule: piet::FillRule) {
         self.set_path(shape);
         self.ctx
             .clip_with_canvas_winding_rule(convert_fill_rule(fill_rule));
-        Ok(())
     }
 
     fn stroke(
@@ -164,12 +165,11 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&StrokeStyle>,
-    ) -> Result<(), Error> {
+    ) {
         self.set_path(shape);
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush, false);
         self.ctx.stroke();
-        Ok(())
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -181,11 +181,13 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) -> Result<(), Error> {
+    ) {
         self.ctx.set_font(&layout.font.get_font_string());
         self.set_brush(brush, true);
         let pos = pos.round_into();
-        self.ctx.fill_text(&layout.text, pos.x, pos.y).wrap()
+        if let Err(e) = self.ctx.fill_text(&layout.text, pos.x, pos.y).wrap() {
+            self.err = Err(e);
+        }
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -199,7 +201,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 
     fn finish(&mut self) -> Result<(), Error> {
-        Ok(())
+        self.status()
     }
 
     fn transform(&mut self, transform: Affine) {
@@ -276,8 +278,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         image: &Self::Image,
         rect: impl Into<Rect>,
         _interp: InterpolationMode,
-    ) -> Result<(), Error> {
-        self.with_save(|rc| {
+    ) {
+        let result = self.with_save(|rc| {
             let rect = rect.into();
             let _ = rc.ctx.translate(rect.x0, rect.y0);
             let _ = rc.ctx.scale(
@@ -287,7 +289,10 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             rc.ctx
                 .draw_image_with_html_canvas_element(&image.inner, 0.0, 0.0)
                 .wrap()
-        })
+        });
+        if let Err(e) = result {
+            self.err = Err(e);
+        }
     }
 }
 

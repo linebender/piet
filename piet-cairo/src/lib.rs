@@ -112,38 +112,40 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     type Image = ImageSurface;
 
-    fn clear(&mut self, rgb: u32) -> Result<(), Error> {
+    fn status(&mut self) -> Result<(), Error> {
+        let status = self.ctx.status();
+        if status == Status::Success {
+            Ok(())
+        } else {
+            let e: Box<dyn std::error::Error> = Box::new(WrappedStatus(status));
+            Err(e.into())
+        }
+    }
+
+    fn clear(&mut self, rgb: u32) {
         self.ctx.set_source_rgb(
             byte_to_frac(rgb >> 16),
             byte_to_frac(rgb >> 8),
             byte_to_frac(rgb),
         );
         self.ctx.paint();
-        self.status()
     }
 
     fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
         Ok(Brush::Solid(rgba))
     }
 
-    fn fill(
-        &mut self,
-        shape: impl Shape,
-        brush: &Self::Brush,
-        fill_rule: FillRule,
-    ) -> Result<(), Error> {
+    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
         self.set_path(shape);
         self.set_brush(brush);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.fill();
-        self.status()
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) -> Result<(), Error> {
+    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
         self.set_path(shape);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.clip();
-        self.status()
     }
 
     fn stroke(
@@ -152,12 +154,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         brush: &Self::Brush,
         width: impl RoundInto<Self::Coord>,
         style: Option<&StrokeStyle>,
-    ) -> Result<(), Error> {
+    ) {
         self.set_path(shape);
         self.set_stroke(width.round_into(), style);
         self.set_brush(brush);
         self.ctx.stroke();
-        self.status()
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -169,13 +170,12 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         layout: &Self::TextLayout,
         pos: impl RoundInto<Self::Point>,
         brush: &Self::Brush,
-    ) -> Result<(), Error> {
+    ) {
         self.ctx.set_scaled_font(&layout.font);
         self.set_brush(brush);
         let pos = pos.round_into();
         self.ctx.move_to(pos.x, pos.y);
         self.ctx.show_text(&layout.text);
-        self.status()
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -262,8 +262,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         image: &Self::Image,
         rect: impl Into<Rect>,
         interp: InterpolationMode,
-    ) -> Result<(), Error> {
-        self.with_save(|rc| {
+    ) {
+        let _ = self.with_save(|rc| {
             let surface_pattern = SurfacePattern::create(image);
             let filter = match interp {
                 InterpolationMode::NearestNeighbor => Filter::Nearest,
@@ -278,8 +278,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             );
             rc.ctx.set_source(&Pattern::SurfacePattern(surface_pattern));
             rc.ctx.paint();
-            rc.status()
-        })
+            Ok(())
+        });
     }
 }
 
@@ -400,16 +400,6 @@ impl<'a> CairoRenderContext<'a> {
                 }
                 PathEl::Closepath => self.ctx.close_path(),
             }
-        }
-    }
-
-    fn status(&self) -> Result<(), Error> {
-        let status = self.ctx.status();
-        if status == Status::Success {
-            Ok(())
-        } else {
-            let e: Box<dyn std::error::Error> = Box::new(WrappedStatus(status));
-            Err(e.into())
         }
     }
 }
