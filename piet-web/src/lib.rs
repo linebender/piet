@@ -5,13 +5,16 @@ use std::fmt;
 
 use js_sys::{Float64Array, Reflect};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
-use web_sys::{CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData, Window};
+use web_sys::{
+    CanvasGradient, CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData,
+    Window,
+};
 
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    Error, Font, FontBuilder, ImageFormat, InterpolationMode, LineCap, LineJoin, RenderContext,
-    RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, Gradient, GradientStop, ImageFormat, InterpolationMode, LineCap,
+    LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -33,6 +36,7 @@ impl<'a> WebRenderContext<'a> {
 
 pub enum Brush {
     Solid(u32),
+    Gradient(CanvasGradient),
 }
 
 #[derive(Clone)]
@@ -144,6 +148,29 @@ impl<'a> RenderContext for WebRenderContext<'a> {
 
     fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
         Ok(Brush::Solid(rgba))
+    }
+
+    fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {
+        match gradient {
+            Gradient::Linear(linear) => {
+                let (x0, y0) = (linear.start.x, linear.start.y);
+                let (x1, y1) = (linear.end.x, linear.end.y);
+                let mut lg = self.ctx.create_linear_gradient(x0, y0, x1, y1);
+                set_gradient_stops(&mut lg, &linear.stops);
+                Ok(Brush::Gradient(lg))
+            }
+            Gradient::Radial(radial) => {
+                let (xc, yc) = (radial.center.x, radial.center.y);
+                let (xo, yo) = (radial.origin_offset.x, radial.origin_offset.y);
+                let r = radial.radius;
+                let mut rg = self
+                    .ctx
+                    .create_radial_gradient(xc + xo, yc + yo, 0.0, xc, yc, r)
+                    .wrap()?;
+                set_gradient_stops(&mut rg, &radial.stops);
+                Ok(Brush::Gradient(rg))
+            }
+        }
     }
 
     fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
@@ -296,6 +323,29 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 }
 
+fn format_color(rgba: u32) -> String {
+    let rgb = rgba >> 8;
+    let a = rgba & 0xff;
+    if a == 0xff {
+        format!("#{:06x}", rgba >> 8)
+    } else {
+        format!(
+            "rgba({},{},{},{:.3})",
+            (rgb >> 16) & 0xff,
+            (rgb >> 8) & 0xff,
+            rgb & 0xff,
+            byte_to_frac(a)
+        )
+    }
+}
+
+fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
+    for stop in src {
+        // TODO: maybe get error?
+        let _ = dst.add_color_stop(stop.pos, &format_color(stop.rgba));
+    }
+}
+
 impl<'a> Text for WebRenderContext<'a> {
     type Coord = f64;
 
@@ -336,28 +386,23 @@ impl<'a> Text for WebRenderContext<'a> {
 impl<'a> WebRenderContext<'a> {
     /// Set the source pattern to the brush.
     ///
-    /// Cairo is super stateful, and we're trying to have more retained stuff.
+    /// Web canvas is super stateful, and we're trying to have more retained stuff.
     /// This is part of the impedance matching.
     fn set_brush(&mut self, brush: &Brush, is_fill: bool) {
         match *brush {
             Brush::Solid(rgba) => {
-                let rgb = rgba >> 8;
-                let a = rgba & 0xff;
-                let color_str = if a == 0xff {
-                    format!("#{:06x}", rgba >> 8)
-                } else {
-                    format!(
-                        "rgba({},{},{},{:.3})",
-                        (rgb >> 16) & 0xff,
-                        (rgb >> 8) & 0xff,
-                        rgb & 0xff,
-                        byte_to_frac(a)
-                    )
-                };
+                let color_str = format_color(rgba);
                 if is_fill {
                     self.ctx.set_fill_style(&JsValue::from_str(&color_str));
                 } else {
                     self.ctx.set_stroke_style(&JsValue::from_str(&color_str));
+                }
+            }
+            Brush::Gradient(ref gradient) => {
+                if is_fill {
+                    self.ctx.set_fill_style(&JsValue::from(gradient));
+                } else {
+                    self.ctx.set_stroke_style(&JsValue::from(gradient));
                 }
             }
         }

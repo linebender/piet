@@ -10,8 +10,9 @@ use cairo::{
 use kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
-    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, ImageFormat, InterpolationMode,
-    LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, GradientStop, ImageFormat,
+    InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -37,6 +38,8 @@ impl<'a> CairoRenderContext<'a> {
 
 pub enum Brush {
     Solid(u32),
+    Linear(cairo::LinearGradient),
+    Radial(cairo::RadialGradient),
 }
 
 /// Right now, we don't need any state, as the "toy text API" treats the
@@ -133,6 +136,26 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
         Ok(Brush::Solid(rgba))
+    }
+
+    fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {
+        match gradient {
+            Gradient::Linear(linear) => {
+                let (x0, y0) = (linear.start.x, linear.start.y);
+                let (x1, y1) = (linear.end.x, linear.end.y);
+                let mut lg = cairo::LinearGradient::new(x0, y0, x1, y1);
+                set_gradient_stops(&mut lg, &linear.stops);
+                Ok(Brush::Linear(lg))
+            }
+            Gradient::Radial(radial) => {
+                let (xc, yc) = (radial.center.x, radial.center.y);
+                let (xo, yo) = (radial.origin_offset.x, radial.origin_offset.y);
+                let r = radial.radius;
+                let mut rg = cairo::RadialGradient::new(xc + xo, yc + yo, 0.0, xc, yc, r);
+                set_gradient_stops(&mut rg, &radial.stops);
+                Ok(Brush::Radial(rg))
+            }
+        }
     }
 
     fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
@@ -283,6 +306,19 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 }
 
+fn set_gradient_stops(dst: &mut impl cairo::Gradient, src: &[GradientStop]) {
+    for stop in src {
+        let rgba = stop.rgba;
+        dst.add_color_stop_rgba(
+            stop.pos as f64,
+            byte_to_frac(rgba >> 24),
+            byte_to_frac(rgba >> 16),
+            byte_to_frac(rgba >> 8),
+            byte_to_frac(rgba),
+        );
+    }
+}
+
 impl Text for CairoText {
     type Coord = f64;
 
@@ -346,6 +382,12 @@ impl<'a> CairoRenderContext<'a> {
                 byte_to_frac(rgba >> 8),
                 byte_to_frac(rgba),
             ),
+            Brush::Linear(ref linear) => self
+                .ctx
+                .set_source(&Pattern::LinearGradient(linear.clone())),
+            Brush::Radial(ref radial) => self
+                .ctx
+                .set_source(&Pattern::RadialGradient(radial.clone())),
         }
     }
 

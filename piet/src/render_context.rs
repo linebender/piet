@@ -2,7 +2,7 @@
 
 use kurbo::{Affine, Rect, Shape, Vec2};
 
-use crate::{Error, FillRule, RoundFrom, RoundInto, StrokeStyle, Text, TextLayout};
+use crate::{Error, FillRule, Gradient, RoundFrom, RoundInto, StrokeStyle, Text, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -88,6 +88,9 @@ pub trait RenderContext {
     /// render target is rebuilt. Solid brushes are super lightweight, but
     /// other potentially retained objects will be heavier.
     fn solid_brush(&mut self, rgba: u32) -> Result<Self::Brush, Error>;
+
+    /// Create a new gradient brush.
+    fn gradient(&mut self, gradient: Gradient) -> Result<Self::Brush, Error>;
 
     /// Clear the canvas with the given color.
     fn clear(&mut self, rgb: u32);
