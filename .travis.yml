@@ -13,7 +13,7 @@ rust:
 
 cache: cargo
 before_script:
-  - rustup component add rustfmt
+  - if [[ "$TRAVIS_RUST_VERSION" = stable ]]; then rustup component add rustfmt; fi
 script:
   - if [[ "$TRAVIS_RUST_VERSION" = stable ]]; then eval "cargo fmt --all -- --check"; fi
   - TO_RUN="--all --exclude piet-direct2d"
