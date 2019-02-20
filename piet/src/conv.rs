@@ -35,6 +35,12 @@ impl RoundFrom<f64> for f32 {
     }
 }
 
+impl RoundFrom<f32> for f64 {
+    fn round_from(x: f32) -> f64 {
+        x as f64
+    }
+}
+
 impl RoundFrom<Vec2> for (f32, f32) {
     fn round_from(p: Vec2) -> (f32, f32) {
         (p.x as f32, p.y as f32)
