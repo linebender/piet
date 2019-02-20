@@ -3,13 +3,13 @@
 pub type Point = <Piet<'static> as piet::RenderContext>::Point;
 pub type Coord = <Piet<'static> as piet::RenderContext>::Coord;
 pub type Brush = <Piet<'static> as piet::RenderContext>::Brush;
-pub type Text = <Piet<'static> as piet::RenderContext>::Text;
+pub type Text<'a> = <Piet<'a> as piet::RenderContext>::Text;
 pub type TextLayout = <Piet<'static> as piet::RenderContext>::TextLayout;
 pub type Image = <Piet<'static> as piet::RenderContext>::Image;
 
-pub type FontBuilder = <Text as piet::Text>::FontBuilder;
-pub type Font = <Text as piet::Text>::Font;
-pub type TextLayoutBuilder = <Text as piet::Text>::TextLayoutBuilder;
+pub type FontBuilder<'a> = <Text<'a> as piet::Text>::FontBuilder;
+pub type Font = <Text<'static> as piet::Text>::Font;
+pub type TextLayoutBuilder<'a> = <Text<'a> as piet::Text>::TextLayoutBuilder;
 
 #[cfg(any(
     feature = "cairo",
