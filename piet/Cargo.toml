@@ -1,6 +1,6 @@
 [package]
 name = "piet"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "An abstraction for 2D graphics."
 license = "MIT/Apache-2.0"
@@ -9,4 +9,4 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-kurbo = "0.2.0"
+kurbo = "0.2.1"
