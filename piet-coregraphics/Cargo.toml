@@ -9,6 +9,6 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-kurbo = "0.1.0"
+kurbo = "0.2.0"
 piet = { path = "../piet" }
 core-graphics = { git = "https://github.com/servo/core-foundation-rs" }
