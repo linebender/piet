@@ -6,7 +6,7 @@ os:
 language: rust
 
 rust:
-  - 1.35
+  - 1.35.0
   - stable
   - beta
   - nightly
