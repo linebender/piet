@@ -2,6 +2,8 @@
 
 use kurbo::Vec2;
 
+use crate::Color;
+
 /// Specification of a gradient.
 #[derive(Clone)]
 pub enum Gradient {
@@ -46,5 +48,5 @@ pub struct GradientStop {
     /// The coordinate of the stop.
     pub pos: f32,
     /// The color at that stop.
-    pub rgba: u32,
+    pub color: Color,
 }

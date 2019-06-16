@@ -4,7 +4,7 @@ use direct2d::math::{ColorF, Matrix3x2F, Point2F, RectF};
 
 use kurbo::{Affine, Rect, Vec2};
 
-use piet::{Error, GradientStop, LineCap, LineJoin, RoundFrom, RoundInto, StrokeStyle};
+use piet::{Color, Error, GradientStop, LineCap, LineJoin, RoundFrom, RoundInto, StrokeStyle};
 
 use crate::error::WrapError;
 
@@ -83,14 +83,15 @@ pub(crate) fn rect_to_rectf(rect: Rect) -> RectF {
         .into()
 }
 
-pub(crate) fn rgba_to_colorf(rgba: u32) -> ColorF {
+pub(crate) fn color_to_colorf(color: Color) -> ColorF {
+    let rgba = color.as_rgba32();
     (rgba >> 8, ((rgba & 255) as f32) * (1.0 / 255.0)).into()
 }
 
 pub(crate) fn gradient_stop_to_d2d(stop: &GradientStop) -> direct2d::brush::gradient::GradientStop {
     direct2d::brush::gradient::GradientStop {
         position: stop.pos,
-        color: rgba_to_colorf(stop.rgba),
+        color: color_to_colorf(stop.color.clone()),
     }
 }
 

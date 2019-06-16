@@ -1,6 +1,6 @@
 use kurbo::Line;
 
-use piet::{ImageFormat, RenderContext};
+use piet::{Color, ImageFormat, RenderContext};
 use piet_common::Device;
 
 fn main() {
@@ -10,7 +10,7 @@ fn main() {
     let mut bitmap = device.bitmap_target(width, height, 1.0).unwrap();
     let mut rc = bitmap.render_context();
     rc.clear(0xffffff);
-    let brush = rc.solid_brush(0x00_00_80_FF).unwrap();
+    let brush = rc.solid_brush(Color::rgb24(0x00_00_80_FF)).unwrap();
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0, None);
     rc.finish().unwrap();
     let raw_pixels = bitmap.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();

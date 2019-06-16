@@ -2,17 +2,17 @@
 
 use kurbo::{Affine, BezPath, Line};
 
-use piet::{Error, LineCap, LineJoin, RenderContext, StrokeStyle};
+use piet::{Color, Error, LineCap, LineJoin, RenderContext, StrokeStyle};
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(0xFF_FF_FF);
+    rc.clear(Color::white());
 
     let mut path = BezPath::new();
     path.moveto((0.0, 0.0));
     path.lineto((20.0, 0.0));
     path.lineto((6.0, 10.0));
     let mut y = 5.0;
-    let brush = rc.solid_brush(0x00_00_C0_FF)?;
+    let brush = rc.solid_brush(Color::rgb24(0x00_00_C0))?;
     for line_cap in &[LineCap::Butt, LineCap::Round, LineCap::Square] {
         let mut x = 5.0;
         for line_join in &[LineJoin::Bevel, LineJoin::Miter, LineJoin::Round] {

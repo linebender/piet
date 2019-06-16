@@ -13,8 +13,8 @@ use web_sys::{
 use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
-    Error, Font, FontBuilder, Gradient, GradientStop, ImageFormat, InterpolationMode, LineCap,
-    LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    Color, Error, Font, FontBuilder, Gradient, GradientStop, ImageFormat, InterpolationMode,
+    LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -142,12 +142,12 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, _rgb: u32) {
+    fn clear(&mut self, _color: Color) {
         // TODO: we might need to know the size of the canvas to do this.
     }
 
-    fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
-        Ok(Brush::Solid(rgba))
+    fn solid_brush(&mut self, color: Color) -> Result<Brush, Error> {
+        Ok(Brush::Solid(color.as_rgba32()))
     }
 
     fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {
@@ -342,7 +342,8 @@ fn format_color(rgba: u32) -> String {
 fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
     for stop in src {
         // TODO: maybe get error?
-        let _ = dst.add_color_stop(stop.pos, &format_color(stop.rgba));
+        let rgba = stop.color.as_rgba32();
+        let _ = dst.add_color_stop(stop.pos, &format_color(rgba));
     }
 }
 
