@@ -89,7 +89,7 @@ pub trait RenderContext {
     /// responsiblity? We could have a cache that is flushed when the Direct2D
     /// render target is rebuilt. Solid brushes are super lightweight, but
     /// other potentially retained objects will be heavier.
-    fn solid_brush(&mut self, color: Color) -> Result<Self::Brush, Error>;
+    fn solid_brush(&mut self, color: Color) -> Self::Brush;
 
     /// Create a new gradient brush.
     fn gradient(&mut self, gradient: Gradient) -> Result<Self::Brush, Error>;

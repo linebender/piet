@@ -214,14 +214,13 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         self.rt.clear(color.as_rgba32() >> 8);
     }
 
-    fn solid_brush(&mut self, color: Color) -> Result<GenericBrush, Error> {
-        Ok(
-            SolidColorBrush::create(&self.rt)
-                .with_color(color_to_colorf(color))
-                .build()
-                .wrap()?
-                .to_generic(), // This does an extra COM clone; avoid somehow?
-        )
+    fn solid_brush(&mut self, color: Color) -> GenericBrush {
+        SolidColorBrush::create(&self.rt)
+            .with_color(color_to_colorf(color))
+            .build()
+            .wrap()
+            .expect("error creating solid brush")
+            .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
     fn gradient(&mut self, gradient: Gradient) -> Result<GenericBrush, Error> {

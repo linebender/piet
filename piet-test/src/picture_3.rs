@@ -12,7 +12,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     path.lineto((20.0, 0.0));
     path.lineto((6.0, 10.0));
     let mut y = 5.0;
-    let brush = rc.solid_brush(Color::rgb24(0x00_00_C0))?;
+    let brush = rc.solid_brush(Color::rgb24(0x00_00_C0));
     for line_cap in &[LineCap::Butt, LineCap::Round, LineCap::Square] {
         let mut x = 5.0;
         for line_join in &[LineJoin::Bevel, LineJoin::Miter, LineJoin::Round] {

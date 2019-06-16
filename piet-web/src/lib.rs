@@ -146,8 +146,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         // TODO: we might need to know the size of the canvas to do this.
     }
 
-    fn solid_brush(&mut self, color: Color) -> Result<Brush, Error> {
-        Ok(Brush::Solid(color.as_rgba32()))
+    fn solid_brush(&mut self, color: Color) -> Brush {
+        Brush::Solid(color.as_rgba32())
     }
 
     fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {

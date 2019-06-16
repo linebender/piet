@@ -135,8 +135,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.paint();
     }
 
-    fn solid_brush(&mut self, color: Color) -> Result<Brush, Error> {
-        Ok(Brush::Solid(color.as_rgba32()))
+    fn solid_brush(&mut self, color: Color) -> Brush {
+        Brush::Solid(color.as_rgba32())
     }
 
     fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {
