@@ -59,6 +59,6 @@ fn draw_cubic_bezier<V: Into<Vec2>>(
 }
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::white());
+    rc.clear(Color::WHITE);
     draw_cubic_bezier(rc, (70.0, 80.0), (140.0, 10.0), (60.0, 10.0), (90.0, 80.0))
 }

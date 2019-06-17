@@ -5,7 +5,7 @@ use kurbo::{Affine, BezPath, Line};
 use piet::{Color, Error, LineCap, LineJoin, RenderContext, StrokeStyle};
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::white());
+    rc.clear(Color::WHITE);
 
     let mut path = BezPath::new();
     path.moveto((0.0, 0.0));

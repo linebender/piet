@@ -52,12 +52,8 @@ impl Color {
     }
 
     /// Opaque white.
-    pub const fn white() -> Color {
-        Color::Rgba32(0xff_ff_ff_ff)
-    }
+    pub const WHITE: Color = Color::Rgba32(0xff_ff_ff_ff);
 
     /// Opaque black.
-    pub const fn black() -> Color {
-        Color::Rgba32(0x00_00_00_ff)
-    }
+    pub const BLACK: Color = Color::Rgba32(0x00_00_00_ff);
 }

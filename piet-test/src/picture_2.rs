@@ -3,7 +3,7 @@
 use piet::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
-    rc.clear(Color::white());
+    rc.clear(Color::WHITE);
 
     let mut y = 5.0;
     for &mode in &[
