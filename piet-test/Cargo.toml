@@ -8,5 +8,4 @@ edition = "2018"
 keywords = ["graphics", "2d"]
 
 [dependencies]
-kurbo = "0.2.1"
 piet = { version = "0.0.2", path = "../piet" }

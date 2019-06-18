@@ -13,7 +13,6 @@ cairo = ["piet-cairo", "cairo-rs"]
 web = ["piet-web"]
 
 [dependencies]
-kurbo = "0.2.1"
 piet = { version = "0.0.2", path = "../piet" }
 piet-cairo = { version = "0.0.2", path = "../piet-cairo", optional = true }
 piet-direct2d = { version = "0.0.2", path = "../piet-direct2d", optional = true }

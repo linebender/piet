@@ -7,7 +7,7 @@ use cairo::{
     ImageSurface, Matrix, Pattern, PatternTrait, ScaledFont, Status, SurfacePattern,
 };
 
-use kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
+use piet::kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
     new_error, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, GradientStop, ImageFormat,

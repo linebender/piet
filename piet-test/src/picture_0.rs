@@ -1,6 +1,6 @@
 //! A wide assortment of graphics meant to show off many different uses of piet
 
-use kurbo::{Affine, BezPath, Line, Vec2};
+use piet::kurbo::{Affine, BezPath, Line, Vec2};
 
 use piet::{
     Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,

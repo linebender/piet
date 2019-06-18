@@ -9,7 +9,6 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-kurbo = "0.2.1"
 piet = { version = "0.0.2", path = "../piet" }
 
 [dependencies.cairo-rs]

@@ -12,7 +12,6 @@ categories = ["rendering::graphics-api", "wasm"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-kurbo = "0.2.1"
 piet = { version = "0.0.2", path = "../piet" }
 
 wasm-bindgen = "0.2.30"
