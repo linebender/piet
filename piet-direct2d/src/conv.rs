@@ -2,7 +2,7 @@
 
 use direct2d::math::{ColorF, Matrix3x2F, Point2F, RectF};
 
-use kurbo::{Affine, Rect, Vec2};
+use piet::kurbo::{Affine, Rect, Vec2};
 
 use piet::{Error, GradientStop, LineCap, LineJoin, RoundFrom, RoundInto, StrokeStyle};
 

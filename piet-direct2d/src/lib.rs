@@ -33,7 +33,7 @@ use directwrite::text_format::TextFormatBuilder;
 use directwrite::text_layout;
 use directwrite::TextFormat;
 
-use kurbo::{Affine, PathEl, Rect, Shape};
+use piet::kurbo::{Affine, PathEl, Rect, Shape};
 
 use piet::{
     new_error, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,

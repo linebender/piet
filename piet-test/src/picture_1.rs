@@ -1,6 +1,6 @@
 //! Rendering a cubic Bézier curve with its control points and handles
 
-use kurbo::{BezPath, Line, Vec2};
+use piet::kurbo::{BezPath, Line, Vec2};
 
 use piet::{Error, FillRule, RenderContext};
 

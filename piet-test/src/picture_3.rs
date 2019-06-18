@@ -1,6 +1,6 @@
 //! Rendering stroke styles.
 
-use kurbo::{Affine, BezPath, Line};
+use piet::kurbo::{Affine, BezPath, Line};
 
 use piet::{Error, LineCap, LineJoin, RenderContext, StrokeStyle};
 
