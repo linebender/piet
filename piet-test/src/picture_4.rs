@@ -3,19 +3,19 @@
 use piet::kurbo::{Rect, Vec2};
 
 use piet::{
-    Error, FillRule, Gradient, GradientStop, LinearGradient, RadialGradient, RenderContext,
+    Color, Error, FillRule, Gradient, GradientStop, LinearGradient, RadialGradient, RenderContext,
 };
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(0xFF_FF_FF);
+    rc.clear(Color::WHITE);
     let stops = vec![
         GradientStop {
             pos: 0.0,
-            rgba: 0xff_ff_ff_ff,
+            color: Color::rgb24(0xff_ff_ff),
         },
         GradientStop {
             pos: 1.0,
-            rgba: 0x00_00_00_ff,
+            color: Color::rgb24(0x00_00_00),
         },
     ];
     let gradient = rc.gradient(Gradient::Radial(RadialGradient {
@@ -32,11 +32,11 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let stops2 = vec![
         GradientStop {
             pos: 0.0,
-            rgba: 0xff_ff_ff_ff,
+            color: Color::rgb24(0xff_ff_ff),
         },
         GradientStop {
             pos: 1.0,
-            rgba: 0x00_00_00_ff,
+            color: Color::rgb24(0x00_00_00),
         },
     ];
     let gradient2 = rc.gradient(Gradient::Linear(LinearGradient {

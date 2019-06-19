@@ -4,8 +4,8 @@ mod conv;
 pub mod error;
 
 use crate::conv::{
-    affine_to_matrix3x2f, convert_stroke_style, gradient_stop_to_d2d, rect_to_rectf,
-    rgba_to_colorf, to_point2f, Point2,
+    affine_to_matrix3x2f, color_to_colorf, convert_stroke_style, gradient_stop_to_d2d,
+    rect_to_rectf, to_point2f, Point2,
 };
 use crate::error::WrapError;
 
@@ -36,7 +36,7 @@ use directwrite::TextFormat;
 use piet::kurbo::{Affine, PathEl, Rect, Shape};
 
 use piet::{
-    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
+    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
     InterpolationMode, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
@@ -210,18 +210,17 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, rgb: u32) {
-        self.rt.clear(rgb);
+    fn clear(&mut self, color: Color) {
+        self.rt.clear(color.as_rgba32() >> 8);
     }
 
-    fn solid_brush(&mut self, rgba: u32) -> Result<GenericBrush, Error> {
-        Ok(
-            SolidColorBrush::create(&self.rt)
-                .with_color(rgba_to_colorf(rgba))
-                .build()
-                .wrap()?
-                .to_generic(), // This does an extra COM clone; avoid somehow?
-        )
+    fn solid_brush(&mut self, color: Color) -> GenericBrush {
+        SolidColorBrush::create(&self.rt)
+            .with_color(color_to_colorf(color))
+            .build()
+            .wrap()
+            .expect("error creating solid brush")
+            .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
     fn gradient(&mut self, gradient: Gradient) -> Result<GenericBrush, Error> {

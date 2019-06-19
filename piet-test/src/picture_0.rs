@@ -3,31 +3,31 @@
 use piet::kurbo::{Affine, BezPath, Line, Vec2};
 
 use piet::{
-    Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text,
+    TextLayout, TextLayoutBuilder,
 };
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
-    rc.clear(0xFF_FF_FF);
-    let brush = rc.solid_brush(0x00_00_80_FF)?;
+    rc.clear(Color::WHITE);
+    let brush = rc.solid_brush(Color::rgb24(0x00_00_80));
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0, None);
 
     let mut path = BezPath::new();
     path.moveto((50.0, 10.0));
     path.quadto((60.0, 50.0), (100.0, 90.0));
-    let brush = rc.solid_brush(0x00_80_00_FF)?;
+    let brush = rc.solid_brush(Color::rgb24(0x00_80_00));
     rc.stroke(path, &brush, 1.0, None);
 
     let mut path = BezPath::new();
     path.moveto((10.0, 20.0));
     path.curveto((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
-    let brush = rc.solid_brush(0x00_00_80_C0)?;
+    let brush = rc.solid_brush(Color::rgba32(0x00_00_80_C0));
     rc.fill(path, &brush, FillRule::NonZero);
 
     let font = rc.text().new_font_by_name("Segoe UI", 12.0)?.build()?;
     let layout = rc.text().new_text_layout(&font, "Hello piet!")?.build()?;
     let w: f64 = layout.width().into();
-    let brush = rc.solid_brush(0x80_00_00_C0)?;
+    let brush = rc.solid_brush(Color::rgba32(0x80_00_00_C0));
     rc.draw_text(&layout, (80.0, 10.0), &brush);
 
     rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0, None);

@@ -2,7 +2,7 @@
 
 use piet::kurbo::{BezPath, Line, Vec2};
 
-use piet::{Error, FillRule, RenderContext};
+use piet::{Color, Error, FillRule, RenderContext};
 
 // TODO: this will eventually become a `kurbo::Shape`.
 fn circle<V: Into<Vec2>>(center: V, radius: f64, num_segments: usize) -> BezPath {
@@ -44,10 +44,10 @@ fn draw_cubic_bezier<V: Into<Vec2>>(
     let mut path = BezPath::new();
     path.moveto(p0);
     path.curveto(p1, p2, p3);
-    let curve_brush = rc.solid_brush(0x00_80_00_FF)?;
+    let curve_brush = rc.solid_brush(Color::rgb24(0x00_80_00));
     rc.stroke(&path, &curve_brush, 3.0, None);
 
-    let handle_brush = rc.solid_brush(0x00_00_80_FF)?;
+    let handle_brush = rc.solid_brush(Color::rgb24(0x00_00_80));
     rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0, None);
     rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0, None);
 
@@ -59,6 +59,6 @@ fn draw_cubic_bezier<V: Into<Vec2>>(
 }
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(0xFF_FF_FF);
+    rc.clear(Color::WHITE);
     draw_cubic_bezier(rc, (70.0, 80.0), (140.0, 10.0), (60.0, 10.0), (90.0, 80.0))
 }

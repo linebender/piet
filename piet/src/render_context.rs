@@ -2,7 +2,9 @@
 
 use kurbo::{Affine, Rect, Shape, Vec2};
 
-use crate::{Error, FillRule, Gradient, RoundFrom, RoundInto, StrokeStyle, Text, TextLayout};
+use crate::{
+    Color, Error, FillRule, Gradient, RoundFrom, RoundInto, StrokeStyle, Text, TextLayout,
+};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -87,13 +89,15 @@ pub trait RenderContext {
     /// responsiblity? We could have a cache that is flushed when the Direct2D
     /// render target is rebuilt. Solid brushes are super lightweight, but
     /// other potentially retained objects will be heavier.
-    fn solid_brush(&mut self, rgba: u32) -> Result<Self::Brush, Error>;
+    fn solid_brush(&mut self, color: Color) -> Self::Brush;
 
     /// Create a new gradient brush.
     fn gradient(&mut self, gradient: Gradient) -> Result<Self::Brush, Error>;
 
     /// Clear the canvas with the given color.
-    fn clear(&mut self, rgb: u32);
+    ///
+    /// Note: only opaque colors are meaningful.
+    fn clear(&mut self, color: Color);
 
     /// Stroke a shape.
     fn stroke(

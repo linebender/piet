@@ -1,9 +1,9 @@
 //! A bunch of image test cases.
 
-use piet::{Error, ImageFormat, InterpolationMode, RenderContext};
+use piet::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
-    rc.clear(0xFF_FF_FF);
+    rc.clear(Color::WHITE);
 
     let mut y = 5.0;
     for &mode in &[

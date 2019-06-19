@@ -10,9 +10,9 @@ use cairo::{
 use piet::kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
-    new_error, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, GradientStop, ImageFormat,
-    InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
-    TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, GradientStop,
+    ImageFormat, InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text,
+    TextLayout, TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -125,17 +125,18 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
     }
 
-    fn clear(&mut self, rgb: u32) {
+    fn clear(&mut self, color: Color) {
+        let rgba = color.as_rgba32();
         self.ctx.set_source_rgb(
-            byte_to_frac(rgb >> 16),
-            byte_to_frac(rgb >> 8),
-            byte_to_frac(rgb),
+            byte_to_frac(rgba >> 24),
+            byte_to_frac(rgba >> 16),
+            byte_to_frac(rgba >> 8),
         );
         self.ctx.paint();
     }
 
-    fn solid_brush(&mut self, rgba: u32) -> Result<Brush, Error> {
-        Ok(Brush::Solid(rgba))
+    fn solid_brush(&mut self, color: Color) -> Brush {
+        Brush::Solid(color.as_rgba32())
     }
 
     fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {
@@ -308,7 +309,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
 fn set_gradient_stops(dst: &mut impl cairo::Gradient, src: &[GradientStop]) {
     for stop in src {
-        let rgba = stop.rgba;
+        let rgba = stop.color.as_rgba32();
         dst.add_color_stop_rgba(
             stop.pos as f64,
             byte_to_frac(rgba >> 24),
