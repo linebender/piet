@@ -1,0 +1,21 @@
+steps:
+    # on non-windows platforms we have to skip d2d
+  - bash: |
+      export RUST_BACKTRACE=1
+      export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/usr/local/opt/libffi/lib/pkgconfig"
+      cargo +${{parameters.toolchain}} fmt --all -- --check || exit
+      cargo +${{parameters.toolchain}} check --all --exclude piet-direct2d || exit
+      cargo +${{parameters.toolchain}} test --all --exclude piet-direct2d || exit
+    condition: not(eq(variables['Agent.OS'], 'Windows_NT'))
+
+    displayName: Run cargo check and test on ${{parameters.toolchain}}
+
+  - bash: |
+      export RUST_BACKTRACE=1
+      cargo +${{parameters.toolchain}} fmt --all -- --check || exit
+      cargo +${{parameters.toolchain}} check --all --exclude piet-cairo || exit
+      cargo +${{parameters.toolchain}} test --all --exclude piet-cairo || exit
+    condition: eq(variables['Agent.OS'], 'Windows_NT')
+
+    displayName: Run cargo check and test on ${{parameters.toolchain}}
+
