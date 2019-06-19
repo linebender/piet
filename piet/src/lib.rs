@@ -1,5 +1,7 @@
 //! A 2D graphics abstraction.
 
+pub use kurbo;
+
 mod color;
 mod conv;
 mod error;

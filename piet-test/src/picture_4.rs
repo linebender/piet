@@ -1,6 +1,6 @@
 //! Gradients.
 
-use kurbo::{Rect, Vec2};
+use piet::kurbo::{Rect, Vec2};
 
 use piet::{
     Color, Error, FillRule, Gradient, GradientStop, LinearGradient, RadialGradient, RenderContext,

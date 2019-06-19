@@ -1,4 +1,4 @@
-use kurbo::Line;
+use piet::kurbo::Line;
 
 use piet::{Color, ImageFormat, RenderContext};
 use piet_common::Device;

@@ -10,7 +10,7 @@ use web_sys::{
     Window,
 };
 
-use kurbo::{Affine, PathEl, Rect, Shape, Vec2};
+use piet::kurbo::{Affine, PathEl, Rect, Shape, Vec2};
 
 use piet::{
     Color, Error, Font, FontBuilder, Gradient, GradientStop, ImageFormat, InterpolationMode,
