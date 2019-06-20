@@ -2,7 +2,7 @@
 
 use direct2d::math::{ColorF, Matrix3x2F, Point2F, RectF};
 
-use piet::kurbo::{Affine, Rect, Vec2};
+use piet::kurbo::{Affine, Point, Rect, Vec2};
 
 use piet::{Color, Error, GradientStop, LineCap, LineJoin, RoundFrom, RoundInto, StrokeStyle};
 
@@ -40,6 +40,13 @@ impl RoundFrom<(f64, f64)> for Point2 {
     #[inline]
     fn round_from(vec: (f64, f64)) -> Point2 {
         Point2(Point2F::new(vec.0 as f32, vec.1 as f32))
+    }
+}
+
+impl RoundFrom<Point> for Point2 {
+    #[inline]
+    fn round_from(point: Point) -> Point2 {
+        Point2(Point2F::new(point.x as f32, point.y as f32))
     }
 }
 

@@ -456,13 +456,13 @@ impl<'a> WebRenderContext<'a> {
         self.ctx.begin_path();
         for el in shape.to_bez_path(1e-3) {
             match el {
-                PathEl::Moveto(p) => self.ctx.move_to(p.x, p.y),
-                PathEl::Lineto(p) => self.ctx.line_to(p.x, p.y),
-                PathEl::Quadto(p1, p2) => self.ctx.quadratic_curve_to(p1.x, p1.y, p2.x, p2.y),
-                PathEl::Curveto(p1, p2, p3) => {
+                PathEl::MoveTo(p) => self.ctx.move_to(p.x, p.y),
+                PathEl::LineTo(p) => self.ctx.line_to(p.x, p.y),
+                PathEl::QuadTo(p1, p2) => self.ctx.quadratic_curve_to(p1.x, p1.y, p2.x, p2.y),
+                PathEl::CurveTo(p1, p2, p3) => {
                     self.ctx.bezier_curve_to(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
                 }
-                PathEl::Closepath => self.ctx.close_path(),
+                PathEl::ClosePath => self.ctx.close_path(),
             }
         }
     }

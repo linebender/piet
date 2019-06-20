@@ -8,9 +8,9 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::WHITE);
 
     let mut path = BezPath::new();
-    path.moveto((0.0, 0.0));
-    path.lineto((20.0, 0.0));
-    path.lineto((6.0, 10.0));
+    path.move_to((0.0, 0.0));
+    path.line_to((20.0, 0.0));
+    path.line_to((6.0, 10.0));
     let mut y = 5.0;
     let brush = rc.solid_brush(Color::rgb24(0x00_00_C0));
     for line_cap in &[LineCap::Butt, LineCap::Round, LineCap::Square] {

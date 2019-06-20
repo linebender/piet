@@ -1,11 +1,11 @@
 //! Rendering a cubic Bézier curve with its control points and handles
 
-use piet::kurbo::{BezPath, Line, Vec2};
+use piet::kurbo::{BezPath, Line, Point};
 
 use piet::{Color, Error, FillRule, RenderContext};
 
 // TODO: this will eventually become a `kurbo::Shape`.
-fn circle<V: Into<Vec2>>(center: V, radius: f64, num_segments: usize) -> BezPath {
+fn circle<V: Into<Point>>(center: V, radius: f64, num_segments: usize) -> BezPath {
     let mut path = BezPath::new();
     if num_segments == 0 {
         return path;
@@ -19,18 +19,18 @@ fn circle<V: Into<Vec2>>(center: V, radius: f64, num_segments: usize) -> BezPath
         let x = radius * theta.cos();
         let y = radius * theta.sin();
         if segment == 0 {
-            path.moveto((x + centerx, y + centery));
+            path.move_to((x + centerx, y + centery));
         } else {
             let end = (x + centerx, y + centery);
-            path.lineto(end);
+            path.line_to(end);
         }
     }
 
-    path.closepath();
+    path.close_path();
     return path;
 }
 
-fn draw_cubic_bezier<V: Into<Vec2>>(
+fn draw_cubic_bezier<V: Into<Point>>(
     rc: &mut impl RenderContext,
     p0: V,
     p1: V,
@@ -42,8 +42,8 @@ fn draw_cubic_bezier<V: Into<Vec2>>(
     let p2 = p2.into();
     let p3 = p3.into();
     let mut path = BezPath::new();
-    path.moveto(p0);
-    path.curveto(p1, p2, p3);
+    path.move_to(p0);
+    path.curve_to(p1, p2, p3);
     let curve_brush = rc.solid_brush(Color::rgb24(0x00_80_00));
     rc.stroke(&path, &curve_brush, 3.0, None);
 
