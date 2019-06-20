@@ -7,7 +7,7 @@ use cairo::{
     ImageSurface, Matrix, Pattern, PatternTrait, ScaledFont, Status, SurfacePattern,
 };
 
-use piet::kurbo::{Affine, PathEl, QuadBez, Rect, Shape, Vec2};
+use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Vec2};
 
 use piet::{
     new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, GradientStop,
@@ -419,29 +419,29 @@ impl<'a> CairoRenderContext<'a> {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.new_path();
-        let mut last = Vec2::default();
+        let mut last = Point::ZERO;
         for el in shape.to_bez_path(1e-3) {
             match el {
-                PathEl::Moveto(p) => {
+                PathEl::MoveTo(p) => {
                     self.ctx.move_to(p.x, p.y);
                     last = p;
                 }
-                PathEl::Lineto(p) => {
+                PathEl::LineTo(p) => {
                     self.ctx.line_to(p.x, p.y);
                     last = p;
                 }
-                PathEl::Quadto(p1, p2) => {
+                PathEl::QuadTo(p1, p2) => {
                     let q = QuadBez::new(last, p1, p2);
                     let c = q.raise();
                     self.ctx
                         .curve_to(c.p1.x, c.p1.y, c.p2.x, c.p2.y, p2.x, p2.y);
                     last = p2;
                 }
-                PathEl::Curveto(p1, p2, p3) => {
+                PathEl::CurveTo(p1, p2, p3) => {
                     self.ctx.curve_to(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
                     last = p3;
                 }
-                PathEl::Closepath => self.ctx.close_path(),
+                PathEl::ClosePath => self.ctx.close_path(),
             }
         }
     }

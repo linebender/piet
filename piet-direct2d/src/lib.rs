@@ -145,7 +145,7 @@ fn path_from_shape(
         let mut builder = Some(PathBuilder::Geom(g));
         for el in shape.to_bez_path(1e-3) {
             match el {
-                PathEl::Moveto(p) => {
+                PathEl::MoveTo(p) => {
                     // TODO: we don't know this now. Will get fixed in direct2d crate.
                     let is_closed = is_filled;
                     if let Some(b) = builder.take() {
@@ -164,20 +164,20 @@ fn path_from_shape(
                         builder = Some(PathBuilder::Fig(f));
                     }
                 }
-                PathEl::Lineto(p) => {
+                PathEl::LineTo(p) => {
                     if let Some(PathBuilder::Fig(f)) = builder.take() {
                         let f = f.add_line(to_point2f(p));
                         builder = Some(PathBuilder::Fig(f));
                     }
                 }
-                PathEl::Quadto(p1, p2) => {
+                PathEl::QuadTo(p1, p2) => {
                     if let Some(PathBuilder::Fig(f)) = builder.take() {
                         let q = QuadBezierSegment::new(to_point2f(p1), to_point2f(p2));
                         let f = f.add_quadratic_bezier(&q);
                         builder = Some(PathBuilder::Fig(f));
                     }
                 }
-                PathEl::Curveto(p1, p2, p3) => {
+                PathEl::CurveTo(p1, p2, p3) => {
                     if let Some(PathBuilder::Fig(f)) = builder.take() {
                         let c = BezierSegment::new(to_point2f(p1), to_point2f(p2), to_point2f(p3));
                         let f = f.add_bezier(&c);
