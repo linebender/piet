@@ -12,12 +12,12 @@ pub enum Color {
 
 impl Color {
     /// Create a color from a 32-bit rgba value (alpha as least significant byte).
-    pub fn rgba32(rgba: u32) -> Color {
+    pub const fn rgba32(rgba: u32) -> Color {
         Color::Rgba32(rgba)
     }
 
     /// Create a color from a 24-bit rgb value (red most significant, blue least).
-    pub fn rgb24(rgb: u32) -> Color {
+    pub const fn rgb24(rgb: u32) -> Color {
         Color::rgba32((rgb << 8) | 0xff)
     }
 
@@ -52,8 +52,8 @@ impl Color {
     }
 
     /// Opaque white.
-    pub const WHITE: Color = Color::Rgba32(0xff_ff_ff_ff);
+    pub const WHITE: Color = Color::rgba32(0xff_ff_ff_ff);
 
     /// Opaque black.
-    pub const BLACK: Color = Color::Rgba32(0x00_00_00_ff);
+    pub const BLACK: Color = Color::rgba32(0x00_00_00_ff);
 }
