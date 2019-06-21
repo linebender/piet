@@ -1,6 +1,6 @@
 //! Traits for fonts and text handling.
 
-use crate::{Error, RoundFrom, RoundInto};
+use crate::Error;
 
 pub trait Text {
     type FontBuilder: FontBuilder<Out = Self::Font>;
@@ -9,13 +9,7 @@ pub trait Text {
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
 
-    type Coord: Into<f64> + RoundFrom<f64>;
-
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error>;
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error>;
 
     fn new_text_layout(
         &mut self,
@@ -39,8 +33,6 @@ pub trait TextLayoutBuilder {
 }
 
 pub trait TextLayout {
-    type Coord: Into<f64> + RoundFrom<f64>;
-
     /// Measure the advance width of the text.
-    fn width(&self) -> Self::Coord;
+    fn width(&self) -> f64;
 }

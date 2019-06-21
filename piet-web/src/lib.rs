@@ -10,11 +10,11 @@ use web_sys::{
     Window,
 };
 
-use piet::kurbo::{Affine, PathEl, Rect, Shape, Vec2};
+use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
     Color, Error, Font, FontBuilder, Gradient, GradientStop, ImageFormat, InterpolationMode,
-    LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -129,8 +129,6 @@ fn convert_line_join(line_join: LineJoin) -> &'static str {
 
 impl<'a> RenderContext for WebRenderContext<'a> {
     /// wasm-bindgen doesn't have a native Point type, so use kurbo's.
-    type Point = Vec2;
-    type Coord = f64;
     type Brush = Brush;
 
     type Text = Self;
@@ -190,11 +188,11 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         &mut self,
         shape: impl Shape,
         brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
+        width: f64,
         style: Option<&StrokeStyle>,
     ) {
         self.set_path(shape);
-        self.set_stroke(width.round_into(), style);
+        self.set_stroke(width, style);
         self.set_brush(brush, false);
         self.ctx.stroke();
     }
@@ -203,15 +201,10 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         self
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl RoundInto<Self::Point>,
-        brush: &Self::Brush,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
         self.ctx.set_font(&layout.font.get_font_string());
         self.set_brush(brush, true);
-        let pos = pos.round_into();
+        let pos = pos.into();
         if let Err(e) = self.ctx.fill_text(&layout.text, pos.x, pos.y).wrap() {
             self.err = Err(e);
         }
@@ -348,21 +341,15 @@ fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
 }
 
 impl<'a> Text for WebRenderContext<'a> {
-    type Coord = f64;
-
     type Font = WebFont;
     type FontBuilder = WebFontBuilder;
     type TextLayout = WebTextLayout;
     type TextLayoutBuilder = WebTextLayoutBuilder;
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error> {
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error> {
         let font = WebFont {
             family: name.to_owned(),
-            size: size.round_into(),
+            size,
             weight: 400,
             style: FontStyle::Normal,
         };
@@ -516,8 +503,6 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
 }
 
 impl TextLayout for WebTextLayout {
-    type Coord = f64;
-
     fn width(&self) -> f64 {
         self.width
     }
