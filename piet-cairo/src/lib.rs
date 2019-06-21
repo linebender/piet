@@ -7,7 +7,7 @@ use cairo::{
     ImageSurface, Matrix, Pattern, PatternTrait, ScaledFont, Status, SurfacePattern,
 };
 
-use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Vec2};
+use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 
 use piet::{
     new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, GradientStop,
@@ -105,9 +105,6 @@ fn convert_fill_rule(fill_rule: piet::FillRule) -> cairo::FillRule {
 }
 
 impl<'a> RenderContext for CairoRenderContext<'a> {
-    /// Cairo mostly uses raw f64, so this is as convenient as anything.
-    type Point = Vec2;
-    type Coord = f64;
     type Brush = Brush;
 
     type Text = CairoText;
@@ -176,11 +173,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self,
         shape: impl Shape,
         brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
+        width: f64,
         style: Option<&StrokeStyle>,
     ) {
         self.set_path(shape);
-        self.set_stroke(width.round_into(), style);
+        self.set_stroke(width, style);
         self.set_brush(brush);
         self.ctx.stroke();
     }
@@ -189,15 +186,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self.text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl RoundInto<Self::Point>,
-        brush: &Self::Brush,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
         self.ctx.set_scaled_font(&layout.font);
         self.set_brush(brush);
-        let pos = pos.round_into();
+        let pos = pos.into();
         self.ctx.move_to(pos.x, pos.y);
         self.ctx.show_text(&layout.text);
     }
@@ -321,18 +313,12 @@ fn set_gradient_stops(dst: &mut impl cairo::Gradient, src: &[GradientStop]) {
 }
 
 impl Text for CairoText {
-    type Coord = f64;
-
     type Font = CairoFont;
     type FontBuilder = CairoFontBuilder;
     type TextLayout = CairoTextLayout;
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error> {
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error> {
         Ok(CairoFontBuilder {
             family: name.to_owned(),
             size: size.round_into(),
@@ -499,8 +485,6 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 }
 
 impl TextLayout for CairoTextLayout {
-    type Coord = f64;
-
     fn width(&self) -> f64 {
         self.font.text_extents(&self.text).width
     }

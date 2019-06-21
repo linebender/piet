@@ -5,7 +5,7 @@ pub mod error;
 
 use crate::conv::{
     affine_to_matrix3x2f, color_to_colorf, convert_stroke_style, gradient_stop_to_d2d,
-    rect_to_rectf, to_point2f, Point2,
+    rect_to_rectf, to_point2f,
 };
 use crate::error::WrapError;
 
@@ -33,11 +33,11 @@ use directwrite::text_format::TextFormatBuilder;
 use directwrite::text_layout;
 use directwrite::TextFormat;
 
-use piet::kurbo::{Affine, PathEl, Rect, Shape};
+use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
     new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
-    InterpolationMode, RenderContext, RoundInto, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    InterpolationMode, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -196,8 +196,6 @@ fn path_from_shape(
 }
 
 impl<'a> RenderContext for D2DRenderContext<'a> {
-    type Point = Point2;
-    type Coord = f32;
     type Brush = GenericBrush;
 
     type Text = D2DText<'a>;
@@ -264,7 +262,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self,
         shape: impl Shape,
         brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
+        width: f64,
         style: Option<&StrokeStyle>,
     ) {
         // TODO: various special-case shapes, for efficiency
@@ -275,7 +273,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 return;
             }
         };
-        let width = width.round_into();
+        let width = width as f32;
         let style = if let Some(style) = style {
             Some(convert_stroke_style(self.factory, style, width).expect("TODO"))
         } else {
@@ -316,12 +314,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self.inner_text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl RoundInto<Self::Point>,
-        brush: &Self::Brush,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
         // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
         let mut line_metrics = Vec::with_capacity(1);
         layout.0.get_line_metrics(&mut line_metrics);
@@ -330,7 +323,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             return;
         }
         // Direct2D takes upper-left, so adjust for baseline.
-        let pos = pos.round_into().0;
+        let pos = to_point2f(pos.into());
         let pos = pos - Vector2F::new(0.0, line_metrics[0].baseline());
         let text_options = DrawTextOptions::NONE;
 
@@ -451,21 +444,16 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 }
 
 impl<'a> Text for D2DText<'a> {
-    type Coord = f32;
     type FontBuilder = D2DFontBuilder<'a>;
     type Font = D2DFont;
     type TextLayoutBuilder = D2DTextLayoutBuilder<'a>;
     type TextLayout = D2DTextLayout;
 
-    fn new_font_by_name(
-        &mut self,
-        name: &str,
-        size: impl RoundInto<Self::Coord>,
-    ) -> Result<Self::FontBuilder, Error> {
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error> {
         // Note: the name is cloned here, rather than applied using `with_family` for
         // lifetime reasons. Maybe there's a better approach.
         Ok(D2DFontBuilder {
-            builder: TextFormat::create(self.dwrite).with_size(size.round_into()),
+            builder: TextFormat::create(self.dwrite).with_size(size as f32),
             name: name.to_owned(),
         })
     }
@@ -514,9 +502,7 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
 }
 
 impl TextLayout for D2DTextLayout {
-    type Coord = f32;
-
-    fn width(&self) -> f32 {
-        self.0.get_metrics().width()
+    fn width(&self) -> f64 {
+        self.0.get_metrics().width() as f64
     }
 }

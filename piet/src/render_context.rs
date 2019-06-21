@@ -1,10 +1,8 @@
 //! The main render context trait.
 
-use kurbo::{Affine, Rect, Shape, Vec2};
+use kurbo::{Affine, Point, Rect, Shape};
 
-use crate::{
-    Color, Error, FillRule, Gradient, RoundFrom, RoundInto, StrokeStyle, Text, TextLayout,
-};
+use crate::{Color, Error, FillRule, Gradient, StrokeStyle, Text, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -51,18 +49,6 @@ impl ImageFormat {
 ///
 /// Code that draws graphics will in general take `&mut impl RenderContext`.
 pub trait RenderContext {
-    /// The type of a 2D point, for this backend.
-    ///
-    /// Generally this needs to be a newtype so that the `RoundFrom` traits
-    /// can be implemented on it. Possibly this can be relaxed in the future,
-    /// as we move towards a standard `RoundFrom`.
-    type Point: Into<Vec2> + RoundFrom<Vec2> + RoundFrom<(f32, f32)> + RoundFrom<(f64, f64)>;
-
-    /// The type of 1D measurements, for example stroke width.
-    ///
-    /// Generally this will be either f32 or f64.
-    type Coord: Into<f64> + RoundFrom<f64>;
-
     /// The type of a "brush".
     ///
     /// Initially just a solid RGBA color, but will probably expand to gradients.
@@ -104,7 +90,7 @@ pub trait RenderContext {
         &mut self,
         shape: impl Shape,
         brush: &Self::Brush,
-        width: impl RoundInto<Self::Coord>,
+        width: f64,
         style: Option<&StrokeStyle>,
     );
 
@@ -126,12 +112,7 @@ pub trait RenderContext {
     ///
     /// The `pos` parameter specifies the baseline of the left starting place of
     /// the text. Note: this is true even if the text is right-to-left.
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl RoundInto<Self::Point>,
-        brush: &Self::Brush,
-    );
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush);
 
     /// Save the context state.
     ///
