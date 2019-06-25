@@ -1,5 +1,6 @@
 //! A bunch of image test cases.
 
+use piet::kurbo::Rect;
 use piet::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
@@ -18,7 +19,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         ] {
             let image_data = make_image_data(16, 16, format);
             let image = rc.make_image(16, 16, &image_data, format)?;
-            rc.draw_image(&image, ((x, y), (x + 40.0, y + 40.0)), mode);
+            rc.draw_image(&image, Rect::new(x, y, x + 40.0, y + 40.0), mode);
             x += 50.0;
         }
         y += 50.0;

@@ -1,6 +1,6 @@
 [package]
 name = "piet-test"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Utilities for testing the piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -8,4 +8,4 @@ edition = "2018"
 keywords = ["graphics", "2d"]
 
 [dependencies]
-piet = { version = "0.0.3", path = "../piet" }
+piet = { version = "0.0.4", path = "../piet" }

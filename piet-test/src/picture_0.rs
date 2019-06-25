@@ -1,6 +1,6 @@
 //! A wide assortment of graphics meant to show off many different uses of piet
 
-use piet::kurbo::{Affine, BezPath, Line, Point, Vec2};
+use piet::kurbo::{Affine, BezPath, Line, Point, Rect, Vec2};
 
 use piet::{
     Color, Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text,
@@ -42,7 +42,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let image = rc.make_image(256, 256, &image_data, ImageFormat::RgbaSeparate)?;
     rc.draw_image(
         &image,
-        ((150.0, 50.0), (180.0, 80.0)),
+        Rect::new(150.0, 50.0, 180.0, 80.0),
         InterpolationMode::Bilinear,
     );
 
