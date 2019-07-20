@@ -291,7 +291,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 return;
             }
         };
-        let path = match path_from_shape(self.factory, false, shape, fill_rule) {
+        let path = match path_from_shape(self.factory, true, shape, fill_rule) {
             Ok(path) => path,
             Err(e) => {
                 self.err = Err(e);
