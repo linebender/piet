@@ -443,6 +443,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 }
 
+impl<'a> D2DText<'a> {
+    /// Create a new factory that satisfies the piet `Text` trait given
+    /// the (platform-specific) dwrite factory.
+    pub fn new(dwrite: &'a directwrite::Factory) -> D2DText<'a> {
+        D2DText { dwrite }
+    }
+}
+
 impl<'a> Text for D2DText<'a> {
     type FontBuilder = D2DFontBuilder<'a>;
     type Font = D2DFont;
