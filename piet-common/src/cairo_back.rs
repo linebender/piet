@@ -2,7 +2,6 @@
 
 use std::marker::PhantomData;
 
-use cairo::prelude::SurfaceExt;
 use cairo::{Context, Format, ImageSurface};
 
 use piet::{ErrorKind, ImageFormat};

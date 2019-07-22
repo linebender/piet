@@ -4,15 +4,15 @@ use std::fmt;
 
 use cairo::{
     BorrowError, Context, Filter, FontFace, FontOptions, FontSlant, FontWeight, Format,
-    ImageSurface, Matrix, Pattern, PatternTrait, ScaledFont, Status, SurfacePattern,
+    ImageSurface, Matrix, ScaledFont, Status, SurfacePattern,
 };
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, GradientStop,
-    ImageFormat, InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text,
-    TextLayout, TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
+    InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -104,6 +104,23 @@ fn convert_fill_rule(fill_rule: piet::FillRule) -> cairo::FillRule {
     }
 }
 
+// we call this with different types of gradient that have `add_color_stop_rgba` fns,
+// and there's no trait for this behaviour so we use a macro. ¯\_(ツ)_/¯
+macro_rules! set_gradient_stops {
+    ($dst: expr, $stops: expr) => {
+        for stop in $stops {
+            let rgba = stop.color.as_rgba32();
+            $dst.add_color_stop_rgba(
+                stop.pos as f64,
+                byte_to_frac(rgba >> 24),
+                byte_to_frac(rgba >> 16),
+                byte_to_frac(rgba >> 8),
+                byte_to_frac(rgba),
+            );
+        }
+    };
+}
+
 impl<'a> RenderContext for CairoRenderContext<'a> {
     type Brush = Brush;
 
@@ -141,16 +158,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             Gradient::Linear(linear) => {
                 let (x0, y0) = (linear.start.x, linear.start.y);
                 let (x1, y1) = (linear.end.x, linear.end.y);
-                let mut lg = cairo::LinearGradient::new(x0, y0, x1, y1);
-                set_gradient_stops(&mut lg, &linear.stops);
+                let lg = cairo::LinearGradient::new(x0, y0, x1, y1);
+                set_gradient_stops!(&lg, &linear.stops);
                 Ok(Brush::Linear(lg))
             }
             Gradient::Radial(radial) => {
                 let (xc, yc) = (radial.center.x, radial.center.y);
                 let (xo, yo) = (radial.origin_offset.x, radial.origin_offset.y);
                 let r = radial.radius;
-                let mut rg = cairo::RadialGradient::new(xc + xo, yc + yo, 0.0, xc, yc, r);
-                set_gradient_stops(&mut rg, &radial.stops);
+                let rg = cairo::RadialGradient::new(xc + xo, yc + yo, 0.0, xc, yc, r);
+                set_gradient_stops!(&rg, &radial.stops);
                 Ok(Brush::Radial(rg))
             }
         }
@@ -292,23 +309,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                 rect.width() / (image.get_width() as f64),
                 rect.height() / (image.get_height() as f64),
             );
-            rc.ctx.set_source(&Pattern::SurfacePattern(surface_pattern));
+            rc.ctx.set_source(&surface_pattern);
             rc.ctx.paint();
             Ok(())
         });
-    }
-}
-
-fn set_gradient_stops(dst: &mut impl cairo::Gradient, src: &[GradientStop]) {
-    for stop in src {
-        let rgba = stop.color.as_rgba32();
-        dst.add_color_stop_rgba(
-            stop.pos as f64,
-            byte_to_frac(rgba >> 24),
-            byte_to_frac(rgba >> 16),
-            byte_to_frac(rgba >> 8),
-            byte_to_frac(rgba),
-        );
     }
 }
 
@@ -379,12 +383,8 @@ impl<'a> CairoRenderContext<'a> {
                 byte_to_frac(rgba >> 8),
                 byte_to_frac(rgba),
             ),
-            Brush::Linear(ref linear) => self
-                .ctx
-                .set_source(&Pattern::LinearGradient(linear.clone())),
-            Brush::Radial(ref radial) => self
-                .ctx
-                .set_source(&Pattern::RadialGradient(radial.clone())),
+            Brush::Linear(ref linear) => self.ctx.set_source(linear),
+            Brush::Radial(ref radial) => self.ctx.set_source(radial),
         }
     }
 
