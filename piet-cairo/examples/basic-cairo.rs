@@ -2,7 +2,6 @@
 
 use std::fs::File;
 
-use cairo::prelude::SurfaceExt;
 use cairo::{Context, Format, ImageSurface};
 
 use piet::RenderContext;
