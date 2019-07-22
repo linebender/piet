@@ -312,6 +312,16 @@ fn set_gradient_stops(dst: &mut impl cairo::Gradient, src: &[GradientStop]) {
     }
 }
 
+impl CairoText {
+    /// Create a new factory that satisfies the piet `Text` trait.
+    ///
+    /// No state is needed for now because the current implementation is just
+    /// toy text, but that will change when proper text is implemented.
+    pub fn new() -> CairoText {
+        CairoText
+    }
+}
+
 impl Text for CairoText {
     type Font = CairoFont;
     type FontBuilder = CairoFontBuilder;
