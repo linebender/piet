@@ -496,6 +496,6 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
-        self.font.text_extents(&self.text).width
+        self.font.text_extents(&self.text).x_advance
     }
 }
