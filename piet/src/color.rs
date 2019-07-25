@@ -46,9 +46,20 @@ impl Color {
 
     /// Create a color from an HLC (aka CIEHLC) specification.
     ///
+    /// The `h` parameter is an angle in degrees, with 0 roughly magenta, 90
+    /// roughly yellow, 180 roughly cyan, and 270 roughly blue. The `l`
+    /// parameter is perceptual luminance, with 0 black and 100 white.
+    /// The `c` parameter is a chrominance concentration, with 0 grayscale
+    /// and a nominal maximum of 127 (in the future, higher values might
+    /// be useful, for high gamut contexts).
+    ///
     /// Currently this is just converted into sRGB, but in the future as we
     /// support high-gamut colorspaces, it can be used to specify more colors
     /// or existing colors with a higher accuracy.
+    ///
+    /// Currently out-of-gamut values are clipped to the nearest sRGB color,
+    /// which is perhaps not ideal (the clipping might change the hue). See
+    /// https://github.com/d3/d3-color/issues/33 for discussion.
     #[allow(non_snake_case)]
     pub fn hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
         // The reverse transformation from Lab to XYZ, see
