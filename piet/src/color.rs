@@ -78,14 +78,26 @@ impl Color {
         let b = c * th.sin();
         let L = l.into();
         let ll = (L + 16.) * (1. / 116.);
-        // Produce XYZ values scaled to D65 white reference
-        let X = 0.9505 * f_inv(ll + a * (1. / 500.));
+        // Produce raw XYZ values
+        let X = f_inv(ll + a * (1. / 500.));
         let Y = f_inv(ll);
-        let Z = 1.0890 * f_inv(ll - b * (1. / 200.));
-        // See https://en.wikipedia.org/wiki/SRGB
-        let r_lin = 3.2406 * X - 1.5372 * Y - 0.4986 * Z;
-        let g_lin = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;
-        let b_lin = 0.0557 * X - 0.2040 * Y + 1.0570 * Z;
+        let Z = f_inv(ll - b * (1. / 200.));
+        // This matrix is the concatenation of three sources.
+        // First, the white point is taken to be ICC standard D50, so
+        // the diagonal matrix of [0.9642, 1, 0.8249]. Note that there
+        // is some controversy around this value. However, it matches
+        // the other matrices, thus minimizing chroma error.
+        //
+        // Second, an adaption matrix from D50 to D65. This is the
+        // inverse of the recommended D50 to D65 adaptation matrix
+        // from the W3C sRGB spec:
+        // https://www.w3.org/Graphics/Color/srgb
+        //
+        // Finally, the conversion from XYZ to linear sRGB values,
+        // also taken from the W3C sRGB spec.
+        let r_lin = 3.02172918 * X - 1.61692294 * Y - 0.40480625 * Z;
+        let g_lin = -0.94339358 * X + 1.91584267 * Y + 0.02755094 * Z;
+        let b_lin = 0.06945666 * X - 0.22903204 * Y + 1.15957526 * Z;
         fn gamma(u: f64) -> f64 {
             if u <= 0.0031308 {
                 12.92 * u
