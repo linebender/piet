@@ -44,7 +44,8 @@ impl Color {
         Color::rgba32((r << 24) | (g << 16) | (b << 8) | 0xff)
     }
 
-    /// Create a color from an HLC (aka CIEHLC) specification.
+    /// Create a color from a CIEL\*a\*b\* polar (also known as CIE HCL)
+    /// specification.
     ///
     /// The `h` parameter is an angle in degrees, with 0 roughly magenta, 90
     /// roughly yellow, 180 roughly cyan, and 270 roughly blue. The `l`
@@ -61,7 +62,7 @@ impl Color {
     /// which is perhaps not ideal (the clipping might change the hue). See
     /// https://github.com/d3/d3-color/issues/33 for discussion.
     #[allow(non_snake_case)]
-    pub fn hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
+    pub fn cielab_hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
         // The reverse transformation from Lab to XYZ, see
         // https://en.wikipedia.org/wiki/CIELAB_color_space
         fn f_inv(t: f64) -> f64 {
@@ -108,11 +109,11 @@ impl Color {
         Color::rgb(gamma(r_lin), gamma(g_lin), gamma(b_lin))
     }
 
-    /// Create a color from an HLC specification and alpha.
+    /// Create a color from a CIEL\*a\*b\* polar specification and alpha.
     ///
     /// The `a` value represents alpha in the range 0.0 to 1.0.
-    pub fn hlca<F: Into<f64>>(h: F, l: F, c: F, a: impl Into<f64>) -> Color {
-        Color::hlc(h, c, l).with_alpha(a)
+    pub fn cielab_hlca<F: Into<f64>>(h: F, l: F, c: F, a: impl Into<f64>) -> Color {
+        Color::cielab_hlc(h, c, l).with_alpha(a)
     }
 
     /// Change just the alpha value of a color.
