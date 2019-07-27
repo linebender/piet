@@ -301,12 +301,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // TODO: we get a use-after-free crash if we don't do this. Almost certainly
         // this will be fixed in direct2d 0.3, so remove workaround when upgrading.
         let _clone = path.clone();
-        let transform = affine_to_matrix3x2f(self.current_transform());
-        self.rt
-            .push_layer(&layer)
-            .with_mask(path)
-            .with_mask_transform(transform)
-            .push();
+        self.rt.push_layer(&layer).with_mask(path).push();
         self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
     }
 
