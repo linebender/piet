@@ -17,6 +17,8 @@ directwrite = "0.1.4"
 dxgi = "0.1.7"
 winapi = "0.3.7"
 
+wio = "0.2.2"
+
 [dev-dependencies]
 direct3d11 = "0.1.7"
 image = "0.22.1"
