@@ -3,28 +3,31 @@
 // TODO: get rid of this when we actually do use everything
 #![allow(unused)]
 
+use std::fmt::{Debug, Display, Formatter};
 use std::ptr::null_mut;
 
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::dwrite::{
     DWriteCreateFactory, IDWriteFactory, IDWriteTextFormat, IDWriteTextLayout,
     DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-    DWRITE_FONT_WEIGHT_NORMAL,
+    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS, DWRITE_TEXT_METRICS,
 };
 use winapi::Interface;
 
 use wio::com::ComPtr;
 use wio::wide::ToWide;
 
+use piet::{new_error, ErrorKind};
+
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
-#[derive(Debug)]
 pub enum Error {
     WinapiError(HRESULT),
 }
 
 pub struct DwriteFactory(ComPtr<IDWriteFactory>);
 
+#[derive(Clone)]
 pub struct TextFormat(ComPtr<IDWriteTextFormat>);
 
 /// A builder for creating new `TextFormat` objects.
@@ -38,7 +41,7 @@ pub struct TextFormatBuilder<'a> {
 
 pub struct TextLayoutBuilder<'a> {
     factory: &'a DwriteFactory,
-    format: &'a TextFormat,
+    format: Option<TextFormat>,
     text: Option<Vec<u16>>,
     width: Option<f32>,
     height: Option<f32>,
@@ -49,6 +52,34 @@ pub struct TextLayout(ComPtr<IDWriteTextLayout>);
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {
         Error::WinapiError(hr)
+    }
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+        }
+    }
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match self {
+            Error::WinapiError(hr) => write!(f, "hresult {:x}", hr),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn description(&self) -> &str {
+        "winapi error"
+    }
+}
+
+impl From<Error> for piet::Error {
+    fn from(e: Error) -> piet::Error {
+        new_error(ErrorKind::BackendError(Box::new(e)))
     }
 }
 
@@ -122,14 +153,21 @@ impl<'a> TextFormatBuilder<'a> {
 }
 
 impl<'a> TextLayoutBuilder<'a> {
-    pub fn new(factory: &'a DwriteFactory, format: &'a TextFormat) -> TextLayoutBuilder<'a> {
+    pub fn new(factory: &'a DwriteFactory) -> TextLayoutBuilder<'a> {
         TextLayoutBuilder {
             factory,
-            format,
+            format: None,
             text: None,
             width: None,
             height: None,
         }
+    }
+
+    pub fn format(mut self, format: &TextFormat) -> TextLayoutBuilder<'a> {
+        // The fact we clone here is annoying, but it gets us out of
+        // otherwise annoying lifetime issues.
+        self.format = Some(format.clone());
+        self
     }
 
     pub fn text(mut self, text: &str) -> TextLayoutBuilder<'a> {
@@ -148,6 +186,7 @@ impl<'a> TextLayoutBuilder<'a> {
     }
 
     pub fn build(self) -> Result<TextLayout, Error> {
+        let format = self.format.expect("`format` must be specified");
         let text = self.text.expect("`text` must be specified");
         let len = text.len();
         assert!(len <= 0xffff_ffff);
@@ -158,12 +197,54 @@ impl<'a> TextLayoutBuilder<'a> {
             let hr = self.factory.0.CreateTextLayout(
                 text.as_ptr(),
                 len as u32,
-                self.format.0.as_raw(),
+                format.0.as_raw(),
                 width,
                 height,
                 &mut ptr,
             );
             wrap(hr, ptr, TextLayout)
+        }
+    }
+}
+
+#[allow(overflowing_literals)]
+const E_NOT_SUFFICIENT_BUFFER: HRESULT = 0x8007007A;
+
+impl TextLayout {
+    /// Get line metrics, storing them in the provided buffer.
+    ///
+    /// Note: this isn't necessarily the lowest level wrapping, as it requires
+    /// an allocation for the buffer. But it's pretty ergonomic.
+    pub fn get_line_metrics(&self, buf: &mut Vec<DWRITE_LINE_METRICS>) {
+        let cap = buf.capacity().min(0xffff_ffff) as u32;
+        unsafe {
+            let mut actual_count = 0;
+            let mut hr = self
+                .0
+                .GetLineMetrics(buf.as_mut_ptr(), cap, &mut actual_count);
+            if hr == E_NOT_SUFFICIENT_BUFFER {
+                buf.reserve((actual_count - cap) as usize);
+                hr = self
+                    .0
+                    .GetLineMetrics(buf.as_mut_ptr(), actual_count, &mut actual_count);
+            }
+            if SUCCEEDED(hr) {
+                buf.set_len(actual_count as usize);
+            } else {
+                buf.set_len(0);
+            }
+        }
+    }
+
+    pub fn get_raw(&self) -> *mut IDWriteTextLayout {
+        self.0.as_raw()
+    }
+
+    pub fn get_metrics(&self) -> DWRITE_TEXT_METRICS {
+        unsafe {
+            let mut result = std::mem::zeroed();
+            self.0.GetMetrics(&mut result);
+            result
         }
     }
 }
