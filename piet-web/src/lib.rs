@@ -106,13 +106,6 @@ impl<T> WrapError<T> for Result<T, JsValue> {
     }
 }
 
-fn convert_fill_rule(fill_rule: piet::FillRule) -> CanvasWindingRule {
-    match fill_rule {
-        piet::FillRule::NonZero => CanvasWindingRule::Nonzero,
-        piet::FillRule::EvenOdd => CanvasWindingRule::Evenodd,
-    }
-}
-
 fn convert_line_cap(line_cap: LineCap) -> &'static str {
     match line_cap {
         LineCap::Butt => "butt",
@@ -173,18 +166,26 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: piet::FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_brush(&*brush, true);
         self.ctx
-            .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
+            .fill_with_canvas_winding_rule(CanvasWindingRule::Nonzero);
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: piet::FillRule) {
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        self.set_path(shape);
+        self.set_brush(&*brush, true);
+        self.ctx
+            .fill_with_canvas_winding_rule(CanvasWindingRule::Evenodd);
+    }
+
+    fn clip(&mut self, shape: impl Shape) {
         self.set_path(shape);
         self.ctx
-            .clip_with_canvas_winding_rule(convert_fill_rule(fill_rule));
+            .clip_with_canvas_winding_rule(CanvasWindingRule::Nonzero);
     }
 
     fn stroke(

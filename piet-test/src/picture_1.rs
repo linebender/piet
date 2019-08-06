@@ -2,7 +2,7 @@
 
 use piet::kurbo::{BezPath, Line, Point};
 
-use piet::{Color, Error, FillRule, RenderContext};
+use piet::{Color, Error, RenderContext};
 
 // TODO: this will eventually become a `kurbo::Shape`.
 fn circle<V: Into<Point>>(center: V, radius: f64, num_segments: usize) -> BezPath {
@@ -53,7 +53,7 @@ fn draw_cubic_bezier<V: Into<Point>>(
 
     for p in [p0, p1, p2, p3].into_iter() {
         let dot = circle(*p, 1.5, 20);
-        rc.fill(&dot, &handle_brush, FillRule::NonZero);
+        rc.fill(&dot, &handle_brush);
     }
     Ok(())
 }

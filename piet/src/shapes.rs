@@ -1,14 +1,5 @@
 //! Options for drawing paths.
 
-/// A fill rule for resolving winding numbers.
-#[derive(Clone, Copy, PartialEq)]
-pub enum FillRule {
-    /// Fill everything with a non-zero winding number.
-    NonZero,
-    /// Fill everything with an odd winding number.
-    EvenOdd,
-}
-
 /// Options for drawing stroked lines.
 #[derive(Clone, PartialEq, Debug)]
 pub struct StrokeStyle {

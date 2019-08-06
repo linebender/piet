@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use kurbo::{Affine, Point, Rect, Shape};
 
-use crate::{Color, Error, FillRule, RawGradient, StrokeStyle, Text, TextLayout};
+use crate::{Color, Error, RawGradient, StrokeStyle, Text, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -99,17 +99,17 @@ where
         style: Option<&StrokeStyle>,
     );
 
-    /// Fill a shape.
+    /// Fill a shape, using non-zero fill rule.
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>);
 
-    // TODO: switch last two argument order to be more similar to clip? Maybe we
-    // should have a convention, geometry first.
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: FillRule);
+    /// Fill a shape, using even-odd fill rule
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>);
 
     /// Clip to a shape.
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule);
+    fn clip(&mut self, shape: impl Shape);
 
     fn text(&mut self) -> &mut Self::Text;
 

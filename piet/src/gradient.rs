@@ -174,7 +174,7 @@ impl LinearGradient {
     /// # Examples
     ///
     /// ```
-    /// use piet::{Color, FillRule, RenderContext, LinearGradient, UnitPoint};
+    /// use piet::{Color, RenderContext, LinearGradient, UnitPoint};
     /// use piet::kurbo::{Circle, Point};
     ///
     /// # let mut render_ctx = piet::NullRenderContext::new();
@@ -184,7 +184,7 @@ impl LinearGradient {
     ///     UnitPoint::BOTTOM,
     ///     (Color::WHITE, Color::BLACK)
     /// );
-    /// render_ctx.fill(circle, &gradient, FillRule::NonZero);
+    /// render_ctx.fill(circle, &gradient);
     /// ```
     ///
     /// [`UnitPoint`]: struct.UnitPoint.html

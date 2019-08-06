@@ -3,8 +3,8 @@
 use piet::kurbo::{Affine, BezPath, Line, Point, Rect, Vec2};
 
 use piet::{
-    Color, Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text,
-    TextLayout, TextLayoutBuilder,
+    Color, Error, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
@@ -22,7 +22,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     path.move_to((10.0, 20.0));
     path.curve_to((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
     let brush = rc.solid_brush(Color::rgba32(0x00_00_80_C0));
-    rc.fill(path, &brush, FillRule::NonZero);
+    rc.fill(path, &brush);
 
     let font = rc.text().new_font_by_name("Segoe UI", 12.0)?.build()?;
     let layout = rc.text().new_text_layout(&font, "Hello piet!")?.build()?;
@@ -47,7 +47,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     );
 
     let clip_path = star(Point::new(90.0, 45.0), 10.0, 30.0, 24);
-    rc.clip(clip_path, FillRule::NonZero);
+    rc.clip(clip_path);
     let layout = rc.text().new_text_layout(&font, "Clipped text")?.build()?;
     rc.draw_text(&layout, (80.0, 50.0), &brush);
     Ok(())

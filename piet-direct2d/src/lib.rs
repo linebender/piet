@@ -37,9 +37,8 @@ use directwrite::TextFormat;
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, IBrush, ImageFormat,
-    InterpolationMode, RawGradient, RenderContext, StrokeStyle, Text, TextLayout,
-    TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode,
+    RawGradient, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -136,13 +135,13 @@ fn path_from_shape(
     d2d: &direct2d::Factory,
     is_filled: bool,
     shape: impl Shape,
-    fill_rule: FillRule,
+    fill_mode: FillMode,
 ) -> Result<Path, Error> {
     let mut path = Path::create(d2d).wrap()?;
     {
         let mut g = path.open().wrap()?;
-        if fill_rule == FillRule::NonZero {
-            g = g.fill_mode(FillMode::Winding);
+        if fill_mode == FillMode::Winding {
+            g = g.fill_mode(fill_mode);
         }
         let mut builder = Some(PathBuilder::Geom(g));
         for el in shape.to_bez_path(1e-3) {
@@ -252,10 +251,19 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
         // TODO: various special-case shapes, for efficiency
         let brush = brush.make_brush(self, || shape.bounding_box());
-        match path_from_shape(self.factory, true, shape, fill_rule) {
+        match path_from_shape(self.factory, true, shape, FillMode::Winding) {
+            Ok(path) => self.rt.fill_geometry(&path, &*brush),
+            Err(e) => self.err = Err(e),
+        }
+    }
+
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+        // TODO: various special-case shapes, for efficiency
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        match path_from_shape(self.factory, true, shape, FillMode::Alternate) {
             Ok(path) => self.rt.fill_geometry(&path, &*brush),
             Err(e) => self.err = Err(e),
         }
@@ -270,7 +278,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     ) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         // TODO: various special-case shapes, for efficiency
-        let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+        let path = match path_from_shape(self.factory, false, shape, FillMode::Alternate) {
             Ok(path) => path,
             Err(e) => {
                 self.err = Err(e);
@@ -279,14 +287,17 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         };
         let width = width as f32;
         let style = if let Some(style) = style {
-            Some(convert_stroke_style(self.factory, style, width).expect("TODO"))
+            Some(
+                convert_stroke_style(self.factory, style, width)
+                    .expect("stroke style conversion failed"),
+            )
         } else {
             None
         };
         self.rt.draw_geometry(&path, &*brush, width, style.as_ref());
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
+    fn clip(&mut self, shape: impl Shape) {
         // TODO: set size based on bbox of shape.
         let layer = match Layer::create(&mut self.rt, None).wrap() {
             Ok(layer) => layer,
@@ -295,7 +306,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 return;
             }
         };
-        let path = match path_from_shape(self.factory, true, shape, fill_rule) {
+        let path = match path_from_shape(self.factory, true, shape, FillMode::Winding) {
             Ok(path) => path,
             Err(e) => {
                 self.err = Err(e);

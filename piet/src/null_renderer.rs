@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
-    Color, Error, FillRule, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode, RawGradient,
+    Color, Error, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode, RawGradient,
     RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
@@ -62,9 +62,11 @@ impl RenderContext for NullRenderContext {
     ) {
     }
 
-    fn fill(&mut self, _shape: impl Shape, _brush: &impl IBrush<Self>, _fill_rule: FillRule) {}
+    fn fill(&mut self, _shape: impl Shape, _brush: &impl IBrush<Self>) {}
 
-    fn clip(&mut self, _shape: impl Shape, _fill_rule: FillRule) {}
+    fn fill_even_odd(&mut self, _shape: impl Shape, _brush: &impl IBrush<Self>) {}
+
+    fn clip(&mut self, _shape: impl Shape) {}
 
     fn text(&mut self) -> &mut Self::Text {
         &mut self.0

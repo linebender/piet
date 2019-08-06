@@ -3,8 +3,7 @@
 use piet::kurbo::{Point, Rect, Vec2};
 
 use piet::{
-    Color, Error, FillRule, GradientStop, RawGradient, RawLinearGradient, RawRadialGradient,
-    RenderContext,
+    Color, Error, GradientStop, RawGradient, RawLinearGradient, RawRadialGradient, RenderContext,
 };
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
@@ -25,11 +24,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         radius: 30.0,
         stops,
     }))?;
-    rc.fill(
-        Rect::new(0.0, 0.0, 60.0, 60.0),
-        &gradient,
-        FillRule::NonZero,
-    );
+    rc.fill(Rect::new(0.0, 0.0, 60.0, 60.0), &gradient);
     let stops2 = vec![
         GradientStop {
             pos: 0.0,
@@ -45,10 +40,6 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         end: Point::new(60.0, 0.0),
         stops: stops2,
     }))?;
-    rc.fill(
-        Rect::new(0.0, 80.0, 60.0, 100.0),
-        &gradient2,
-        FillRule::NonZero,
-    );
+    rc.fill(Rect::new(0.0, 80.0, 60.0, 100.0), &gradient2);
     Ok(())
 }

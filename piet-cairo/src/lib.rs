@@ -11,9 +11,9 @@ use cairo::{
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, IBrush, ImageFormat,
-    InterpolationMode, LineCap, LineJoin, RawGradient, RenderContext, RoundInto, StrokeStyle, Text,
-    TextLayout, TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode,
+    LineCap, LineJoin, RawGradient, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -99,13 +99,6 @@ impl<T> WrapError<T> for Result<T, Status> {
     }
 }
 
-fn convert_fill_rule(fill_rule: piet::FillRule) -> cairo::FillRule {
-    match fill_rule {
-        piet::FillRule::NonZero => cairo::FillRule::Winding,
-        piet::FillRule::EvenOdd => cairo::FillRule::EvenOdd,
-    }
-}
-
 // we call this with different types of gradient that have `add_color_stop_rgba` fns,
 // and there's no trait for this behaviour so we use a macro. ¯\_(ツ)_/¯
 macro_rules! set_gradient_stops {
@@ -175,17 +168,25 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_brush(&*brush);
-        self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
+        self.ctx.set_fill_rule(cairo::FillRule::Winding);
         self.ctx.fill();
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
+        self.set_brush(&*brush);
+        self.ctx.set_fill_rule(cairo::FillRule::EvenOdd);
+        self.ctx.fill();
+    }
+
+    fn clip(&mut self, shape: impl Shape) {
+        self.set_path(shape);
+        self.ctx.set_fill_rule(cairo::FillRule::Winding);
         self.ctx.clip();
     }
 
