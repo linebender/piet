@@ -34,6 +34,7 @@ impl<'a> WebRenderContext<'a> {
     }
 }
 
+#[derive(Clone)]
 pub enum Brush {
     Solid(u32),
     Gradient(CanvasGradient),
