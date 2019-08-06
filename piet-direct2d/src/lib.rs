@@ -10,6 +10,7 @@ use crate::conv::{
 use crate::error::WrapError;
 
 use std::borrow::Cow;
+use std::ops::Deref;
 
 use winapi::shared::basetsd::UINT32;
 use winapi::um::dcommon::D2D_SIZE_U;
@@ -37,8 +38,9 @@ use directwrite::TextFormat;
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
-    InterpolationMode, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, IBrush, ImageFormat,
+    InterpolationMode, RawGradient, RenderContext, StrokeStyle, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -222,9 +224,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn gradient(&mut self, gradient: Gradient) -> Result<GenericBrush, Error> {
+    fn gradient(&mut self, gradient: RawGradient) -> Result<GenericBrush, Error> {
         match gradient {
-            Gradient::Linear(linear) => {
+            RawGradient::Linear(linear) => {
                 let mut builder = LinearGradientBrushBuilder::new(&self.rt)
                     .with_start(to_point2f(linear.start))
                     .with_end(to_point2f(linear.end));
@@ -235,7 +237,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 // Same concern about extra COM clone as above.
                 Ok(brush.to_generic())
             }
-            Gradient::Radial(radial) => {
+            RawGradient::Radial(radial) => {
                 let radius = radial.radius as f32;
                 let mut builder = RadialGradientBrushBuilder::new(&self.rt)
                     .with_center(to_point2f(radial.center))
@@ -251,10 +253,11 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: FillRule) {
         // TODO: various special-case shapes, for efficiency
+        let brush = brush.make_brush(self, &shape);
         match path_from_shape(self.factory, true, shape, fill_rule) {
-            Ok(path) => self.rt.fill_geometry(&path, brush),
+            Ok(path) => self.rt.fill_geometry(&path, brush.deref()),
             Err(e) => self.err = Err(e),
         }
     }
@@ -262,10 +265,11 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn stroke(
         &mut self,
         shape: impl Shape,
-        brush: &Self::Brush,
+        brush: &impl IBrush<Self>,
         width: f64,
         style: Option<&StrokeStyle>,
     ) {
+        let brush = brush.make_brush(self, &shape);
         // TODO: various special-case shapes, for efficiency
         let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
             Ok(path) => path,
@@ -280,7 +284,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         } else {
             None
         };
-        self.rt.draw_geometry(&path, brush, width, style.as_ref());
+        self.rt
+            .draw_geometry(&path, brush.deref(), width, style.as_ref());
     }
 
     fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
@@ -436,6 +441,16 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let src_rect = (0.0, 0.0, src_size.0.width, src_size.0.height);
         self.rt
             .draw_bitmap(&image, rect_to_rectf(rect.into()), 1.0, interp, src_rect);
+    }
+}
+
+impl<'a> IBrush<D2DRenderContext<'a>> for GenericBrush {
+    fn make_brush<'b>(
+        &'b self,
+        _piet: &mut D2DRenderContext,
+        _shape: &impl Shape,
+    ) -> std::borrow::Cow<'b, GenericBrush> {
+        Cow::Borrowed(self)
     }
 }
 

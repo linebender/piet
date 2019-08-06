@@ -1,5 +1,7 @@
 //! A simple representation of color
 
+use std::fmt::{Debug, Formatter};
+
 /// A datatype representing color.
 ///
 /// Currently this is only a 32 bit RGBA value, but it will likely
@@ -8,6 +10,12 @@
 #[derive(Clone)]
 pub enum Color {
     Rgba32(u32),
+}
+
+impl Debug for Color {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "Color(#{:08x})", self.as_rgba32())
+    }
 }
 
 impl Color {
@@ -62,7 +70,7 @@ impl Color {
     /// which is perhaps not ideal (the clipping might change the hue). See
     /// https://github.com/d3/d3-color/issues/33 for discussion.
     #[allow(non_snake_case)]
-    pub fn cielab_hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
+    pub fn hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
         // The reverse transformation from Lab to XYZ, see
         // https://en.wikipedia.org/wiki/CIELAB_color_space
         fn f_inv(t: f64) -> f64 {
@@ -112,8 +120,8 @@ impl Color {
     /// Create a color from a CIEL\*a\*b\* polar specification and alpha.
     ///
     /// The `a` value represents alpha in the range 0.0 to 1.0.
-    pub fn cielab_hlca<F: Into<f64>>(h: F, l: F, c: F, a: impl Into<f64>) -> Color {
-        Color::cielab_hlc(h, c, l).with_alpha(a)
+    pub fn hlca<F: Into<f64>>(h: F, l: F, c: F, a: impl Into<f64>) -> Color {
+        Color::hlc(h, c, l).with_alpha(a)
     }
 
     /// Change just the alpha value of a color.

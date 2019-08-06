@@ -1,9 +1,10 @@
 //! Gradients.
 
-use piet::kurbo::{Rect, Vec2};
+use piet::kurbo::{Point, Rect, Vec2};
 
 use piet::{
-    Color, Error, FillRule, Gradient, GradientStop, LinearGradient, RadialGradient, RenderContext,
+    Color, Error, FillRule, GradientStop, RawGradient, RawLinearGradient, RawRadialGradient,
+    RenderContext,
 };
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
@@ -18,8 +19,8 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
             color: Color::rgb24(0x00_00_00),
         },
     ];
-    let gradient = rc.gradient(Gradient::Radial(RadialGradient {
-        center: Vec2::new(30.0, 30.0),
+    let gradient = rc.gradient(RawGradient::Radial(RawRadialGradient {
+        center: Point::new(30.0, 30.0),
         origin_offset: Vec2::new(10.0, 10.0),
         radius: 30.0,
         stops,
@@ -39,9 +40,9 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
             color: Color::rgb24(0x00_00_00),
         },
     ];
-    let gradient2 = rc.gradient(Gradient::Linear(LinearGradient {
-        start: Vec2::new(0.0, 0.0),
-        end: Vec2::new(60.0, 0.0),
+    let gradient2 = rc.gradient(RawGradient::Linear(RawLinearGradient {
+        start: Point::new(0.0, 0.0),
+        end: Point::new(60.0, 0.0),
         stops: stops2,
     }))?;
     rc.fill(

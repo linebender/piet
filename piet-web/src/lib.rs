@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::ops::Deref;
 
 use js_sys::{Float64Array, Reflect};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
@@ -13,8 +14,8 @@ use web_sys::{
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    Color, Error, Font, FontBuilder, Gradient, GradientStop, ImageFormat, InterpolationMode,
-    LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    Color, Error, Font, FontBuilder, GradientStop, IBrush, ImageFormat, InterpolationMode, LineCap,
+    LineJoin, RawGradient, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -149,16 +150,16 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Brush::Solid(color.as_rgba32())
     }
 
-    fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {
+    fn gradient(&mut self, gradient: RawGradient) -> Result<Brush, Error> {
         match gradient {
-            Gradient::Linear(linear) => {
+            RawGradient::Linear(linear) => {
                 let (x0, y0) = (linear.start.x, linear.start.y);
                 let (x1, y1) = (linear.end.x, linear.end.y);
                 let mut lg = self.ctx.create_linear_gradient(x0, y0, x1, y1);
                 set_gradient_stops(&mut lg, &linear.stops);
                 Ok(Brush::Gradient(lg))
             }
-            Gradient::Radial(radial) => {
+            RawGradient::Radial(radial) => {
                 let (xc, yc) = (radial.center.x, radial.center.y);
                 let (xo, yo) = (radial.origin_offset.x, radial.origin_offset.y);
                 let r = radial.radius;
@@ -172,9 +173,10 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: piet::FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: piet::FillRule) {
+        let brush = brush.make_brush(self, &shape);
         self.set_path(shape);
-        self.set_brush(brush, true);
+        self.set_brush(brush.deref(), true);
         self.ctx
             .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
     }
@@ -188,13 +190,14 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     fn stroke(
         &mut self,
         shape: impl Shape,
-        brush: &Self::Brush,
+        brush: &impl IBrush<Self>,
         width: f64,
         style: Option<&StrokeStyle>,
     ) {
+        let brush = brush.make_brush(self, &shape);
         self.set_path(shape);
         self.set_stroke(width, style);
-        self.set_brush(brush, false);
+        self.set_brush(brush.deref(), false);
         self.ctx.stroke();
     }
 
@@ -314,6 +317,16 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         if let Err(e) = result {
             self.err = Err(e);
         }
+    }
+}
+
+impl<'a> IBrush<WebRenderContext<'a>> for Brush {
+    fn make_brush<'b>(
+        &'b self,
+        _piet: &mut WebRenderContext,
+        _shape: &impl Shape,
+    ) -> std::borrow::Cow<'b, Brush> {
+        Cow::Borrowed(self)
     }
 }
 
