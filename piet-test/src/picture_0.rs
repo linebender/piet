@@ -10,13 +10,13 @@ use piet::{
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     let brush = rc.solid_brush(Color::rgb24(0x00_00_80));
-    rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0, None);
+    rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0);
 
     let mut path = BezPath::new();
     path.move_to((50.0, 10.0));
     path.quad_to((60.0, 50.0), (100.0, 90.0));
     let brush = rc.solid_brush(Color::rgb24(0x00_80_00));
-    rc.stroke(path, &brush, 1.0, None);
+    rc.stroke(path, &brush, 1.0);
 
     let mut path = BezPath::new();
     path.move_to((10.0, 20.0));
@@ -30,7 +30,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let brush = rc.solid_brush(Color::rgba32(0x80_00_00_C0));
     rc.draw_text(&layout, (80.0, 10.0), &brush);
 
-    rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0, None);
+    rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0);
 
     rc.with_save(|rc| {
         rc.transform(Affine::rotate(0.1));

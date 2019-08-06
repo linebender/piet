@@ -53,12 +53,14 @@ impl RenderContext for NullRenderContext {
 
     fn clear(&mut self, _color: Color) {}
 
-    fn stroke(
+    fn stroke(&mut self, _shape: impl Shape, _brush: &impl IBrush<Self>, _width: f64) {}
+
+    fn stroke_styled(
         &mut self,
         _shape: impl Shape,
         _brush: &impl IBrush<Self>,
         _width: f64,
-        _style: Option<&StrokeStyle>,
+        _style: &StrokeStyle,
     ) {
     }
 

@@ -269,12 +269,26 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn stroke(
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        // TODO: various special-case shapes, for efficiency
+        let path = match path_from_shape(self.factory, false, shape, FillMode::Alternate) {
+            Ok(path) => path,
+            Err(e) => {
+                self.err = Err(e);
+                return;
+            }
+        };
+        let width = width as f32;
+        self.rt.draw_geometry(&path, &*brush, width, None);
+    }
+
+    fn stroke_styled(
         &mut self,
         shape: impl Shape,
         brush: &impl IBrush<Self>,
         width: f64,
-        style: Option<&StrokeStyle>,
+        style: &StrokeStyle,
     ) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         // TODO: various special-case shapes, for efficiency
@@ -286,15 +300,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
         };
         let width = width as f32;
-        let style = if let Some(style) = style {
-            Some(
-                convert_stroke_style(self.factory, style, width)
-                    .expect("stroke style conversion failed"),
-            )
-        } else {
-            None
-        };
-        self.rt.draw_geometry(&path, &*brush, width, style.as_ref());
+        let style = convert_stroke_style(self.factory, style, width)
+            .expect("stroke style conversion failed");
+        self.rt.draw_geometry(&path, &*brush, width, Some(&style));
     }
 
     fn clip(&mut self, shape: impl Shape) {

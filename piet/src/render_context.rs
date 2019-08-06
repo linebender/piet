@@ -91,12 +91,15 @@ where
     fn clear(&mut self, color: Color);
 
     /// Stroke a shape.
-    fn stroke(
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64);
+
+    /// Stroke a shape, with styled strokes.
+    fn stroke_styled(
         &mut self,
         shape: impl Shape,
         brush: &impl IBrush<Self>,
         width: f64,
-        style: Option<&StrokeStyle>,
+        style: &StrokeStyle,
     );
 
     /// Fill a shape, using non-zero fill rule.

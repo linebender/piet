@@ -22,7 +22,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
                 rc.transform(Affine::translate((x, y)));
                 style.set_line_cap(*line_cap);
                 style.set_line_join(*line_join);
-                rc.stroke(&path, &brush, width, Some(&style));
+                rc.stroke_styled(&path, &brush, width, &style);
                 Ok(())
             })?;
             x += 30.0;
@@ -37,7 +37,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         let mut style = StrokeStyle::new();
         dashes.push((i + 1) as f64);
         style.set_dash(dashes.clone(), 0.0);
-        rc.stroke(Line::new((x, y), (x + 50.0, y)), &brush, 2.0, Some(&style));
+        rc.stroke_styled(Line::new((x, y), (x + 50.0, y)), &brush, 2.0, &style);
         y += 10.0;
     }
     Ok(())

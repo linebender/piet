@@ -188,16 +188,24 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             .clip_with_canvas_winding_rule(CanvasWindingRule::Nonzero);
     }
 
-    fn stroke(
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        self.set_path(shape);
+        self.set_stroke(width, None);
+        self.set_brush(&*brush.deref(), false);
+        self.ctx.stroke();
+    }
+
+    fn stroke_styled(
         &mut self,
         shape: impl Shape,
         brush: &impl IBrush<Self>,
         width: f64,
-        style: Option<&StrokeStyle>,
+        style: &StrokeStyle,
     ) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_stroke(width, style);
+        self.set_stroke(width, Some(style));
         self.set_brush(&*brush.deref(), false);
         self.ctx.stroke();
     }
