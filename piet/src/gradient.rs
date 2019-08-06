@@ -2,7 +2,7 @@
 
 use std::borrow::Cow;
 
-use kurbo::{Point, Rect, Shape, Vec2};
+use kurbo::{Point, Rect, Vec2};
 
 use crate::{IBrush, RenderContext};
 
@@ -198,8 +198,8 @@ impl LinearGradient {
 }
 
 impl<P: RenderContext> IBrush<P> for LinearGradient {
-    fn make_brush<'a>(&'a self, piet: &mut P, shape: &impl Shape) -> Cow<'a, P::Brush> {
-        let rect = shape.bounding_box();
+    fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
+        let rect = bbox();
         let gradient = RawGradient::Linear(RawLinearGradient {
             start: self.start.resolve(rect),
             end: self.end.resolve(rect),

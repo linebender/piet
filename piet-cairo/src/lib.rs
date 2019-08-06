@@ -2,7 +2,6 @@
 
 use std::borrow::Cow;
 use std::fmt;
-use std::ops::Deref;
 
 use cairo::{
     BorrowError, Context, Filter, FontFace, FontOptions, FontSlant, FontWeight, Format,
@@ -177,9 +176,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: FillRule) {
-        let brush = brush.make_brush(self, &shape);
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_brush(brush.deref());
+        self.set_brush(&*brush);
         self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
         self.ctx.fill();
     }
@@ -197,10 +196,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         width: f64,
         style: Option<&StrokeStyle>,
     ) {
-        let brush = brush.make_brush(self, &shape);
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, style);
-        self.set_brush(brush.deref());
+        self.set_brush(&*brush);
         self.ctx.stroke();
     }
 
@@ -208,9 +207,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self.text
     }
 
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IBrush<Self>,
+    ) {
+        // TODO: bounding box for text
+        let brush = brush.make_brush(self, || Rect::ZERO);
         self.ctx.set_scaled_font(&layout.font);
-        self.set_brush(brush);
+        self.set_brush(&*brush);
         let pos = pos.into();
         self.ctx.move_to(pos.x, pos.y);
         self.ctx.show_text(&layout.text);
@@ -325,7 +331,7 @@ impl<'a> IBrush<CairoRenderContext<'a>> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut CairoRenderContext,
-        _shape: &impl Shape,
+        _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, Brush> {
         Cow::Borrowed(self)
     }

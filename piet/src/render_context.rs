@@ -117,7 +117,12 @@ where
     ///
     /// The `pos` parameter specifies the baseline of the left starting place of
     /// the text. Note: this is true even if the text is right-to-left.
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush);
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IBrush<Self>,
+    );
 
     /// Save the context state.
     ///
@@ -181,11 +186,11 @@ pub trait IBrush<P: RenderContext>
 where
     P: ?Sized,
 {
-    fn make_brush<'a>(&'a self, piet: &mut P, shape: &impl Shape) -> Cow<'a, P::Brush>;
+    fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush>;
 }
 
 impl<P: RenderContext> IBrush<P> for Color {
-    fn make_brush<'a>(&'a self, piet: &mut P, _shape: &impl Shape) -> Cow<'a, P::Brush> {
+    fn make_brush<'a>(&'a self, piet: &mut P, _bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         Cow::Owned(piet.solid_brush(self.to_owned()))
     }
 }

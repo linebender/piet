@@ -74,7 +74,7 @@ impl RenderContext for NullRenderContext {
         &mut self,
         _layout: &Self::TextLayout,
         _pos: impl Into<Point>,
-        _brush: &Self::Brush,
+        _brush: &impl IBrush<Self>,
     ) {
     }
 
@@ -154,7 +154,7 @@ impl IBrush<NullRenderContext> for NullBrush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut NullRenderContext,
-        _shape: &impl Shape,
+        _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, NullBrush> {
         Cow::Borrowed(self)
     }

@@ -174,9 +174,9 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 
     fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: piet::FillRule) {
-        let brush = brush.make_brush(self, &shape);
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_brush(brush.deref(), true);
+        self.set_brush(&*brush, true);
         self.ctx
             .fill_with_canvas_winding_rule(convert_fill_rule(fill_rule));
     }
@@ -194,10 +194,10 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         width: f64,
         style: Option<&StrokeStyle>,
     ) {
-        let brush = brush.make_brush(self, &shape);
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, style);
-        self.set_brush(brush.deref(), false);
+        self.set_brush(&*brush.deref(), false);
         self.ctx.stroke();
     }
 
@@ -205,9 +205,16 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         self
     }
 
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IBrush<Self>,
+    ) {
+        // TODO: bounding box for text
+        let brush = brush.make_brush(self, || Rect::ZERO);
         self.ctx.set_font(&layout.font.get_font_string());
-        self.set_brush(brush, true);
+        self.set_brush(&*brush, true);
         let pos = pos.into();
         if let Err(e) = self.ctx.fill_text(&layout.text, pos.x, pos.y).wrap() {
             self.err = Err(e);
@@ -324,7 +331,7 @@ impl<'a> IBrush<WebRenderContext<'a>> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut WebRenderContext,
-        _shape: &impl Shape,
+        _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, Brush> {
         Cow::Borrowed(self)
     }

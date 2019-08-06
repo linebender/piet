@@ -10,7 +10,6 @@ use crate::conv::{
 use crate::error::WrapError;
 
 use std::borrow::Cow;
-use std::ops::Deref;
 
 use winapi::shared::basetsd::UINT32;
 use winapi::um::dcommon::D2D_SIZE_U;
@@ -255,9 +254,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, fill_rule: FillRule) {
         // TODO: various special-case shapes, for efficiency
-        let brush = brush.make_brush(self, &shape);
+        let brush = brush.make_brush(self, || shape.bounding_box());
         match path_from_shape(self.factory, true, shape, fill_rule) {
-            Ok(path) => self.rt.fill_geometry(&path, brush.deref()),
+            Ok(path) => self.rt.fill_geometry(&path, &*brush),
             Err(e) => self.err = Err(e),
         }
     }
@@ -269,7 +268,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         width: f64,
         style: Option<&StrokeStyle>,
     ) {
-        let brush = brush.make_brush(self, &shape);
+        let brush = brush.make_brush(self, || shape.bounding_box());
         // TODO: various special-case shapes, for efficiency
         let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
             Ok(path) => path,
@@ -284,8 +283,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         } else {
             None
         };
-        self.rt
-            .draw_geometry(&path, brush.deref(), width, style.as_ref());
+        self.rt.draw_geometry(&path, &*brush, width, style.as_ref());
     }
 
     fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
@@ -315,8 +313,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self.inner_text
     }
 
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
-        // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IBrush<Self>,
+    ) {
+        // TODO: bounding box for text
+        let brush = brush.make_brush(self, || Rect::ZERO);
         let mut line_metrics = Vec::with_capacity(1);
         layout.0.get_line_metrics(&mut line_metrics);
         if line_metrics.is_empty() {
@@ -326,10 +330,11 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // Direct2D takes upper-left, so adjust for baseline.
         let pos = to_point2f(pos.into());
         let pos = pos - Vector2F::new(0.0, line_metrics[0].baseline());
+        // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
         let text_options = DrawTextOptions::NONE;
 
         self.rt
-            .draw_text_layout(pos, &layout.0, brush, text_options);
+            .draw_text_layout(pos, &layout.0, &*brush, text_options);
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -448,7 +453,7 @@ impl<'a> IBrush<D2DRenderContext<'a>> for GenericBrush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut D2DRenderContext,
-        _shape: &impl Shape,
+        _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, GenericBrush> {
         Cow::Borrowed(self)
     }
