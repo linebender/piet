@@ -12,10 +12,46 @@ use dxgi::flags::Format;
 
 use piet::{ErrorKind, ImageFormat};
 
+#[doc(hidden)]
 pub use piet_direct2d::*;
 
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
+
+/// The associated brush type for this backend.
+///
+/// This type matches `RenderContext::Brush`
+pub type Brush = GenericBrush;
+
+/// The associated text factory for this backend.
+///
+/// This type matches `RenderContext::Text`
+pub type PietText<'a> = D2DText<'a>;
+
+/// The associated font type for this backend.
+///
+/// This type matches `RenderContext::Text::Font`
+pub type PietFont = D2DFont;
+
+/// The associated font builder for this backend.
+///
+/// This type matches `RenderContext::Text::FontBuilder`
+pub type PietFontBuilder<'a> = D2DFontBuilder<'a>;
+
+/// The associated text layout type for this backend.
+///
+/// This type matches `RenderContext::Text::TextLayout`
+pub type PietTextLayout = D2DTextLayout;
+
+/// The associated text layout builder for this backend.
+///
+/// This type matches `RenderContext::Text::TextLayoutBuilder`
+pub type PietTextLayoutBuilder<'a> = D2DTextLayoutBuilder<'a>;
+
+/// The associated image type for this backend.
+///
+/// This type matches `RenderContext::Image`
+pub type Image = Bitmap;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {

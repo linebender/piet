@@ -18,7 +18,8 @@ use dxgi::Format;
 
 use direct2d::brush::gradient::linear::LinearGradientBrushBuilder;
 use direct2d::brush::gradient::radial::RadialGradientBrushBuilder;
-use direct2d::brush::{Brush, GenericBrush, SolidColorBrush};
+pub use direct2d::brush::GenericBrush;
+use direct2d::brush::{Brush, SolidColorBrush};
 use direct2d::enums::{
     AlphaMode, BitmapInterpolationMode, DrawTextOptions, FigureBegin, FigureEnd, FillMode,
 };
