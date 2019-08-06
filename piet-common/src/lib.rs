@@ -9,6 +9,17 @@
 //! supporting multiple backends simultaneously) you should use crates such as
 //! [piet][] and [piet-cairo][] directly.
 //!
+//! The associated types for brushes, text, and images are exported as type
+//! definitions (resolving to concrete types within the backend), so they can
+//! be used directly. The text-related types are prefixed with "Piet" to avoid
+//! conflict with the text traits that would otherwise have the same name.
+//!
+//! Also note that all public types for the specific backend are re-exported,
+//! but have their docs hidden here. These types can be useful for platform
+//! integration, and also potentially to access extensions specific to the
+//! backend. The types documented below can be used portable across all
+//! backends.
+//!
 //! [piet]: https://crates.io/crates/piet
 //! [kurbo]: https://crates.io/crates/kurbo
 //! [piet-cairo]: https://crates.io/crates/piet-cairo
@@ -30,10 +41,7 @@ mod backend;
 mod backend;
 
 #[cfg(any(feature = "web", target_arch = "wasm32"))]
-mod backend {
-    pub use piet_web::*;
-    pub type Piet<'a> = WebRenderContext<'a>;
-}
+#[path = "web_back.rs"]
+mod backend;
 
-#[doc(hidden)]
 pub use backend::*;

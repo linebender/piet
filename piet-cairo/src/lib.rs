@@ -36,6 +36,7 @@ impl<'a> CairoRenderContext<'a> {
     }
 }
 
+#[derive(Clone)]
 pub enum Brush {
     Solid(u32),
     Linear(cairo::LinearGradient),

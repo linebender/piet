@@ -6,10 +6,46 @@ use cairo::{Context, Format, ImageSurface};
 
 use piet::{ErrorKind, ImageFormat};
 
+#[doc(hidden)]
 pub use piet_cairo::*;
 
 /// The `RenderContext` for the Cairo backend, which is selected.
 pub type Piet<'a> = CairoRenderContext<'a>;
+
+/// The associated brush type for this backend.
+///
+/// This type matches `RenderContext::Brush`
+pub type Brush = piet_cairo::Brush;
+
+/// The associated text factory for this backend.
+///
+/// This type matches `RenderContext::Text`
+pub type PietText<'a> = CairoText;
+
+/// The associated font type for this backend.
+///
+/// This type matches `RenderContext::Text::Font`
+pub type PietFont = CairoFont;
+
+/// The associated font builder for this backend.
+///
+/// This type matches `RenderContext::Text::FontBuilder`
+pub type PietFontBuilder<'a> = CairoFontBuilder;
+
+/// The associated text layout type for this backend.
+///
+/// This type matches `RenderContext::Text::TextLayout`
+pub type PietTextLayout = CairoTextLayout;
+
+/// The associated text layout builder for this backend.
+///
+/// This type matches `RenderContext::Text::TextLayoutBuilder`
+pub type PietTextLayoutBuilder<'a> = CairoTextLayoutBuilder;
+
+/// The associated image type for this backend.
+///
+/// This type matches `RenderContext::Image`
+pub type Image = ImageSurface;
 
 /// A struct that can be used to create bitmap render contexts.
 ///
