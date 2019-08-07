@@ -75,7 +75,7 @@ pub trait GradientStops {
 }
 
 /// A description of a linear gradient in the unit rect, which can be resolved
-/// to a concrete gradient.
+/// to a fixed gradient.
 ///
 /// The start and end points in the gradient are given in [`UnitPoint`] coordinates,
 /// which are then resolved to image-space coordinates for any given concrete `Rect`.
@@ -90,7 +90,7 @@ pub struct LinearGradient {
     stops: Vec<GradientStop>,
 }
 
-/// A representation of a point relative to a rectangle.
+/// A representation of a point relative to a unit rectangle.
 pub struct UnitPoint {
     u: f64,
     v: f64,
@@ -174,8 +174,8 @@ impl UnitPoint {
 
     /// Create a new UnitPoint.
     ///
-    /// The `u` and `v` coordinates describe the point, with 0.0 being
-    /// left and top, and 1.0 being right and bottom, respectively.
+    /// The `u` and `v` coordinates describe the point, with (0.0, 0.0) being
+    /// the top-left, and (1.0, 1.0) being the bottom-right.
     pub const fn new(u: f64, v: f64) -> UnitPoint {
         UnitPoint { u, v }
     }
