@@ -19,6 +19,16 @@ impl Debug for Color {
 }
 
 impl Color {
+    /// Create a color from 8 bit per sample RGB values.
+    pub const fn rgb8(r: u8, g: u8, b: u8) -> Color {
+        Color::rgba32(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | 0xff)
+    }
+
+    /// Create a color from 8 bit per sample RGBA values.
+    pub const fn rgba8(r: u8, g: u8, b: u8, a: u8) -> Color {
+        Color::rgba32(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32))
+    }
+
     /// Create a color from a 32-bit rgba value (alpha as least significant byte).
     pub const fn rgba32(rgba: u32) -> Color {
         Color::Rgba32(rgba)
@@ -140,8 +150,8 @@ impl Color {
     }
 
     /// Opaque white.
-    pub const WHITE: Color = Color::rgba32(0xff_ff_ff_ff);
+    pub const WHITE: Color = Color::rgb8(0xff, 0xff, 0xff);
 
     /// Opaque black.
-    pub const BLACK: Color = Color::rgba32(0x00_00_00_ff);
+    pub const BLACK: Color = Color::rgb8(0, 0, 0);
 }
