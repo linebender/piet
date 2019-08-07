@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use kurbo::{Affine, Point, Rect, Shape};
 
-use crate::{Color, Error, RawGradient, StrokeStyle, Text, TextLayout};
+use crate::{Color, Error, FixedGradient, StrokeStyle, Text, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -83,7 +83,7 @@ where
     fn solid_brush(&mut self, color: Color) -> Self::Brush;
 
     /// Create a new gradient brush.
-    fn gradient(&mut self, gradient: RawGradient) -> Result<Self::Brush, Error>;
+    fn gradient(&mut self, gradient: FixedGradient) -> Result<Self::Brush, Error>;
 
     /// Clear the canvas with the given color.
     ///

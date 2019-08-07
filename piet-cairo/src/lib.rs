@@ -11,8 +11,8 @@ use cairo::{
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode,
-    LineCap, LineJoin, RawGradient, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
+    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, IBrush, ImageFormat,
+    InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
     TextLayoutBuilder,
 };
 
@@ -148,16 +148,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Brush::Solid(color.as_rgba32())
     }
 
-    fn gradient(&mut self, gradient: RawGradient) -> Result<Brush, Error> {
+    fn gradient(&mut self, gradient: FixedGradient) -> Result<Brush, Error> {
         match gradient {
-            RawGradient::Linear(linear) => {
+            FixedGradient::Linear(linear) => {
                 let (x0, y0) = (linear.start.x, linear.start.y);
                 let (x1, y1) = (linear.end.x, linear.end.y);
                 let lg = cairo::LinearGradient::new(x0, y0, x1, y1);
                 set_gradient_stops!(&lg, &linear.stops);
                 Ok(Brush::Linear(lg))
             }
-            RawGradient::Radial(radial) => {
+            FixedGradient::Radial(radial) => {
                 let (xc, yc) = (radial.center.x, radial.center.y);
                 let (xo, yo) = (radial.origin_offset.x, radial.origin_offset.y);
                 let r = radial.radius;

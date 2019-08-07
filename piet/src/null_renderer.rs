@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
-    Color, Error, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode, RawGradient,
+    Color, Error, FixedGradient, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode,
     RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
@@ -47,7 +47,7 @@ impl RenderContext for NullRenderContext {
         NullBrush
     }
 
-    fn gradient(&mut self, _gradient: RawGradient) -> Result<Self::Brush, Error> {
+    fn gradient(&mut self, _gradient: FixedGradient) -> Result<Self::Brush, Error> {
         Ok(NullBrush)
     }
 

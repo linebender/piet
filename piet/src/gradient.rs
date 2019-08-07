@@ -9,17 +9,31 @@ use crate::{IBrush, RenderContext};
 use crate::Color;
 
 /// Specification of a gradient.
+///
+/// This specification is in terms of image-space coordinates. For linear
+/// gradients, in many cases, it is better to specify coordinates relative
+/// to the `Rect` of the item being drawn; for these, use [`LinearGradient`]
+/// instead. A similar feature for radial gradients doesn't currently exist,
+/// but may be added later if needed.
+///
+/// [`LinearGradient`]: struct.LinearGradient.html
 #[derive(Clone)]
-pub enum RawGradient {
+pub enum FixedGradient {
     /// A linear gradient.
-    Linear(RawLinearGradient),
+    Linear(FixedLinearGradient),
     /// A radial gradient.
-    Radial(RawRadialGradient),
+    Radial(FixedRadialGradient),
 }
 
 /// Specification of a linear gradient.
+///
+/// This specification is in terms of image-space coordinates. In many
+/// cases, it is better to specify coordinates relative to the `Rect`
+/// of the item being drawn; for these, use [`LinearGradient`] instead.
+///
+/// [`LinearGradient`]: struct.LinearGradient.html
 #[derive(Clone)]
-pub struct RawLinearGradient {
+pub struct FixedLinearGradient {
     /// The start point (corresponding to pos 0.0).
     pub start: Point,
     /// The end point (corresponding to pos 1.0).
@@ -32,7 +46,7 @@ pub struct RawLinearGradient {
 
 /// Specification of a radial gradient.
 #[derive(Clone)]
-pub struct RawRadialGradient {
+pub struct FixedRadialGradient {
     /// The center.
     pub center: Point,
     /// The offset of the origin relative to the center.
@@ -60,7 +74,16 @@ pub trait GradientStops {
     fn to_vec(self) -> Vec<GradientStop>;
 }
 
-/// A "gradient description" that depends on the geometry being drawn.
+/// A description of a linear gradient in the unit rect, which can be resolved
+/// to a concrete gradient.
+///
+/// The start and end points in the gradient are given in [`UnitPoint`] coordinates,
+/// which are then resolved to image-space coordinates for any given concrete `Rect`.
+///
+/// When the fixed coordinates are known, use [`FixedGradient`] instead.
+///
+/// [`UnitPoint`]: struct.UnitPoint.html
+/// [`FixedGradient`]: struct.FixedGradient.html
 pub struct LinearGradient {
     start: UnitPoint,
     end: UnitPoint,
@@ -156,6 +179,7 @@ impl UnitPoint {
     pub const fn new(u: f64, v: f64) -> UnitPoint {
         UnitPoint { u, v }
     }
+
     /// Given a rectangle, resolve the point within the rectangle.
     pub fn resolve(&self, rect: Rect) -> Point {
         Point::new(
@@ -200,7 +224,7 @@ impl LinearGradient {
 impl<P: RenderContext> IBrush<P> for LinearGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         let rect = bbox();
-        let gradient = RawGradient::Linear(RawLinearGradient {
+        let gradient = FixedGradient::Linear(FixedLinearGradient {
             start: self.start.resolve(rect),
             end: self.end.resolve(rect),
             stops: self.stops.clone(),

@@ -37,8 +37,8 @@ use directwrite::TextFormat;
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode,
-    RawGradient, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, IBrush, ImageFormat,
+    InterpolationMode, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -222,9 +222,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn gradient(&mut self, gradient: RawGradient) -> Result<GenericBrush, Error> {
+    fn gradient(&mut self, gradient: FixedGradient) -> Result<GenericBrush, Error> {
         match gradient {
-            RawGradient::Linear(linear) => {
+            FixedGradient::Linear(linear) => {
                 let mut builder = LinearGradientBrushBuilder::new(&self.rt)
                     .with_start(to_point2f(linear.start))
                     .with_end(to_point2f(linear.end));
@@ -235,7 +235,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 // Same concern about extra COM clone as above.
                 Ok(brush.to_generic())
             }
-            RawGradient::Radial(radial) => {
+            FixedGradient::Radial(radial) => {
                 let radius = radial.radius as f32;
                 let mut builder = RadialGradientBrushBuilder::new(&self.rt)
                     .with_center(to_point2f(radial.center))

@@ -14,8 +14,9 @@ use web_sys::{
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    Color, Error, Font, FontBuilder, GradientStop, IBrush, ImageFormat, InterpolationMode, LineCap,
-    LineJoin, RawGradient, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    Color, Error, FixedGradient, Font, FontBuilder, GradientStop, IBrush, ImageFormat,
+    InterpolationMode, LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -143,16 +144,16 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         Brush::Solid(color.as_rgba32())
     }
 
-    fn gradient(&mut self, gradient: RawGradient) -> Result<Brush, Error> {
+    fn gradient(&mut self, gradient: FixedGradient) -> Result<Brush, Error> {
         match gradient {
-            RawGradient::Linear(linear) => {
+            FixedGradient::Linear(linear) => {
                 let (x0, y0) = (linear.start.x, linear.start.y);
                 let (x1, y1) = (linear.end.x, linear.end.y);
                 let mut lg = self.ctx.create_linear_gradient(x0, y0, x1, y1);
                 set_gradient_stops(&mut lg, &linear.stops);
                 Ok(Brush::Gradient(lg))
             }
-            RawGradient::Radial(radial) => {
+            FixedGradient::Radial(radial) => {
                 let (xc, yc) = (radial.center.x, radial.center.y);
                 let (xo, yo) = (radial.origin_offset.x, radial.origin_offset.y);
                 let r = radial.radius;
