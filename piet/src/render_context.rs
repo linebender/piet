@@ -1,8 +1,10 @@
 //! The main render context trait.
 
+use std::borrow::Cow;
+
 use kurbo::{Affine, Point, Rect, Shape};
 
-use crate::{Color, Error, FillRule, Gradient, StrokeStyle, Text, TextLayout};
+use crate::{Color, Error, FixedGradient, StrokeStyle, Text, TextLayout};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -48,11 +50,14 @@ impl ImageFormat {
 /// can implement this trait.
 ///
 /// Code that draws graphics will in general take `&mut impl RenderContext`.
-pub trait RenderContext {
+pub trait RenderContext
+where
+    Self::Brush: IBrush<Self>,
+{
     /// The type of a "brush".
     ///
-    /// Initially just a solid RGBA color, but will probably expand to gradients.
-    type Brush;
+    /// Represents solid colors and gradients.
+    type Brush: Clone;
 
     /// An associated factory for creating text layouts and related resources.
     type Text: Text<TextLayout = Self::TextLayout>;
@@ -78,7 +83,7 @@ pub trait RenderContext {
     fn solid_brush(&mut self, color: Color) -> Self::Brush;
 
     /// Create a new gradient brush.
-    fn gradient(&mut self, gradient: Gradient) -> Result<Self::Brush, Error>;
+    fn gradient(&mut self, gradient: FixedGradient) -> Result<Self::Brush, Error>;
 
     /// Clear the canvas with the given color.
     ///
@@ -86,25 +91,28 @@ pub trait RenderContext {
     fn clear(&mut self, color: Color);
 
     /// Stroke a shape.
-    fn stroke(
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64);
+
+    /// Stroke a shape, with styled strokes.
+    fn stroke_styled(
         &mut self,
         shape: impl Shape,
-        brush: &Self::Brush,
+        brush: &impl IBrush<Self>,
         width: f64,
-        style: Option<&StrokeStyle>,
+        style: &StrokeStyle,
     );
 
-    /// Fill a shape.
+    /// Fill a shape, using non-zero fill rule.
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>);
 
-    // TODO: switch last two argument order to be more similar to clip? Maybe we
-    // should have a convention, geometry first.
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule);
+    /// Fill a shape, using even-odd fill rule
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>);
 
     /// Clip to a shape.
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule);
+    fn clip(&mut self, shape: impl Shape);
 
     fn text(&mut self) -> &mut Self::Text;
 
@@ -112,7 +120,12 @@ pub trait RenderContext {
     ///
     /// The `pos` parameter specifies the baseline of the left starting place of
     /// the text. Note: this is true even if the text is right-to-left.
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush);
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IBrush<Self>,
+    );
 
     /// Save the context state.
     ///
@@ -169,4 +182,18 @@ pub trait RenderContext {
     /// The image is scaled to the provided `rect`. It will be squashed if
     /// aspect ratios don't match.
     fn draw_image(&mut self, image: &Self::Image, rect: impl Into<Rect>, interp: InterpolationMode);
+}
+
+/// A brush that can be dependent on the geometry being drawn.
+pub trait IBrush<P: RenderContext>
+where
+    P: ?Sized,
+{
+    fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush>;
+}
+
+impl<P: RenderContext> IBrush<P> for Color {
+    fn make_brush<'a>(&'a self, piet: &mut P, _bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
+        Cow::Owned(piet.solid_brush(self.to_owned()))
+    }
 }

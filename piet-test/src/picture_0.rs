@@ -3,34 +3,34 @@
 use piet::kurbo::{Affine, BezPath, Line, Point, Rect, Vec2};
 
 use piet::{
-    Color, Error, FillRule, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text,
-    TextLayout, TextLayoutBuilder,
+    Color, Error, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
-    let brush = rc.solid_brush(Color::rgb24(0x00_00_80));
-    rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0, None);
+    let brush = rc.solid_brush(Color::rgb8(0x00, 0x00, 0x80));
+    rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0);
 
     let mut path = BezPath::new();
     path.move_to((50.0, 10.0));
     path.quad_to((60.0, 50.0), (100.0, 90.0));
-    let brush = rc.solid_brush(Color::rgb24(0x00_80_00));
-    rc.stroke(path, &brush, 1.0, None);
+    let brush = rc.solid_brush(Color::rgb8(0x00, 0x80, 0x00));
+    rc.stroke(path, &brush, 1.0);
 
     let mut path = BezPath::new();
     path.move_to((10.0, 20.0));
     path.curve_to((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
-    let brush = rc.solid_brush(Color::rgba32(0x00_00_80_C0));
-    rc.fill(path, &brush, FillRule::NonZero);
+    let brush = rc.solid_brush(Color::rgba8(0x00, 0x00, 0x80, 0xC0));
+    rc.fill(path, &brush);
 
     let font = rc.text().new_font_by_name("Segoe UI", 12.0)?.build()?;
     let layout = rc.text().new_text_layout(&font, "Hello piet!")?.build()?;
     let w: f64 = layout.width().into();
-    let brush = rc.solid_brush(Color::rgba32(0x80_00_00_C0));
+    let brush = rc.solid_brush(Color::rgba8(0x80, 0x00, 0x00, 0xC0));
     rc.draw_text(&layout, (80.0, 10.0), &brush);
 
-    rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0, None);
+    rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &brush, 1.0);
 
     rc.with_save(|rc| {
         rc.transform(Affine::rotate(0.1));
@@ -47,7 +47,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     );
 
     let clip_path = star(Point::new(90.0, 45.0), 10.0, 30.0, 24);
-    rc.clip(clip_path, FillRule::NonZero);
+    rc.clip(clip_path);
     let layout = rc.text().new_text_layout(&font, "Clipped text")?.build()?;
     rc.draw_text(&layout, (80.0, 50.0), &brush);
     Ok(())

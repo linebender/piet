@@ -2,7 +2,7 @@
 
 use piet::kurbo::{BezPath, Line, Point};
 
-use piet::{Color, Error, FillRule, RenderContext};
+use piet::{Color, Error, RenderContext};
 
 // TODO: this will eventually become a `kurbo::Shape`.
 fn circle<V: Into<Point>>(center: V, radius: f64, num_segments: usize) -> BezPath {
@@ -44,16 +44,16 @@ fn draw_cubic_bezier<V: Into<Point>>(
     let mut path = BezPath::new();
     path.move_to(p0);
     path.curve_to(p1, p2, p3);
-    let curve_brush = rc.solid_brush(Color::rgb24(0x00_80_00));
-    rc.stroke(&path, &curve_brush, 3.0, None);
+    let curve_brush = rc.solid_brush(Color::rgb8(0x00, 0x80, 0x00));
+    rc.stroke(&path, &curve_brush, 3.0);
 
-    let handle_brush = rc.solid_brush(Color::rgb24(0x00_00_80));
-    rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0, None);
-    rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0, None);
+    let handle_brush = rc.solid_brush(Color::rgb8(0x00, 0x00, 0x80));
+    rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0);
+    rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0);
 
     for p in [p0, p1, p2, p3].into_iter() {
         let dot = circle(*p, 1.5, 20);
-        rc.fill(&dot, &handle_brush, FillRule::NonZero);
+        rc.fill(&dot, &handle_brush);
     }
     Ok(())
 }

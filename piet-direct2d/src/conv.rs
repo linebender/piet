@@ -91,7 +91,7 @@ pub(crate) fn rect_to_rectf(rect: Rect) -> RectF {
 }
 
 pub(crate) fn color_to_colorf(color: Color) -> ColorF {
-    let rgba = color.as_rgba32();
+    let rgba = color.as_rgba_u32();
     (rgba >> 8, ((rgba & 255) as f32) * (1.0 / 255.0)).into()
 }
 

@@ -1,5 +1,6 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
+use std::borrow::Cow;
 use std::fmt;
 
 use cairo::{
@@ -10,7 +11,7 @@ use cairo::{
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
+    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, IBrush, ImageFormat,
     InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
     TextLayoutBuilder,
 };
@@ -98,19 +99,12 @@ impl<T> WrapError<T> for Result<T, Status> {
     }
 }
 
-fn convert_fill_rule(fill_rule: piet::FillRule) -> cairo::FillRule {
-    match fill_rule {
-        piet::FillRule::NonZero => cairo::FillRule::Winding,
-        piet::FillRule::EvenOdd => cairo::FillRule::EvenOdd,
-    }
-}
-
 // we call this with different types of gradient that have `add_color_stop_rgba` fns,
 // and there's no trait for this behaviour so we use a macro. ¯\_(ツ)_/¯
 macro_rules! set_gradient_stops {
     ($dst: expr, $stops: expr) => {
         for stop in $stops {
-            let rgba = stop.color.as_rgba32();
+            let rgba = stop.color.as_rgba_u32();
             $dst.add_color_stop_rgba(
                 stop.pos as f64,
                 byte_to_frac(rgba >> 24),
@@ -141,7 +135,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn clear(&mut self, color: Color) {
-        let rgba = color.as_rgba32();
+        let rgba = color.as_rgba_u32();
         self.ctx.set_source_rgb(
             byte_to_frac(rgba >> 24),
             byte_to_frac(rgba >> 16),
@@ -151,19 +145,19 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
-        Brush::Solid(color.as_rgba32())
+        Brush::Solid(color.as_rgba_u32())
     }
 
-    fn gradient(&mut self, gradient: Gradient) -> Result<Brush, Error> {
+    fn gradient(&mut self, gradient: FixedGradient) -> Result<Brush, Error> {
         match gradient {
-            Gradient::Linear(linear) => {
+            FixedGradient::Linear(linear) => {
                 let (x0, y0) = (linear.start.x, linear.start.y);
                 let (x1, y1) = (linear.end.x, linear.end.y);
                 let lg = cairo::LinearGradient::new(x0, y0, x1, y1);
                 set_gradient_stops!(&lg, &linear.stops);
                 Ok(Brush::Linear(lg))
             }
-            Gradient::Radial(radial) => {
+            FixedGradient::Radial(radial) => {
                 let (xc, yc) = (radial.center.x, radial.center.y);
                 let (xo, yo) = (radial.origin_offset.x, radial.origin_offset.y);
                 let r = radial.radius;
@@ -174,29 +168,47 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_brush(brush);
-        self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
+        self.set_brush(&*brush);
+        self.ctx.set_fill_rule(cairo::FillRule::Winding);
         self.ctx.fill();
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.ctx.set_fill_rule(convert_fill_rule(fill_rule));
+        self.set_brush(&*brush);
+        self.ctx.set_fill_rule(cairo::FillRule::EvenOdd);
+        self.ctx.fill();
+    }
+
+    fn clip(&mut self, shape: impl Shape) {
+        self.set_path(shape);
+        self.ctx.set_fill_rule(cairo::FillRule::Winding);
         self.ctx.clip();
     }
 
-    fn stroke(
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        self.set_path(shape);
+        self.set_stroke(width, None);
+        self.set_brush(&*brush);
+        self.ctx.stroke();
+    }
+
+    fn stroke_styled(
         &mut self,
         shape: impl Shape,
-        brush: &Self::Brush,
+        brush: &impl IBrush<Self>,
         width: f64,
-        style: Option<&StrokeStyle>,
+        style: &StrokeStyle,
     ) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_stroke(width, style);
-        self.set_brush(brush);
+        self.set_stroke(width, Some(style));
+        self.set_brush(&*brush);
         self.ctx.stroke();
     }
 
@@ -204,9 +216,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self.text
     }
 
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IBrush<Self>,
+    ) {
+        // TODO: bounding box for text
+        let brush = brush.make_brush(self, || Rect::ZERO);
         self.ctx.set_scaled_font(&layout.font);
-        self.set_brush(brush);
+        self.set_brush(&*brush);
         let pos = pos.into();
         self.ctx.move_to(pos.x, pos.y);
         self.ctx.show_text(&layout.text);
@@ -314,6 +333,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             rc.ctx.paint();
             Ok(())
         });
+    }
+}
+
+impl<'a> IBrush<CairoRenderContext<'a>> for Brush {
+    fn make_brush<'b>(
+        &'b self,
+        _piet: &mut CairoRenderContext,
+        _bbox: impl FnOnce() -> Rect,
+    ) -> std::borrow::Cow<'b, Brush> {
+        Cow::Borrowed(self)
     }
 }
 

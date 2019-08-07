@@ -37,7 +37,7 @@ use directwrite::TextFormat;
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FillRule, Font, FontBuilder, Gradient, ImageFormat,
+    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, IBrush, ImageFormat,
     InterpolationMode, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
@@ -135,13 +135,13 @@ fn path_from_shape(
     d2d: &direct2d::Factory,
     is_filled: bool,
     shape: impl Shape,
-    fill_rule: FillRule,
+    fill_mode: FillMode,
 ) -> Result<Path, Error> {
     let mut path = Path::create(d2d).wrap()?;
     {
         let mut g = path.open().wrap()?;
-        if fill_rule == FillRule::NonZero {
-            g = g.fill_mode(FillMode::Winding);
+        if fill_mode == FillMode::Winding {
+            g = g.fill_mode(fill_mode);
         }
         let mut builder = Some(PathBuilder::Geom(g));
         for el in shape.to_bez_path(1e-3) {
@@ -210,7 +210,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, color: Color) {
-        self.rt.clear(color.as_rgba32() >> 8);
+        self.rt.clear(color.as_rgba_u32() >> 8);
     }
 
     fn solid_brush(&mut self, color: Color) -> GenericBrush {
@@ -222,9 +222,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn gradient(&mut self, gradient: Gradient) -> Result<GenericBrush, Error> {
+    fn gradient(&mut self, gradient: FixedGradient) -> Result<GenericBrush, Error> {
         match gradient {
-            Gradient::Linear(linear) => {
+            FixedGradient::Linear(linear) => {
                 let mut builder = LinearGradientBrushBuilder::new(&self.rt)
                     .with_start(to_point2f(linear.start))
                     .with_end(to_point2f(linear.end));
@@ -235,7 +235,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 // Same concern about extra COM clone as above.
                 Ok(brush.to_generic())
             }
-            Gradient::Radial(radial) => {
+            FixedGradient::Radial(radial) => {
                 let radius = radial.radius as f32;
                 let mut builder = RadialGradientBrushBuilder::new(&self.rt)
                     .with_center(to_point2f(radial.center))
@@ -251,23 +251,28 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &Self::Brush, fill_rule: FillRule) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
         // TODO: various special-case shapes, for efficiency
-        match path_from_shape(self.factory, true, shape, fill_rule) {
-            Ok(path) => self.rt.fill_geometry(&path, brush),
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        match path_from_shape(self.factory, true, shape, FillMode::Winding) {
+            Ok(path) => self.rt.fill_geometry(&path, &*brush),
             Err(e) => self.err = Err(e),
         }
     }
 
-    fn stroke(
-        &mut self,
-        shape: impl Shape,
-        brush: &Self::Brush,
-        width: f64,
-        style: Option<&StrokeStyle>,
-    ) {
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
         // TODO: various special-case shapes, for efficiency
-        let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        match path_from_shape(self.factory, true, shape, FillMode::Alternate) {
+            Ok(path) => self.rt.fill_geometry(&path, &*brush),
+            Err(e) => self.err = Err(e),
+        }
+    }
+
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        // TODO: various special-case shapes, for efficiency
+        let path = match path_from_shape(self.factory, false, shape, FillMode::Alternate) {
             Ok(path) => path,
             Err(e) => {
                 self.err = Err(e);
@@ -275,15 +280,32 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
         };
         let width = width as f32;
-        let style = if let Some(style) = style {
-            Some(convert_stroke_style(self.factory, style, width).expect("TODO"))
-        } else {
-            None
-        };
-        self.rt.draw_geometry(&path, brush, width, style.as_ref());
+        self.rt.draw_geometry(&path, &*brush, width, None);
     }
 
-    fn clip(&mut self, shape: impl Shape, fill_rule: FillRule) {
+    fn stroke_styled(
+        &mut self,
+        shape: impl Shape,
+        brush: &impl IBrush<Self>,
+        width: f64,
+        style: &StrokeStyle,
+    ) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        // TODO: various special-case shapes, for efficiency
+        let path = match path_from_shape(self.factory, false, shape, FillMode::Alternate) {
+            Ok(path) => path,
+            Err(e) => {
+                self.err = Err(e);
+                return;
+            }
+        };
+        let width = width as f32;
+        let style = convert_stroke_style(self.factory, style, width)
+            .expect("stroke style conversion failed");
+        self.rt.draw_geometry(&path, &*brush, width, Some(&style));
+    }
+
+    fn clip(&mut self, shape: impl Shape) {
         // TODO: set size based on bbox of shape.
         let layer = match Layer::create(&mut self.rt, None).wrap() {
             Ok(layer) => layer,
@@ -292,7 +314,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 return;
             }
         };
-        let path = match path_from_shape(self.factory, true, shape, fill_rule) {
+        let path = match path_from_shape(self.factory, true, shape, FillMode::Winding) {
             Ok(path) => path,
             Err(e) => {
                 self.err = Err(e);
@@ -310,8 +332,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self.inner_text
     }
 
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &Self::Brush) {
-        // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IBrush<Self>,
+    ) {
+        // TODO: bounding box for text
+        let brush = brush.make_brush(self, || Rect::ZERO);
         let mut line_metrics = Vec::with_capacity(1);
         layout.0.get_line_metrics(&mut line_metrics);
         if line_metrics.is_empty() {
@@ -321,10 +349,11 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // Direct2D takes upper-left, so adjust for baseline.
         let pos = to_point2f(pos.into());
         let pos = pos - Vector2F::new(0.0, line_metrics[0].baseline());
+        // TODO: set ENABLE_COLOR_FONT on Windows 8.1 and above, need version sniffing.
         let text_options = DrawTextOptions::NONE;
 
         self.rt
-            .draw_text_layout(pos, &layout.0, brush, text_options);
+            .draw_text_layout(pos, &layout.0, &*brush, text_options);
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -436,6 +465,16 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let src_rect = (0.0, 0.0, src_size.0.width, src_size.0.height);
         self.rt
             .draw_bitmap(&image, rect_to_rectf(rect.into()), 1.0, interp, src_rect);
+    }
+}
+
+impl<'a> IBrush<D2DRenderContext<'a>> for GenericBrush {
+    fn make_brush<'b>(
+        &'b self,
+        _piet: &mut D2DRenderContext,
+        _bbox: impl FnOnce() -> Rect,
+    ) -> std::borrow::Cow<'b, GenericBrush> {
+        Cow::Borrowed(self)
     }
 }
 
