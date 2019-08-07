@@ -14,29 +14,26 @@ pub enum Color {
 
 impl Debug for Color {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "Color(#{:08x})", self.as_rgba32())
+        write!(f, "#{:08x}", self.as_rgba_u32())
     }
 }
 
 impl Color {
     /// Create a color from 8 bit per sample RGB values.
     pub const fn rgb8(r: u8, g: u8, b: u8) -> Color {
-        Color::rgba32(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | 0xff)
+        Color::from_rgba32_u32(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | 0xff)
     }
 
     /// Create a color from 8 bit per sample RGBA values.
     pub const fn rgba8(r: u8, g: u8, b: u8, a: u8) -> Color {
-        Color::rgba32(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32))
+        Color::from_rgba32_u32(
+            ((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32),
+        )
     }
 
     /// Create a color from a 32-bit rgba value (alpha as least significant byte).
-    pub const fn rgba32(rgba: u32) -> Color {
+    pub const fn from_rgba32_u32(rgba: u32) -> Color {
         Color::Rgba32(rgba)
-    }
-
-    /// Create a color from a 24-bit rgb value (red most significant, blue least).
-    pub const fn rgb24(rgb: u32) -> Color {
-        Color::rgba32((rgb << 8) | 0xff)
     }
 
     /// Create a color from four floating point values, each in the range 0.0 to 1.0.
@@ -48,7 +45,7 @@ impl Color {
         let g = (g.into().max(0.0).min(1.0) * 255.0).round() as u32;
         let b = (b.into().max(0.0).min(1.0) * 255.0).round() as u32;
         let a = (a.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        Color::rgba32((r << 24) | (g << 16) | (b << 8) | a)
+        Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | a)
     }
 
     /// Create a color from three floating point values, each in the range 0.0 to 1.0.
@@ -59,7 +56,7 @@ impl Color {
         let r = (r.into().max(0.0).min(1.0) * 255.0).round() as u32;
         let g = (g.into().max(0.0).min(1.0) * 255.0).round() as u32;
         let b = (b.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        Color::rgba32((r << 24) | (g << 16) | (b << 8) | 0xff)
+        Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | 0xff)
     }
 
     /// Create a color from a CIEL\*a\*b\* polar (also known as CIE HCL)
@@ -139,11 +136,11 @@ impl Color {
     /// The `a` value represents alpha in the range 0.0 to 1.0.
     pub fn with_alpha(self, a: impl Into<f64>) -> Color {
         let a = (a.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        Color::rgba32((self.as_rgba32() & !0xff) | a)
+        Color::from_rgba32_u32((self.as_rgba_u32() & !0xff) | a)
     }
 
     /// Convert a color value to a 32-bit rgba value.
-    pub fn as_rgba32(&self) -> u32 {
+    pub fn as_rgba_u32(&self) -> u32 {
         match *self {
             Color::Rgba32(rgba) => rgba,
         }

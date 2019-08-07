@@ -12,11 +12,11 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let stops = vec![
         GradientStop {
             pos: 0.0,
-            color: Color::rgb24(0xff_ff_ff),
+            color: Color::WHITE,
         },
         GradientStop {
             pos: 1.0,
-            color: Color::rgb24(0x00_00_00),
+            color: Color::BLACK,
         },
     ];
     let gradient = rc.gradient(FixedGradient::Radial(FixedRadialGradient {
@@ -29,11 +29,11 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let stops2 = vec![
         GradientStop {
             pos: 0.0,
-            color: Color::rgb24(0xff_ff_ff),
+            color: Color::WHITE,
         },
         GradientStop {
             pos: 1.0,
-            color: Color::rgb24(0x00_00_00),
+            color: Color::BLACK,
         },
     ];
     let gradient2 = rc.gradient(FixedGradient::Linear(FixedLinearGradient {

@@ -44,10 +44,10 @@ fn draw_cubic_bezier<V: Into<Point>>(
     let mut path = BezPath::new();
     path.move_to(p0);
     path.curve_to(p1, p2, p3);
-    let curve_brush = rc.solid_brush(Color::rgb24(0x00_80_00));
+    let curve_brush = rc.solid_brush(Color::rgb8(0x00, 0x80, 0x00));
     rc.stroke(&path, &curve_brush, 3.0);
 
-    let handle_brush = rc.solid_brush(Color::rgb24(0x00_00_80));
+    let handle_brush = rc.solid_brush(Color::rgb8(0x00, 0x00, 0x80));
     rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0);
     rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0);
 

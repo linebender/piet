@@ -210,7 +210,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, color: Color) {
-        self.rt.clear(color.as_rgba32() >> 8);
+        self.rt.clear(color.as_rgba_u32() >> 8);
     }
 
     fn solid_brush(&mut self, color: Color) -> GenericBrush {

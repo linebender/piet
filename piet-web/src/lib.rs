@@ -141,7 +141,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
-        Brush::Solid(color.as_rgba32())
+        Brush::Solid(color.as_rgba_u32())
     }
 
     fn gradient(&mut self, gradient: FixedGradient) -> Result<Brush, Error> {
@@ -366,7 +366,7 @@ fn format_color(rgba: u32) -> String {
 fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
     for stop in src {
         // TODO: maybe get error?
-        let rgba = stop.color.as_rgba32();
+        let rgba = stop.color.as_rgba_u32();
         let _ = dst.add_color_stop(stop.pos, &format_color(rgba));
     }
 }

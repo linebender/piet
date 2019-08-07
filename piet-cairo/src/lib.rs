@@ -104,7 +104,7 @@ impl<T> WrapError<T> for Result<T, Status> {
 macro_rules! set_gradient_stops {
     ($dst: expr, $stops: expr) => {
         for stop in $stops {
-            let rgba = stop.color.as_rgba32();
+            let rgba = stop.color.as_rgba_u32();
             $dst.add_color_stop_rgba(
                 stop.pos as f64,
                 byte_to_frac(rgba >> 24),
@@ -135,7 +135,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn clear(&mut self, color: Color) {
-        let rgba = color.as_rgba32();
+        let rgba = color.as_rgba_u32();
         self.ctx.set_source_rgb(
             byte_to_frac(rgba >> 24),
             byte_to_frac(rgba >> 16),
@@ -145,7 +145,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
-        Brush::Solid(color.as_rgba32())
+        Brush::Solid(color.as_rgba_u32())
     }
 
     fn gradient(&mut self, gradient: FixedGradient) -> Result<Brush, Error> {
