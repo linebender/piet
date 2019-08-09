@@ -1,22 +1,46 @@
 //! Gradient specifications.
+//!
+//! We provide both linear and radial gradients; and for each flavor
+//! we provide two representations, a 'generic' representation that uses
+//! points in the [unit square], and a 'fixed' representation that uses
+//! image-space coordinates.
+//!
+//! The generic representations ([`LinearGradient`] and [`RadialGradient`])
+//! are useful for cases such as UI, when the same gradient may be reused
+//! with different shapes. The fixed representations
+//! ([`FixedLinearGradient`] and [`FixedRadialGradient`]) may be better suited
+//! to working with content in existing formats such as SVG. A fixed gradient
+//! can be generated from a generic gradient by mapping points from the unit
+//! square onto any arbitrary rectangle.
+//!
+//! The fixed variants are provided because they more closely match the types
+//! used by many 2d graphics APIs; but you can use the generic representations
+//! anywhere you can use the fixed ones, and they will be automatically
+//! resolved appropriately.
+//!
+//! [`LinearGradient`]: struct.LinearGradient.html
+//! [`RadialGradient`]: struct.RadialGradient.html
+//! [`FixedLinearGradient`]: struct.FixedLinearGradient.html
+//! [`FixedRadialGradient`]: struct.FixedRadialGradient.html
+//! [unit square]: https://en.wikipedia.org/wiki/Unit_square
 
 use std::borrow::Cow;
 
-use kurbo::{Point, Rect, Vec2};
+use kurbo::{Point, Rect, Size, Vec2};
 
 use crate::{IntoBrush, RenderContext};
 
 use crate::Color;
 
-/// Specification of a gradient.
+/// Specification of a linear or radial gradient in image-space.
 ///
-/// This specification is in terms of image-space coordinates. For linear
-/// gradients, in many cases, it is better to specify coordinates relative
+/// This specification is in terms of image-space coordinates.
+/// In many cases, it is better to specify coordinates relative
 /// to the `Rect` of the item being drawn; for these, use [`LinearGradient`]
-/// instead. A similar feature for radial gradients doesn't currently exist,
-/// but may be added later if needed.
+/// and [`RadialGradient`] instead.
 ///
 /// [`LinearGradient`]: struct.LinearGradient.html
+/// [`RadialGradient`]: struct.RadialGradient.html
 #[derive(Debug, Clone)]
 pub enum FixedGradient {
     /// A linear gradient.
@@ -25,7 +49,7 @@ pub enum FixedGradient {
     Radial(FixedRadialGradient),
 }
 
-/// Specification of a linear gradient.
+/// Specification of a linear gradient in image-space.
 ///
 /// This specification is in terms of image-space coordinates. In many
 /// cases, it is better to specify coordinates relative to the `Rect`
@@ -44,7 +68,13 @@ pub struct FixedLinearGradient {
     pub stops: Vec<GradientStop>,
 }
 
-/// Specification of a radial gradient.
+/// Specification of a radial gradient in image-space.
+///
+/// This specification is in terms of image-space coordinates. In many
+/// cases, it is better to specify coordinates relative to the `Rect`
+/// of the item being drawn; for these, use [`RadialGradient`] instead.
+///
+/// [`RadialGradient`]: struct.RadialGradient.html
 #[derive(Debug, Clone)]
 pub struct FixedRadialGradient {
     /// The center.
@@ -54,14 +84,13 @@ pub struct FixedRadialGradient {
     /// The radius.
     ///
     /// The circle with this radius from the center corresponds to pos 1.0.
-    // TODO: investigate elliptical radius
     pub radius: f64,
     /// The stops (see similar field in [`LinearGradient`](struct.LinearGradient.html)).
     pub stops: Vec<GradientStop>,
 }
 
 /// Specification of a gradient stop.
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct GradientStop {
     /// The coordinate of the stop.
     pub pos: f32,
@@ -80,10 +109,10 @@ pub trait GradientStops {
 /// The start and end points in the gradient are given in [`UnitPoint`] coordinates,
 /// which are then resolved to image-space coordinates for any given concrete `Rect`.
 ///
-/// When the fixed coordinates are known, use [`FixedGradient`] instead.
+/// When the fixed coordinates are known, use [`FixedLinearGradient`] instead.
 ///
 /// [`UnitPoint`]: struct.UnitPoint.html
-/// [`FixedGradient`]: struct.FixedGradient.html
+/// [`FixedLinearGradient`]: struct.FixedLinearGradient.html
 #[derive(Debug, Clone)]
 pub struct LinearGradient {
     start: UnitPoint,
@@ -94,21 +123,28 @@ pub struct LinearGradient {
 /// A description of a radial gradient in the unit rect, which can be resolved
 /// to a fixed gradient.
 ///
-/// The center is given in `UnitPoint` coordinates.
+/// The `center` and `origin` are given in [`UnitPoint`] coordinates.
 ///
-/// The `center` and `radius` describe a sphere. `origin` describes the angle
-/// of the gradient on that sphere, useful for simulating lighting effects.
-/// see [configuring a radial gradient][config] for a fuller explanation.
+/// The `center` parameter specifies the `center` of the circle, so that points
+/// of distance radius from the `center` map to 1.0 in the gradient stops.
+/// The `origin` parameter specifies the point that maps to 0.0 in the
+/// gradient stops. Using the same `origin` and `center` gives a radially
+/// symmetric gradient; using different points is useful for simulating
+/// lighting effects. See [configuring a radial gradient][config] for a fuller
+/// explanation.
 ///
-/// By default, `origin` is equal to `center`. This can be changed during construction
-/// with the [`with_origin`] builder method.
+/// By default, `origin` and `center` are both at the center (0.5, 0.5) point.
+/// This can be changed during construction with the [`with_center`] and
+/// [`with_origin`] builder methods.
 ///
 /// The [`ScaleMode`] describes how the gradient is mapped to a non-square
 /// rectangle; by default this will expand on the longest axis, but this can
 /// be changed with the [`with_scale_mode`] builder method.
 ///
 /// [config]: https://docs.microsoft.com/en-us/windows/win32/direct2d/direct2d-brushes-overview#configuring-a-radial-gradient
+/// [`UnitPoint`]: struct.UnitPoint.html
 /// [`ScaleMode`]: enum.ScaleMode.html
+/// [`with_center`]: struct.RadialGradient.html#method.with_center
 /// [`with_origin`]: struct.RadialGradient.html#method.with_origin
 /// [`with_scale_mode`]: struct.RadialGradient.html#method.with_scale_mode
 #[derive(Debug, Clone)]
@@ -123,12 +159,11 @@ pub struct RadialGradient {
 /// Mappings from the unit square into a non-square rectangle.
 #[derive(Debug, Clone)]
 pub enum ScaleMode {
-    /// The unit 1.0 is mapped to the smaller of width & height. All
-    /// values will be mapped without clipping, but the mapped item will
-    /// not cover the entire reect.
+    /// The unit 1.0 is mapped to the smaller of width & height, but the mapped
+    /// item may not cover the entire rectangle.
     Fit,
     /// The unit 1.0 is mapped to the larger of width & height; some
-    /// values on the other axis will be clipped.
+    /// values on the other axis may extend outside the target rectangle.
     Fill,
 }
 
@@ -262,24 +297,52 @@ impl LinearGradient {
             stops: stops.to_vec(),
         }
     }
+
+    // maybe these should be public API? that was my original intention but I'm not
+    // sure there's a clear use, so keeping them private for now.
+    /// Generate a [`FixedLinearGradient`] by mapping points in the unit square
+    /// onto points in `rect`.
+    ///
+    /// [`FixedLinearGradient`]: struct.FixedLinearGradient.html
+    fn resolve(&self, rect: Rect) -> FixedLinearGradient {
+        FixedLinearGradient {
+            start: self.start.resolve(rect),
+            end: self.end.resolve(rect),
+            stops: self.stops.clone(),
+        }
+    }
 }
 
 impl RadialGradient {
-    /// Creates a simple `RadialGradient`. This gradient has the same `origin`
-    /// and `center`, and uses the `Fill` [`ScaleMode`]. These attributes can be
-    /// modified with the [`with_origin`] and [`with_scale_mode`] builder methods.
+    /// Creates a simple `RadialGradient`. This gradient has `origin` and `center`
+    /// set to `(0.5, 0.5)`, and uses the `Fill` [`ScaleMode`]. These attributes can be
+    /// modified with the [`with_center`], [`with_origin`],
+    /// and [`with_scale_mode`] builder methods.
     ///
     /// [`ScaleMode`]: enum.ScaleMode.html
+    /// [`with_center`]: struct.RadialGradient.html#method.with_center
     /// [`with_origin`]: struct.RadialGradient.html#method.with_origin
     /// [`with_scale_mode`]: struct.RadialGradient.html#method.with_scale_mode
-    pub fn new(center: UnitPoint, radius: f64, stops: impl GradientStops) -> Self {
+    pub fn new(radius: f64, stops: impl GradientStops) -> Self {
         RadialGradient {
-            center,
-            origin: center,
+            center: UnitPoint::CENTER,
+            origin: UnitPoint::CENTER,
             radius,
             stops: stops.to_vec(),
             scale_mode: ScaleMode::Fill,
         }
+    }
+
+    /// A builder-style method for changing the center of the gradient. This
+    /// does not change the `origin`; in the common case, you will want to change
+    /// both values.
+    ///
+    /// See the main [`RadialGradient`] docs for an explanation of center vs. origin.
+    ///
+    /// [`RadialGradient`]: struct.RadialGradient.html
+    pub fn with_center(mut self, center: UnitPoint) -> Self {
+        self.center = center;
+        self
     }
 
     /// A builder-style method for changing the origin of the gradient.
@@ -299,6 +362,29 @@ impl RadialGradient {
         self.scale_mode = scale_mode;
         self
     }
+
+    /// Generate a [`FixedRadialGradient`] by mapping points in the unit square
+    /// onto points in `rect`.
+    ///
+    /// [`FixedRadialGradient`]: struct.FixedRadialGradient.html
+    fn resolve(&self, rect: Rect) -> FixedRadialGradient {
+        let scale_len = match self.scale_mode {
+            ScaleMode::Fill => rect.width().max(rect.height()),
+            ScaleMode::Fit => rect.width().min(rect.height()),
+        };
+
+        let rect = equalize_sides_preserving_center(rect, scale_len);
+        let center = self.center.resolve(rect);
+        let origin = self.origin.resolve(rect);
+        let origin_offset = origin - center;
+        let radius = self.radius * scale_len;
+        FixedRadialGradient {
+            center,
+            origin_offset,
+            radius,
+            stops: self.stops.clone(),
+        }
+    }
 }
 
 impl<P: RenderContext> IntoBrush<P> for FixedGradient {
@@ -314,11 +400,7 @@ impl<P: RenderContext> IntoBrush<P> for FixedGradient {
 impl<P: RenderContext> IntoBrush<P> for LinearGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         let rect = bbox();
-        let gradient = FixedGradient::Linear(FixedLinearGradient {
-            start: self.start.resolve(rect),
-            end: self.end.resolve(rect),
-            stops: self.stops.clone(),
-        });
+        let gradient = FixedGradient::Linear(self.resolve(rect));
         // Perhaps the make_brush method should be fallible instead of panicking.
         Cow::Owned(piet.gradient(gradient).expect("error creating gradient"))
     }
@@ -327,44 +409,14 @@ impl<P: RenderContext> IntoBrush<P> for LinearGradient {
 impl<P: RenderContext> IntoBrush<P> for RadialGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         let rect = bbox();
-        let scale_len = match self.scale_mode {
-            ScaleMode::Fill => rect.width().max(rect.height()),
-            ScaleMode::Fit => rect.width().min(rect.height()),
-        };
-
-        let rect =  equalize_sides_preserving_center(rect, scale_len);
-        let center = self.center.resolve(rect);
-        let origin = self.origin.resolve(rect);
-        let origin_offset = origin - center;
-        let radius = self.radius * scale_len;
-
-        let gradient = FixedGradient::Radial(FixedRadialGradient {
-            center,
-            origin_offset,
-            radius,
-            stops: self.stops.clone(),
-        });
+        let gradient = FixedGradient::Radial(self.resolve(rect));
         // Perhaps the make_brush method should be fallible instead of panicking.
         Cow::Owned(piet.gradient(gradient).expect("error creating gradient"))
     }
 }
 
 fn equalize_sides_preserving_center(rect: Rect, new_len: f64) -> Rect {
-    let (x, width) = if new_len != rect.width() {
-        let dwidth = rect.width() - new_len;
-        let dx = dwidth * 0.5;
-        (rect.x0 + dx, new_len)
-    } else {
-        (rect.x0, rect.width())
-    };
-
-    let (y, height) = if new_len != rect.height() {
-        let dheight = rect.height() - new_len;
-        let dy = dheight * 0.5;
-        (rect.y0 + dy, new_len)
-    } else {
-        (rect.y0, rect.height())
-    };
-
-    Rect::from_origin_size((x, y), (width, height))
+    let size = Size::new(new_len, new_len);
+    let origin = rect.center() - size.to_vec2() / 2.;
+    Rect::from_origin_size(origin, size)
 }
