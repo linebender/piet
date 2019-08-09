@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use kurbo::{Point, Rect, Vec2};
 
-use crate::{IBrush, RenderContext};
+use crate::{IntoBrush, RenderContext};
 
 use crate::Color;
 
@@ -221,7 +221,7 @@ impl LinearGradient {
     }
 }
 
-impl<P: RenderContext> IBrush<P> for LinearGradient {
+impl<P: RenderContext> IntoBrush<P> for LinearGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         let rect = bbox();
         let gradient = FixedGradient::Linear(FixedLinearGradient {
@@ -234,7 +234,7 @@ impl<P: RenderContext> IBrush<P> for LinearGradient {
     }
 }
 
-impl<P: RenderContext> IBrush<P> for FixedGradient {
+impl<P: RenderContext> IntoBrush<P> for FixedGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, _bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         // Perhaps the make_brush method should be fallible instead of panicking.
         // Also, at some point we might want to be smarter about the extra clone here.

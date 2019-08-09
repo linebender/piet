@@ -37,8 +37,8 @@ use directwrite::TextFormat;
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, IBrush, ImageFormat,
-    InterpolationMode, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, ImageFormat,
+    InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -251,7 +251,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         // TODO: various special-case shapes, for efficiency
         let brush = brush.make_brush(self, || shape.bounding_box());
         match path_from_shape(self.factory, true, shape, FillMode::Winding) {
@@ -260,7 +260,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         // TODO: various special-case shapes, for efficiency
         let brush = brush.make_brush(self, || shape.bounding_box());
         match path_from_shape(self.factory, true, shape, FillMode::Alternate) {
@@ -269,7 +269,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
     }
 
-    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64) {
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         // TODO: various special-case shapes, for efficiency
         let path = match path_from_shape(self.factory, false, shape, FillMode::Alternate) {
@@ -286,7 +286,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn stroke_styled(
         &mut self,
         shape: impl Shape,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
         width: f64,
         style: &StrokeStyle,
     ) {
@@ -336,7 +336,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self,
         layout: &Self::TextLayout,
         pos: impl Into<Point>,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
     ) {
         // TODO: bounding box for text
         let brush = brush.make_brush(self, || Rect::ZERO);
@@ -468,7 +468,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 }
 
-impl<'a> IBrush<D2DRenderContext<'a>> for GenericBrush {
+impl<'a> IntoBrush<D2DRenderContext<'a>> for GenericBrush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut D2DRenderContext,

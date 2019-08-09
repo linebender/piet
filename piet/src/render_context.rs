@@ -52,7 +52,7 @@ impl ImageFormat {
 /// Code that draws graphics will in general take `&mut impl RenderContext`.
 pub trait RenderContext
 where
-    Self::Brush: IBrush<Self>,
+    Self::Brush: IntoBrush<Self>,
 {
     /// The type of a "brush".
     ///
@@ -91,22 +91,22 @@ where
     fn clear(&mut self, color: Color);
 
     /// Stroke a shape.
-    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64);
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64);
 
     /// Stroke a shape, with styled strokes.
     fn stroke_styled(
         &mut self,
         shape: impl Shape,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
         width: f64,
         style: &StrokeStyle,
     );
 
     /// Fill a shape, using non-zero fill rule.
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>);
+    fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>);
 
     /// Fill a shape, using even-odd fill rule
-    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>);
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>);
 
     /// Clip to a shape.
     ///
@@ -124,7 +124,7 @@ where
         &mut self,
         layout: &Self::TextLayout,
         pos: impl Into<Point>,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
     );
 
     /// Save the context state.
@@ -189,14 +189,14 @@ where
 /// as the types used to represent these on a specific backend.
 ///
 /// This is an internal trait that you should not have to implement or think about.
-pub trait IBrush<P: RenderContext>
+pub trait IntoBrush<P: RenderContext>
 where
     P: ?Sized,
 {
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush>;
 }
 
-impl<P: RenderContext> IBrush<P> for Color {
+impl<P: RenderContext> IntoBrush<P> for Color {
     fn make_brush<'a>(&'a self, piet: &mut P, _bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         Cow::Owned(piet.solid_brush(self.to_owned()))
     }
