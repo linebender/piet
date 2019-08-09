@@ -4,7 +4,10 @@ use std::borrow::Cow;
 
 use kurbo::{Affine, Point, Rect, Shape};
 
-use crate::{Color, Error, FixedGradient, StrokeStyle, Text, TextLayout};
+use crate::{
+    Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, LinearGradient,
+    RadialGradient, StrokeStyle, Text, TextLayout,
+};
 
 /// A requested interpolation mode for drawing images.
 #[derive(Clone, Copy, PartialEq)]
@@ -199,5 +202,88 @@ where
 impl<P: RenderContext> IntoBrush<P> for Color {
     fn make_brush<'a>(&'a self, piet: &mut P, _bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         Cow::Owned(piet.solid_brush(self.to_owned()))
+    }
+}
+
+/// A color or a gradient.
+///
+/// This type is provided as a convenience, so that library consumers can
+/// easily write methods and types that use or reference *something* that can
+/// be used as a brush, without needing to know what it is.
+///
+/// # Examples
+///
+/// ```no_run
+/// use piet::{Color, PaintBrush, RadialGradient};
+/// use piet::kurbo::Rect;
+///
+/// struct Widget {
+/// frame: Rect,
+/// background: PaintBrush,
+/// }
+///
+/// fn make_widget<T: Into<PaintBrush>>(frame: Rect, bg: T) -> Widget {
+///     Widget {
+///         frame,
+///         background: bg.into(),
+///     }
+/// }
+///
+/// let color_widget = make_widget(Rect::ZERO, Color::BLACK);
+/// let rad_grad = RadialGradient::new(0.8, (Color::WHITE, Color::BLACK));
+/// let gradient_widget = make_widget(Rect::ZERO, rad_grad);
+///
+/// ```
+pub enum PaintBrush {
+    Color(Color),
+    Linear(LinearGradient),
+    Radial(RadialGradient),
+    Fixed(FixedGradient),
+}
+
+impl<P: RenderContext> IntoBrush<P> for PaintBrush {
+    fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
+        match self {
+            PaintBrush::Color(color) => color.make_brush(piet, bbox),
+            PaintBrush::Linear(linear) => linear.make_brush(piet, bbox),
+            PaintBrush::Radial(radial) => radial.make_brush(piet, bbox),
+            PaintBrush::Fixed(fixed) => fixed.make_brush(piet, bbox),
+        }
+    }
+}
+
+impl From<Color> for PaintBrush {
+    fn from(src: Color) -> PaintBrush {
+        PaintBrush::Color(src)
+    }
+}
+
+impl From<LinearGradient> for PaintBrush {
+    fn from(src: LinearGradient) -> PaintBrush {
+        PaintBrush::Linear(src)
+    }
+}
+
+impl From<RadialGradient> for PaintBrush {
+    fn from(src: RadialGradient) -> PaintBrush {
+        PaintBrush::Radial(src)
+    }
+}
+
+impl From<FixedGradient> for PaintBrush {
+    fn from(src: FixedGradient) -> PaintBrush {
+        PaintBrush::Fixed(src)
+    }
+}
+
+impl From<FixedLinearGradient> for PaintBrush {
+    fn from(src: FixedLinearGradient) -> PaintBrush {
+        PaintBrush::Fixed(src.into())
+    }
+}
+
+impl From<FixedRadialGradient> for PaintBrush {
+    fn from(src: FixedRadialGradient) -> PaintBrush {
+        PaintBrush::Fixed(src.into())
     }
 }
