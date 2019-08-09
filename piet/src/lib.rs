@@ -15,7 +15,6 @@ pub use crate::color::*;
 pub use crate::conv::*;
 pub use crate::error::*;
 pub use crate::gradient::*;
-#[doc(hidden)]
 pub use crate::null_renderer::*;
 pub use crate::render_context::*;
 pub use crate::shapes::*;

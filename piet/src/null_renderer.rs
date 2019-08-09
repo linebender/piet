@@ -13,18 +13,26 @@ use crate::{
 ///
 /// This is useful largely for doc tests, but is made public in case
 /// it might come in handy.
+#[doc(hidden)]
 pub struct NullRenderContext(NullText);
 
 #[derive(Clone)]
+#[doc(hidden)]
 pub struct NullBrush;
+#[doc(hidden)]
 pub struct NullImage;
 
+#[doc(hidden)]
 pub struct NullText;
 
+#[doc(hidden)]
 pub struct NullFont;
+#[doc(hidden)]
 pub struct NullFontBuilder;
 
+#[doc(hidden)]
 pub struct NullTextLayout;
+#[doc(hidden)]
 pub struct NullTextLayoutBuilder;
 
 impl NullRenderContext {
