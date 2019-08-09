@@ -233,3 +233,14 @@ impl<P: RenderContext> IBrush<P> for LinearGradient {
         Cow::Owned(piet.gradient(gradient).expect("error creating gradient"))
     }
 }
+
+impl<P: RenderContext> IBrush<P> for FixedGradient {
+    fn make_brush<'a>(&'a self, piet: &mut P, _bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
+        // Perhaps the make_brush method should be fallible instead of panicking.
+        // Also, at some point we might want to be smarter about the extra clone here.
+        Cow::Owned(
+            piet.gradient(self.to_owned())
+                .expect("error creating gradient"),
+        )
+    }
+}
