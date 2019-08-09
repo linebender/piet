@@ -14,9 +14,8 @@ use web_sys::{
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    Color, Error, FixedGradient, Font, FontBuilder, GradientStop, IBrush, ImageFormat,
-    InterpolationMode, LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, FixedGradient, Font, FontBuilder, GradientStop, ImageFormat, InterpolationMode,
+    IntoBrush, LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct WebRenderContext<'a> {
@@ -167,7 +166,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_brush(&*brush, true);
@@ -175,7 +174,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             .fill_with_canvas_winding_rule(CanvasWindingRule::Nonzero);
     }
 
-    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_brush(&*brush, true);
@@ -189,7 +188,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             .clip_with_canvas_winding_rule(CanvasWindingRule::Nonzero);
     }
 
-    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64) {
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, None);
@@ -200,7 +199,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     fn stroke_styled(
         &mut self,
         shape: impl Shape,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
         width: f64,
         style: &StrokeStyle,
     ) {
@@ -219,7 +218,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         &mut self,
         layout: &Self::TextLayout,
         pos: impl Into<Point>,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
     ) {
         // TODO: bounding box for text
         let brush = brush.make_brush(self, || Rect::ZERO);
@@ -337,7 +336,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 }
 
-impl<'a> IBrush<WebRenderContext<'a>> for Brush {
+impl<'a> IntoBrush<WebRenderContext<'a>> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut WebRenderContext,

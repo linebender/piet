@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
-    Color, Error, FixedGradient, Font, FontBuilder, IBrush, ImageFormat, InterpolationMode,
+    Color, Error, FixedGradient, Font, FontBuilder, ImageFormat, InterpolationMode, IntoBrush,
     RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
@@ -61,20 +61,20 @@ impl RenderContext for NullRenderContext {
 
     fn clear(&mut self, _color: Color) {}
 
-    fn stroke(&mut self, _shape: impl Shape, _brush: &impl IBrush<Self>, _width: f64) {}
+    fn stroke(&mut self, _shape: impl Shape, _brush: &impl IntoBrush<Self>, _width: f64) {}
 
     fn stroke_styled(
         &mut self,
         _shape: impl Shape,
-        _brush: &impl IBrush<Self>,
+        _brush: &impl IntoBrush<Self>,
         _width: f64,
         _style: &StrokeStyle,
     ) {
     }
 
-    fn fill(&mut self, _shape: impl Shape, _brush: &impl IBrush<Self>) {}
+    fn fill(&mut self, _shape: impl Shape, _brush: &impl IntoBrush<Self>) {}
 
-    fn fill_even_odd(&mut self, _shape: impl Shape, _brush: &impl IBrush<Self>) {}
+    fn fill_even_odd(&mut self, _shape: impl Shape, _brush: &impl IntoBrush<Self>) {}
 
     fn clip(&mut self, _shape: impl Shape) {}
 
@@ -86,7 +86,7 @@ impl RenderContext for NullRenderContext {
         &mut self,
         _layout: &Self::TextLayout,
         _pos: impl Into<Point>,
-        _brush: &impl IBrush<Self>,
+        _brush: &impl IntoBrush<Self>,
     ) {
     }
 
@@ -162,7 +162,7 @@ impl TextLayout for NullTextLayout {
     }
 }
 
-impl IBrush<NullRenderContext> for NullBrush {
+impl IntoBrush<NullRenderContext> for NullBrush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut NullRenderContext,

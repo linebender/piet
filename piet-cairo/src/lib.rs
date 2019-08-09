@@ -11,9 +11,9 @@ use cairo::{
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, IBrush, ImageFormat,
-    InterpolationMode, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
-    TextLayoutBuilder,
+    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, ImageFormat,
+    InterpolationMode, IntoBrush, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text,
+    TextLayout, TextLayoutBuilder,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -168,7 +168,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
     }
 
-    fn fill(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+    fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_brush(&*brush);
@@ -176,7 +176,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.fill();
     }
 
-    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IBrush<Self>) {
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_brush(&*brush);
@@ -190,7 +190,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.clip();
     }
 
-    fn stroke(&mut self, shape: impl Shape, brush: &impl IBrush<Self>, width: f64) {
+    fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, None);
@@ -201,7 +201,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     fn stroke_styled(
         &mut self,
         shape: impl Shape,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
         width: f64,
         style: &StrokeStyle,
     ) {
@@ -220,7 +220,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self,
         layout: &Self::TextLayout,
         pos: impl Into<Point>,
-        brush: &impl IBrush<Self>,
+        brush: &impl IntoBrush<Self>,
     ) {
         // TODO: bounding box for text
         let brush = brush.make_brush(self, || Rect::ZERO);
@@ -336,7 +336,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 }
 
-impl<'a> IBrush<CairoRenderContext<'a>> for Brush {
+impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut CairoRenderContext,
