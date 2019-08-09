@@ -148,8 +148,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Brush::Solid(color.as_rgba_u32())
     }
 
-    fn gradient(&mut self, gradient: FixedGradient) -> Result<Brush, Error> {
-        match gradient {
+    fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
+        match gradient.into() {
             FixedGradient::Linear(linear) => {
                 let (x0, y0) = (linear.start.x, linear.start.y);
                 let (x1, y1) = (linear.end.x, linear.end.y);

@@ -222,8 +222,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             .to_generic() // This does an extra COM clone; avoid somehow?
     }
 
-    fn gradient(&mut self, gradient: FixedGradient) -> Result<GenericBrush, Error> {
-        match gradient {
+    fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<GenericBrush, Error> {
+        match gradient.into() {
             FixedGradient::Linear(linear) => {
                 let mut builder = LinearGradientBrushBuilder::new(&self.rt)
                     .with_start(to_point2f(linear.start))
