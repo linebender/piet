@@ -83,7 +83,7 @@ where
     fn solid_brush(&mut self, color: Color) -> Self::Brush;
 
     /// Create a new gradient brush.
-    fn gradient(&mut self, gradient: FixedGradient) -> Result<Self::Brush, Error>;
+    fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Self::Brush, Error>;
 
     /// Clear the canvas with the given color.
     ///

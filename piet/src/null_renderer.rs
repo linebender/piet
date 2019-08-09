@@ -55,7 +55,7 @@ impl RenderContext for NullRenderContext {
         NullBrush
     }
 
-    fn gradient(&mut self, _gradient: FixedGradient) -> Result<Self::Brush, Error> {
+    fn gradient(&mut self, _gradient: impl Into<FixedGradient>) -> Result<Self::Brush, Error> {
         Ok(NullBrush)
     }
 

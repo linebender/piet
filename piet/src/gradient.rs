@@ -32,24 +32,7 @@ use crate::{IntoBrush, RenderContext};
 
 use crate::Color;
 
-/// Specification of a linear or radial gradient in image-space.
-///
-/// This specification is in terms of image-space coordinates.
-/// In many cases, it is better to specify coordinates relative
-/// to the `Rect` of the item being drawn; for these, use [`LinearGradient`]
-/// and [`RadialGradient`] instead.
-///
-/// [`LinearGradient`]: struct.LinearGradient.html
-/// [`RadialGradient`]: struct.RadialGradient.html
-#[derive(Debug, Clone)]
-pub enum FixedGradient {
-    /// A linear gradient.
-    Linear(FixedLinearGradient),
-    /// A radial gradient.
-    Radial(FixedRadialGradient),
-}
-
-/// Specification of a linear gradient in image-space.
+/// Specification of a linear gradient.
 ///
 /// This specification is in terms of image-space coordinates. In many
 /// cases, it is better to specify coordinates relative to the `Rect`
@@ -87,6 +70,23 @@ pub struct FixedRadialGradient {
     pub radius: f64,
     /// The stops (see similar field in [`LinearGradient`](struct.LinearGradient.html)).
     pub stops: Vec<GradientStop>,
+}
+
+/// Any fixed gradient.
+///
+/// This is provided as a convenience, so that we can provide API that
+/// accept both [`FixedLinearGradient`] and [`FixedRadialGradient`].
+/// You should not construct this type dirctly; rather construct one of those
+/// types, both of which impl `Into<FixedGradient>`.
+///
+/// [`FixedLinearGradient`]: struct.FixedLinearGradient.html
+/// [`FixedRadialGradient`]: struct.FixedRadialGradient.html
+#[derive(Clone)]
+pub enum FixedGradient {
+    /// A linear gradient.
+    Linear(FixedLinearGradient),
+    /// A radial gradient.
+    Radial(FixedRadialGradient),
 }
 
 /// Specification of a gradient stop.
@@ -387,6 +387,18 @@ impl RadialGradient {
     }
 }
 
+impl From<FixedLinearGradient> for FixedGradient {
+    fn from(src: FixedLinearGradient) -> FixedGradient {
+        FixedGradient::Linear(src)
+    }
+}
+
+impl From<FixedRadialGradient> for FixedGradient {
+    fn from(src: FixedRadialGradient) -> FixedGradient {
+        FixedGradient::Radial(src)
+    }
+}
+
 impl<P: RenderContext> IntoBrush<P> for FixedGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, _bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         // Also, at some point we might want to be smarter about the extra clone here.
@@ -400,7 +412,7 @@ impl<P: RenderContext> IntoBrush<P> for FixedGradient {
 impl<P: RenderContext> IntoBrush<P> for LinearGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         let rect = bbox();
-        let gradient = FixedGradient::Linear(self.resolve(rect));
+        let gradient = self.resolve(rect);
         // Perhaps the make_brush method should be fallible instead of panicking.
         Cow::Owned(piet.gradient(gradient).expect("error creating gradient"))
     }
@@ -409,7 +421,7 @@ impl<P: RenderContext> IntoBrush<P> for LinearGradient {
 impl<P: RenderContext> IntoBrush<P> for RadialGradient {
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush> {
         let rect = bbox();
-        let gradient = FixedGradient::Radial(self.resolve(rect));
+        let gradient = self.resolve(rect);
         // Perhaps the make_brush method should be fallible instead of panicking.
         Cow::Owned(piet.gradient(gradient).expect("error creating gradient"))
     }
