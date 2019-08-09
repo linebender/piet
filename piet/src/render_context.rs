@@ -184,7 +184,11 @@ where
     fn draw_image(&mut self, image: &Self::Image, rect: impl Into<Rect>, interp: InterpolationMode);
 }
 
-/// A brush that can be dependent on the geometry being drawn.
+/// A trait for various types that can be used as brushes. These include
+/// backend-independent types such `Color` and `LinearGradient`, as well
+/// as the types used to represent these on a specific backend.
+///
+/// This is an internal trait that you should not have to implement or think about.
 pub trait IBrush<P: RenderContext>
 where
     P: ?Sized,
