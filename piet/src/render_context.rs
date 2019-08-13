@@ -234,6 +234,7 @@ impl<P: RenderContext> IntoBrush<P> for Color {
 /// let gradient_widget = make_widget(Rect::ZERO, rad_grad);
 ///
 /// ```
+#[derive(Debug, Clone)]
 pub enum PaintBrush {
     Color(Color),
     Linear(LinearGradient),

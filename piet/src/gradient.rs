@@ -81,7 +81,7 @@ pub struct FixedRadialGradient {
 ///
 /// [`FixedLinearGradient`]: struct.FixedLinearGradient.html
 /// [`FixedRadialGradient`]: struct.FixedRadialGradient.html
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum FixedGradient {
     /// A linear gradient.
     Linear(FixedLinearGradient),
