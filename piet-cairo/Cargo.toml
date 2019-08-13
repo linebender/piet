@@ -1,6 +1,6 @@
 [package]
 name = "piet-cairo"
-version = "0.0.6"
+version = "0.0.7"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Cairo backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -9,7 +9,7 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-piet = { version = "0.0.6", path = "../piet" }
+piet = { version = "0.0.7", path = "../piet" }
 
 [dependencies.cairo-rs]
 version = "0.7.1"
@@ -17,7 +17,7 @@ version = "0.7.1"
 default-features = false
 
 [dev-dependencies]
-piet-test = { version = "0.0.6", path = "../piet-test" }
+piet-test = { version = "0.0.7", path = "../piet-test" }
 
 [dev-dependencies.cairo-rs]
 version = "0.7.1"
