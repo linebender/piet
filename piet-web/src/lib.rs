@@ -376,28 +376,24 @@ impl<'a> Text for WebRenderContext<'a> {
     type TextLayout = WebTextLayout;
     type TextLayoutBuilder = WebTextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error> {
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
         let font = WebFont {
             family: name.to_owned(),
             size,
             weight: 400,
             style: FontStyle::Normal,
         };
-        Ok(WebFontBuilder(font))
+        WebFontBuilder(font)
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error> {
-        Ok(WebTextLayoutBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
+        WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
             font: font.clone(),
             text: text.to_owned(),
-        })
+        }
     }
 }
 

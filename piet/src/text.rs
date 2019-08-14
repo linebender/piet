@@ -9,13 +9,9 @@ pub trait Text {
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
 
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error>;
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error>;
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder;
 }
 
 pub trait FontBuilder {
