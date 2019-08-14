@@ -8,9 +8,9 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::BLACK);
 
     // do something texty
-    let font = rc.text().new_font_by_name("Segoe UI", 12.0)?.build()?;
+    let font = rc.text().new_font_by_name("Segoe UI", 12.0).build()?;
 
-    let layout = rc.text().new_text_layout(&font, "piet text!")?.build()?;
+    let layout = rc.text().new_text_layout(&font, "piet text!").build()?;
 
     let width = layout.width();
 

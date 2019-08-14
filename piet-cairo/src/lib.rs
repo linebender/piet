@@ -362,25 +362,21 @@ impl Text for CairoText {
     type TextLayout = CairoTextLayout;
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error> {
-        Ok(CairoFontBuilder {
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
+        CairoFontBuilder {
             family: name.to_owned(),
             size: size.round_into(),
             weight: FontWeight::Normal,
             slant: FontSlant::Normal,
-        })
+        }
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error> {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
         let text_layout = CairoTextLayout {
             font: font.0.clone(),
             text: text.to_owned(),
         };
-        Ok(CairoTextLayoutBuilder(text_layout))
+        CairoTextLayoutBuilder(text_layout)
     }
 }
 

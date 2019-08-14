@@ -1,3 +1,4 @@
+#![cfg(windows)]
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
 mod conv;
@@ -492,27 +493,23 @@ impl<'a> Text for D2DText<'a> {
     type TextLayoutBuilder = D2DTextLayoutBuilder<'a>;
     type TextLayout = D2DTextLayout;
 
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Result<Self::FontBuilder, Error> {
+    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
         // Note: the name is cloned here, rather than applied using `with_family` for
         // lifetime reasons. Maybe there's a better approach.
-        Ok(D2DFontBuilder {
+        D2DFontBuilder {
             builder: TextFormat::create(self.dwrite).with_size(size as f32),
             name: name.to_owned(),
-        })
+        }
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error> {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
         // Same consideration as above, we clone the font and text for lifetime
         // reasons.
-        Ok(D2DTextLayoutBuilder {
+        D2DTextLayoutBuilder {
             builder: text_layout::TextLayout::create(self.dwrite),
             format: font.0.clone(),
             text: text.to_owned(),
-        })
+        }
     }
 }
 

@@ -125,16 +125,12 @@ impl Text for NullText {
     type TextLayout = NullTextLayout;
     type TextLayoutBuilder = NullTextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, _name: &str, _size: f64) -> Result<Self::FontBuilder, Error> {
-        Ok(NullFontBuilder)
+    fn new_font_by_name(&mut self, _name: &str, _size: f64) -> Self::FontBuilder {
+        NullFontBuilder
     }
 
-    fn new_text_layout(
-        &mut self,
-        _font: &Self::Font,
-        _text: &str,
-    ) -> Result<Self::TextLayoutBuilder, Error> {
-        Ok(NullTextLayoutBuilder)
+    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str) -> Self::TextLayoutBuilder {
+        NullTextLayoutBuilder
     }
 }
 
