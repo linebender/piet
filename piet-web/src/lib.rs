@@ -137,11 +137,11 @@ impl<'a> RenderContext for WebRenderContext<'a> {
 
     fn clear(&mut self, color: Color) {
         let (width, height) = match self.ctx.canvas() {
-            Some (canvas) =>  (canvas.width(), canvas.height()),
+            Some(canvas) => (canvas.width(), canvas.height()),
             None => return,
-                /* Canvas might be null if the dom node is not in 
-                 * the document; do nothing. */
-        }; 
+            /* Canvas might be null if the dom node is not in
+             * the document; do nothing. */
+        };
         let shape = Rect::new(0.0, 0.0, width as f64, height as f64);
         let brush = self.solid_brush(color);
         self.fill(shape, &brush);
