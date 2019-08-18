@@ -39,7 +39,7 @@ use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
     new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, ImageFormat,
-    InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder, HitTestPoint, HitTestTextPosition, HitTestMetrics,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -570,5 +570,31 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
 impl TextLayout for D2DTextLayout {
     fn width(&self) -> f64 {
         self.0.get_metrics().width() as f64
+    }
+
+    fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint {
+        let htp = self.0.hit_test_point(point_x, point_y);
+
+        HitTestPoint {
+            metrics: HitTestMetrics {
+                text_position: htp.metrics.text_position(),
+                is_text: htp.metrics.is_text(),
+            },
+            is_inside: htp.is_inside,
+            is_trailing_hit: htp.is_trailing_hit,
+        }
+    }
+    fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition> {
+        self.0.hit_test_text_position(text_position, trailing)
+            .map(|http| {
+                HitTestTextPosition {
+                    point_x: http.point_x,
+                    point_y: http.point_y,
+                    metrics: HitTestMetrics {
+                        text_position: http.metrics.text_position(),
+                        is_text: http.metrics.is_text(),
+                    },
+                }
+            })
     }
 }

@@ -31,4 +31,41 @@ pub trait TextLayoutBuilder {
 pub trait TextLayout {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
+
+    /// Given a Point, determine the corresponding text position
+    // TODO use kurbo::Point?
+    fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint;
+
+    /// Given a text position, determine the corresponding pixel location
+    /// (In this case, the 
+    /// (currently consider the text layout just one line)
+    fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition>;
 }
+
+#[derive(Default)]
+pub struct HitTestPoint {
+    pub metrics: HitTestMetrics,
+    pub is_inside: bool,
+    pub is_trailing_hit: bool,
+}
+
+#[derive(Default)]
+pub struct HitTestTextPosition {
+    pub point_x: f32,
+    pub point_y: f32,
+    pub metrics: HitTestMetrics,
+}
+
+#[derive(Default)]
+pub struct HitTestMetrics {
+    pub text_position: u32,
+    //length: u32,
+    //left: f32,
+    //top: f32,
+    //width: f32,
+    //height: f32,
+    //bidiLevel: u32,
+    pub is_text: bool,
+    //is_trimmed: bool,
+}
+
