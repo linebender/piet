@@ -135,8 +135,16 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, _color: Color) {
-        // TODO: we might need to know the size of the canvas to do this.
+    fn clear(&mut self, color: Color) {
+        let (width, height) = match self.ctx.canvas() {
+            Some(canvas) => (canvas.width(), canvas.height()),
+            None => return,
+            /* Canvas might be null if the dom node is not in
+             * the document; do nothing. */
+        };
+        let shape = Rect::new(0.0, 0.0, width as f64, height as f64);
+        let brush = self.solid_brush(color);
+        self.fill(shape, &brush);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
