@@ -13,7 +13,7 @@ use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 use piet::{
     new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, ImageFormat,
     InterpolationMode, IntoBrush, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text,
-    TextLayout, TextLayoutBuilder,
+    TextLayout, TextLayoutBuilder, HitTestPoint, HitTestTextPosition, HitTestMetrics,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -523,5 +523,31 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
         self.font.text_extents(&self.text).x_advance
+    }
+
+    fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint {
+        HitTestPoint::default()
+    }
+
+    fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition> {
+        // substring hack, from futurepaul/druid -> better-textbox
+        let end = if trailing { text_position } else { text_position - 1};
+
+        if let Some(substring) = self.text.get(0..end as usize) {
+            // use innards of `width`, but substitute substring for text
+            // TODO f32 from windows, f64 elsewhere?
+            let point_x = self.font.text_extents(&substring).x_advance as f32;
+
+            Some(HitTestTextPosition {
+                point_x,
+                point_y: 0.0,
+                metrics: HitTestMetrics {
+                    text_position,
+                    is_text: true,
+                },
+            })
+        } else {
+            None
+        }
     }
 }
