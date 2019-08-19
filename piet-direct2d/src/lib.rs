@@ -598,3 +598,4 @@ impl TextLayout for D2DTextLayout {
             })
     }
 }
+

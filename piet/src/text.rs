@@ -42,21 +42,21 @@ pub trait TextLayout {
     fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition>;
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct HitTestPoint {
     pub metrics: HitTestMetrics,
     pub is_inside: bool,
     pub is_trailing_hit: bool,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct HitTestTextPosition {
     pub point_x: f32,
     pub point_y: f32,
     pub metrics: HitTestMetrics,
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct HitTestMetrics {
     pub text_position: u32,
     //length: u32,
