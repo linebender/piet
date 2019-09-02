@@ -525,10 +525,84 @@ impl TextLayout for CairoTextLayout {
         self.font.text_extents(&self.text).x_advance
     }
 
+    // first assume one line.
+    // TODO do with lines
+    // TODO ask about f32/f64, u32/usize
+    // TODO ask what exactly a text position is.
+    // What text position should I report? the byte index or the char index?
+    // If the second, I'll need to iterate over chars.
     fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint {
-        HitTestPoint::default()
+        let end_text_position = self.text.len() - 1;
+        let end_codepoint_boundaries = self.get_codepoint_boundaries(end_text_position as u32);
+
+        let start_text_position = 0;
+        let start_codepoint_boundaries = self.get_codepoint_boundaries(start_text_position as u32);
+
+        // first test beyond ends
+        if point_x > end_codepoint_boundaries.end_x {
+            return HitTestPoint {
+                metrics: HitTestMetrics {
+                    text_position: end_text_position as u32,
+                    is_text: false,
+                },
+                is_inside: false,
+                is_trailing_hit: true,
+            }
+        }
+        if point_x < start_codepoint_boundaries.start_x {
+            return HitTestPoint {
+                metrics: HitTestMetrics {
+                    text_position: start_text_position as u32,
+                    is_text: false,
+                },
+                is_inside: false,
+                is_trailing_hit: false,
+            }
+        }
+
+        // then test the beginning
+        if let Some(hit) = point_x_in_codepoint(point_x, &start_codepoint_boundaries) {
+            return hit;
+        }
+
+        // then test the end
+        if let Some(hit) = point_x_in_codepoint(point_x, &end_codepoint_boundaries) {
+            return hit;
+        }
+
+        // Now that we know it's not beginning or end, begin binary search
+        // We'll keep looping until there's a hit; there must be a hit, as we're searching
+        // in a continuous range and we're using only trailing edges. unless there's something
+        // funky that can happen TODO ask Raph about this.
+        // also, I looped, but is it better to recurse? I prefer loop
+        let mut search_start_idx = start_text_position;
+        let mut search_end_idx = end_text_position;
+        loop {
+            // pick halfway point
+            let current_idx = (search_end_idx - search_start_idx) / 2;
+
+            let codepoint_boundaries = self.get_codepoint_boundaries(current_idx as u32);
+            if let Some(hit) = point_x_in_codepoint(point_x, &codepoint_boundaries) {
+                return hit;
+            }
+
+            // since it's not a hit, check if closer to start or finish
+            // and move the appropriate search boundary
+            if point_x < codepoint_boundaries.start_x {
+                search_end_idx = codepoint_boundaries.start_idx as usize; // should this be -1?
+            } else if point_x > codepoint_boundaries.end_x {
+                search_start_idx = codepoint_boundaries.end_idx as usize; // should this be +1?
+            }
+
+            // TODO do I need to add a condition in case something goes terribly wrong
+            // and search start idx crosses search end idx?
+        }
     }
 
+    // TODO substring slicing only works with ascii
+    // Text position is treated as the ascii index; if it's not at a utf-8 boundary, we'll
+    // have to step in one direction or another to find the boundary (just use a loop to move
+    // until we get Some())
     fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition> {
         // substring hack, from futurepaul/druid -> better-textbox
         let end = if trailing { text_position } else { text_position - 1};
@@ -550,4 +624,75 @@ impl TextLayout for CairoTextLayout {
             None
         }
     }
+}
+impl CairoTextLayout {
+    // a text position here is just the byte index. should it be
+    // measured by char?
+    // it's an inclusive range for both idx and x_point
+    fn get_codepoint_boundaries(&self, text_position: u32) -> CodePointBoundaries {
+        let mut res = CodePointBoundaries::default();
+
+        // given an index into a str, iterate forward and back to find the boundaries of the
+        // char (unicode codepoint)
+
+        // first do leading edge
+        // if text position is 0, the leading edge defaults to 0
+        if text_position != 0 {
+            let mut leading_idx = text_position - 1; // looking at trailing edges only, not leading edg of current
+            let leading_idx_trailing_hit =
+                loop {
+                    match self.hit_test_text_position(leading_idx as u32, true) {
+                        Some(pos) => break pos,
+                        None => leading_idx -= 1, // shouldn't be able to go off the front end?
+                    }
+                };
+
+            res.start_idx = leading_idx + 1; // x uses trailing edge of previous idx, but starting idx should be part of codepoint
+            res.start_x = leading_idx_trailing_hit.point_x;
+        }
+
+        // now trailing edge
+        let mut trailing_idx = text_position;
+        let trailing_idx_trailing_hit =
+            loop {
+                match self.hit_test_text_position(trailing_idx as u32, true) {
+                    Some(pos) => break pos,
+                    None => trailing_idx += 1, // shouldn't be able to go off the back end?
+                }
+            };
+
+        res.end_idx = trailing_idx;
+        res.end_x = trailing_idx_trailing_hit.point_x;
+
+        res
+    }
+}
+
+fn point_x_in_codepoint(point_x: f32, codepoint_boundaries: &CodePointBoundaries) -> Option<HitTestPoint> {
+    let mut res = HitTestPoint::default();
+    let start_x = codepoint_boundaries.start_x;
+    let end_x = codepoint_boundaries.end_x;
+    let start_idx = codepoint_boundaries.start_idx;
+    let end_idx = codepoint_boundaries.end_idx;
+
+    if point_x >= start_x && point_x <= end_x {
+        // if inside, check which boundary it's closer to
+        let is_trailing_hit = (end_x - point_x) > (point_x - start_x);
+
+        res.is_inside= true;
+        res.is_trailing_hit= is_trailing_hit; // TODO double check what this means?
+        res.metrics.text_position = if is_trailing_hit { end_idx } else { start_idx };
+        res.metrics.is_text = true;
+        Some(res)
+    } else {
+        None
+    }
+}
+
+#[derive(Debug, Default)]
+struct CodePointBoundaries {
+    start_idx: u32,
+    end_idx: u32,
+    start_x: f32,
+    end_x: f32,
 }
