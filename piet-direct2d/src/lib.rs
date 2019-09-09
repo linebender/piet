@@ -132,6 +132,12 @@ impl<'a> PathBuilder<'a> {
     }
 }
 
+// The setting of 1e-3 is extremely conservative (absolutely no
+// differences should be visible) but setting a looser tolerance is
+// likely a tiny performance improvement. We could fine-tune based on
+// empirical study of both quality and performance.
+const BEZ_TOLERANCE: f64 = 1e-3;
+
 fn path_from_shape(
     d2d: &direct2d::Factory,
     is_filled: bool,
@@ -145,11 +151,30 @@ fn path_from_shape(
             g = g.fill_mode(fill_mode);
         }
         let mut builder = Some(PathBuilder::Geom(g));
-        for el in shape.to_bez_path(1e-3) {
+        // Note: this is the allocate + clone version so we can scan forward
+        // to determine whether the path is closed. Switch to non-allocating
+        // version when updating the direct2d bindings.
+        let bez_path = shape.into_bez_path(BEZ_TOLERANCE);
+        let bez_elements = bez_path.elements();
+        for i in 0..bez_elements.len() {
+            let el = &bez_elements[i];
             match el {
                 PathEl::MoveTo(p) => {
-                    // TODO: we don't know this now. Will get fixed in direct2d crate.
-                    let is_closed = is_filled;
+                    let mut is_closed = is_filled;
+                    // Scan forward to see if we need to close the path. The
+                    // need for this will go away when we udpate direct2d.
+                    if !is_filled {
+                        for close_el in &bez_elements[i + 1..] {
+                            match close_el {
+                                PathEl::MoveTo(_) => break,
+                                PathEl::ClosePath => {
+                                    is_closed = true;
+                                    break;
+                                }
+                                _ => (),
+                            }
+                        }
+                    }
                     if let Some(b) = builder.take() {
                         let g = b.finish_figure();
                         let begin = if is_filled {
@@ -162,26 +187,27 @@ fn path_from_shape(
                         } else {
                             FigureEnd::Open
                         };
-                        let f = g.begin_figure(to_point2f(p), begin, end);
+                        let f = g.begin_figure(to_point2f(*p), begin, end);
                         builder = Some(PathBuilder::Fig(f));
                     }
                 }
                 PathEl::LineTo(p) => {
                     if let Some(PathBuilder::Fig(f)) = builder.take() {
-                        let f = f.add_line(to_point2f(p));
+                        let f = f.add_line(to_point2f(*p));
                         builder = Some(PathBuilder::Fig(f));
                     }
                 }
                 PathEl::QuadTo(p1, p2) => {
                     if let Some(PathBuilder::Fig(f)) = builder.take() {
-                        let q = QuadBezierSegment::new(to_point2f(p1), to_point2f(p2));
+                        let q = QuadBezierSegment::new(to_point2f(*p1), to_point2f(*p2));
                         let f = f.add_quadratic_bezier(&q);
                         builder = Some(PathBuilder::Fig(f));
                     }
                 }
                 PathEl::CurveTo(p1, p2, p3) => {
                     if let Some(PathBuilder::Fig(f)) = builder.take() {
-                        let c = BezierSegment::new(to_point2f(p1), to_point2f(p2), to_point2f(p3));
+                        let c =
+                            BezierSegment::new(to_point2f(*p1), to_point2f(*p2), to_point2f(*p3));
                         let f = f.add_bezier(&c);
                         builder = Some(PathBuilder::Fig(f));
                     }
