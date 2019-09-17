@@ -1,6 +1,6 @@
 //! A wide assortment of graphics meant to show off many different uses of piet
 
-use piet::kurbo::{Affine, BezPath, Line, Point, Rect, Vec2};
+use piet::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Vec2};
 
 use piet::{
     Color, Error, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,
@@ -23,6 +23,8 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     path.curve_to((10.0, 80.0), (100.0, 80.0), (100.0, 60.0));
     let brush = rc.solid_brush(Color::rgba8(0x00, 0x00, 0x80, 0xC0));
     rc.fill(path, &brush);
+
+    rc.stroke(RoundedRect::new(145.0, 45.0, 185.0, 85.0, 5.0), &brush, 1.0);
 
     let font = rc.text().new_font_by_name("Segoe UI", 12.0).build()?;
     let layout = rc.text().new_text_layout(&font, "Hello piet!").build()?;
