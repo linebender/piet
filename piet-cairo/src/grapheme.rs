@@ -7,43 +7,29 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::CairoTextLayout;
 
 // it's an inclusive range for both idx and x_point
-// text_position is the index of the code point.
-// This should all be utf8
+// text_position is the index of the grapheme.
+// Hit test text position deals with graphemes, so can just call it.
 impl CairoTextLayout {
     pub(crate) fn get_grapheme_boundaries(&self, text_position: u32) -> GraphemeBoundaries {
-        let text = self.text.as_str();
-
+        //  0 as default
         let mut res = GraphemeBoundaries::default();
 
-        // First get the code unit boundaries, using unicode-segmentation
-        // TODO need to a bounds check?
-        let graphemes = UnicodeSegmentation::grapheme_indices(text, true);
-        println!("{}: grapheme count:{}, bytes count: {}", text, graphemes.count(), text.len());
-
-        let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(text, true);
-        grapheme_indices.by_ref().skip_while(|(i, _s)| *i < text_position as usize)
-            .fold(0, |_,_| 0); // is this needed just to drive the skip?
-
-        let leading_idx = grapheme_indices.next().unwrap().0;
-        let trailing_idx = grapheme_indices.next().unwrap().0 - 1;
-
-        // first do leading edge
-        // if text position is 0, the leading edge defaults to 0
+        // leading edge
         if text_position != 0 {
-            let previous_trailing_idx = leading_idx - 1; // looking at trailing edges only, not leading edge of current
-            let previous_trailing_idx_trailing_hit = self.hit_test_text_position(previous_trailing_idx as u32, true)
-                .expect("internal logic, code point not grapheme boundary");
+            let leading_idx = (text_position - 1) as u32;
+            let leading_edge = self.hit_test_text_position(leading_idx, true)
+                    .expect("internal logic, code point not grapheme boundary");
 
-            res.start_idx = leading_idx as u32;
-            res.start_x = previous_trailing_idx_trailing_hit.point_x;
+            res.start_idx = leading_idx;
+            res.start_x = leading_edge.point_x;
         }
 
         // now trailing edge
-        let trailing_idx_trailing_hit = self.hit_test_text_position(trailing_idx as u32, true)
+        let trailing_edge = self.hit_test_text_position(text_position as u32, true)
                 .expect("internal logic, code point not grapheme boundary");
 
-        res.end_idx = trailing_idx as u32;
-        res.end_x = trailing_idx_trailing_hit.point_x;
+        res.end_idx = text_position as u32;
+        res.end_x = trailing_edge.point_x;
 
         res
     }
@@ -81,17 +67,37 @@ pub struct GraphemeBoundaries {
 #[cfg(test)]
 mod test {
     use crate::*;
+    use piet::TextLayout;
 
     #[test]
+    #[ignore]
     fn test_hit_test_point() {
         let mut text_layout = CairoText::new();
 
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+        println!("text width: {}", layout.width());
+        println!("text width: {:?}", layout.hit_test_text_position(3, true));
+        println!("text width: {:?}", layout.hit_test_text_position(4, true));
 
         // test hit test point
         let hit_test_point = layout.hit_test_point(19.0, 0.0);
         let hit_test_point_text_position = hit_test_point.metrics.text_position;
         println!("hit_test_point text_position: {}", hit_test_point_text_position);
+    }
+
+    #[test]
+    fn test_grapheme_boundaries() {
+        let mut text_layout = CairoText::new();
+
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+        println!("text width: {}", layout.width());
+        println!("position 3 trailing pt: {:?}", layout.hit_test_text_position(3, true));
+        println!("position 4 trailing pt: {:?}", layout.hit_test_text_position(4, true));
+
+        // test grapheme boundaries
+        let grapheme_boundaries = layout.get_grapheme_boundaries(4);
+        println!("grapheme boundaries: {:?}", grapheme_boundaries);
     }
 }
