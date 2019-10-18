@@ -1,8 +1,9 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
+mod grapheme;
+
 use std::borrow::Cow;
 use std::fmt;
-use unicode_segmentation::UnicodeSegmentation;
 
 use cairo::{
     BorrowError, Context, Filter, FontFace, FontOptions, FontSlant, FontWeight, Format,
@@ -15,6 +16,10 @@ use piet::{
     new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, ImageFormat,
     InterpolationMode, IntoBrush, LineCap, LineJoin, RenderContext, RoundInto, StrokeStyle, Text,
     TextLayout, TextLayoutBuilder, HitTestPoint, HitTestTextPosition, HitTestMetrics,
+};
+
+use crate::grapheme::{
+    point_x_in_grapheme,
 };
 
 pub struct CairoRenderContext<'a> {
@@ -625,70 +630,4 @@ impl TextLayout for CairoTextLayout {
             None
         }
     }
-}
-impl CairoTextLayout {
-    // it's an inclusive range for both idx and x_point
-    // text_position is the index of the code point.
-    // This should all be utf8
-    fn get_grapheme_boundaries(&self, text_position: u32) -> GraphemeBoundaries {
-        let mut res = GraphemeBoundaries::default();
-
-        // First get the code unit boundaries, using unicode-segmentation
-        // TODO need to a bounds check?
-        let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true);
-        grapheme_indices.by_ref().skip_while(|(i, _s)| *i < text_position as usize)
-            .fold(0, |_,_| 0); // is this needed just to drive the skip?
-
-        let leading_idx = grapheme_indices.next().unwrap().0;
-        let trailing_idx = grapheme_indices.next().unwrap().0 - 1;
-
-        // first do leading edge
-        // if text position is 0, the leading edge defaults to 0
-        if text_position != 0 {
-            let previous_trailing_idx = leading_idx - 1; // looking at trailing edges only, not leading edge of current
-            let previous_trailing_idx_trailing_hit = self.hit_test_text_position(previous_trailing_idx as u32, true)
-                .expect("internal logic, code point not grapheme boundary");
-
-            res.start_idx = leading_idx as u32;
-            res.start_x = previous_trailing_idx_trailing_hit.point_x;
-        }
-
-        // now trailing edge
-        let trailing_idx_trailing_hit = self.hit_test_text_position(trailing_idx as u32, true)
-                .expect("internal logic, code point not grapheme boundary");
-
-        res.end_idx = trailing_idx as u32;
-        res.end_x = trailing_idx_trailing_hit.point_x;
-
-        res
-    }
-}
-
-fn point_x_in_grapheme(point_x: f32, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
-    let mut res = HitTestPoint::default();
-    let start_x = grapheme_boundaries.start_x;
-    let end_x = grapheme_boundaries.end_x;
-    let start_idx = grapheme_boundaries.start_idx;
-    let end_idx = grapheme_boundaries.end_idx;
-
-    if point_x >= start_x && point_x <= end_x {
-        // if inside, check which boundary it's closer to
-        let is_trailing_hit = (end_x - point_x) > (point_x - start_x);
-
-        res.is_inside= true;
-        res.is_trailing_hit= is_trailing_hit; // TODO double check what this means?
-        res.metrics.text_position = if is_trailing_hit { end_idx } else { start_idx };
-        res.metrics.is_text = true;
-        Some(res)
-    } else {
-        None
-    }
-}
-
-#[derive(Debug, Default)]
-struct GraphemeBoundaries {
-    start_idx: u32,
-    end_idx: u32,
-    start_x: f32,
-    end_x: f32,
 }
