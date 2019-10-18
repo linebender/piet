@@ -18,6 +18,8 @@ use piet::{
     TextLayout, TextLayoutBuilder, HitTestPoint, HitTestTextPosition, HitTestMetrics,
 };
 
+use unicode_segmentation::UnicodeSegmentation;
+
 use crate::grapheme::{
     point_x_in_grapheme,
 };
@@ -605,18 +607,27 @@ impl TextLayout for CairoTextLayout {
         }
     }
 
-    // TODO substring slicing only works with ascii
-    // Text position is treated as the ascii index; if it's not at a utf-8 boundary, we'll
-    // have to step in one direction or another to find the boundary (just use a loop to move
-    // until we get Some())
     fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition> {
-        // substring hack, from futurepaul/druid -> better-textbox
-        let end = if trailing { text_position } else { text_position - 1};
+        // Using substrings, but now with unicode grapheme awareness
 
-        if let Some(substring) = self.text.get(0..end as usize) {
-            // use innards of `width`, but substitute substring for text
+        if text_position == 0 && !trailing {
+            return Some(HitTestTextPosition::default());
+        }
+
+        // TODO avoid iterating twice?
+        if  text_position as usize >= UnicodeSegmentation::graphemes(self.text.as_str(), true).count() {
+            return None;
+        }
+
+        let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true);
+
+        // already checked that text_position > 0 and text_position < count
+        // in order to find the byte index to slice at, go one grapheme beyond.
+        let end = if trailing { text_position + 1 } else { text_position };
+
+        if let Some((byte_idx, _s)) = grapheme_indices.nth(end as usize) {
             // TODO f32 from windows, f64 elsewhere?
-            let point_x = self.font.text_extents(&substring).x_advance as f32;
+            let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance as f32;
 
             Some(HitTestTextPosition {
                 point_x,
@@ -629,5 +640,39 @@ impl TextLayout for CairoTextLayout {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+    use piet::TextLayout;
+
+    #[test]
+    fn test_hit_test_text_position() {
+        let mut text_layout = CairoText::new();
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+
+        let layout = text_layout.new_text_layout(&font, "piet").build().unwrap();
+        let piet_width = layout.width();
+
+        let layout = text_layout.new_text_layout(&font, "pie").build().unwrap();
+        let pie_width = layout.width();
+
+        let layout = text_layout.new_text_layout(&font, "pi").build().unwrap();
+        let pi_width = layout.width();
+
+        let layout = text_layout.new_text_layout(&font, "p").build().unwrap();
+        let p_width = layout.width();
+
+        let full_layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+        println!("position 2 trailing pt: {:?}", layout.hit_test_text_position(2, true));
+        println!("position 3 trailing pt: {:?}", layout.hit_test_text_position(3, true));
+        println!("position 4 trailing pt: {:?}", layout.hit_test_text_position(4, true));
+
+        assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point_x as f64), Some(piet_width));
+        assert_eq!(full_layout.hit_test_text_position(2, true).map(|p| p.point_x as f64), Some(pie_width));
+        assert_eq!(full_layout.hit_test_text_position(1, true).map(|p| p.point_x as f64), Some(pi_width));
+        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(p_width));
     }
 }

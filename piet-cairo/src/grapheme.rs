@@ -2,7 +2,6 @@ use piet::{
     HitTestPoint,
     TextLayout,
 };
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::CairoTextLayout;
 
