@@ -688,18 +688,61 @@ mod test {
 
         assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point_x as f64), Some(null_width));
         assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point_x as f64), Some(full_layout.width()));
+        assert_eq!(full_layout.hit_test_text_position(10, true).map(|p| p.point_x as f64), None);
     }
 
     #[test]
-    fn test_hit_test_text_position_complex() {
+    fn test_hit_test_text_position_complex_0() {
         let input = "é";
 
         let mut text_layout = CairoText::new();
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        println!("position 2 trailing pt: {:?}", layout.hit_test_text_position(2, true));
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(layout.width()));
+        assert_eq!(input.len(), 2);
 
-        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
+        // unicode segmentation is wrong on this one for now.
+        //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
+
+        //let mut text_layout = CairoText::new();
+        //let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        //let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        //assert_eq!(input.graphemes(true).count(), 1);
+        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
+        //assert_eq!(input.len(), 17);
+
+        let input = "\u{0023}\u{FE0F}\u{20E3}"; // #️⃣
+
+        let mut text_layout = CairoText::new();
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(layout.width()));
+        assert_eq!(input.len(), 7);
+        assert_eq!(input.chars().count(), 3);
+    }
+
+    #[test]
+    fn test_hit_test_text_position_complex_1() {
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
+
+        let mut text_layout = CairoText::new();
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        let test_layout_0 = text_layout.new_text_layout(&font, "é").build().unwrap();
+        let test_layout_1 = text_layout.new_text_layout(&font, "é\u{0023}\u{FE0F}\u{20E3}").build().unwrap();
+
+        assert_eq!(input.graphemes(true).count(), 3);
+        assert_eq!(input.len(), 10);
+
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(test_layout_0.width()));
+        assert_eq!(layout.hit_test_text_position(1, true).map(|p| p.point_x), Some(test_layout_1.width()));
+        assert_eq!(layout.hit_test_text_position(2, true).map(|p| p.point_x), Some(layout.width()));
+
+        assert_eq!(layout.hit_test_text_position(1, false).map(|p| p.point_x), Some(test_layout_0.width()));
+        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point_x), Some(test_layout_1.width()));
     }
 }
