@@ -539,7 +539,7 @@ impl TextLayout for CairoTextLayout {
     // TODO ask what exactly a text position is.
     // What text position should I report? the byte index or the char index?
     // If the second, I'll need to iterate over chars.
-    fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint {
+    fn hit_test_point(&self, point_x: f64, point_y: f64) -> HitTestPoint {
         let end_text_position = self.text.len() - 1;
         let end_grapheme_boundaries = self.get_grapheme_boundaries(end_text_position as u32);
 
@@ -615,7 +615,18 @@ impl TextLayout for CairoTextLayout {
         }
 
         // TODO avoid iterating twice?
-        if  text_position as usize >= UnicodeSegmentation::graphemes(self.text.as_str(), true).count() {
+        let grapheme_count = UnicodeSegmentation::graphemes(self.text.as_str(), true).count();
+
+        if (text_position + 1) as usize == grapheme_count && trailing {
+            return Some(HitTestTextPosition {
+                point_x: self.font.text_extents(&self.text).x_advance,
+                point_y: 0.0,
+                metrics: HitTestMetrics {
+                    text_position,
+                    is_text: true,
+                },
+            })
+        } else if  text_position as usize >= grapheme_count {
             return None;
         }
 
@@ -627,7 +638,7 @@ impl TextLayout for CairoTextLayout {
 
         if let Some((byte_idx, _s)) = grapheme_indices.nth(end as usize) {
             // TODO f32 from windows, f64 elsewhere?
-            let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance as f32;
+            let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance;
 
             Some(HitTestTextPosition {
                 point_x,
@@ -665,14 +676,30 @@ mod test {
         let layout = text_layout.new_text_layout(&font, "p").build().unwrap();
         let p_width = layout.width();
 
+        let layout = text_layout.new_text_layout(&font, "").build().unwrap();
+        let null_width = layout.width();
+
         let full_layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
-        println!("position 2 trailing pt: {:?}", layout.hit_test_text_position(2, true));
-        println!("position 3 trailing pt: {:?}", layout.hit_test_text_position(3, true));
-        println!("position 4 trailing pt: {:?}", layout.hit_test_text_position(4, true));
 
         assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point_x as f64), Some(piet_width));
         assert_eq!(full_layout.hit_test_text_position(2, true).map(|p| p.point_x as f64), Some(pie_width));
         assert_eq!(full_layout.hit_test_text_position(1, true).map(|p| p.point_x as f64), Some(pi_width));
         assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(p_width));
+
+        assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point_x as f64), Some(null_width));
+        assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point_x as f64), Some(full_layout.width()));
+    }
+
+    #[test]
+    fn test_hit_test_text_position_complex() {
+        let input = "é";
+
+        let mut text_layout = CairoText::new();
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        println!("position 2 trailing pt: {:?}", layout.hit_test_text_position(2, true));
+
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
     }
 }

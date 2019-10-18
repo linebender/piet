@@ -34,7 +34,7 @@ pub trait TextLayout {
 
     /// Given a Point, determine the corresponding text position
     // TODO use kurbo::Point?
-    fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint;
+    fn hit_test_point(&self, point_x: f64, point_y: f64) -> HitTestPoint;
 
     /// Given a text position, determine the corresponding pixel location
     /// (In this case, the 
@@ -51,8 +51,8 @@ pub struct HitTestPoint {
 
 #[derive(Debug, Default)]
 pub struct HitTestTextPosition {
-    pub point_x: f32,
-    pub point_y: f32,
+    pub point_x: f64,
+    pub point_y: f64,
     pub metrics: HitTestMetrics,
 }
 

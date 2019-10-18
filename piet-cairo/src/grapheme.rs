@@ -34,7 +34,7 @@ impl CairoTextLayout {
     }
 }
 
-pub fn point_x_in_grapheme(point_x: f32, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
+pub fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
     let mut res = HitTestPoint::default();
     let start_x = grapheme_boundaries.start_x;
     let end_x = grapheme_boundaries.end_x;
@@ -59,8 +59,8 @@ pub fn point_x_in_grapheme(point_x: f32, grapheme_boundaries: &GraphemeBoundarie
 pub struct GraphemeBoundaries {
     pub start_idx: u32,
     pub end_idx: u32,
-    pub start_x: f32,
-    pub end_x: f32,
+    pub start_x: f64,
+    pub end_x: f64,
 }
 
 #[cfg(test)]
