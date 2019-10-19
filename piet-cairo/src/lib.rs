@@ -536,6 +536,13 @@ impl TextLayout for CairoTextLayout {
     // first assume one line.
     // TODO do with lines
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        // null case
+        if self.text.len() == 0 {
+            return HitTestPoint::default();
+        }
+
+        // get bounds
+        // TODO handle if string is not null yet count is 0?
         let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
         let end_bounds= match self.get_grapheme_boundaries(end as u32) {
             Some(bounds) => bounds,
@@ -572,7 +579,7 @@ impl TextLayout for CairoTextLayout {
         loop {
             // pick halfway point
             // TODO this needs to map to the closest grapheme index
-            let middle = (left - right) / 2;
+            let middle = left + ((right - left) / 2);
 
             let grapheme_bounds = match self.get_grapheme_boundaries(middle as u32) {
                 Some(bounds) => bounds,
@@ -737,19 +744,25 @@ mod test {
     }
 
     #[test]
-    fn test_hit_test_point() {
+    fn test_hit_test_point_basic() {
         let mut text_layout = CairoText::new();
 
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
-        println!("text width: {}", layout.width());
-        println!("text width: {:?}", layout.hit_test_text_position(3, true));
-        println!("text width: {:?}", layout.hit_test_text_position(4, true));
+        println!("text pos 4 leading: {:?}", layout.hit_test_text_position(4, false));
+        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(4, true));
 
         // test hit test point
-        let hit_test_point = layout.hit_test_point(Point::new(19.0, 0.0));
-        let hit_test_point_text_position = hit_test_point.metrics.text_position;
-        println!("hit_test_point text_position: {}", hit_test_point_text_position);
+        let pt = layout.hit_test_point(Point::new(24.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(25.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(26.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(27.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(28.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 5);
     }
 
 }
