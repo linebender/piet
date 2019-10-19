@@ -5,9 +5,6 @@ use piet::{
 
 use crate::CairoTextLayout;
 
-// it's an inclusive range for both idx and x_point
-// text_position is the index of the grapheme.
-// Hit test text position deals with graphemes, so can just call it.
 impl CairoTextLayout {
     pub(crate) fn get_grapheme_boundaries(&self, text_position: u32) -> GraphemeBoundaries {
         //  0 as default
@@ -19,8 +16,8 @@ impl CairoTextLayout {
         let trailing_edge = self.hit_test_text_position(text_position, true)
                 .expect("internal logic, code point not grapheme boundary");
 
-        res.leading = leading_edge.point_x;
-        res.trailing = trailing_edge.point_x;
+        res.leading = leading_edge.point.x;
+        res.trailing = trailing_edge.point.x;
 
         res
     }

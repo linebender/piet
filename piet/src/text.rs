@@ -50,8 +50,7 @@ pub struct HitTestPoint {
 
 #[derive(Debug, Default)]
 pub struct HitTestTextPosition {
-    pub point_x: f64,
-    pub point_y: f64,
+    pub point: Point,
     pub metrics: HitTestMetrics,
 }
 

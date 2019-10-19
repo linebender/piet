@@ -595,8 +595,10 @@ impl TextLayout for CairoTextLayout {
 
         if (text_position + 1) as usize == grapheme_count && trailing {
             return Some(HitTestTextPosition {
-                point_x: self.font.text_extents(&self.text).x_advance,
-                point_y: 0.0,
+                point: Point {
+                    x: self.font.text_extents(&self.text).x_advance,
+                    y: 0.0,
+                },
                 metrics: HitTestMetrics {
                     text_position,
                     is_text: true,
@@ -617,8 +619,10 @@ impl TextLayout for CairoTextLayout {
             let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance;
 
             Some(HitTestTextPosition {
-                point_x,
-                point_y: 0.0,
+                point: Point {
+                    x: point_x,
+                    y: 0.0,
+                },
                 metrics: HitTestMetrics {
                     text_position,
                     is_text: true,
