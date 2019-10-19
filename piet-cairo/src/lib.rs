@@ -671,14 +671,14 @@ mod test {
 
         let full_layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
 
-        assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point_x as f64), Some(piet_width));
-        assert_eq!(full_layout.hit_test_text_position(2, true).map(|p| p.point_x as f64), Some(pie_width));
-        assert_eq!(full_layout.hit_test_text_position(1, true).map(|p| p.point_x as f64), Some(pi_width));
-        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(p_width));
+        assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point.x as f64), Some(piet_width));
+        assert_eq!(full_layout.hit_test_text_position(2, true).map(|p| p.point.x as f64), Some(pie_width));
+        assert_eq!(full_layout.hit_test_text_position(1, true).map(|p| p.point.x as f64), Some(pi_width));
+        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point.x as f64), Some(p_width));
 
-        assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point_x as f64), Some(null_width));
-        assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point_x as f64), Some(full_layout.width()));
-        assert_eq!(full_layout.hit_test_text_position(10, true).map(|p| p.point_x as f64), None);
+        assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point.x as f64), Some(null_width));
+        assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point.x as f64), Some(full_layout.width()));
+        assert_eq!(full_layout.hit_test_text_position(10, true).map(|p| p.point.x as f64), None);
     }
 
     #[test]
@@ -689,7 +689,7 @@ mod test {
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(layout.width()));
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(layout.width()));
         assert_eq!(input.len(), 2);
 
         // unicode segmentation is wrong on this one for now.
@@ -709,7 +709,7 @@ mod test {
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(layout.width()));
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(layout.width()));
         assert_eq!(input.len(), 7);
         assert_eq!(input.chars().count(), 3);
     }
@@ -728,11 +728,28 @@ mod test {
         assert_eq!(input.graphemes(true).count(), 3);
         assert_eq!(input.len(), 10);
 
-        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(test_layout_0.width()));
-        assert_eq!(layout.hit_test_text_position(1, true).map(|p| p.point_x), Some(test_layout_1.width()));
-        assert_eq!(layout.hit_test_text_position(2, true).map(|p| p.point_x), Some(layout.width()));
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(test_layout_0.width()));
+        assert_eq!(layout.hit_test_text_position(1, true).map(|p| p.point.x), Some(test_layout_1.width()));
+        assert_eq!(layout.hit_test_text_position(2, true).map(|p| p.point.x), Some(layout.width()));
 
-        assert_eq!(layout.hit_test_text_position(1, false).map(|p| p.point_x), Some(test_layout_0.width()));
-        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point_x), Some(test_layout_1.width()));
+        assert_eq!(layout.hit_test_text_position(1, false).map(|p| p.point.x), Some(test_layout_0.width()));
+        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point.x), Some(test_layout_1.width()));
     }
+
+    #[test]
+    fn test_hit_test_point() {
+        let mut text_layout = CairoText::new();
+
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+        println!("text width: {}", layout.width());
+        println!("text width: {:?}", layout.hit_test_text_position(3, true));
+        println!("text width: {:?}", layout.hit_test_text_position(4, true));
+
+        // test hit test point
+        let hit_test_point = layout.hit_test_point(Point::new(19.0, 0.0));
+        let hit_test_point_text_position = hit_test_point.metrics.text_position;
+        println!("hit_test_point text_position: {}", hit_test_point_text_position);
+    }
+
 }

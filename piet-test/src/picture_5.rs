@@ -27,7 +27,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
 
     if let Some(http) = hit_test_text_position {
         // TODO should the points be f64? directwrite only returns f32
-        let cursor_x = http.point_x as f64;
+        let cursor_x = http.point.x as f64;
         println!("cursor_x: {}", cursor_x);
 
         let cursor_brush = rc.solid_brush(Color::rgba8(0x80, 0x80, 0x80, 0xF0));

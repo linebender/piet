@@ -53,23 +53,6 @@ mod test {
     use piet::TextLayout;
 
     #[test]
-    #[ignore]
-    fn test_hit_test_point() {
-        let mut text_layout = CairoText::new();
-
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
-        let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
-        println!("text width: {}", layout.width());
-        println!("text width: {:?}", layout.hit_test_text_position(3, true));
-        println!("text width: {:?}", layout.hit_test_text_position(4, true));
-
-        // test hit test point
-        let hit_test_point = layout.hit_test_point(19.0, 0.0);
-        let hit_test_point_text_position = hit_test_point.metrics.text_position;
-        println!("hit_test_point text_position: {}", hit_test_point_text_position);
-    }
-
-    #[test]
     fn test_grapheme_boundaries() {
         let mut text_layout = CairoText::new();
 
