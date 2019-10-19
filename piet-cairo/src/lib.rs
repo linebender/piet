@@ -537,10 +537,16 @@ impl TextLayout for CairoTextLayout {
     // TODO do with lines
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
-        let end_bounds= self.get_grapheme_boundaries(end as u32);
+        let end_bounds= match self.get_grapheme_boundaries(end as u32) {
+            Some(bounds) => bounds,
+            None => return HitTestPoint::default(),
+        };
 
         let start = 0;
-        let start_bounds = self.get_grapheme_boundaries(start as u32);
+        let start_bounds = match self.get_grapheme_boundaries(start as u32) {
+            Some(bounds) => bounds,
+            None => return HitTestPoint::default(),
+        };
 
         // first test beyond ends
         if point.x > end_bounds.trailing {
@@ -568,7 +574,11 @@ impl TextLayout for CairoTextLayout {
             // TODO this needs to map to the closest grapheme index
             let middle = (left - right) / 2;
 
-            let grapheme_bounds = self.get_grapheme_boundaries(middle as u32);
+            let grapheme_bounds = match self.get_grapheme_boundaries(middle as u32) {
+                Some(bounds) => bounds,
+                None => return HitTestPoint::default(),
+            };
+
             if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
                 return hit;
             }

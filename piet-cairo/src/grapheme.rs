@@ -6,20 +6,18 @@ use piet::{
 use crate::CairoTextLayout;
 
 impl CairoTextLayout {
-    pub(crate) fn get_grapheme_boundaries(&self, text_position: u32) -> GraphemeBoundaries {
+    pub(crate) fn get_grapheme_boundaries(&self, text_position: u32) -> Option<GraphemeBoundaries> {
         //  0 as default
         let mut res = GraphemeBoundaries::default();
         res.idx = text_position;
 
-        let leading_edge = self.hit_test_text_position(text_position, false)
-                .expect("internal logic, code point not grapheme boundary");
-        let trailing_edge = self.hit_test_text_position(text_position, true)
-                .expect("internal logic, code point not grapheme boundary");
+        let leading_edge = self.hit_test_text_position(text_position, false)?;
+        let trailing_edge = self.hit_test_text_position(text_position, true)?;
 
         res.leading = leading_edge.point.x;
         res.trailing = trailing_edge.point.x;
 
-        res
+        Some(res)
     }
 }
 
