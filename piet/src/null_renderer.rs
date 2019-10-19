@@ -157,7 +157,7 @@ impl TextLayout for NullTextLayout {
         42.0
     }
 
-    fn hit_test_point(&self, _x: f64, _y: f64) -> HitTestPoint {
+    fn hit_test_point(&self, _point: Point) -> HitTestPoint {
         HitTestPoint::default()
     }
 

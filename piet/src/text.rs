@@ -1,5 +1,6 @@
 //! Traits for fonts and text handling.
 
+use crate::kurbo::Point;
 use crate::Error;
 
 pub trait Text {
@@ -33,11 +34,9 @@ pub trait TextLayout {
     fn width(&self) -> f64;
 
     /// Given a Point, determine the corresponding text position
-    // TODO use kurbo::Point?
-    fn hit_test_point(&self, point_x: f64, point_y: f64) -> HitTestPoint;
+    fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
     /// Given a text position, determine the corresponding pixel location
-    /// (In this case, the 
     /// (currently consider the text layout just one line)
     fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition>;
 }

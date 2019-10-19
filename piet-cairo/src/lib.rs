@@ -535,11 +535,9 @@ impl TextLayout for CairoTextLayout {
 
     // first assume one line.
     // TODO do with lines
-    // TODO ask about f32/f64, u32/usize
-    // TODO ask what exactly a text position is.
-    // What text position should I report? the byte index or the char index?
-    // If the second, I'll need to iterate over chars.
-    fn hit_test_point(&self, point_x: f64, point_y: f64) -> HitTestPoint {
+    fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        let point_x = point.x;
+
         let end_text_position = self.text.len() - 1;
         let end_grapheme_boundaries = self.get_grapheme_boundaries(end_text_position as u32);
 
