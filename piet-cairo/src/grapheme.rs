@@ -12,23 +12,15 @@ impl CairoTextLayout {
     pub(crate) fn get_grapheme_boundaries(&self, text_position: u32) -> GraphemeBoundaries {
         //  0 as default
         let mut res = GraphemeBoundaries::default();
+        res.idx = text_position;
 
-        // leading edge
-        if text_position != 0 {
-            let leading_idx = (text_position - 1) as u32;
-            let leading_edge = self.hit_test_text_position(leading_idx, true)
-                    .expect("internal logic, code point not grapheme boundary");
-
-            res.start_idx = leading_idx;
-            res.start_x = leading_edge.point_x;
-        }
-
-        // now trailing edge
-        let trailing_edge = self.hit_test_text_position(text_position as u32, true)
+        let leading_edge = self.hit_test_text_position(text_position, false)
+                .expect("internal logic, code point not grapheme boundary");
+        let trailing_edge = self.hit_test_text_position(text_position, true)
                 .expect("internal logic, code point not grapheme boundary");
 
-        res.end_idx = text_position as u32;
-        res.end_x = trailing_edge.point_x;
+        res.leading = leading_edge.point_x;
+        res.trailing = trailing_edge.point_x;
 
         res
     }
@@ -36,18 +28,16 @@ impl CairoTextLayout {
 
 pub fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
     let mut res = HitTestPoint::default();
-    let start_x = grapheme_boundaries.start_x;
-    let end_x = grapheme_boundaries.end_x;
-    let start_idx = grapheme_boundaries.start_idx;
-    let end_idx = grapheme_boundaries.end_idx;
+    let leading = grapheme_boundaries.leading;
+    let trailing = grapheme_boundaries.trailing;
+    let idx = grapheme_boundaries.idx;
 
-    if point_x >= start_x && point_x <= end_x {
-        // if inside, check which boundary it's closer to
-        let is_trailing_hit = (end_x - point_x) > (point_x - start_x);
+    if point_x >= leading && point_x <= trailing {
+        // TODO if inside, check which boundary it's closer to
+        res.is_trailing_hit= true;
 
-        res.is_inside= true;
-        res.is_trailing_hit= is_trailing_hit; // TODO double check what this means?
-        res.metrics.text_position = if is_trailing_hit { end_idx } else { start_idx };
+        res.is_inside = true;
+        res.metrics.text_position = idx;
         res.metrics.is_text = true;
         Some(res)
     } else {
@@ -57,10 +47,9 @@ pub fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundarie
 
 #[derive(Debug, Default)]
 pub struct GraphemeBoundaries {
-    pub start_idx: u32,
-    pub end_idx: u32,
-    pub start_x: f64,
-    pub end_x: f64,
+    pub idx: u32,
+    pub leading: f64,
+    pub trailing: f64,
 }
 
 #[cfg(test)]

@@ -536,73 +536,51 @@ impl TextLayout for CairoTextLayout {
     // first assume one line.
     // TODO do with lines
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        let point_x = point.x;
+        let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
+        let end_bounds= self.get_grapheme_boundaries(end as u32);
 
-        let end_text_position = self.text.len() - 1;
-        let end_grapheme_boundaries = self.get_grapheme_boundaries(end_text_position as u32);
-
-        let start_text_position = 0;
-        let start_grapheme_boundaries = self.get_grapheme_boundaries(start_text_position as u32);
+        let start = 0;
+        let start_bounds = self.get_grapheme_boundaries(start as u32);
 
         // first test beyond ends
-        if point_x > end_grapheme_boundaries.end_x {
-            return HitTestPoint {
-                metrics: HitTestMetrics {
-                    text_position: end_text_position as u32,
-                    is_text: false,
-                },
-                is_inside: false,
-                is_trailing_hit: true,
-            }
+        if point.x > end_bounds.trailing {
+            let mut res = HitTestPoint::default();
+            res.metrics.text_position = end as u32;
         }
-        if point_x < start_grapheme_boundaries.start_x {
-            return HitTestPoint {
-                metrics: HitTestMetrics {
-                    text_position: start_text_position as u32,
-                    is_text: false,
-                },
-                is_inside: false,
-                is_trailing_hit: false,
-            }
+        if point.x < start_bounds.leading {
+            return HitTestPoint::default();
         }
 
-        // then test the beginning
-        if let Some(hit) = point_x_in_grapheme(point_x, &start_grapheme_boundaries) {
+        // then test the beginning and end (common cases)
+        if let Some(hit) = point_x_in_grapheme(point.x, &start_bounds) {
+            return hit;
+        }
+        if let Some(hit) = point_x_in_grapheme(point.x, &end_bounds) {
             return hit;
         }
 
-        // then test the end
-        if let Some(hit) = point_x_in_grapheme(point_x, &end_grapheme_boundaries) {
-            return hit;
-        }
-
-        // Now that we know it's not beginning or end, begin binary search
-        // We'll keep looping until there's a hit; there must be a hit, as we're searching
-        // in a continuous range and we're using only trailing edges. unless there's something
-        // funky that can happen TODO ask Raph about this.
-        // also, I looped, but is it better to recurse? I prefer loop
-        let mut search_start_idx = start_text_position;
-        let mut search_end_idx = end_text_position;
+        // Now that we know it's not beginning or end, begin binary search.
+        // Iterative style
+        let mut left = start;
+        let mut right = end;
         loop {
             // pick halfway point
-            let current_idx = (search_end_idx - search_start_idx) / 2;
+            // TODO this needs to map to the closest grapheme index
+            let middle = (left - right) / 2;
 
-            let grapheme_boundaries = self.get_grapheme_boundaries(current_idx as u32);
-            if let Some(hit) = point_x_in_grapheme(point_x, &grapheme_boundaries) {
+            let grapheme_bounds = self.get_grapheme_boundaries(middle as u32);
+            if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
                 return hit;
             }
 
             // since it's not a hit, check if closer to start or finish
             // and move the appropriate search boundary
-            if point_x < grapheme_boundaries.start_x {
-                search_end_idx = grapheme_boundaries.start_idx as usize; // should this be -1?
-            } else if point_x > grapheme_boundaries.end_x {
-                search_start_idx = grapheme_boundaries.end_idx as usize; // should this be +1?
+            if point.x < grapheme_bounds.leading {
+                right = grapheme_bounds.idx as usize; // should this be -1?
+            } else if point.x > grapheme_bounds.trailing {
+                left = grapheme_bounds.idx as usize; // should this be +1?
             }
-
-            // TODO do I need to add a condition in case something goes terribly wrong
-            // and search start idx crosses search end idx?
-        }
+       }
     }
 
     fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition> {
