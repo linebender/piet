@@ -578,7 +578,6 @@ impl TextLayout for CairoTextLayout {
         let mut right = end;
         loop {
             // pick halfway point
-            // TODO this needs to map to the closest grapheme index
             let middle = left + ((right - left) / 2);
 
             let grapheme_bounds = match self.get_grapheme_boundaries(middle as u32) {
