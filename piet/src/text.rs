@@ -38,7 +38,7 @@ pub trait TextLayout {
 
     /// Given a text position, determine the corresponding pixel location
     /// (currently consider the text layout just one line)
-    fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition>;
+    fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition>;
 }
 
 #[derive(Debug, Default)]
@@ -56,7 +56,7 @@ pub struct HitTestTextPosition {
 
 #[derive(Debug, Default)]
 pub struct HitTestMetrics {
-    pub text_position: u32,
+    pub text_position: usize,
     //length: u32,
     //left: f32,
     //top: f32,

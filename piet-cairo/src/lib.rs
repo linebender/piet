@@ -544,13 +544,13 @@ impl TextLayout for CairoTextLayout {
         // get bounds
         // TODO handle if string is not null yet count is 0?
         let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
-        let end_bounds= match self.get_grapheme_boundaries(end as u32) {
+        let end_bounds= match self.get_grapheme_boundaries(end) {
             Some(bounds) => bounds,
             None => return HitTestPoint::default(),
         };
 
         let start = 0;
-        let start_bounds = match self.get_grapheme_boundaries(start as u32) {
+        let start_bounds = match self.get_grapheme_boundaries(start) {
             Some(bounds) => bounds,
             None => return HitTestPoint::default(),
         };
@@ -558,7 +558,7 @@ impl TextLayout for CairoTextLayout {
         // first test beyond ends
         if point.x > end_bounds.trailing {
             let mut res = HitTestPoint::default();
-            res.metrics.text_position = end as u32;
+            res.metrics.text_position = end;
         }
         if point.x < start_bounds.leading {
             return HitTestPoint::default();
@@ -580,7 +580,7 @@ impl TextLayout for CairoTextLayout {
             // pick halfway point
             let middle = left + ((right - left) / 2);
 
-            let grapheme_bounds = match self.get_grapheme_boundaries(middle as u32) {
+            let grapheme_bounds = match self.get_grapheme_boundaries(middle) {
                 Some(bounds) => bounds,
                 None => return HitTestPoint::default(),
             };
@@ -599,7 +599,7 @@ impl TextLayout for CairoTextLayout {
        }
     }
 
-    fn hit_test_text_position(&self, text_position: u32, trailing: bool) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
         // Using substrings, but now with unicode grapheme awareness
 
         if text_position == 0 && !trailing {

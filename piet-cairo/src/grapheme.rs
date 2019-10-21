@@ -6,7 +6,7 @@ use piet::{
 use crate::CairoTextLayout;
 
 impl CairoTextLayout {
-    pub(crate) fn get_grapheme_boundaries(&self, text_position: u32) -> Option<GraphemeBoundaries> {
+    pub(crate) fn get_grapheme_boundaries(&self, text_position: usize) -> Option<GraphemeBoundaries> {
         //  0 as default
         let mut res = GraphemeBoundaries::default();
         res.idx = text_position;
@@ -42,7 +42,7 @@ pub fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundarie
 
 #[derive(Debug, Default)]
 pub struct GraphemeBoundaries {
-    pub idx: u32,
+    pub idx: usize,
     pub leading: f64,
     pub trailing: f64,
 }
