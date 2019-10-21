@@ -11,6 +11,7 @@ use crate::conv::{
 use crate::error::WrapError;
 
 use std::borrow::Cow;
+use std::convert::TryInto;
 
 use winapi::shared::basetsd::UINT32;
 use winapi::um::dcommon::D2D_SIZE_U;
@@ -573,8 +574,9 @@ impl TextLayout for D2DTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        // TODO lossy going from f64 to f32, any other options here?
         let htp = self.0.hit_test_point(
-            point.x as f32, // TODO how to deal with conversion
+            point.x as f32,
             point.y as f32,
         );
 
@@ -588,8 +590,11 @@ impl TextLayout for D2DTextLayout {
         }
     }
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
-        // TODO deal with conversion
-        self.0.hit_test_text_position(text_position as u32, trailing)
+        // TODO should we panic instead? Or we can just document behavior,
+        // it's unlikely to index such a large text.
+        let idx = text_position.try_into().ok()?;
+
+        self.0.hit_test_text_position(idx, trailing)
             .map(|http| {
                 HitTestTextPosition {
                     point: Point {
