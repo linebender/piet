@@ -610,3 +610,125 @@ impl TextLayout for D2DTextLayout {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use crate::*;
+    use piet::TextLayout;
+
+    #[test]
+    fn test_hit_test_text_position() {
+        let dwrite = directwrite::factory::Factory::new().unwrap();
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+
+        let layout = text_layout.new_text_layout(&font, "piet").build().unwrap();
+        let piet_width = layout.width();
+
+        let layout = text_layout.new_text_layout(&font, "pie").build().unwrap();
+        let pie_width = layout.width();
+
+        let layout = text_layout.new_text_layout(&font, "pi").build().unwrap();
+        let pi_width = layout.width();
+
+        let layout = text_layout.new_text_layout(&font, "p").build().unwrap();
+        let p_width = layout.width();
+
+        let layout = text_layout.new_text_layout(&font, "").build().unwrap();
+        let null_width = layout.width();
+
+        let full_layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+
+        assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point.x as f64), Some(piet_width));
+        assert_eq!(full_layout.hit_test_text_position(2, true).map(|p| p.point.x as f64), Some(pie_width));
+        assert_eq!(full_layout.hit_test_text_position(1, true).map(|p| p.point.x as f64), Some(pi_width));
+        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point.x as f64), Some(p_width));
+
+        assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point.x as f64), Some(null_width));
+        assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point.x as f64), Some(full_layout.width()));
+        assert_eq!(full_layout.hit_test_text_position(10, true).map(|p| p.point.x as f64), None);
+    }
+
+    #[test]
+    fn test_hit_test_text_position_complex_0() {
+        let dwrite = directwrite::factory::Factory::new().unwrap();
+
+        let input = "é";
+
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(layout.width()));
+        assert_eq!(input.len(), 2);
+
+        // unicode segmentation is wrong on this one for now.
+        //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
+
+        //let mut text_layout = D2DText::new();
+        //let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        //let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        //assert_eq!(input.graphemes(true).count(), 1);
+        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
+        //assert_eq!(input.len(), 17);
+
+        let input = "\u{0023}\u{FE0F}\u{20E3}"; // #️⃣
+
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(layout.width()));
+        assert_eq!(input.len(), 7);
+        assert_eq!(input.chars().count(), 3);
+    }
+
+    #[test]
+    fn test_hit_test_text_position_complex_1() {
+        let dwrite = directwrite::factory::Factory::new().unwrap();
+
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
+
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+
+        let test_layout_0 = text_layout.new_text_layout(&font, "é").build().unwrap();
+        let test_layout_1 = text_layout.new_text_layout(&font, "é\u{0023}\u{FE0F}\u{20E3}").build().unwrap();
+
+        //assert_eq!(input.graphemes(true).count(), 3);
+        assert_eq!(input.len(), 10);
+
+        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(test_layout_0.width()));
+        assert_eq!(layout.hit_test_text_position(1, true).map(|p| p.point.x), Some(test_layout_1.width()));
+        assert_eq!(layout.hit_test_text_position(2, true).map(|p| p.point.x), Some(layout.width()));
+
+        assert_eq!(layout.hit_test_text_position(1, false).map(|p| p.point.x), Some(test_layout_0.width()));
+        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point.x), Some(test_layout_1.width()));
+    }
+
+    #[test]
+    fn test_hit_test_point_basic() {
+        let dwrite = directwrite::factory::Factory::new().unwrap();
+
+        let mut text_layout = D2DText::new(&dwrite);
+
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+        println!("text pos 4 leading: {:?}", layout.hit_test_text_position(4, false));
+        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(4, true));
+
+        // test hit test point
+        let pt = layout.hit_test_point(Point::new(24.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(25.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(26.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(27.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(28.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 5);
+    }
+
+}
