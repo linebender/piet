@@ -578,7 +578,7 @@ impl TextLayout for D2DTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        // TODO lossy going from f64 to f32, any other options here?
+        // lossy from f64 to f32, but shouldn't have too much impact
         let htp = self.layout.hit_test_point(
             point.x as f32,
             point.y as f32,
@@ -593,10 +593,16 @@ impl TextLayout for D2DTextLayout {
             is_trailing_hit: htp.is_trailing_hit,
         }
     }
+
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
-        // TODO should we panic instead? Or we can just document behavior,
-        // it's unlikely to index such a large text.
-        let idx = text_position.try_into().ok()?;
+        // now convert the ut8 index to utf16
+        let idx_16 = count_utf16(&self.text[0..text_position]);
+
+        // panic or Result are also fine options for dealing with overflow. Using Option here
+        // because it's already present and convenient.
+        // TODO this should probably go before convertin to utf16, since that's relatively slow
+        let idx_16 = idx_16.try_into().ok()?;
+
 
         // check for idx out of bounds.
         // Since we're testing on the String in Windows (utf-16), need to convert count.
@@ -606,13 +612,13 @@ impl TextLayout for D2DTextLayout {
         let line_len = line_metrics.iter()
             .inspect(|l| println!("whitespace: {}", l.trailing_whitespace_length()))
             .map(|l| l.length())
-            .nth(0).unwrap() as usize;
-            //.sum::<u32>() as usize;
+            //.nth(0).unwrap() as usize;
+            .sum::<u32>()
+            // TODO directwrite wrapper adds an extra \u{0}, so subtract 1 from len
+            // https://docs.rs/directwrite/0.1.4/src/directwrite/text_layout/builder.rs.html#34
+            - 1;
 
-        let text_len_8_16 = count_utf16(&self.text);
-
-        println!("text_position: {}, line_len_16: {}, len_8_16: {}, len_8: {}", text_position, line_len, text_len_8_16, self.text.len());
-        if text_position >= line_len {
+        if idx_16 >= line_len {
             return None;
         }
 
@@ -620,7 +626,7 @@ impl TextLayout for D2DTextLayout {
         // TODO quick fix until directwrite fixes bool bug
         let trailing = !trailing;
 
-        self.layout.hit_test_text_position(idx, trailing)
+        self.layout.hit_test_text_position(idx_16, trailing)
             .map(|http| {
                 HitTestTextPosition {
                     point: Point {
@@ -657,18 +663,6 @@ mod test {
     use piet::TextLayout;
 
     #[test]
-    fn test_hit_test_text_position_super_basic() {
-        let dwrite = directwrite::factory::Factory::new().unwrap();
-        let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
-
-        let full_layout = text_layout.new_text_layout(&font, "\u{0070}").build().unwrap();
-
-        assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point.x as f64), Some(0.));
-    }
-
-    #[test]
-    #[ignore]
     fn test_hit_test_text_position_basic() {
         let dwrite = directwrite::factory::Factory::new().unwrap();
         let mut text_layout = D2DText::new(&dwrite);
