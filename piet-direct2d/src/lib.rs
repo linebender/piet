@@ -67,7 +67,10 @@ pub struct D2DFontBuilder<'a> {
     name: String,
 }
 
-pub struct D2DTextLayout(text_layout::TextLayout);
+pub struct D2DTextLayout {
+    text: String,
+    layout: text_layout::TextLayout,
+}
 
 pub struct D2DTextLayoutBuilder<'a> {
     builder: text_layout::TextLayoutBuilder<'a>,
@@ -369,7 +372,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // TODO: bounding box for text
         let brush = brush.make_brush(self, || Rect::ZERO);
         let mut line_metrics = Vec::with_capacity(1);
-        layout.0.get_line_metrics(&mut line_metrics);
+        layout.layout.get_line_metrics(&mut line_metrics);
         if line_metrics.is_empty() {
             // Layout is empty, don't bother drawing.
             return;
@@ -381,7 +384,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let text_options = DrawTextOptions::NONE;
 
         self.rt
-            .draw_text_layout(pos, &layout.0, &*brush, text_options);
+            .draw_text_layout(pos, &layout.layout, &*brush, text_options);
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -556,26 +559,27 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
     type Out = D2DTextLayout;
 
     fn build(self) -> Result<Self::Out, Error> {
-        Ok(D2DTextLayout(
-            self.builder
-                .with_text(&self.text)
-                .with_font(&self.format)
-                .with_width(1e6) // TODO: probably want to support wrapping
-                .with_height(1e6)
-                .build()
-                .wrap()?,
-        ))
+        Ok(D2DTextLayout {
+            layout: self.builder
+                    .with_text(&self.text)
+                    .with_font(&self.format)
+                    .with_width(1e6) // TODO: probably want to support wrapping
+                    .with_height(1e6)
+                    .build()
+                    .wrap()?,
+            text: self.text,
+        })
     }
 }
 
 impl TextLayout for D2DTextLayout {
     fn width(&self) -> f64 {
-        self.0.get_metrics().width() as f64
+        self.layout.get_metrics().width() as f64
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // TODO lossy going from f64 to f32, any other options here?
-        let htp = self.0.hit_test_point(
+        let htp = self.layout.hit_test_point(
             point.x as f32,
             point.y as f32,
         );
@@ -594,10 +598,29 @@ impl TextLayout for D2DTextLayout {
         // it's unlikely to index such a large text.
         let idx = text_position.try_into().ok()?;
 
+        // check for idx out of bounds.
+        // Since we're testing on the String in Windows (utf-16), need to convert count.
+        // Temp: use all lines aggregated
+        let mut line_metrics = vec![];
+        self.layout.get_line_metrics(&mut line_metrics);
+        let line_len = line_metrics.iter()
+            .inspect(|l| println!("whitespace: {}", l.trailing_whitespace_length()))
+            .map(|l| l.length())
+            .nth(0).unwrap() as usize;
+            //.sum::<u32>() as usize;
+
+        let text_len_8_16 = count_utf16(&self.text);
+
+        println!("text_position: {}, line_len_16: {}, len_8_16: {}, len_8: {}", text_position, line_len, text_len_8_16, self.text.len());
+        if text_position >= line_len {
+            return None;
+        }
+
+
         // TODO quick fix until directwrite fixes bool bug
         let trailing = !trailing;
 
-        self.0.hit_test_text_position(idx, trailing)
+        self.layout.hit_test_text_position(idx, trailing)
             .map(|http| {
                 HitTestTextPosition {
                     point: Point {
@@ -613,12 +636,39 @@ impl TextLayout for D2DTextLayout {
     }
 }
 
+/// Counts the number of utf-16 code units in the given string.
+/// from xi-editor
+pub(crate) fn count_utf16(s: &str) -> usize {
+    let mut utf16_count = 0;
+    for &b in s.as_bytes() {
+        if (b as i8) >= -0x40 {
+            utf16_count += 1;
+        }
+        if b >= 0xf0 {
+            utf16_count += 1;
+        }
+    }
+    utf16_count
+}
+
 #[cfg(test)]
 mod test {
     use crate::*;
     use piet::TextLayout;
 
     #[test]
+    fn test_hit_test_text_position_super_basic() {
+        let dwrite = directwrite::factory::Factory::new().unwrap();
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+
+        let full_layout = text_layout.new_text_layout(&font, "\u{0070}").build().unwrap();
+
+        assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point.x as f64), Some(0.));
+    }
+
+    #[test]
+    #[ignore]
     fn test_hit_test_text_position_basic() {
         let dwrite = directwrite::factory::Factory::new().unwrap();
         let mut text_layout = D2DText::new(&dwrite);
