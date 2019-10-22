@@ -604,8 +604,9 @@ impl TextLayout for D2DTextLayout {
         let idx_16 = idx_16.try_into().ok()?;
 
 
-        // check for idx out of bounds.
-        // Since we're testing on the String in Windows (utf-16), need to convert count.
+        // Check for idx out of bounds.
+        // For this, we need the line length in terms of text positions as reported
+        // by directwrite.
         // Temp: use all lines aggregated
         let mut line_metrics = vec![];
         self.layout.get_line_metrics(&mut line_metrics);
