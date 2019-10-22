@@ -597,6 +597,7 @@ impl TextLayout for D2DTextLayout {
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
         // now convert the ut8 index to utf16
         let idx_16 = count_utf16(&self.text[0..text_position]);
+        println!("code unit offset:: utf8: {}, utf16: {}", text_position, idx_16);
 
         // panic or Result are also fine options for dealing with overflow. Using Option here
         // because it's already present and convenient.
@@ -611,7 +612,6 @@ impl TextLayout for D2DTextLayout {
         let mut line_metrics = vec![];
         self.layout.get_line_metrics(&mut line_metrics);
         let line_len = line_metrics.iter()
-            .inspect(|l| println!("whitespace: {}", l.trailing_whitespace_length()))
             .map(|l| l.length())
             //.nth(0).unwrap() as usize;
             .sum::<u32>()
@@ -693,15 +693,10 @@ mod test {
 
         assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point.x as f64), Some(null_width));
         assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point.x as f64), Some(full_layout.width()));
-
-        // TODO When idx beyond end of string, it still gives the full width of layout instead of
-        // None. Check directwrite api.
-        println!("{}", full_layout.width());
         assert_eq!(full_layout.hit_test_text_position(10, true).map(|p| p.point.x as f64), None);
     }
 
     #[test]
-    #[ignore]
     fn test_hit_test_text_position_complex_0() {
         let dwrite = directwrite::factory::Factory::new().unwrap();
 
@@ -737,7 +732,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_hit_test_text_position_complex_1() {
         let dwrite = directwrite::factory::Factory::new().unwrap();
 
@@ -753,12 +747,13 @@ mod test {
         //assert_eq!(input.graphemes(true).count(), 3);
         assert_eq!(input.len(), 10);
 
+        // Note: text position is in terms of utf8 code units
         assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(test_layout_0.width()));
-        assert_eq!(layout.hit_test_text_position(1, true).map(|p| p.point.x), Some(test_layout_1.width()));
-        assert_eq!(layout.hit_test_text_position(2, true).map(|p| p.point.x), Some(layout.width()));
+        assert_eq!(layout.hit_test_text_position(2, true).map(|p| p.point.x), Some(test_layout_1.width()));
+        assert_eq!(layout.hit_test_text_position(9, true).map(|p| p.point.x), Some(layout.width()));
 
-        assert_eq!(layout.hit_test_text_position(1, false).map(|p| p.point.x), Some(test_layout_0.width()));
-        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point.x), Some(test_layout_1.width()));
+        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point.x), Some(test_layout_0.width()));
+        assert_eq!(layout.hit_test_text_position(9, false).map(|p| p.point.x), Some(test_layout_1.width()));
     }
 
     #[test]
