@@ -592,6 +592,7 @@ impl TextLayout for D2DTextLayout {
         // utf-16 text position reached.
         //
         // TODO ask about text_position, it looks like windows returns last index;
+        // can't use the text_position of last index from directwrite, it has an extra code unit.
         let idx_8 = count_until_utf16(&self.text, text_position)
             .unwrap_or(self.text.len() - 1);
             //.expect("(logic error?) utf16 text position not found in string");
@@ -647,7 +648,7 @@ impl TextLayout for D2DTextLayout {
                         y: http.point_y as f64,
                     },
                     metrics: HitTestMetrics {
-                        text_position: http.metrics.text_position() as usize,
+                        text_position: text_position, // no need to use directwrite return value
                         is_text: http.metrics.is_text(),
                     },
                 }
@@ -912,5 +913,3 @@ mod test {
         assert_eq!(count_until_utf16(input,5), None);
     }
 }
-
-// TODO fix text_position in HitTestMetrics in HitTestTextPosition
