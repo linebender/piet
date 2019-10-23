@@ -591,10 +591,9 @@ impl TextLayout for D2DTextLayout {
         // Strategy: count up in utf16 and utf8 simultaneously, stop when
         // utf-16 text position reached.
         //
-        // TODO ask about text_position, it looks like windows returns one index
-        // beyond end of string. I would consider returning an Option somewhere.
+        // TODO ask about text_position, it looks like windows returns last index;
         let idx_8 = count_until_utf16(&self.text, text_position)
-            .unwrap_or(self.text.len());
+            .unwrap_or(self.text.len() - 1);
             //.expect("(logic error?) utf16 text position not found in string");
 
         HitTestPoint {
@@ -846,7 +845,8 @@ mod test {
         println!("layout_width: {:?}", layout.width()); // 46.916015625
 
         let pt = layout.hit_test_point(Point::new(48.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.metrics.text_position, 9); // last text position
+        panic!();
         assert_eq!(pt.is_trailing_hit, true);
         assert_eq!(pt.is_inside, false);
     }
