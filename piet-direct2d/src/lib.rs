@@ -584,9 +584,19 @@ impl TextLayout for D2DTextLayout {
             point.y as f32,
         );
 
+        let text_position = htp.metrics.text_position() as usize;
+
+        // Convert text position from utf-16 code units to
+        // utf-8 code units.
+        // Strategy: count up in utf16 and utf8 simultaneously, stop when
+        // utf-16 text position reached.
+        let idx_8 = count_until_utf16(&self.text, text_position)
+            .expect("utf16 text position not found in string");
+
+
         HitTestPoint {
             metrics: HitTestMetrics {
-                text_position: htp.metrics.text_position() as usize,
+                text_position: idx_8,
                 is_text: htp.metrics.is_text(),
             },
             is_inside: htp.is_inside,
@@ -596,8 +606,8 @@ impl TextLayout for D2DTextLayout {
 
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
         // now convert the ut8 index to utf16
+        // TODO this can panic; should try next text_position
         let idx_16 = count_utf16(&self.text[0..text_position]);
-        println!("code unit offset:: utf8: {}, utf16: {}", text_position, idx_16);
 
         // panic or Result are also fine options for dealing with overflow. Using Option here
         // because it's already present and convenient.
@@ -656,6 +666,28 @@ pub(crate) fn count_utf16(s: &str) -> usize {
         }
     }
     utf16_count
+}
+
+/// returns utf8 text position (code unit offset)
+/// at the given utf-16 text position
+pub(crate) fn count_until_utf16(s: &str, text_position: usize) -> Option<usize> {
+    let mut utf8_count = 0;
+    let mut utf16_count = 0;
+    for &b in s.as_bytes() {
+        if (b as i8) >= -0x40 {
+            utf16_count += 1;
+        }
+        if b >= 0xf0 {
+            utf16_count += 1;
+        }
+        utf8_count += 1;
+
+        if utf16_count == text_position {
+            return Some(utf8_count);
+        }
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -762,7 +794,6 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_hit_test_point_basic() {
         let dwrite = directwrite::factory::Factory::new().unwrap();
 
@@ -770,19 +801,19 @@ mod test {
 
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
-        println!("text pos 4 leading: {:?}", layout.hit_test_text_position(4, false));
-        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(4, true));
+        println!("text pos 4 leading: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
+        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(4, true)); // 23.58984375
 
         // test hit test point
+        let pt = layout.hit_test_point(Point::new(21.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(22.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(23.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
         let pt = layout.hit_test_point(Point::new(24.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.metrics.text_position, 5);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
-        let pt = layout.hit_test_point(Point::new(26.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
-        let pt = layout.hit_test_point(Point::new(27.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
-        let pt = layout.hit_test_point(Point::new(28.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
     }
 
