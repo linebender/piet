@@ -593,7 +593,6 @@ impl TextLayout for D2DTextLayout {
         let idx_8 = count_until_utf16(&self.text, text_position)
             .expect("utf16 text position not found in string");
 
-
         HitTestPoint {
             metrics: HitTestMetrics {
                 text_position: idx_8,
@@ -805,16 +804,30 @@ mod test {
         println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(4, true)); // 23.58984375
 
         // test hit test point
+        // all inside
         let pt = layout.hit_test_point(Point::new(21.0, 0.0));
         assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(22.0, 0.0));
         assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.is_trailing_hit, true);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
         assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.is_trailing_hit, true);
         let pt = layout.hit_test_point(Point::new(24.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_trailing_hit, false);
+
+        // outside
+        println!("layout_width: {:?}", layout.width()); // 46.916015625
+
+        let pt = layout.hit_test_point(Point::new(48.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.is_inside, false);
     }
 
 }
