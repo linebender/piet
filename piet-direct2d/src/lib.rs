@@ -590,8 +590,12 @@ impl TextLayout for D2DTextLayout {
         // utf-8 code units.
         // Strategy: count up in utf16 and utf8 simultaneously, stop when
         // utf-16 text position reached.
+        //
+        // TODO ask about text_position, it looks like windows returns one index
+        // beyond end of string. I would consider returning an Option somewhere.
         let idx_8 = count_until_utf16(&self.text, text_position)
-            .expect("utf16 text position not found in string");
+            .unwrap_or(self.text.len());
+            //.expect("(logic error?) utf16 text position not found in string");
 
         HitTestPoint {
             metrics: HitTestMetrics {
@@ -669,9 +673,10 @@ pub(crate) fn count_utf16(s: &str) -> usize {
 
 /// returns utf8 text position (code unit offset)
 /// at the given utf-16 text position
-pub(crate) fn count_until_utf16(s: &str, text_position: usize) -> Option<usize> {
+pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<usize> {
     let mut utf8_count = 0;
     let mut utf16_count = 0;
+    println!("");
     for &b in s.as_bytes() {
         if (b as i8) >= -0x40 {
             utf16_count += 1;
@@ -679,11 +684,27 @@ pub(crate) fn count_until_utf16(s: &str, text_position: usize) -> Option<usize> 
         if b >= 0xf0 {
             utf16_count += 1;
         }
+
         utf8_count += 1;
 
-        if utf16_count == text_position {
-            return Some(utf8_count);
+        // When count goes beyond text position, it means the start boundary of the utf16 code unit is passed.
+        // So the utf8 count needs to be backtracked 1.
+        //
+        // char  | utf8 | utf16 | 16_count
+        // é     | 0    | 0     | 0
+        //       | 1    | -     | 1
+        // {0023}| 2    | 1     | 1
+        // {FE0F}| 3    | 2     | 2
+        //       | 4    | -     | 3
+        //       | 5    | -     | 3
+        // {20E3}| 6    | 3     | 3
+        //       | 7    | -     | 4
+        //       | 8    | -     | 4
+        // 1     | 9    | -     | 4
+        if utf16_count == utf16_text_position + 1 {
+            return Some(utf8_count - 1);
         }
+
     }
 
     None
@@ -830,4 +851,62 @@ mod test {
         assert_eq!(pt.is_inside, false);
     }
 
+    #[test]
+    fn test_hit_test_point_complex() {
+        let dwrite = directwrite::factory::Factory::new().unwrap();
+
+        // Notes on this input:
+        // 5 code points
+        // 5 utf-16 code units
+        // 10 utf-8 code units (2/1/3/3/1)
+        // 3 graphemes
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
+
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        println!("text pos 2 leading: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
+        println!("text pos 2 trailing: {:?}", layout.hit_test_text_position(2, true)); // 18.0
+
+        let pt = layout.hit_test_point(Point::new(2.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(4.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_trailing_hit, true);
+        let pt = layout.hit_test_point(Point::new(7.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(10.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(14.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.is_trailing_hit, true);
+        let pt = layout.hit_test_point(Point::new(18.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(19.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.is_trailing_hit, false);
+    }
+
+    #[test]
+    fn test_count_until_utf16() {
+        // Notes on this input:
+        // 5 code points
+        // 5 utf-16 code units
+        // 10 utf-8 code units (2/1/3/3/1)
+        // 3 graphemes
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
+
+        assert_eq!(count_until_utf16(input,0), Some(0));
+        assert_eq!(count_until_utf16(input,1), Some(2));
+        assert_eq!(count_until_utf16(input,2), Some(3));
+        assert_eq!(count_until_utf16(input,3), Some(6));
+        assert_eq!(count_until_utf16(input,4), Some(9));
+        assert_eq!(count_until_utf16(input,5), None);
+    }
 }
+
+// TODO fix text_position in HitTestMetrics in HitTestTextPosition
