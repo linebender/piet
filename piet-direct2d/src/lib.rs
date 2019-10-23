@@ -846,8 +846,12 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(48.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9); // last text position
-        panic!();
         assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0); // first text position
+        assert_eq!(pt.is_trailing_hit, false);
         assert_eq!(pt.is_inside, false);
     }
 
