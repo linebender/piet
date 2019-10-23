@@ -735,6 +735,11 @@ mod test {
     fn test_hit_test_text_position_complex_1() {
         let dwrite = directwrite::factory::Factory::new().unwrap();
 
+        // Notes on this input:
+        // 5 code points
+        // 5 utf-16 code units
+        // 10 utf-8 code units (2/1/3/3/1)
+        // 3 graphemes
         let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
 
         let mut text_layout = D2DText::new(&dwrite);
