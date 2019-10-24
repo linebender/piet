@@ -607,9 +607,14 @@ impl TextLayout for D2DTextLayout {
         }
     }
 
+    /// Hit Test for Text Position.
+    ///
+    /// Given a text position (as a utf-8 code unit), returns the `x` offset of the associated grapheme cluster (generally).
+    /// Setting `trailing` to `true` will give the trailing offset, otherwise the leading offset.
+    /// Can panic if text position is not at a code point boundary, or if it's out of bounds.
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
-        // now convert the ut8 index to utf16
-        // TODO this can panic; should try next text_position
+        // Now convert the utf8 index to utf16.
+        // This can panic;
         let idx_16 = count_utf16(&self.text[0..text_position]);
 
         // panic or Result are also fine options for dealing with overflow. Using Option here
@@ -619,6 +624,9 @@ impl TextLayout for D2DTextLayout {
 
 
         // Check for idx out of bounds.
+        // Motivation: Directwrite will just return the line width if text position is
+        // out of bounds. So in order for us to return None, we need and explicit check.
+        //
         // For this, we need the line length in terms of text positions as reported
         // by directwrite.
         // Temp: use all lines aggregated
@@ -632,10 +640,9 @@ impl TextLayout for D2DTextLayout {
             // https://docs.rs/directwrite/0.1.4/src/directwrite/text_layout/builder.rs.html#34
             - 1;
 
-        if idx_16 >= line_len {
-            return None;
-        }
-
+        //if idx_16 >= line_len {
+        //    return None;
+        //}
 
         // TODO quick fix until directwrite fixes bool bug
         let trailing = !trailing;
@@ -676,7 +683,6 @@ pub(crate) fn count_utf16(s: &str) -> usize {
 pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<usize> {
     let mut utf8_count = 0;
     let mut utf16_count = 0;
-    println!("");
     for &b in s.as_bytes() {
         if (b as i8) >= -0x40 {
             utf16_count += 1;
@@ -684,8 +690,6 @@ pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<u
         if b >= 0xf0 {
             utf16_count += 1;
         }
-
-        utf8_count += 1;
 
         // When count goes beyond text position, it means the start boundary of the utf16 code unit is passed.
         // So the utf8 count needs to be backtracked 1.
@@ -701,10 +705,11 @@ pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<u
         //       | 7    | -     | 4
         //       | 8    | -     | 4
         // 1     | 9    | -     | 4
-        if utf16_count == utf16_text_position + 1 {
-            return Some(utf8_count - 1);
+        if utf16_count > utf16_text_position {
+            return Some(utf8_count);
         }
 
+        utf8_count += 1;
     }
 
     None
