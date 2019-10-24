@@ -613,6 +613,11 @@ impl TextLayout for D2DTextLayout {
     /// Setting `trailing` to `true` will give the trailing offset, otherwise the leading offset.
     /// Can panic if text position is not at a code point boundary, or if it's out of bounds.
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
+        // Note: Directwrite will just return the line width if text position is
+        // out of bounds. This is what want for piet; return line width for the last text position
+        // (equal to line.len()). This is basically returning line width for the last cursor
+        // position.
+
         // Now convert the utf8 index to utf16.
         // This can panic;
         let idx_16 = count_utf16(&self.text[0..text_position]);
@@ -621,28 +626,6 @@ impl TextLayout for D2DTextLayout {
         // because it's already present and convenient.
         // TODO this should probably go before convertin to utf16, since that's relatively slow
         let idx_16 = idx_16.try_into().ok()?;
-
-
-        // Check for idx out of bounds.
-        // Motivation: Directwrite will just return the line width if text position is
-        // out of bounds. So in order for us to return None, we need and explicit check.
-        //
-        // For this, we need the line length in terms of text positions as reported
-        // by directwrite.
-        // Temp: use all lines aggregated
-        let mut line_metrics = vec![];
-        self.layout.get_line_metrics(&mut line_metrics);
-        let line_len = line_metrics.iter()
-            .map(|l| l.length())
-            //.nth(0).unwrap() as usize;
-            .sum::<u32>()
-            // TODO directwrite wrapper adds an extra \u{0}, so subtract 1 from len
-            // https://docs.rs/directwrite/0.1.4/src/directwrite/text_layout/builder.rs.html#34
-            - 1;
-
-        //if idx_16 >= line_len {
-        //    return None;
-        //}
 
         // TODO quick fix until directwrite fixes bool bug
         let trailing = !trailing;
@@ -750,7 +733,7 @@ mod test {
 
         assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point.x as f64), Some(null_width));
         assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point.x as f64), Some(full_layout.width()));
-        assert_eq!(full_layout.hit_test_text_position(10, true).map(|p| p.point.x as f64), None);
+        assert_eq!(full_layout.hit_test_text_position(10, false).map(|p| p.point.x as f64), Some(full_layout.width()));
     }
 
     #[test]
