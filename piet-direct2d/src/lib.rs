@@ -722,6 +722,19 @@ mod test {
     use crate::*;
     use piet::TextLayout;
 
+    // - x: expression that results in Option<f64>
+    // - target: f64
+    // - tolerance: in f64
+    fn assert_close_to(some_x: Option<f64>, target: f64, tolerance: f64) {
+        let min = target - tolerance;
+        let max = target + tolerance;
+        if let Some(x) = some_x {
+            assert!(x <= max && x >= min);
+        } else {
+            panic!("some_x cannot be None");
+        }
+    }
+
     #[test]
     fn test_hit_test_text_position_basic() {
         let dwrite = directwrite::factory::Factory::new().unwrap();
@@ -748,12 +761,12 @@ mod test {
         let full_layout = text_layout.new_text_layout(&font, input).build().unwrap();
         let full_width = full_layout.width();
 
-        assert_eq!(full_layout.hit_test_text_position(4, false).map(|p| p.point.x as f64), Some(piet_width));
-        assert_eq!(full_layout.hit_test_text_position(3, false).map(|p| p.point.x as f64), Some(pie_width));
-        assert_eq!(full_layout.hit_test_text_position(2, false).map(|p| p.point.x as f64), Some(pi_width));
-        assert_eq!(full_layout.hit_test_text_position(1, false).map(|p| p.point.x as f64), Some(p_width));
-        assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point.x as f64), Some(null_width));
-        assert_eq!(full_layout.hit_test_text_position(10, false).map(|p| p.point.x as f64), Some(full_width));
+        assert_close_to(full_layout.hit_test_text_position(4, false).map(|p| p.point.x as f64), piet_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(3, false).map(|p| p.point.x as f64), pie_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(2, false).map(|p| p.point.x as f64), pi_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(1, false).map(|p| p.point.x as f64), p_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(0, false).map(|p| p.point.x as f64), null_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(10, false).map(|p| p.point.x as f64), full_width, 3.0);
 
         // until BIDI, trailing_hit = true will always return None
         assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point.x as f64), None);
@@ -770,8 +783,8 @@ mod test {
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_eq!(layout.hit_test_text_position(0, false).map(|p| p.point.x), Some(0.0));
-        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point.x), Some(layout.width()));
+        assert_close_to(layout.hit_test_text_position(0, false).map(|p| p.point.x), 0.0, 3.0);
+        assert_close_to(layout.hit_test_text_position(2, false).map(|p| p.point.x), layout.width(), 3.0);
 
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
@@ -792,8 +805,8 @@ mod test {
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_eq!(layout.hit_test_text_position(0, false).map(|p| p.point.x), Some(0.0));
-        assert_eq!(layout.hit_test_text_position(7, false).map(|p| p.point.x), Some(layout.width()));
+        assert_close_to(layout.hit_test_text_position(0, false).map(|p| p.point.x), 0.0, 3.0);
+        assert_close_to(layout.hit_test_text_position(7, false).map(|p| p.point.x), layout.width(), 3.0);
     }
 
     #[test]
@@ -817,11 +830,11 @@ mod test {
         let test_layout_2 = text_layout.new_text_layout(&font, &input[0..10]).build().unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_eq!(layout.hit_test_text_position(0, false).map(|p| p.point.x), Some(0.0));
-        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point.x), Some(test_layout_0.width()));
-        assert_eq!(layout.hit_test_text_position(9, false).map(|p| p.point.x), Some(test_layout_1.width()));
-        assert_eq!(layout.hit_test_text_position(10, false).map(|p| p.point.x), Some(test_layout_2.width()));
-        assert_eq!(layout.hit_test_text_position(14, false).map(|p| p.point.x), Some(layout.width()));
+        assert_close_to(layout.hit_test_text_position(0, false).map(|p| p.point.x), 0.0, 3.0);
+        assert_close_to(layout.hit_test_text_position(2, false).map(|p| p.point.x), test_layout_0.width(), 3.0);
+        assert_close_to(layout.hit_test_text_position(9, false).map(|p| p.point.x), test_layout_1.width(), 3.0);
+        assert_close_to(layout.hit_test_text_position(10, false).map(|p| p.point.x), test_layout_2.width(), 3.0);
+        assert_close_to(layout.hit_test_text_position(14, false).map(|p| p.point.x), layout.width(), 3.0);
     }
 
     #[test]
