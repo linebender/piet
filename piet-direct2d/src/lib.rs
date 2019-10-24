@@ -722,7 +722,7 @@ mod test {
     use crate::*;
     use piet::TextLayout;
 
-    // - x: expression that results in Option<f64>
+    // - x: calculated value
     // - target: f64
     // - tolerance: in f64
     fn assert_close_to(x: f64, target: f64, tolerance: f64) {
