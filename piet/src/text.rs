@@ -42,12 +42,18 @@ pub trait TextLayout {
 }
 
 #[derive(Debug, Default)]
+/// return values for `hit_test_point`.
+/// - `metrics.text_position` will give you the text position.
+/// - `is_inside` indicates whether the hit test point landed within the text.
+/// - `is_trailing_hit` will always return `false` for now, until BIDI support is implemented.
 pub struct HitTestPoint {
     pub metrics: HitTestMetrics,
     pub is_inside: bool,
     pub is_trailing_hit: bool,
 }
 
+/// return values for `hit_test_text_position`.
+/// - `point.x` will give you the x offset.
 #[derive(Debug, Default)]
 pub struct HitTestTextPosition {
     pub point: Point,
