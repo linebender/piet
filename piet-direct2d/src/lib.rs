@@ -577,6 +577,13 @@ impl TextLayout for D2DTextLayout {
         self.layout.get_metrics().width() as f64
     }
 
+    /// Hit Test for Point
+    ///
+    /// Given a Point, returns the text position which corresponds to the nearest leading grapheme
+    /// cluster boundary.
+    ///
+    /// `text.len()` is a valid position; it's the last valid "cursor position" at the end of the
+    /// line.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // lossy from f64 to f32, but shouldn't have too much impact
         let htp = self.layout.hit_test_point(
@@ -584,7 +591,14 @@ impl TextLayout for D2DTextLayout {
             point.y as f32,
         );
 
-        let text_position = htp.metrics.text_position() as usize;
+        // Round up to next grapheme cluster boundary if directwrite
+        // reports a trailing hit.
+        let text_position_16 = if htp.is_trailing_hit {
+            htp.metrics.text_position() + htp.metrics.length()
+        } else {
+            htp.metrics.text_position()
+        } as usize;
+
 
         // Convert text position from utf-16 code units to
         // utf-8 code units.
@@ -593,17 +607,17 @@ impl TextLayout for D2DTextLayout {
         //
         // TODO ask about text_position, it looks like windows returns last index;
         // can't use the text_position of last index from directwrite, it has an extra code unit.
-        let idx_8 = count_until_utf16(&self.text, text_position)
-            .unwrap_or(self.text.len() - 1);
-            //.expect("(logic error?) utf16 text position not found in string");
+        let text_position = count_until_utf16(&self.text, text_position_16)
+            .unwrap_or(self.text.len());
+
 
         HitTestPoint {
             metrics: HitTestMetrics {
-                text_position: idx_8,
+                text_position,
                 is_text: htp.metrics.is_text(),
             },
             is_inside: htp.is_inside,
-            is_trailing_hit: htp.is_trailing_hit,
+            is_trailing_hit: false, // not doing BIDI for now, so will never use trailing
         }
     }
 
@@ -810,7 +824,7 @@ mod test {
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
         println!("text pos 4 leading: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
-        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(4, true)); // 23.58984375
+        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(5, false)); // 23.58984375
 
         // test hit test point
         // all inside
@@ -818,11 +832,11 @@ mod test {
         assert_eq!(pt.metrics.text_position, 4);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(22.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(24.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
         assert_eq!(pt.is_trailing_hit, false);
@@ -834,8 +848,8 @@ mod test {
         println!("layout_width: {:?}", layout.width()); // 46.916015625
 
         let pt = layout.hit_test_point(Point::new(48.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9); // last text position
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.is_trailing_hit, false);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
@@ -859,14 +873,15 @@ mod test {
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
         println!("text pos 2 leading: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
-        println!("text pos 2 trailing: {:?}", layout.hit_test_text_position(2, true)); // 18.0
+        println!("text pos 2 trailing: {:?}", layout.hit_test_text_position(9, false)); // 18.0
+        println!("text pos 2 trailing: {:?}", layout.hit_test_text_position(10, false)); // 24.46875, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(7.0, 0.0));
         assert_eq!(pt.metrics.text_position, 2);
         assert_eq!(pt.is_trailing_hit, false);
@@ -874,13 +889,16 @@ mod test {
         assert_eq!(pt.metrics.text_position, 2);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(19.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(30.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10);
         assert_eq!(pt.is_trailing_hit, false);
     }
 
