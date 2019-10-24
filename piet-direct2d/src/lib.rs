@@ -823,8 +823,8 @@ mod test {
 
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
-        println!("text pos 4 leading: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
-        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(5, false)); // 23.58984375
+        println!("text pos 4: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
+        println!("text pos 5: {:?}", layout.hit_test_text_position(5, false)); // 23.58984375
 
         // test hit test point
         // all inside
@@ -863,18 +863,19 @@ mod test {
         let dwrite = directwrite::factory::Factory::new().unwrap();
 
         // Notes on this input:
-        // 5 code points
-        // 5 utf-16 code units
-        // 10 utf-8 code units (2/1/3/3/1)
-        // 3 graphemes
-        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
+        // 6 code points
+        // 7 utf-16 code units (1/1/1/1/1/2)
+        // 14 utf-8 code units (2/1/3/3/1/4)
+        // 4 graphemes
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = D2DText::new(&dwrite);
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
-        println!("text pos 2 leading: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
-        println!("text pos 2 trailing: {:?}", layout.hit_test_text_position(9, false)); // 18.0
-        println!("text pos 2 trailing: {:?}", layout.hit_test_text_position(10, false)); // 24.46875, line width
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
+        println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 18.0
+        println!("text pos 10: {:?}", layout.hit_test_text_position(10, false)); // 24.46875
+        println!("text pos 14: {:?}", layout.hit_test_text_position(14, false)); // 33.3046875, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
@@ -897,8 +898,17 @@ mod test {
         let pt = layout.hit_test_point(Point::new(19.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
         assert_eq!(pt.is_trailing_hit, false);
-        let pt = layout.hit_test_point(Point::new(30.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(23.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(25.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(32.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(35.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
         assert_eq!(pt.is_trailing_hit, false);
     }
 
