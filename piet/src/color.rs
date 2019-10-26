@@ -36,6 +36,29 @@ impl Color {
         Color::Rgba32(rgba)
     }
 
+    /// Create a color from a grey value.
+    ///
+    /// ```
+    /// use piet::Color;
+    ///
+    /// let grey_val = 0x55;
+    ///
+    /// let one = Color::grey8(grey_val);
+    /// // is shorthand for
+    /// let two = Color::rgb8(grey_val, grey_val, grey_val);
+    ///
+    /// assert_eq!(one.as_rgba_u32(), two.as_rgba_u32());
+    /// ```
+    pub const fn grey8(grey: u8) -> Color {
+        Color::rgb8(grey, grey, grey)
+    }
+
+    /// Create a color with a grey value in the range 0.0..=1.0.
+    pub fn grey(grey: impl Into<f64>) -> Color {
+        let grey = grey.into();
+        Color::rgb(grey, grey, grey)
+    }
+
     /// Create a color from four floating point values, each in the range 0.0 to 1.0.
     ///
     /// The interpretation is the same as rgba32, and no greater precision is
@@ -50,7 +73,7 @@ impl Color {
 
     /// Create a color from three floating point values, each in the range 0.0 to 1.0.
     ///
-    /// The interpretation is the same as rgb24, and no greater precision is
+    /// The interpretation is the same as rgb8, and no greater precision is
     /// (currently) assumed.
     pub fn rgb<F: Into<f64>>(r: F, g: F, b: F) -> Color {
         let r = (r.into().max(0.0).min(1.0) * 255.0).round() as u32;
