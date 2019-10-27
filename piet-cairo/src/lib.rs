@@ -646,7 +646,17 @@ impl TextLayout for CairoTextLayout {
                 },
             })
         } else {
-            None
+            // iterated to end boundary
+            Some(HitTestTextPosition {
+                point: Point {
+                    x: self.font.text_extents(&self.text).x_advance,
+                    y: 0.0,
+                },
+                metrics: HitTestMetrics {
+                    text_position: text_len,
+                    is_text: true,
+                },
+            })
         }
     }
 }
@@ -712,6 +722,7 @@ mod test {
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
+        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, layout.width(), 0.0); // note code unit not at grapheme boundary
         assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, layout.width(), 3.0);
 
         // unicode segmentation is wrong on this one for now.
