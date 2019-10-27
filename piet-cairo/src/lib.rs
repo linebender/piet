@@ -599,6 +599,7 @@ impl TextLayout for CairoTextLayout {
        }
     }
 
+    // Using substrings, but now with unicode grapheme awareness
     // text_position is code units offset
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
         // trailing = true not supported
@@ -606,36 +607,32 @@ impl TextLayout for CairoTextLayout {
             return None;
         }
 
-        // Using substrings, but now with unicode grapheme awareness
         let text_len = self.text.len();
 
-        if text_position == 0 && !trailing {
+        if text_position == 0 {
             return Some(HitTestTextPosition::default());
         }
 
-        if (text_position + 1) as usize == text_len && trailing {
+        if text_position as usize >= text_len {
             return Some(HitTestTextPosition {
                 point: Point {
                     x: self.font.text_extents(&self.text).x_advance,
                     y: 0.0,
                 },
                 metrics: HitTestMetrics {
-                    text_position,
+                    text_position: text_len,
                     is_text: true,
                 },
             })
-        } else if  text_position as usize >= text_len {
-            return None;
         }
 
         // Already checked that text_position > 0 and text_position < count.
         // If text position is not at a grapheme boundary, go on to the next.
         // Use the indices (byte offset, which for our purposes = utf8 code units).
         let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
-            .skip_while(|(byte_idx, _s)| text_position < *byte_idx);
+            .skip_while(|(byte_idx, _s)| text_position > *byte_idx);
 
         if let Some((byte_idx, _s)) = grapheme_indices.next() {
-            // TODO f32 from windows, f64 elsewhere?
             let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance;
 
             Some(HitTestTextPosition {
@@ -659,53 +656,68 @@ mod test {
     use crate::*;
     use piet::TextLayout;
 
+    // - x: calculated value
+    // - target: f64
+    // - tolerance: in f64
+    fn assert_close_to(x: f64, target: f64, tolerance: f64) {
+        let min = target - tolerance;
+        let max = target + tolerance;
+        println!("x: {}, target: {}", x, target);
+        assert!(x <= max && x >= min);
+    }
+
     #[test]
     fn test_hit_test_text_position_basic() {
         let mut text_layout = CairoText::new();
+
+        let input = "piet text!";
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
 
-        let layout = text_layout.new_text_layout(&font, "piet").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, &input[0..4]).build().unwrap();
         let piet_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, "pie").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, &input[0..3]).build().unwrap();
         let pie_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, "pi").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
         let pi_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, "p").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, &input[0..1]).build().unwrap();
         let p_width = layout.width();
 
         let layout = text_layout.new_text_layout(&font, "").build().unwrap();
         let null_width = layout.width();
 
-        let full_layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+        let full_layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let full_width = full_layout.width();
 
-        assert_eq!(full_layout.hit_test_text_position(3, true).map(|p| p.point.x as f64), Some(piet_width));
-        assert_eq!(full_layout.hit_test_text_position(2, true).map(|p| p.point.x as f64), Some(pie_width));
-        assert_eq!(full_layout.hit_test_text_position(1, true).map(|p| p.point.x as f64), Some(pi_width));
-        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point.x as f64), Some(p_width));
+        assert_close_to(full_layout.hit_test_text_position(4, false).unwrap().point.x as f64, piet_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(3, false).unwrap().point.x as f64, pie_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(2, false).unwrap().point.x as f64, pi_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(1, false).unwrap().point.x as f64, p_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(0, false).unwrap().point.x as f64, null_width, 3.0);
+        assert_close_to(full_layout.hit_test_text_position(10, false).unwrap().point.x as f64, full_width, 3.0);
 
-        assert_eq!(full_layout.hit_test_text_position(0, false).map(|p| p.point.x as f64), Some(null_width));
-        assert_eq!(full_layout.hit_test_text_position(9, true).map(|p| p.point.x as f64), Some(full_layout.width()));
-        assert_eq!(full_layout.hit_test_text_position(10, true).map(|p| p.point.x as f64), None);
+        // until BIDI, trailing_hit = true will always return None
+        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point.x as f64), None);
     }
 
     #[test]
     fn test_hit_test_text_position_complex_0() {
         let input = "é";
+        assert_eq!(input.len(), 2);
 
         let mut text_layout = CairoText::new();
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(layout.width()));
-        assert_eq!(input.len(), 2);
+        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
+        assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, layout.width(), 3.0);
 
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
 
-        //let mut text_layout = D2DTex::new();
+        //let mut text_layout = D2DText::new();
         //let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         //let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
@@ -714,42 +726,41 @@ mod test {
         //assert_eq!(input.len(), 17);
 
         let input = "\u{0023}\u{FE0F}\u{20E3}"; // #️⃣
+        assert_eq!(input.len(), 7);
+        assert_eq!(input.chars().count(), 3);
 
         let mut text_layout = CairoText::new();
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(layout.width()));
-        assert_eq!(input.len(), 7);
-        assert_eq!(input.chars().count(), 3);
+        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
+        assert_close_to(layout.hit_test_text_position(7, false).unwrap().point.x, layout.width(), 3.0);
     }
 
     #[test]
     fn test_hit_test_text_position_complex_1() {
         // Notes on this input:
-        // 5 code points
-        // 5 utf-16 code units
-        // 10 utf-8 code units (2/1/3/3/1)
-        // 3 graphemes
-        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
+        // 6 code points
+        // 7 utf-16 code units (1/1/1/1/1/2)
+        // 14 utf-8 code units (2/1/3/3/1/4)
+        // 4 graphemes
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
+        assert_eq!(input.len(), 14);
 
         let mut text_layout = CairoText::new();
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        let test_layout_0 = text_layout.new_text_layout(&font, "é").build().unwrap();
-        let test_layout_1 = text_layout.new_text_layout(&font, "é\u{0023}\u{FE0F}\u{20E3}").build().unwrap();
-
-        //assert_eq!(input.graphemes(true).count(), 3);
-        assert_eq!(input.len(), 10);
+        let test_layout_0 = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
+        let test_layout_1 = text_layout.new_text_layout(&font, &input[0..9]).build().unwrap();
+        let test_layout_2 = text_layout.new_text_layout(&font, &input[0..10]).build().unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point.x), Some(test_layout_0.width()));
-        assert_eq!(layout.hit_test_text_position(2, true).map(|p| p.point.x), Some(test_layout_1.width()));
-        assert_eq!(layout.hit_test_text_position(9, true).map(|p| p.point.x), Some(layout.width()));
-
-        assert_eq!(layout.hit_test_text_position(2, false).map(|p| p.point.x), Some(test_layout_0.width()));
-        assert_eq!(layout.hit_test_text_position(9, false).map(|p| p.point.x), Some(test_layout_1.width()));
+        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
+        assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, test_layout_0.width(), 3.0);
+        assert_close_to(layout.hit_test_text_position(9, false).unwrap().point.x, test_layout_1.width(), 3.0);
+        assert_close_to(layout.hit_test_text_position(10, false).unwrap().point.x, test_layout_2.width(), 3.0);
+        assert_close_to(layout.hit_test_text_position(14, false).unwrap().point.x, layout.width(), 3.0);
     }
 
     #[test]
@@ -758,8 +769,8 @@ mod test {
 
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
-        println!("text pos 4 leading: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
-        println!("text pos 4 trailing: {:?}", layout.hit_test_text_position(4, true)); // 23.58984375
+        println!("text pos 4: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
+        println!("text pos 5: {:?}", layout.hit_test_text_position(5, false)); // 23.58984375
 
         // test hit test point
         // all inside
@@ -767,11 +778,11 @@ mod test {
         assert_eq!(pt.metrics.text_position, 4);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(22.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(24.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
         assert_eq!(pt.is_trailing_hit, false);
@@ -783,8 +794,8 @@ mod test {
         println!("layout_width: {:?}", layout.width()); // 46.916015625
 
         let pt = layout.hit_test_point(Point::new(48.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9); // last text position
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.is_trailing_hit, false);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
@@ -796,24 +807,26 @@ mod test {
     #[test]
     fn test_hit_test_point_complex() {
         // Notes on this input:
-        // 5 code points
-        // 5 utf-16 code units
-        // 10 utf-8 code units (2/1/3/3/1)
-        // 3 graphemes
-        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
+        // 6 code points
+        // 7 utf-16 code units (1/1/1/1/1/2)
+        // 14 utf-8 code units (2/1/3/3/1/4)
+        // 4 graphemes
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = CairoText::new();
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
-        println!("text pos 2 leading: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
-        println!("text pos 2 trailing: {:?}", layout.hit_test_text_position(2, true)); // 18.0
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
+        println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 18.0
+        println!("text pos 10: {:?}", layout.hit_test_text_position(10, false)); // 24.46875
+        println!("text pos 14: {:?}", layout.hit_test_text_position(14, false)); // 33.3046875, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(7.0, 0.0));
         assert_eq!(pt.metrics.text_position, 2);
         assert_eq!(pt.is_trailing_hit, false);
@@ -821,13 +834,25 @@ mod test {
         assert_eq!(pt.metrics.text_position, 2);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
-        assert_eq!(pt.is_trailing_hit, true);
+        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(19.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(23.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(25.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(32.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(35.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
         assert_eq!(pt.is_trailing_hit, false);
     }
 }
