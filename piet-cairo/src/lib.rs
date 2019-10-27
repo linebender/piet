@@ -543,6 +543,9 @@ impl TextLayout for CairoTextLayout {
     /// `text.len()` is a valid position; it's the last valid "cursor position" at the end of the
     /// line.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        // internal logic is using grapheme clusters, but return the text position associated
+        // with the border of the grapheme cluster.
+
         // null case
         if self.text.len() == 0 {
             return HitTestPoint::default();

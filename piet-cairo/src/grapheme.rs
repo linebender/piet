@@ -82,18 +82,10 @@ mod test {
             trailing: 0.0, // not testing x advance
         };
 
-        let expected_4 = GraphemeBoundaries {
-            curr_idx: 4,
-            next_idx: 4,
-            leading: 0.0, // not testing x advance
-            trailing: 0.0, // not testing x advance
-        };
-
         // test grapheme boundaries
         assert_eq!(layout.get_grapheme_boundaries(3).unwrap().curr_idx, expected_3.curr_idx);
         assert_eq!(layout.get_grapheme_boundaries(3).unwrap().next_idx, expected_3.next_idx);
-        assert_eq!(layout.get_grapheme_boundaries(4).unwrap().curr_idx, expected_4.curr_idx);
-        assert_eq!(layout.get_grapheme_boundaries(4).unwrap().next_idx, expected_4.next_idx);
+        assert_eq!(layout.get_grapheme_boundaries(4), None);
     }
 
     #[test]
