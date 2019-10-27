@@ -543,7 +543,7 @@ impl TextLayout for CairoTextLayout {
 
         // get bounds
         // TODO handle if string is not null yet count is 0?
-        let end = self.text.len();
+        let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
         let end_bounds= match self.get_grapheme_boundaries(end) {
             Some(bounds) => bounds,
             None => return HitTestPoint::default(),
@@ -558,7 +558,7 @@ impl TextLayout for CairoTextLayout {
         // first test beyond ends
         if point.x > end_bounds.trailing {
             let mut res = HitTestPoint::default();
-            res.metrics.text_position = end;
+            res.metrics.text_position = self.text.len();
             return res;
         }
         if point.x <= start_bounds.leading {
@@ -580,12 +580,12 @@ impl TextLayout for CairoTextLayout {
         loop {
             // pick halfway point
             let middle = left + ((right - left) / 2);
-            println!("{}, {}, {}", left, right, middle);
 
             let grapheme_bounds = match self.get_grapheme_boundaries(middle) {
                 Some(bounds) => bounds,
                 None => return HitTestPoint::default(),
             };
+            println!("left: {}, middle: {}, right: {}, bounds: {:?}", left, middle, right, grapheme_bounds);
 
             if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
                 return hit;
@@ -854,10 +854,10 @@ mod test {
         let mut text_layout = CairoText::new();
         let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
-        println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
-        println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 18.0
-        println!("text pos 10: {:?}", layout.hit_test_text_position(10, false)); // 24.46875
-        println!("text pos 14: {:?}", layout.hit_test_text_position(14, false)); // 33.3046875, line width
+        //println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.99999999
+        //println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 24.0
+        //println!("text pos 10: {:?}", layout.hit_test_text_position(10, false)); // 32.0
+        //println!("text pos 14: {:?}", layout.hit_test_text_position(14, false)); // 39.0, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
@@ -872,24 +872,30 @@ mod test {
         assert_eq!(pt.metrics.text_position, 2);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.metrics.text_position, 2);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
         assert_eq!(pt.is_trailing_hit, false);
-        let pt = layout.hit_test_point(Point::new(19.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(23.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
         assert_eq!(pt.is_trailing_hit, false);
-        let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        let pt = layout.hit_test_point(Point::new(26.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 9);
         assert_eq!(pt.is_trailing_hit, false);
-        let pt = layout.hit_test_point(Point::new(25.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(29.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10);
         assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(32.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(35.5, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
         assert_eq!(pt.is_trailing_hit, false);
-        let pt = layout.hit_test_point(Point::new(35.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(38.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.is_trailing_hit, false);
+        let pt = layout.hit_test_point(Point::new(40.0, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
         assert_eq!(pt.is_trailing_hit, false);
     }

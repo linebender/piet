@@ -2,13 +2,17 @@ use piet::{
     HitTestPoint,
     TextLayout,
 };
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::CairoTextLayout;
 
 impl CairoTextLayout {
-    pub(crate) fn get_grapheme_boundaries(&self, text_position: usize) -> Option<GraphemeBoundaries> {
+    pub(crate) fn get_grapheme_boundaries(&self, grapheme_position: usize) -> Option<GraphemeBoundaries> {
         //  0 as default
         let mut res = GraphemeBoundaries::default();
+
+        let (text_position, _) = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
+            .nth(grapheme_position)?;
 
         let curr_edge = self.hit_test_text_position(text_position, false)?;
         // text_position logic will automatically round to next grapheme boundary
