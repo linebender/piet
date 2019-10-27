@@ -641,7 +641,7 @@ impl TextLayout for CairoTextLayout {
                     y: 0.0,
                 },
                 metrics: HitTestMetrics {
-                    text_position,
+                    text_position: byte_idx,
                     is_text: true,
                 },
             })
