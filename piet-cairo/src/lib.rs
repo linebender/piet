@@ -599,17 +599,21 @@ impl TextLayout for CairoTextLayout {
        }
     }
 
+    // text_position is code units offset
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
+        // trailing = true not supported
+        if trailing {
+            return None;
+        }
+
         // Using substrings, but now with unicode grapheme awareness
+        let text_len = self.text.len();
 
         if text_position == 0 && !trailing {
             return Some(HitTestTextPosition::default());
         }
 
-        // TODO avoid iterating twice?
-        let grapheme_count = UnicodeSegmentation::graphemes(self.text.as_str(), true).count();
-
-        if (text_position + 1) as usize == grapheme_count && trailing {
+        if (text_position + 1) as usize == text_len && trailing {
             return Some(HitTestTextPosition {
                 point: Point {
                     x: self.font.text_extents(&self.text).x_advance,
@@ -620,17 +624,17 @@ impl TextLayout for CairoTextLayout {
                     is_text: true,
                 },
             })
-        } else if  text_position as usize >= grapheme_count {
+        } else if  text_position as usize >= text_len {
             return None;
         }
 
-        let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true);
+        // Already checked that text_position > 0 and text_position < count.
+        // If text position is not at a grapheme boundary, go on to the next.
+        // Use the indices (byte offset, which for our purposes = utf8 code units).
+        let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
+            .skip_while(|(byte_idx, _s)| text_position < *byte_idx);
 
-        // already checked that text_position > 0 and text_position < count
-        // in order to find the byte index to slice at, go one grapheme beyond.
-        let end = if trailing { text_position + 1 } else { text_position };
-
-        if let Some((byte_idx, _s)) = grapheme_indices.nth(end as usize) {
+        if let Some((byte_idx, _s)) = grapheme_indices.next() {
             // TODO f32 from windows, f64 elsewhere?
             let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance;
 
