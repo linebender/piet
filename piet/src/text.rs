@@ -41,7 +41,7 @@ pub trait TextLayout {
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition>;
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 /// return values for `hit_test_point`.
 /// - `metrics.text_position` will give you the text position.
 /// - `is_inside` indicates whether the hit test point landed within the text.
@@ -60,7 +60,7 @@ pub struct HitTestTextPosition {
     pub metrics: HitTestMetrics,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct HitTestMetrics {
     pub text_position: usize,
     //length: u32,
