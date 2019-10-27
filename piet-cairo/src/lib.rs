@@ -599,9 +599,15 @@ impl TextLayout for CairoTextLayout {
        }
     }
 
-    // Using substrings, but now with unicode grapheme awareness
-    // text_position is code units offset
+    /// Hit Test for Text Position.
+    ///
+    /// Given a text position (as a utf-8 code unit), returns the `x` offset of the associated grapheme cluster (generally).
+    ///
+    /// Note: if text position is not at grapheme boundary, we find the next text position/grapheme
+    /// boundary. This behavior is different than directwrite, which will panic.
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
+        // Using substrings, but now with unicode grapheme awareness
+
         // trailing = true not supported
         if trailing {
             return None;
@@ -722,8 +728,11 @@ mod test {
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, layout.width(), 0.0); // note code unit not at grapheme boundary
         assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, layout.width(), 3.0);
+
+        // note code unit not at grapheme boundary
+        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, layout.width(), 3.0);
+        assert_eq!(layout.hit_test_text_position(1, false).unwrap().metrics.text_position, 2);
 
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
@@ -746,6 +755,10 @@ mod test {
 
         assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
         assert_close_to(layout.hit_test_text_position(7, false).unwrap().point.x, layout.width(), 3.0);
+
+        // note code unit not at grapheme boundary
+        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, layout.width(), 3.0);
+        assert_eq!(layout.hit_test_text_position(1, false).unwrap().metrics.text_position, 7);
     }
 
     #[test]
@@ -772,6 +785,10 @@ mod test {
         assert_close_to(layout.hit_test_text_position(9, false).unwrap().point.x, test_layout_1.width(), 3.0);
         assert_close_to(layout.hit_test_text_position(10, false).unwrap().point.x, test_layout_2.width(), 3.0);
         assert_close_to(layout.hit_test_text_position(14, false).unwrap().point.x, layout.width(), 3.0);
+
+        // note code unit not at grapheme boundary
+        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, test_layout_0.width(), 3.0);
+        assert_eq!(layout.hit_test_text_position(1, false).unwrap().metrics.text_position, 2);
     }
 
     #[test]

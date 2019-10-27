@@ -624,7 +624,7 @@ impl TextLayout for D2DTextLayout {
     /// Hit Test for Text Position.
     ///
     /// Given a text position (as a utf-8 code unit), returns the `x` offset of the associated grapheme cluster (generally).
-    /// Setting `trailing` to `true` will give the trailing offset, otherwise the leading offset.
+    ///
     /// Can panic if text position is not at a code point boundary, or if it's out of bounds.
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
         // trailing not supported currently; waiting for BIDI
