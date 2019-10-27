@@ -535,6 +535,13 @@ impl TextLayout for CairoTextLayout {
 
     // first assume one line.
     // TODO do with lines
+    /// Hit Test for Point
+    ///
+    /// Given a Point, returns the text position which corresponds to the nearest leading grapheme
+    /// cluster boundary.
+    ///
+    /// `text.len()` is a valid position; it's the last valid "cursor position" at the end of the
+    /// line.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // null case
         if self.text.len() == 0 {
