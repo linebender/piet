@@ -49,7 +49,9 @@ pub trait TextLayout {
 pub struct HitTestPoint {
     pub metrics: HitTestMetrics,
     pub is_inside: bool,
-    pub is_trailing_hit: bool,
+
+    // removing until needed for BIDI or other.
+    //pub is_trailing_hit: bool,
 }
 
 /// return values for `hit_test_text_position`.

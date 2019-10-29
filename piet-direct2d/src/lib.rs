@@ -617,7 +617,6 @@ impl TextLayout for D2DTextLayout {
                 is_text: htp.metrics.is_text(),
             },
             is_inside: htp.is_inside,
-            is_trailing_hit: false, // not doing BIDI for now, so will never use trailing
         }
     }
 

@@ -45,8 +45,6 @@ pub fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundarie
             res.metrics.text_position = curr_idx;
         }
 
-        res.is_trailing_hit= false; // always false for now
-
         res.is_inside = true;
         res.metrics.is_text = true;
         Some(res)
