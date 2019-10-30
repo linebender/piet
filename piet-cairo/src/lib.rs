@@ -816,39 +816,30 @@ mod test {
         // all inside
         let pt = layout.hit_test_point(Point::new(22.5, 0.0));
         assert_eq!(pt.metrics.text_position, 4);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
         assert_eq!(pt.metrics.text_position, 4);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(28.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
-        assert_eq!(pt.is_trailing_hit, false);
 
         // outside
         println!("layout_width: {:?}", layout.width()); // 56.0
 
         let pt = layout.hit_test_point(Point::new(56.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10); // last text position
-        assert_eq!(pt.is_trailing_hit, false);
         assert_eq!(pt.is_inside, true);
 
         let pt = layout.hit_test_point(Point::new(57.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10); // last text position
-        assert_eq!(pt.is_trailing_hit, false);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0); // first text position
-        assert_eq!(pt.is_trailing_hit, false);
         assert_eq!(pt.is_inside, false);
     }
 
@@ -871,42 +862,29 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
         assert_eq!(pt.metrics.text_position, 2);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(7.0, 0.0));
         assert_eq!(pt.metrics.text_position, 2);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(10.0, 0.0));
         assert_eq!(pt.metrics.text_position, 2);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
         assert_eq!(pt.metrics.text_position, 2);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(29.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(32.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(35.5, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(38.0, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
-        assert_eq!(pt.is_trailing_hit, false);
         let pt = layout.hit_test_point(Point::new(40.0, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
-        assert_eq!(pt.is_trailing_hit, false);
     }
 }
