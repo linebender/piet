@@ -853,7 +853,7 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = CairoText::new();
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
         //println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.99999999
         //println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 24.0

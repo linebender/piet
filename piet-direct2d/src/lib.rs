@@ -736,7 +736,7 @@ mod test {
         let mut text_layout = D2DText::new(&dwrite);
 
         let input = "piet text!";
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
 
         let layout = text_layout.new_text_layout(&font, &input[0..4]).build().unwrap();
         let piet_width = layout.width();
