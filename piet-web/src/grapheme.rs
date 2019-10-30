@@ -6,6 +6,11 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::WebTextLayout;
 
+// currently copied and pasted from cairo backend.
+//
+// However, not cleaning up because cairo and web implementations should diverge soon; and putting this
+// code in `piet` core doesn't really make sense as it's implementation specific.
+//
 impl WebTextLayout {
     pub(crate) fn get_grapheme_boundaries(&self, grapheme_position: usize) -> Option<GraphemeBoundaries> {
         //  0 as default
