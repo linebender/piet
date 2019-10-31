@@ -685,7 +685,7 @@ mod test {
         let mut text_layout = CairoText::new();
 
         let input = "piet text!";
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
 
         let layout = text_layout.new_text_layout(&font, &input[0..4]).build().unwrap();
         let piet_width = layout.width();
@@ -722,7 +722,7 @@ mod test {
         assert_eq!(input.len(), 2);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
@@ -736,7 +736,7 @@ mod test {
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
 
         //let mut text_layout = D2DText::new();
-        //let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         //let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
@@ -748,7 +748,7 @@ mod test {
         assert_eq!(input.chars().count(), 3);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
@@ -770,7 +770,7 @@ mod test {
         assert_eq!(input.len(), 14);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         let test_layout_0 = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
@@ -793,7 +793,7 @@ mod test {
     fn test_hit_test_point_basic() {
         let mut text_layout = CairoText::new();
 
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4, false)); // 23.0
         println!("text pos 5: {:?}", layout.hit_test_text_position(5, false)); // 27.0

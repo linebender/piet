@@ -750,7 +750,7 @@ mod test {
         assert_eq!(input.len(), 2);
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
@@ -760,7 +760,7 @@ mod test {
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
 
         //let mut text_layout = D2DText::new();
-        //let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         //let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
@@ -772,7 +772,7 @@ mod test {
         assert_eq!(input.chars().count(), 3);
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
@@ -792,7 +792,7 @@ mod test {
         assert_eq!(input.len(), 14);
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         let test_layout_0 = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
@@ -813,7 +813,7 @@ mod test {
 
         let mut text_layout = D2DText::new(&dwrite);
 
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
         println!("text pos 5: {:?}", layout.hit_test_text_position(5, false)); // 23.58984375
@@ -855,7 +855,7 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
         println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 18.0
