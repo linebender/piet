@@ -9,6 +9,12 @@ This repo is structured as a core API crate, "piet" and a separate crate for eac
 
 A companion for Bézier path representation and geometry is [kurbo].
 
+The piet-cairo crate depends on the cairo library, found at
+https://www.cairographics.org/download/.  A simple test of the cairo
+backend is to run `cargo run --example basic-cairo`, which should
+produce an image file called "temp-cairo.png".
+
+
 ## Roadmap
 
 Since the project is in its infant stages, there's not currently a set roadmap. For a good idea of what the library will eventually be capable of see [this list][resvg backend requirements] of requirements to be a backend 2D graphics library for the SVG rendering library resvg.
