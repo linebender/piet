@@ -29,7 +29,11 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
 
         let color = Color::rgba8(0x80, 0x80, 0x80, 0xF0);
 
-        rc.stroke(Line::new((100.0 + cursor_x, 50.0), (100.0 + cursor_x, 50.0 - 10.0)), &color, 1.0);
+        rc.stroke(
+            Line::new((100.0 + cursor_x, 50.0), (100.0 + cursor_x, 50.0 - 10.0)),
+            &color,
+            1.0,
+        );
     }
 
     Ok(())

@@ -78,18 +78,33 @@ mod test {
         let text_layout = ctx;
 
         let input = "piet text!";
-        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..4]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..4])
+            .build()
+            .unwrap();
         let piet_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..3]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..3])
+            .build()
+            .unwrap();
         let pie_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..2])
+            .build()
+            .unwrap();
         let pi_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..1]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..1])
+            .build()
+            .unwrap();
         let p_width = layout.width();
 
         let layout = text_layout.new_text_layout(&font, "").build().unwrap();
@@ -98,15 +113,68 @@ mod test {
         let full_layout = text_layout.new_text_layout(&font, input).build().unwrap();
         let full_width = full_layout.width();
 
-        assert_close_to(full_layout.hit_test_text_position(4, false).unwrap().point.x as f64, piet_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(3, false).unwrap().point.x as f64, pie_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(2, false).unwrap().point.x as f64, pi_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(1, false).unwrap().point.x as f64, p_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(0, false).unwrap().point.x as f64, null_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(10, false).unwrap().point.x as f64, full_width, 3.0);
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(4, false)
+                .unwrap()
+                .point
+                .x as f64,
+            piet_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(3, false)
+                .unwrap()
+                .point
+                .x as f64,
+            pie_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(2, false)
+                .unwrap()
+                .point
+                .x as f64,
+            pi_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(1, false)
+                .unwrap()
+                .point
+                .x as f64,
+            p_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(0, false)
+                .unwrap()
+                .point
+                .x as f64,
+            null_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(10, false)
+                .unwrap()
+                .point
+                .x as f64,
+            full_width,
+            3.0,
+        );
 
         // until BIDI, trailing_hit = true will always return None
-        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point.x as f64), None);
+        assert_eq!(
+            full_layout
+                .hit_test_text_position(0, true)
+                .map(|p| p.point.x as f64),
+            None
+        );
     }
 
     pub fn test_hit_test_text_position_complex_0(ctx: &mut WebRenderContext) {
@@ -114,15 +182,37 @@ mod test {
         assert_eq!(input.len(), 2);
 
         let text_layout = ctx;
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("Segoe UI", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, layout.width(), 3.0);
+        assert_close_to(
+            layout.hit_test_text_position(0, false).unwrap().point.x,
+            0.0,
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(2, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
 
         // note code unit not at grapheme boundary
-        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, layout.width(), 3.0);
-        assert_eq!(layout.hit_test_text_position(1, false).unwrap().metrics.text_position, 2);
+        assert_close_to(
+            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
+        assert_eq!(
+            layout
+                .hit_test_text_position(1, false)
+                .unwrap()
+                .metrics
+                .text_position,
+            2
+        );
 
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
@@ -139,15 +229,37 @@ mod test {
         assert_eq!(input.len(), 7);
         assert_eq!(input.chars().count(), 3);
 
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("Segoe UI", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(layout.hit_test_text_position(7, false).unwrap().point.x, layout.width(), 3.0);
+        assert_close_to(
+            layout.hit_test_text_position(0, false).unwrap().point.x,
+            0.0,
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(7, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
 
         // note code unit not at grapheme boundary
-        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, layout.width(), 3.0);
-        assert_eq!(layout.hit_test_text_position(1, false).unwrap().metrics.text_position, 7);
+        assert_close_to(
+            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
+        assert_eq!(
+            layout
+                .hit_test_text_position(1, false)
+                .unwrap()
+                .metrics
+                .text_position,
+            7
+        );
     }
 
     pub fn test_hit_test_text_position_complex_1(ctx: &mut WebRenderContext) {
@@ -160,33 +272,86 @@ mod test {
         assert_eq!(input.len(), 14);
 
         let text_layout = ctx;
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("Segoe UI", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        let test_layout_0 = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
-        let test_layout_1 = text_layout.new_text_layout(&font, &input[0..9]).build().unwrap();
-        let test_layout_2 = text_layout.new_text_layout(&font, &input[0..10]).build().unwrap();
+        let test_layout_0 = text_layout
+            .new_text_layout(&font, &input[0..2])
+            .build()
+            .unwrap();
+        let test_layout_1 = text_layout
+            .new_text_layout(&font, &input[0..9])
+            .build()
+            .unwrap();
+        let test_layout_2 = text_layout
+            .new_text_layout(&font, &input[0..10])
+            .build()
+            .unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, test_layout_0.width(), 3.0);
-        assert_close_to(layout.hit_test_text_position(9, false).unwrap().point.x, test_layout_1.width(), 3.0);
-        assert_close_to(layout.hit_test_text_position(10, false).unwrap().point.x, test_layout_2.width(), 3.0);
-        assert_close_to(layout.hit_test_text_position(14, false).unwrap().point.x, layout.width(), 3.0);
+        assert_close_to(
+            layout.hit_test_text_position(0, false).unwrap().point.x,
+            0.0,
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(2, false).unwrap().point.x,
+            test_layout_0.width(),
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(9, false).unwrap().point.x,
+            test_layout_1.width(),
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(10, false).unwrap().point.x,
+            test_layout_2.width(),
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(14, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
 
         // note code unit not at grapheme boundary
-        assert_close_to(layout.hit_test_text_position(1, false).unwrap().point.x, test_layout_0.width(), 3.0);
-        assert_eq!(layout.hit_test_text_position(1, false).unwrap().metrics.text_position, 2);
+        assert_close_to(
+            layout.hit_test_text_position(1, false).unwrap().point.x,
+            test_layout_0.width(),
+            3.0,
+        );
+        assert_eq!(
+            layout
+                .hit_test_text_position(1, false)
+                .unwrap()
+                .metrics
+                .text_position,
+            2
+        );
     }
 
     // NOTE brittle test
     pub fn test_hit_test_point_basic(ctx: &mut WebRenderContext) {
         let text_layout = ctx;
 
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
-        let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
-        console::log_1(&format!("text pos 4: {:?}", layout.hit_test_text_position(4, false)).into()); // 23.432432174682617
-        console::log_1(&format!("text pos 5: {:?}", layout.hit_test_text_position(5, false)).into()); // 27.243244171142578
+        let font = text_layout
+            .new_font_by_name("Segoe UI", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, "piet text!")
+            .build()
+            .unwrap();
+        console::log_1(
+            &format!("text pos 4: {:?}", layout.hit_test_text_position(4, false)).into(),
+        ); // 23.432432174682617
+        console::log_1(
+            &format!("text pos 5: {:?}", layout.hit_test_text_position(5, false)).into(),
+        ); // 27.243244171142578
 
         // test hit test point
         // all inside
@@ -229,12 +394,31 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let text_layout = ctx;
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("Segoe UI", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
-        console::log_1(&format!("text pos 2: {:?}", layout.hit_test_text_position(2, false)).into()); // 7.108108043670654
-        console::log_1(&format!("text pos 9: {:?}", layout.hit_test_text_position(9, false)).into()); // 19.29729652404785
-        console::log_1(&format!("text pos 10: {:?}", layout.hit_test_text_position(10, false)).into()); // 26.91891860961914
-        console::log_1(&format!("text pos 14: {:?}", layout.hit_test_text_position(14, false)).into()); // 38.27027130126953, line width
+        console::log_1(
+            &format!("text pos 2: {:?}", layout.hit_test_text_position(2, false)).into(),
+        ); // 7.108108043670654
+        console::log_1(
+            &format!("text pos 9: {:?}", layout.hit_test_text_position(9, false)).into(),
+        ); // 19.29729652404785
+        console::log_1(
+            &format!(
+                "text pos 10: {:?}",
+                layout.hit_test_text_position(10, false)
+            )
+            .into(),
+        ); // 26.91891860961914
+        console::log_1(
+            &format!(
+                "text pos 14: {:?}",
+                layout.hit_test_text_position(14, false)
+            )
+            .into(),
+        ); // 38.27027130126953, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);

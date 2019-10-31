@@ -39,8 +39,9 @@ use directwrite::TextFormat;
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, ImageFormat,
-    InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder, HitTestPoint, HitTestTextPosition, HitTestMetrics,
+    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, HitTestMetrics,
+    HitTestPoint, HitTestTextPosition, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
+    StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct D2DRenderContext<'a> {
@@ -560,13 +561,14 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
 
     fn build(self) -> Result<Self::Out, Error> {
         Ok(D2DTextLayout {
-            layout: self.builder
-                    .with_text(&self.text)
-                    .with_font(&self.format)
-                    .with_width(1e6) // TODO: probably want to support wrapping
-                    .with_height(1e6)
-                    .build()
-                    .wrap()?,
+            layout: self
+                .builder
+                .with_text(&self.text)
+                .with_font(&self.format)
+                .with_width(1e6) // TODO: probably want to support wrapping
+                .with_height(1e6)
+                .build()
+                .wrap()?,
             text: self.text,
         })
     }
@@ -579,10 +581,7 @@ impl TextLayout for D2DTextLayout {
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // lossy from f64 to f32, but shouldn't have too much impact
-        let htp = self.layout.hit_test_point(
-            point.x as f32,
-            point.y as f32,
-        );
+        let htp = self.layout.hit_test_point(point.x as f32, point.y as f32);
 
         // Round up to next grapheme cluster boundary if directwrite
         // reports a trailing hit.
@@ -592,7 +591,6 @@ impl TextLayout for D2DTextLayout {
             htp.metrics.text_position()
         } as usize;
 
-
         // Convert text position from utf-16 code units to
         // utf-8 code units.
         // Strategy: count up in utf16 and utf8 simultaneously, stop when
@@ -600,9 +598,8 @@ impl TextLayout for D2DTextLayout {
         //
         // TODO ask about text_position, it looks like windows returns last index;
         // can't use the text_position of last index from directwrite, it has an extra code unit.
-        let text_position = count_until_utf16(&self.text, text_position_16)
-            .unwrap_or(self.text.len());
-
+        let text_position =
+            count_until_utf16(&self.text, text_position_16).unwrap_or(self.text.len());
 
         HitTestPoint {
             metrics: HitTestMetrics {
@@ -614,7 +611,11 @@ impl TextLayout for D2DTextLayout {
     }
 
     // Can panic if text position is not at a code point boundary, or if it's out of bounds.
-    fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(
+        &self,
+        text_position: usize,
+        trailing: bool,
+    ) -> Option<HitTestTextPosition> {
         // trailing not supported currently; waiting for BIDI
         if trailing {
             return None;
@@ -637,7 +638,8 @@ impl TextLayout for D2DTextLayout {
         // TODO quick fix until directwrite fixes bool bug
         let trailing = !trailing;
 
-        self.layout.hit_test_text_position(idx_16, trailing)
+        self.layout
+            .hit_test_text_position(idx_16, trailing)
             .map(|http| {
                 HitTestTextPosition {
                     point: Point {
@@ -711,18 +713,33 @@ mod test {
         let mut text_layout = D2DText::new(&dwrite);
 
         let input = "piet text!";
-        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..4]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..4])
+            .build()
+            .unwrap();
         let piet_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..3]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..3])
+            .build()
+            .unwrap();
         let pie_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..2])
+            .build()
+            .unwrap();
         let pi_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, &input[0..1]).build().unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..1])
+            .build()
+            .unwrap();
         let p_width = layout.width();
 
         let layout = text_layout.new_text_layout(&font, "").build().unwrap();
@@ -731,15 +748,68 @@ mod test {
         let full_layout = text_layout.new_text_layout(&font, input).build().unwrap();
         let full_width = full_layout.width();
 
-        assert_close_to(full_layout.hit_test_text_position(4, false).unwrap().point.x as f64, piet_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(3, false).unwrap().point.x as f64, pie_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(2, false).unwrap().point.x as f64, pi_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(1, false).unwrap().point.x as f64, p_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(0, false).unwrap().point.x as f64, null_width, 3.0);
-        assert_close_to(full_layout.hit_test_text_position(10, false).unwrap().point.x as f64, full_width, 3.0);
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(4, false)
+                .unwrap()
+                .point
+                .x as f64,
+            piet_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(3, false)
+                .unwrap()
+                .point
+                .x as f64,
+            pie_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(2, false)
+                .unwrap()
+                .point
+                .x as f64,
+            pi_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(1, false)
+                .unwrap()
+                .point
+                .x as f64,
+            p_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(0, false)
+                .unwrap()
+                .point
+                .x as f64,
+            null_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout
+                .hit_test_text_position(10, false)
+                .unwrap()
+                .point
+                .x as f64,
+            full_width,
+            3.0,
+        );
 
         // until BIDI, trailing_hit = true will always return None
-        assert_eq!(full_layout.hit_test_text_position(0, true).map(|p| p.point.x as f64), None);
+        assert_eq!(
+            full_layout
+                .hit_test_text_position(0, true)
+                .map(|p| p.point.x as f64),
+            None
+        );
     }
 
     #[test]
@@ -750,11 +820,22 @@ mod test {
         assert_eq!(input.len(), 2);
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, layout.width(), 3.0);
+        assert_close_to(
+            layout.hit_test_text_position(0, false).unwrap().point.x,
+            0.0,
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(2, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
 
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
@@ -772,11 +853,22 @@ mod test {
         assert_eq!(input.chars().count(), 3);
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(layout.hit_test_text_position(7, false).unwrap().point.x, layout.width(), 3.0);
+        assert_close_to(
+            layout.hit_test_text_position(0, false).unwrap().point.x,
+            0.0,
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(7, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
     }
 
     #[test]
@@ -792,19 +884,51 @@ mod test {
         assert_eq!(input.len(), 14);
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        let test_layout_0 = text_layout.new_text_layout(&font, &input[0..2]).build().unwrap();
-        let test_layout_1 = text_layout.new_text_layout(&font, &input[0..9]).build().unwrap();
-        let test_layout_2 = text_layout.new_text_layout(&font, &input[0..10]).build().unwrap();
+        let test_layout_0 = text_layout
+            .new_text_layout(&font, &input[0..2])
+            .build()
+            .unwrap();
+        let test_layout_1 = text_layout
+            .new_text_layout(&font, &input[0..9])
+            .build()
+            .unwrap();
+        let test_layout_2 = text_layout
+            .new_text_layout(&font, &input[0..10])
+            .build()
+            .unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_close_to(layout.hit_test_text_position(0, false).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(layout.hit_test_text_position(2, false).unwrap().point.x, test_layout_0.width(), 3.0);
-        assert_close_to(layout.hit_test_text_position(9, false).unwrap().point.x, test_layout_1.width(), 3.0);
-        assert_close_to(layout.hit_test_text_position(10, false).unwrap().point.x, test_layout_2.width(), 3.0);
-        assert_close_to(layout.hit_test_text_position(14, false).unwrap().point.x, layout.width(), 3.0);
+        assert_close_to(
+            layout.hit_test_text_position(0, false).unwrap().point.x,
+            0.0,
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(2, false).unwrap().point.x,
+            test_layout_0.width(),
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(9, false).unwrap().point.x,
+            test_layout_1.width(),
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(10, false).unwrap().point.x,
+            test_layout_2.width(),
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(14, false).unwrap().point.x,
+            layout.width(),
+            3.0,
+        );
     }
 
     #[test]
@@ -813,8 +937,14 @@ mod test {
 
         let mut text_layout = D2DText::new(&dwrite);
 
-        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
-        let layout = text_layout.new_text_layout(&font, "piet text!").build().unwrap();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, "piet text!")
+            .build()
+            .unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4, false)); // 20.302734375
         println!("text pos 5: {:?}", layout.hit_test_text_position(5, false)); // 23.58984375
 
@@ -855,12 +985,21 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.275390625
         println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 18.0
-        println!("text pos 10: {:?}", layout.hit_test_text_position(10, false)); // 24.46875
-        println!("text pos 14: {:?}", layout.hit_test_text_position(14, false)); // 33.3046875, line width
+        println!(
+            "text pos 10: {:?}",
+            layout.hit_test_text_position(10, false)
+        ); // 24.46875
+        println!(
+            "text pos 14: {:?}",
+            layout.hit_test_text_position(14, false)
+        ); // 33.3046875, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
@@ -895,11 +1034,11 @@ mod test {
         // 3 graphemes
         let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
 
-        assert_eq!(count_until_utf16(input,0), Some(0));
-        assert_eq!(count_until_utf16(input,1), Some(2));
-        assert_eq!(count_until_utf16(input,2), Some(3));
-        assert_eq!(count_until_utf16(input,3), Some(6));
-        assert_eq!(count_until_utf16(input,4), Some(9));
-        assert_eq!(count_until_utf16(input,5), None);
+        assert_eq!(count_until_utf16(input, 0), Some(0));
+        assert_eq!(count_until_utf16(input, 1), Some(2));
+        assert_eq!(count_until_utf16(input, 2), Some(3));
+        assert_eq!(count_until_utf16(input, 3), Some(6));
+        assert_eq!(count_until_utf16(input, 4), Some(9));
+        assert_eq!(count_until_utf16(input, 5), None);
     }
 }

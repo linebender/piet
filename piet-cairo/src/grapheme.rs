@@ -1,13 +1,13 @@
-use piet::{
-    HitTestPoint,
-    TextLayout,
-};
+use piet::{HitTestPoint, TextLayout};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::CairoTextLayout;
 
 impl CairoTextLayout {
-    pub(crate) fn get_grapheme_boundaries(&self, grapheme_position: usize) -> Option<GraphemeBoundaries> {
+    pub(crate) fn get_grapheme_boundaries(
+        &self,
+        grapheme_position: usize,
+    ) -> Option<GraphemeBoundaries> {
         let (text_position, _) = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
             .nth(grapheme_position)?;
 
@@ -27,7 +27,10 @@ impl CairoTextLayout {
     }
 }
 
-pub(crate) fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
+pub(crate) fn point_x_in_grapheme(
+    point_x: f64,
+    grapheme_boundaries: &GraphemeBoundaries,
+) -> Option<HitTestPoint> {
     let mut res = HitTestPoint::default();
     let leading = grapheme_boundaries.leading;
     let trailing = grapheme_boundaries.trailing;
@@ -36,7 +39,7 @@ pub(crate) fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBo
 
     if point_x >= leading && point_x <= trailing {
         // Check which boundary it's closer to.
-        // Round up to next grapheme boundary if 
+        // Round up to next grapheme boundary if
         let midpoint = leading + ((trailing - leading) / 2.0);
         if point_x >= midpoint {
             res.metrics.text_position = next_idx;
@@ -62,26 +65,35 @@ pub(crate) struct GraphemeBoundaries {
 }
 #[cfg(test)]
 mod test {
-    use crate::*;
     use super::*;
+    use crate::*;
 
     #[test]
     fn test_grapheme_boundaries() {
         let mut text_layout = CairoText::new();
 
-        let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text_layout
+            .new_font_by_name("Segoe UI", 12.0)
+            .build()
+            .unwrap();
         let layout = text_layout.new_text_layout(&font, "piet").build().unwrap();
 
         let expected_3 = GraphemeBoundaries {
             curr_idx: 3,
             next_idx: 4,
-            leading: 0.0, // not testing x advance
+            leading: 0.0,  // not testing x advance
             trailing: 0.0, // not testing x advance
         };
 
         // test grapheme boundaries
-        assert_eq!(layout.get_grapheme_boundaries(3).unwrap().curr_idx, expected_3.curr_idx);
-        assert_eq!(layout.get_grapheme_boundaries(3).unwrap().next_idx, expected_3.next_idx);
+        assert_eq!(
+            layout.get_grapheme_boundaries(3).unwrap().curr_idx,
+            expected_3.curr_idx
+        );
+        assert_eq!(
+            layout.get_grapheme_boundaries(3).unwrap().next_idx,
+            expected_3.next_idx
+        );
         assert_eq!(layout.get_grapheme_boundaries(4), None);
     }
 
@@ -98,19 +110,19 @@ mod test {
             metrics: HitTestMetrics {
                 text_position: 2,
                 is_text: true,
-                .. Default::default()
+                ..Default::default()
             },
             is_inside: true,
-            .. Default::default()
+            ..Default::default()
         });
         let expected_next = Some(HitTestPoint {
             metrics: HitTestMetrics {
                 text_position: 4,
                 is_text: true,
-                .. Default::default()
+                ..Default::default()
             },
             is_inside: true,
-            .. Default::default()
+            ..Default::default()
         });
 
         assert_eq!(point_x_in_grapheme(10.0, &bounds), expected_curr);

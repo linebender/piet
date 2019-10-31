@@ -51,7 +51,11 @@ pub trait TextLayout {
     ///
     /// Note: if text position is not at grapheme boundary, `cairo` and `web` will find the next text position/grapheme
     /// boundary. This behavior is different than `directwrite`, which will panic.
-    fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition>;
+    fn hit_test_text_position(
+        &self,
+        text_position: usize,
+        trailing: bool,
+    ) -> Option<HitTestTextPosition>;
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
@@ -61,7 +65,6 @@ pub trait TextLayout {
 pub struct HitTestPoint {
     pub metrics: HitTestMetrics,
     pub is_inside: bool,
-
     // removing until needed for BIDI or other.
     //pub is_trailing_hit: bool,
 }
@@ -77,9 +80,7 @@ pub struct HitTestTextPosition {
 pub struct HitTestMetrics {
     pub text_position: usize,
     pub is_text: bool,
-
     // TODO:
     // consider adding other metrics as needed, such as those provided in
     // [DWRITE_HIT_TEST_METRICS](https://docs.microsoft.com/en-us/windows/win32/api/dwrite/ns-dwrite-dwrite_hit_test_metrics).
 }
-

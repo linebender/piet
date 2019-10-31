@@ -1,7 +1,4 @@
-use piet::{
-    HitTestPoint,
-    TextLayout,
-};
+use piet::{HitTestPoint, TextLayout};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::WebTextLayout;
@@ -12,7 +9,10 @@ use crate::WebTextLayout;
 // code in `piet` core doesn't really make sense as it's implementation specific.
 //
 impl WebTextLayout {
-    pub(crate) fn get_grapheme_boundaries(&self, grapheme_position: usize) -> Option<GraphemeBoundaries> {
+    pub(crate) fn get_grapheme_boundaries(
+        &self,
+        grapheme_position: usize,
+    ) -> Option<GraphemeBoundaries> {
         let (text_position, _) = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
             .nth(grapheme_position)?;
 
@@ -32,7 +32,10 @@ impl WebTextLayout {
     }
 }
 
-pub(crate) fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
+pub(crate) fn point_x_in_grapheme(
+    point_x: f64,
+    grapheme_boundaries: &GraphemeBoundaries,
+) -> Option<HitTestPoint> {
     let mut res = HitTestPoint::default();
     let leading = grapheme_boundaries.leading;
     let trailing = grapheme_boundaries.trailing;
@@ -41,7 +44,7 @@ pub(crate) fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBo
 
     if point_x >= leading && point_x <= trailing {
         // Check which boundary it's closer to.
-        // Round up to next grapheme boundary if 
+        // Round up to next grapheme boundary if
         let midpoint = leading + ((trailing - leading) / 2.0);
         if point_x >= midpoint {
             res.metrics.text_position = next_idx;

@@ -15,9 +15,9 @@ use web_sys::{
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    Color, Error, FixedGradient, Font, FontBuilder, GradientStop, ImageFormat, InterpolationMode,
-    IntoBrush, LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
-    HitTestPoint, HitTestMetrics, HitTestTextPosition,
+    Color, Error, FixedGradient, Font, FontBuilder, GradientStop, HitTestMetrics, HitTestPoint,
+    HitTestTextPosition, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
+    RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -540,8 +540,7 @@ impl TextLayout for WebTextLayout {
     fn width(&self) -> f64 {
         //cairo:
         //self.font.text_extents(&self.text).x_advance
-        self
-            .ctx
+        self.ctx
             .measure_text(&self.text)
             .map(|m| m.width())
             .expect("Text measurement failed")
@@ -561,7 +560,7 @@ impl TextLayout for WebTextLayout {
         // get bounds
         // TODO handle if string is not null yet count is 0?
         let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
-        let end_bounds= match self.get_grapheme_boundaries(end) {
+        let end_bounds = match self.get_grapheme_boundaries(end) {
             Some(bounds) => bounds,
             None => return HitTestPoint::default(),
         };
@@ -614,10 +613,14 @@ impl TextLayout for WebTextLayout {
             } else if point.x > grapheme_bounds.trailing {
                 left = grapheme_bounds.curr_idx as usize; // should this be +1?
             }
-       }
+        }
     }
 
-    fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(
+        &self,
+        text_position: usize,
+        trailing: bool,
+    ) -> Option<HitTestTextPosition> {
         // Using substrings, but now with unicode grapheme awareness
 
         // trailing = true not supported
@@ -635,15 +638,12 @@ impl TextLayout for WebTextLayout {
             let x = self.width();
 
             return Some(HitTestTextPosition {
-                point: Point {
-                    x,
-                    y: 0.0,
-                },
+                point: Point { x, y: 0.0 },
                 metrics: HitTestMetrics {
                     text_position: text_len,
                     is_text: true,
                 },
-            })
+            });
         }
 
         // Already checked that text_position > 0 and text_position < count.
@@ -660,10 +660,7 @@ impl TextLayout for WebTextLayout {
                 .expect("Text measurement failed");
 
             Some(HitTestTextPosition {
-                point: Point {
-                    x,
-                    y: 0.0,
-                },
+                point: Point { x, y: 0.0 },
                 metrics: HitTestMetrics {
                     text_position: byte_idx,
                     is_text: true,
@@ -684,4 +681,3 @@ impl TextLayout for WebTextLayout {
         }
     }
 }
-
