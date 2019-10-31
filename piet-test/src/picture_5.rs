@@ -21,18 +21,15 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     // underline text
     rc.stroke(Line::new((100.0, 52.0), (100.0 + width, 52.0)), &brush, 1.0);
 
-    // get hit test text position and draw a curos
-    // this is for position three, not trailing
+    // get hit test text position and draw a cursor
     let hit_test_text_position = layout.hit_test_text_position(3, true);
 
     if let Some(http) = hit_test_text_position {
-        // TODO should the points be f64? directwrite only returns f32
-        let cursor_x = http.point.x as f64;
-        println!("cursor_x: {}", cursor_x);
+        let cursor_x = http.point.x;
 
-        let cursor_brush = rc.solid_brush(Color::rgba8(0x80, 0x80, 0x80, 0xF0));
+        let color = Color::rgba8(0x80, 0x80, 0x80, 0xF0);
 
-        rc.stroke(Line::new((100.0 + cursor_x, 50.0), (100.0 + cursor_x, 50.0 - 10.0)), &cursor_brush, 1.0);
+        rc.stroke(Line::new((100.0 + cursor_x, 50.0), (100.0 + cursor_x, 50.0 - 10.0)), &color, 1.0);
     }
 
     Ok(())

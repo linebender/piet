@@ -29,6 +29,16 @@ pub trait TextLayoutBuilder {
     fn build(self) -> Result<Self::Out, Error>;
 }
 
+/// # Text Layout
+///
+/// A text position corresponds roughly to unicode code units. Because piet uses rust utf-8
+/// strings, this means that text position corresponods roughly with byte index.
+///
+/// However, text position is also related to valid cursor positions. Therefore:
+/// - The end of a line is a valid text position. `text.len()` is a valid text position.
+/// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
+/// occur.
+///
 pub trait TextLayout {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
@@ -38,14 +48,16 @@ pub trait TextLayout {
 
     /// Given a text position, determine the corresponding pixel location
     /// (currently consider the text layout just one line)
+    ///
+    /// Note: if text position is not at grapheme boundary, `cairo` and `web` will find the next text position/grapheme
+    /// boundary. This behavior is different than `directwrite`, which will panic.
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition>;
 }
 
-#[derive(Debug, Default, PartialEq)]
-/// return values for `hit_test_point`.
+/// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
 /// - `metrics.text_position` will give you the text position.
 /// - `is_inside` indicates whether the hit test point landed within the text.
-/// - `is_trailing_hit` will always return `false` for now, until BIDI support is implemented.
+#[derive(Debug, Default, PartialEq)]
 pub struct HitTestPoint {
     pub metrics: HitTestMetrics,
     pub is_inside: bool,
@@ -54,8 +66,7 @@ pub struct HitTestPoint {
     //pub is_trailing_hit: bool,
 }
 
-/// return values for `hit_test_text_position`.
-/// - `point.x` will give you the x offset.
+/// return values for [`hit_test_text_position`](../piet/trait.TextLayout.html#tymethod.hit_test_text_position).
 #[derive(Debug, Default)]
 pub struct HitTestTextPosition {
     pub point: Point,
@@ -65,13 +76,10 @@ pub struct HitTestTextPosition {
 #[derive(Debug, Default, PartialEq)]
 pub struct HitTestMetrics {
     pub text_position: usize,
-    //length: u32,
-    //left: f32,
-    //top: f32,
-    //width: f32,
-    //height: f32,
-    //bidiLevel: u32,
     pub is_text: bool,
-    //is_trimmed: bool,
+
+    // TODO:
+    // consider adding other metrics as needed, such as those provided in
+    // [DWRITE_HIT_TEST_METRICS](https://docs.microsoft.com/en-us/windows/win32/api/dwrite/ns-dwrite-dwrite_hit_test_metrics).
 }
 

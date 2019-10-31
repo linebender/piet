@@ -8,9 +8,6 @@ use crate::CairoTextLayout;
 
 impl CairoTextLayout {
     pub(crate) fn get_grapheme_boundaries(&self, grapheme_position: usize) -> Option<GraphemeBoundaries> {
-        //  0 as default
-        let mut res = GraphemeBoundaries::default();
-
         let (text_position, _) = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
             .nth(grapheme_position)?;
 
@@ -19,16 +16,18 @@ impl CairoTextLayout {
         // when text position is not on a grapheme boundary
         let next_edge = self.hit_test_text_position(text_position + 1, false)?;
 
-        res.curr_idx = curr_edge.metrics.text_position;
-        res.next_idx = next_edge.metrics.text_position;
-        res.leading = curr_edge.point.x;
-        res.trailing = next_edge.point.x;
+        let res = GraphemeBoundaries {
+            curr_idx: curr_edge.metrics.text_position,
+            next_idx: next_edge.metrics.text_position,
+            leading: curr_edge.point.x,
+            trailing: next_edge.point.x,
+        };
 
         Some(res)
     }
 }
 
-pub fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
+pub(crate) fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundaries) -> Option<HitTestPoint> {
     let mut res = HitTestPoint::default();
     let leading = grapheme_boundaries.leading;
     let trailing = grapheme_boundaries.trailing;
@@ -54,7 +53,7 @@ pub fn point_x_in_grapheme(point_x: f64, grapheme_boundaries: &GraphemeBoundarie
 }
 
 #[derive(Debug, Default, PartialEq)]
-pub struct GraphemeBoundaries {
+pub(crate) struct GraphemeBoundaries {
     pub curr_idx: usize,
     pub next_idx: usize,
     pub leading: f64,

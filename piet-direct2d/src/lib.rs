@@ -577,13 +577,6 @@ impl TextLayout for D2DTextLayout {
         self.layout.get_metrics().width() as f64
     }
 
-    /// Hit Test for Point
-    ///
-    /// Given a Point, returns the text position which corresponds to the nearest leading grapheme
-    /// cluster boundary.
-    ///
-    /// `text.len()` is a valid position; it's the last valid "cursor position" at the end of the
-    /// line.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // lossy from f64 to f32, but shouldn't have too much impact
         let htp = self.layout.hit_test_point(
@@ -620,11 +613,7 @@ impl TextLayout for D2DTextLayout {
         }
     }
 
-    /// Hit Test for Text Position.
-    ///
-    /// Given a text position (as a utf-8 code unit), returns the `x` offset of the associated grapheme cluster (generally).
-    ///
-    /// Can panic if text position is not at a code point boundary, or if it's out of bounds.
+    // Can panic if text position is not at a code point boundary, or if it's out of bounds.
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
         // trailing not supported currently; waiting for BIDI
         if trailing {
@@ -692,20 +681,6 @@ pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<u
             utf16_count += 1;
         }
 
-        // When count goes beyond text position, it means the start boundary of the utf16 code unit is passed.
-        // So the utf8 count needs to be backtracked 1.
-        //
-        // char  | utf8 | utf16 | 16_count
-        // é     | 0    | 0     | 0
-        //       | 1    | -     | 1
-        // {0023}| 2    | 1     | 1
-        // {FE0F}| 3    | 2     | 2
-        //       | 4    | -     | 3
-        //       | 5    | -     | 3
-        // {20E3}| 6    | 3     | 3
-        //       | 7    | -     | 4
-        //       | 8    | -     | 4
-        // 1     | 9    | -     | 4
         if utf16_count > utf16_text_position {
             return Some(utf8_count);
         }

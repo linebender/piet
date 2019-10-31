@@ -535,13 +535,6 @@ impl TextLayout for CairoTextLayout {
 
     // first assume one line.
     // TODO do with lines
-    /// Hit Test for Point
-    ///
-    /// Given a Point, returns the text position which corresponds to the nearest leading grapheme
-    /// cluster boundary.
-    ///
-    /// `text.len()` is a valid position; it's the last valid "cursor position" at the end of the
-    /// line.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // internal logic is using grapheme clusters, but return the text position associated
         // with the border of the grapheme cluster.
@@ -595,7 +588,6 @@ impl TextLayout for CairoTextLayout {
                 Some(bounds) => bounds,
                 None => return HitTestPoint::default(),
             };
-            println!("left: {}, middle: {}, right: {}, bounds: {:?}", left, middle, right, grapheme_bounds);
 
             if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
                 return hit;
@@ -611,12 +603,6 @@ impl TextLayout for CairoTextLayout {
        }
     }
 
-    /// Hit Test for Text Position.
-    ///
-    /// Given a text position (as a utf-8 code unit), returns the `x` offset of the associated grapheme cluster (generally).
-    ///
-    /// Note: if text position is not at grapheme boundary, we find the next text position/grapheme
-    /// boundary. This behavior is different than directwrite, which will panic.
     fn hit_test_text_position(&self, text_position: usize, trailing: bool) -> Option<HitTestTextPosition> {
         // Using substrings, but now with unicode grapheme awareness
 
