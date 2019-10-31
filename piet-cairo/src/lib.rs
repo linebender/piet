@@ -601,10 +601,7 @@ impl TextLayout for CairoTextLayout {
         }
     }
 
-    fn hit_test_text_position(
-        &self,
-        text_position: usize,
-    ) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
         // Using substrings, but now with unicode grapheme awareness
 
         let text_len = self.text.len();
@@ -714,56 +711,32 @@ mod test {
         let full_width = full_layout.width();
 
         assert_close_to(
-            full_layout
-                .hit_test_text_position(4)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(4).unwrap().point.x as f64,
             piet_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(3)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
             pie_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(2)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(2).unwrap().point.x as f64,
             pi_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(1).unwrap().point.x as f64,
             p_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(0)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(0).unwrap().point.x as f64,
             null_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(10)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
             full_width,
             3.0,
         );
@@ -781,11 +754,7 @@ mod test {
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
             layout.width(),
@@ -829,11 +798,7 @@ mod test {
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(7).unwrap().point.x,
             layout.width(),
@@ -887,11 +852,7 @@ mod test {
             .unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
             test_layout_0.width(),

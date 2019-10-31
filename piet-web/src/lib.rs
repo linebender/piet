@@ -616,10 +616,7 @@ impl TextLayout for WebTextLayout {
         }
     }
 
-    fn hit_test_text_position(
-        &self,
-        text_position: usize,
-    ) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
         // Using substrings, but now with unicode grapheme awareness
 
         let text_len = self.text.len();

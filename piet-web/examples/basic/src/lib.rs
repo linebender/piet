@@ -114,56 +114,32 @@ mod test {
         let full_width = full_layout.width();
 
         assert_close_to(
-            full_layout
-                .hit_test_text_position(4)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(4).unwrap().point.x as f64,
             piet_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(3)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
             pie_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(2)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(2).unwrap().point.x as f64,
             pi_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(1).unwrap().point.x as f64,
             p_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(0)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(0).unwrap().point.x as f64,
             null_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(10)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
             full_width,
             3.0,
         );
@@ -180,11 +156,7 @@ mod test {
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
             layout.width(),
@@ -227,11 +199,7 @@ mod test {
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(7).unwrap().point.x,
             layout.width(),
@@ -284,11 +252,7 @@ mod test {
             .unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
             test_layout_0.width(),
@@ -338,12 +302,8 @@ mod test {
             .new_text_layout(&font, "piet text!")
             .build()
             .unwrap();
-        console::log_1(
-            &format!("text pos 4: {:?}", layout.hit_test_text_position(4)).into(),
-        ); // 23.432432174682617
-        console::log_1(
-            &format!("text pos 5: {:?}", layout.hit_test_text_position(5)).into(),
-        ); // 27.243244171142578
+        console::log_1(&format!("text pos 4: {:?}", layout.hit_test_text_position(4)).into()); // 23.432432174682617
+        console::log_1(&format!("text pos 5: {:?}", layout.hit_test_text_position(5)).into()); // 27.243244171142578
 
         // test hit test point
         // all inside
@@ -391,26 +351,10 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
-        console::log_1(
-            &format!("text pos 2: {:?}", layout.hit_test_text_position(2)).into(),
-        ); // 7.108108043670654
-        console::log_1(
-            &format!("text pos 9: {:?}", layout.hit_test_text_position(9)).into(),
-        ); // 19.29729652404785
-        console::log_1(
-            &format!(
-                "text pos 10: {:?}",
-                layout.hit_test_text_position(10)
-            )
-            .into(),
-        ); // 26.91891860961914
-        console::log_1(
-            &format!(
-                "text pos 14: {:?}",
-                layout.hit_test_text_position(14)
-            )
-            .into(),
-        ); // 38.27027130126953, line width
+        console::log_1(&format!("text pos 2: {:?}", layout.hit_test_text_position(2)).into()); // 7.108108043670654
+        console::log_1(&format!("text pos 9: {:?}", layout.hit_test_text_position(9)).into()); // 19.29729652404785
+        console::log_1(&format!("text pos 10: {:?}", layout.hit_test_text_position(10)).into()); // 26.91891860961914
+        console::log_1(&format!("text pos 14: {:?}", layout.hit_test_text_position(14)).into()); // 38.27027130126953, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);

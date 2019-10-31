@@ -51,10 +51,7 @@ pub trait TextLayout {
     ///
     /// Note: if text position is not at grapheme boundary, `cairo` and `web` will find the next text position/grapheme
     /// boundary. This behavior is different than `directwrite`, which will panic.
-    fn hit_test_text_position(
-        &self,
-        text_position: usize,
-    ) -> Option<HitTestTextPosition>;
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition>;
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).

@@ -611,10 +611,7 @@ impl TextLayout for D2DTextLayout {
     }
 
     // Can panic if text position is not at a code point boundary, or if it's out of bounds.
-    fn hit_test_text_position(
-        &self,
-        text_position: usize,
-    ) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
         // Note: Directwrite will just return the line width if text position is
         // out of bounds. This is what want for piet; return line width for the last text position
         // (equal to line.len()). This is basically returning line width for the last cursor
@@ -743,56 +740,32 @@ mod test {
         let full_width = full_layout.width();
 
         assert_close_to(
-            full_layout
-                .hit_test_text_position(4)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(4).unwrap().point.x as f64,
             piet_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(3)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
             pie_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(2)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(2).unwrap().point.x as f64,
             pi_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(1).unwrap().point.x as f64,
             p_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(0)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(0).unwrap().point.x as f64,
             null_width,
             3.0,
         );
         assert_close_to(
-            full_layout
-                .hit_test_text_position(10)
-                .unwrap()
-                .point
-                .x as f64,
+            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
             full_width,
             3.0,
         );
@@ -812,11 +785,7 @@ mod test {
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
             layout.width(),
@@ -845,11 +814,7 @@ mod test {
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(7).unwrap().point.x,
             layout.width(),
@@ -890,11 +855,7 @@ mod test {
             .unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_close_to(
-            layout.hit_test_text_position(0).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
             test_layout_0.width(),
@@ -978,14 +939,8 @@ mod test {
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.275390625
         println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 18.0
-        println!(
-            "text pos 10: {:?}",
-            layout.hit_test_text_position(10)
-        ); // 24.46875
-        println!(
-            "text pos 14: {:?}",
-            layout.hit_test_text_position(14)
-        ); // 33.3046875, line width
+        println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 24.46875
+        println!("text pos 14: {:?}", layout.hit_test_text_position(14)); // 33.3046875, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
