@@ -619,14 +619,8 @@ impl TextLayout for WebTextLayout {
     fn hit_test_text_position(
         &self,
         text_position: usize,
-        trailing: bool,
     ) -> Option<HitTestTextPosition> {
         // Using substrings, but now with unicode grapheme awareness
-
-        // trailing = true not supported
-        if trailing {
-            return None;
-        }
 
         let text_len = self.text.len();
 

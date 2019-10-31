@@ -16,10 +16,10 @@ impl WebTextLayout {
         let (text_position, _) = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
             .nth(grapheme_position)?;
 
-        let curr_edge = self.hit_test_text_position(text_position, false)?;
+        let curr_edge = self.hit_test_text_position(text_position)?;
         // text_position logic will automatically round to next grapheme boundary
         // when text position is not on a grapheme boundary
-        let next_edge = self.hit_test_text_position(text_position + 1, false)?;
+        let next_edge = self.hit_test_text_position(text_position + 1)?;
 
         let res = GraphemeBoundaries {
             curr_idx: curr_edge.metrics.text_position,

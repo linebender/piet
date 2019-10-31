@@ -54,7 +54,6 @@ pub trait TextLayout {
     fn hit_test_text_position(
         &self,
         text_position: usize,
-        trailing: bool,
     ) -> Option<HitTestTextPosition>;
 }
 

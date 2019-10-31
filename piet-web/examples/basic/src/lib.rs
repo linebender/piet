@@ -115,7 +115,7 @@ mod test {
 
         assert_close_to(
             full_layout
-                .hit_test_text_position(4, false)
+                .hit_test_text_position(4)
                 .unwrap()
                 .point
                 .x as f64,
@@ -124,7 +124,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(3, false)
+                .hit_test_text_position(3)
                 .unwrap()
                 .point
                 .x as f64,
@@ -133,7 +133,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(2, false)
+                .hit_test_text_position(2)
                 .unwrap()
                 .point
                 .x as f64,
@@ -142,7 +142,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .point
                 .x as f64,
@@ -151,7 +151,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(0, false)
+                .hit_test_text_position(0)
                 .unwrap()
                 .point
                 .x as f64,
@@ -160,20 +160,12 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(10, false)
+                .hit_test_text_position(10)
                 .unwrap()
                 .point
                 .x as f64,
             full_width,
             3.0,
-        );
-
-        // until BIDI, trailing_hit = true will always return None
-        assert_eq!(
-            full_layout
-                .hit_test_text_position(0, true)
-                .map(|p| p.point.x as f64),
-            None
         );
     }
 
@@ -183,31 +175,31 @@ mod test {
 
         let text_layout = ctx;
         let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
+            .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(
-            layout.hit_test_text_position(0, false).unwrap().point.x,
+            layout.hit_test_text_position(0).unwrap().point.x,
             0.0,
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(2, false).unwrap().point.x,
+            layout.hit_test_text_position(2).unwrap().point.x,
             layout.width(),
             3.0,
         );
 
         // note code unit not at grapheme boundary
         assert_close_to(
-            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.hit_test_text_position(1).unwrap().point.x,
             layout.width(),
             3.0,
         );
         assert_eq!(
             layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
@@ -218,7 +210,7 @@ mod test {
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
 
         //let mut text_layout = D2DText::new();
-        //let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
         //let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
@@ -230,31 +222,31 @@ mod test {
         assert_eq!(input.chars().count(), 3);
 
         let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
+            .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(
-            layout.hit_test_text_position(0, false).unwrap().point.x,
+            layout.hit_test_text_position(0).unwrap().point.x,
             0.0,
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(7, false).unwrap().point.x,
+            layout.hit_test_text_position(7).unwrap().point.x,
             layout.width(),
             3.0,
         );
 
         // note code unit not at grapheme boundary
         assert_close_to(
-            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.hit_test_text_position(1).unwrap().point.x,
             layout.width(),
             3.0,
         );
         assert_eq!(
             layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
@@ -273,7 +265,7 @@ mod test {
 
         let text_layout = ctx;
         let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
+            .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
@@ -293,40 +285,40 @@ mod test {
 
         // Note: text position is in terms of utf8 code units
         assert_close_to(
-            layout.hit_test_text_position(0, false).unwrap().point.x,
+            layout.hit_test_text_position(0).unwrap().point.x,
             0.0,
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(2, false).unwrap().point.x,
+            layout.hit_test_text_position(2).unwrap().point.x,
             test_layout_0.width(),
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(9, false).unwrap().point.x,
+            layout.hit_test_text_position(9).unwrap().point.x,
             test_layout_1.width(),
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(10, false).unwrap().point.x,
+            layout.hit_test_text_position(10).unwrap().point.x,
             test_layout_2.width(),
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(14, false).unwrap().point.x,
+            layout.hit_test_text_position(14).unwrap().point.x,
             layout.width(),
             3.0,
         );
 
         // note code unit not at grapheme boundary
         assert_close_to(
-            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.hit_test_text_position(1).unwrap().point.x,
             test_layout_0.width(),
             3.0,
         );
         assert_eq!(
             layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
@@ -339,7 +331,7 @@ mod test {
         let text_layout = ctx;
 
         let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
+            .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
         let layout = text_layout
@@ -347,10 +339,10 @@ mod test {
             .build()
             .unwrap();
         console::log_1(
-            &format!("text pos 4: {:?}", layout.hit_test_text_position(4, false)).into(),
+            &format!("text pos 4: {:?}", layout.hit_test_text_position(4)).into(),
         ); // 23.432432174682617
         console::log_1(
-            &format!("text pos 5: {:?}", layout.hit_test_text_position(5, false)).into(),
+            &format!("text pos 5: {:?}", layout.hit_test_text_position(5)).into(),
         ); // 27.243244171142578
 
         // test hit test point
@@ -395,27 +387,27 @@ mod test {
 
         let text_layout = ctx;
         let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
+            .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
         console::log_1(
-            &format!("text pos 2: {:?}", layout.hit_test_text_position(2, false)).into(),
+            &format!("text pos 2: {:?}", layout.hit_test_text_position(2)).into(),
         ); // 7.108108043670654
         console::log_1(
-            &format!("text pos 9: {:?}", layout.hit_test_text_position(9, false)).into(),
+            &format!("text pos 9: {:?}", layout.hit_test_text_position(9)).into(),
         ); // 19.29729652404785
         console::log_1(
             &format!(
                 "text pos 10: {:?}",
-                layout.hit_test_text_position(10, false)
+                layout.hit_test_text_position(10)
             )
             .into(),
         ); // 26.91891860961914
         console::log_1(
             &format!(
                 "text pos 14: {:?}",
-                layout.hit_test_text_position(14, false)
+                layout.hit_test_text_position(14)
             )
             .into(),
         ); // 38.27027130126953, line width

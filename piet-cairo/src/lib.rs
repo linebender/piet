@@ -604,14 +604,8 @@ impl TextLayout for CairoTextLayout {
     fn hit_test_text_position(
         &self,
         text_position: usize,
-        trailing: bool,
     ) -> Option<HitTestTextPosition> {
         // Using substrings, but now with unicode grapheme awareness
-
-        // trailing = true not supported
-        if trailing {
-            return None;
-        }
 
         let text_len = self.text.len();
 
@@ -721,7 +715,7 @@ mod test {
 
         assert_close_to(
             full_layout
-                .hit_test_text_position(4, false)
+                .hit_test_text_position(4)
                 .unwrap()
                 .point
                 .x as f64,
@@ -730,7 +724,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(3, false)
+                .hit_test_text_position(3)
                 .unwrap()
                 .point
                 .x as f64,
@@ -739,7 +733,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(2, false)
+                .hit_test_text_position(2)
                 .unwrap()
                 .point
                 .x as f64,
@@ -748,7 +742,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .point
                 .x as f64,
@@ -757,7 +751,7 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(0, false)
+                .hit_test_text_position(0)
                 .unwrap()
                 .point
                 .x as f64,
@@ -766,20 +760,12 @@ mod test {
         );
         assert_close_to(
             full_layout
-                .hit_test_text_position(10, false)
+                .hit_test_text_position(10)
                 .unwrap()
                 .point
                 .x as f64,
             full_width,
             3.0,
-        );
-
-        // until BIDI, trailing_hit = true will always return None
-        assert_eq!(
-            full_layout
-                .hit_test_text_position(0, true)
-                .map(|p| p.point.x as f64),
-            None
         );
     }
 
@@ -796,25 +782,25 @@ mod test {
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(
-            layout.hit_test_text_position(0, false).unwrap().point.x,
+            layout.hit_test_text_position(0).unwrap().point.x,
             0.0,
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(2, false).unwrap().point.x,
+            layout.hit_test_text_position(2).unwrap().point.x,
             layout.width(),
             3.0,
         );
 
         // note code unit not at grapheme boundary
         assert_close_to(
-            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.hit_test_text_position(1).unwrap().point.x,
             layout.width(),
             3.0,
         );
         assert_eq!(
             layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
@@ -844,25 +830,25 @@ mod test {
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
 
         assert_close_to(
-            layout.hit_test_text_position(0, false).unwrap().point.x,
+            layout.hit_test_text_position(0).unwrap().point.x,
             0.0,
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(7, false).unwrap().point.x,
+            layout.hit_test_text_position(7).unwrap().point.x,
             layout.width(),
             3.0,
         );
 
         // note code unit not at grapheme boundary
         assert_close_to(
-            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.hit_test_text_position(1).unwrap().point.x,
             layout.width(),
             3.0,
         );
         assert_eq!(
             layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
@@ -902,40 +888,40 @@ mod test {
 
         // Note: text position is in terms of utf8 code units
         assert_close_to(
-            layout.hit_test_text_position(0, false).unwrap().point.x,
+            layout.hit_test_text_position(0).unwrap().point.x,
             0.0,
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(2, false).unwrap().point.x,
+            layout.hit_test_text_position(2).unwrap().point.x,
             test_layout_0.width(),
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(9, false).unwrap().point.x,
+            layout.hit_test_text_position(9).unwrap().point.x,
             test_layout_1.width(),
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(10, false).unwrap().point.x,
+            layout.hit_test_text_position(10).unwrap().point.x,
             test_layout_2.width(),
             3.0,
         );
         assert_close_to(
-            layout.hit_test_text_position(14, false).unwrap().point.x,
+            layout.hit_test_text_position(14).unwrap().point.x,
             layout.width(),
             3.0,
         );
 
         // note code unit not at grapheme boundary
         assert_close_to(
-            layout.hit_test_text_position(1, false).unwrap().point.x,
+            layout.hit_test_text_position(1).unwrap().point.x,
             test_layout_0.width(),
             3.0,
         );
         assert_eq!(
             layout
-                .hit_test_text_position(1, false)
+                .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
@@ -955,8 +941,8 @@ mod test {
             .new_text_layout(&font, "piet text!")
             .build()
             .unwrap();
-        println!("text pos 4: {:?}", layout.hit_test_text_position(4, false)); // 23.0
-        println!("text pos 5: {:?}", layout.hit_test_text_position(5, false)); // 27.0
+        println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 23.0
+        println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 27.0
 
         // test hit test point
         // all inside
@@ -1004,10 +990,10 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout.new_text_layout(&font, input).build().unwrap();
-        //println!("text pos 2: {:?}", layout.hit_test_text_position(2, false)); // 6.99999999
-        //println!("text pos 9: {:?}", layout.hit_test_text_position(9, false)); // 24.0
-        //println!("text pos 10: {:?}", layout.hit_test_text_position(10, false)); // 32.0
-        //println!("text pos 14: {:?}", layout.hit_test_text_position(14, false)); // 39.0, line width
+        //println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.99999999
+        //println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 24.0
+        //println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 32.0
+        //println!("text pos 14: {:?}", layout.hit_test_text_position(14)); // 39.0, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);

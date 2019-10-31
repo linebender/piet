@@ -164,7 +164,6 @@ impl TextLayout for NullTextLayout {
     fn hit_test_text_position(
         &self,
         _text_position: usize,
-        _trailing: bool,
     ) -> Option<HitTestTextPosition> {
         None
     }

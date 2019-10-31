@@ -22,7 +22,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.stroke(Line::new((100.0, 52.0), (100.0 + width, 52.0)), &brush, 1.0);
 
     // get hit test text position and draw a cursor
-    let hit_test_text_position = layout.hit_test_text_position(3, true);
+    let hit_test_text_position = layout.hit_test_text_position(3);
 
     if let Some(http) = hit_test_text_position {
         let cursor_x = http.point.x;
