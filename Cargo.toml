@@ -9,3 +9,12 @@ members = [
     "piet-web",
     "piet-web/examples/basic"
 ]
+
+default-members = [
+    "piet",
+    "piet-cairo",
+    "piet-common",
+    "piet-test",
+    "piet-web",
+    "piet-web/examples/basic"
+]

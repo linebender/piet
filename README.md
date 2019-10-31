@@ -14,6 +14,10 @@ https://www.cairographics.org/download/.  A simple test of the cairo
 backend is to run `cargo run --example basic-cairo`, which should
 produce an image file called "temp-cairo.png".
 
+The piet-direct2d create works on Windows only.  Build with `cargo
+build --all` to include it.  A simple test of the direct2d backend is
+to run `cargo run --example basic`, which should produce an image
+called "temp-image.png".
 
 ## Roadmap
 
