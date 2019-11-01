@@ -21,5 +21,20 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     // underline text
     rc.stroke(Line::new((100.0, 52.0), (100.0 + width, 52.0)), &brush, 1.0);
 
+    // get hit test text position and draw a cursor
+    let hit_test_text_position = layout.hit_test_text_position(3);
+
+    if let Some(http) = hit_test_text_position {
+        let cursor_x = http.point.x;
+
+        let color = Color::rgba8(0x80, 0x80, 0x80, 0xF0);
+
+        rc.stroke(
+            Line::new((100.0 + cursor_x, 50.0), (100.0 + cursor_x, 50.0 - 10.0)),
+            &color,
+            1.0,
+        );
+    }
+
     Ok(())
 }

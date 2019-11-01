@@ -5,8 +5,8 @@ use std::borrow::Cow;
 use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
-    Color, Error, FixedGradient, Font, FontBuilder, ImageFormat, InterpolationMode, IntoBrush,
-    RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
+    InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 /// A render context that doesn't render.
@@ -155,6 +155,14 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
 impl TextLayout for NullTextLayout {
     fn width(&self) -> f64 {
         42.0
+    }
+
+    fn hit_test_point(&self, _point: Point) -> HitTestPoint {
+        HitTestPoint::default()
+    }
+
+    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
+        None
     }
 }
 
