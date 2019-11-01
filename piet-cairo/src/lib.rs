@@ -901,6 +901,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(target_os="linux")]
     fn test_hit_test_point_basic() {
         let mut text_layout = CairoText::new();
 
@@ -947,6 +948,103 @@ mod test {
     }
 
     #[test]
+    #[cfg(target_os="macos")]
+    fn test_hit_test_point_basic() {
+        let mut text_layout = CairoText::new();
+
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, "piet text!")
+            .build()
+            .unwrap();
+        println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 23.0
+        println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 27.0
+
+        // test hit test point
+        // all inside
+        let pt = layout.hit_test_point(Point::new(22.5, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(23.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 4);
+        let pt = layout.hit_test_point(Point::new(25.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 5);
+        let pt = layout.hit_test_point(Point::new(26.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 5);
+        let pt = layout.hit_test_point(Point::new(27.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 5);
+        let pt = layout.hit_test_point(Point::new(28.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 5);
+
+        // outside
+        println!("layout_width: {:?}", layout.width()); // 56.0
+
+        let pt = layout.hit_test_point(Point::new(56.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.is_inside, true);
+
+        let pt = layout.hit_test_point(Point::new(57.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0); // first text position
+        assert_eq!(pt.is_inside, false);
+    }
+
+    #[test]
+    #[cfg(target_os="linux")]
+    fn test_hit_test_point_complex() {
+        // Notes on this input:
+        // 6 code points
+        // 7 utf-16 code units (1/1/1/1/1/2)
+        // 14 utf-8 code units (2/1/3/3/1/4)
+        // 4 graphemes
+        let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
+
+        let mut text_layout = CairoText::new();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        //println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.99999999
+        //println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 24.0
+        //println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 32.0
+        //println!("text pos 14: {:?}", layout.hit_test_text_position(14)); // 39.0, line width
+
+        let pt = layout.hit_test_point(Point::new(2.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(4.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+        let pt = layout.hit_test_point(Point::new(7.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+        let pt = layout.hit_test_point(Point::new(10.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+        let pt = layout.hit_test_point(Point::new(14.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+        let pt = layout.hit_test_point(Point::new(18.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 9);
+        let pt = layout.hit_test_point(Point::new(23.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 9);
+        let pt = layout.hit_test_point(Point::new(26.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 9);
+        let pt = layout.hit_test_point(Point::new(29.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        let pt = layout.hit_test_point(Point::new(32.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        let pt = layout.hit_test_point(Point::new(35.5, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
+        let pt = layout.hit_test_point(Point::new(38.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
+        let pt = layout.hit_test_point(Point::new(40.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 14);
+    }
+
+    #[test]
+    #[cfg(target_os="macos")]
     fn test_hit_test_point_complex() {
         // Notes on this input:
         // 6 code points
