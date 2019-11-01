@@ -876,6 +876,19 @@ mod test {
             layout.width(),
             3.0,
         );
+
+        // Code point boundaries, but not grapheme boundaries.
+        // Width should stay at the last complete grapheme boundary.
+        assert_close_to(
+            layout.hit_test_text_position(3).unwrap().point.x,
+            test_layout_0.width(),
+            3.0,
+        );
+        assert_close_to(
+            layout.hit_test_text_position(6).unwrap().point.x,
+            test_layout_0.width(),
+            3.0,
+        );
     }
 
     #[test]

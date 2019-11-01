@@ -49,8 +49,12 @@ pub trait TextLayout {
     /// Given a text position, determine the corresponding pixel location
     /// (currently consider the text layout just one line)
     ///
-    /// Note: if text position is not at grapheme boundary, `cairo` and `web` will find the next text position/grapheme
-    /// boundary. This behavior is different than `directwrite`, which will panic.
+    /// Note: if text position is not at grapheme boundary, `cairo` and `web` will find the next grapheme
+    /// boundary. This behavior is different than `directwrite`, which will stay at the previous
+    /// grapheme boundary.
+    ///
+    /// Note: in directwrite, if text position is not at code point boundary, this method will
+    /// panic.
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition>;
 }
 
