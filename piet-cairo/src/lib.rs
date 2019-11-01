@@ -624,18 +624,19 @@ impl TextLayout for CairoTextLayout {
         }
 
         // Already checked that text_position > 0 and text_position < count.
-        // If text position is not at a grapheme boundary, go on to the next.
+        // If text position is not at a grapheme boundary, use the text position of current
+        // grapheme cluster. But return the original text position
         // Use the indices (byte offset, which for our purposes = utf8 code units).
-        let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
-            .skip_while(|(byte_idx, _s)| text_position > *byte_idx);
+        let grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
+            .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
 
-        if let Some((byte_idx, _s)) = grapheme_indices.next() {
+        if let Some((byte_idx, _s)) = grapheme_indices.last() {
             let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance;
 
             Some(HitTestTextPosition {
                 point: Point { x: point_x, y: 0.0 },
                 metrics: HitTestMetrics {
-                    text_position: byte_idx,
+                    text_position: text_position,
                     is_text: true,
                 },
             })
@@ -762,18 +763,17 @@ mod test {
         );
 
         // note code unit not at grapheme boundary
-        assert_close_to(
-            layout.hit_test_text_position(1).unwrap().point.x,
-            layout.width(),
-            3.0,
-        );
+        // This one panics in d2d because this is not a code unit boundary.
+        // But it works here! Harder to deal with this right now, since unicode-segmentation
+        // doesn't give code point offsets.
+        assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
         assert_eq!(
             layout
                 .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
-            2
+            1
         );
 
         // unicode segmentation is wrong on this one for now.
@@ -806,18 +806,14 @@ mod test {
         );
 
         // note code unit not at grapheme boundary
-        assert_close_to(
-            layout.hit_test_text_position(1).unwrap().point.x,
-            layout.width(),
-            3.0,
-        );
+        assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
         assert_eq!(
             layout
                 .hit_test_text_position(1)
                 .unwrap()
                 .metrics
                 .text_position,
-            7
+            1
         );
     }
 
@@ -874,19 +870,33 @@ mod test {
             3.0,
         );
 
-        // note code unit not at grapheme boundary
+        // Code point boundaries, but not grapheme boundaries.
+        // Width should stay at the current grapheme boundary.
         assert_close_to(
-            layout.hit_test_text_position(1).unwrap().point.x,
+            layout.hit_test_text_position(3).unwrap().point.x,
             test_layout_0.width(),
             3.0,
         );
         assert_eq!(
             layout
-                .hit_test_text_position(1)
+                .hit_test_text_position(3)
                 .unwrap()
                 .metrics
                 .text_position,
-            2
+            3
+        );
+        assert_close_to(
+            layout.hit_test_text_position(6).unwrap().point.x,
+            test_layout_0.width(),
+            3.0,
+        );
+        assert_eq!(
+            layout
+                .hit_test_text_position(6)
+                .unwrap()
+                .metrics
+                .text_position,
+            6
         );
     }
 

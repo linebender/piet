@@ -638,12 +638,13 @@ impl TextLayout for WebTextLayout {
         }
 
         // Already checked that text_position > 0 and text_position < count.
-        // If text position is not at a grapheme boundary, go on to the next.
+        // If text position is not at a grapheme boundary, use the text position of current
+        // grapheme cluster. But return the original text position
         // Use the indices (byte offset, which for our purposes = utf8 code units).
-        let mut grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
-            .skip_while(|(byte_idx, _s)| text_position > *byte_idx);
+        let grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
+            .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
 
-        if let Some((byte_idx, _s)) = grapheme_indices.next() {
+        if let Some((byte_idx, _s)) = grapheme_indices.last() {
             let x = self
                 .ctx
                 .measure_text(&self.text[0..byte_idx])
@@ -653,7 +654,7 @@ impl TextLayout for WebTextLayout {
             Some(HitTestTextPosition {
                 point: Point { x, y: 0.0 },
                 metrics: HitTestMetrics {
-                    text_position: byte_idx,
+                    text_position: text_position,
                     is_text: true,
                 },
             })

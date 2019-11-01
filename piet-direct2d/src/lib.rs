@@ -820,6 +820,17 @@ mod test {
             layout.width(),
             3.0,
         );
+
+        // note code unit not at grapheme boundary
+        assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
+        assert_eq!(
+            layout
+                .hit_test_text_position(1)
+                .unwrap()
+                .metrics
+                .text_position,
+            1
+        );
     }
 
     #[test]
@@ -878,16 +889,32 @@ mod test {
         );
 
         // Code point boundaries, but not grapheme boundaries.
-        // Width should stay at the last complete grapheme boundary.
+        // Width should stay at the current grapheme boundary.
         assert_close_to(
             layout.hit_test_text_position(3).unwrap().point.x,
             test_layout_0.width(),
             3.0,
         );
+        assert_eq!(
+            layout
+                .hit_test_text_position(3)
+                .unwrap()
+                .metrics
+                .text_position,
+            3
+        );
         assert_close_to(
             layout.hit_test_text_position(6).unwrap().point.x,
             test_layout_0.width(),
             3.0,
+        );
+        assert_eq!(
+            layout
+                .hit_test_text_position(6)
+                .unwrap()
+                .metrics
+                .text_position,
+            6
         );
     }
 

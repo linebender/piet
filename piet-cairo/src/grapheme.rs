@@ -8,13 +8,12 @@ impl CairoTextLayout {
         &self,
         grapheme_position: usize,
     ) -> Option<GraphemeBoundaries> {
-        let (text_position, _) = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
-            .nth(grapheme_position)?;
+        let mut graphemes = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true);
+        let (text_position, _) = graphemes.nth(grapheme_position)?;
+        let (next_text_position, _) = graphemes.next().unwrap_or_else(|| (self.text.len(), ""));
 
         let curr_edge = self.hit_test_text_position(text_position)?;
-        // text_position logic will automatically round to next grapheme boundary
-        // when text position is not on a grapheme boundary
-        let next_edge = self.hit_test_text_position(text_position + 1)?;
+        let next_edge = self.hit_test_text_position(next_text_position)?;
 
         let res = GraphemeBoundaries {
             curr_idx: curr_edge.metrics.text_position,
@@ -73,7 +72,7 @@ mod test {
         let mut text_layout = CairoText::new();
 
         let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
+            .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
         let layout = text_layout.new_text_layout(&font, "piet").build().unwrap();
