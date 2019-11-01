@@ -901,7 +901,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(target_os="linux")]
+    #[cfg(target_os = "linux")]
     fn test_hit_test_point_basic() {
         let mut text_layout = CairoText::new();
 
@@ -948,7 +948,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(target_os="macos")]
+    #[cfg(target_os = "macos")]
     fn test_hit_test_point_basic() {
         let mut text_layout = CairoText::new();
 
@@ -993,7 +993,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(target_os="linux")]
+    #[cfg(target_os = "linux")]
     fn test_hit_test_point_complex() {
         // Notes on this input:
         // 6 code points
@@ -1042,7 +1042,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(target_os="macos")]
+    #[cfg(target_os = "macos")]
     fn test_hit_test_point_complex() {
         // Notes on this input:
         // 6 code points
