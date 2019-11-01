@@ -31,11 +31,10 @@ pub trait TextLayoutBuilder {
 
 /// # Text Layout
 ///
-/// A text position corresponds roughly to unicode code units. Because piet uses rust utf-8
-/// strings, this means that text position corresponods roughly with byte index.
+/// A text position is defined in utf-8 code units, as is standard for Rust strings.
 ///
 /// However, text position is also related to valid cursor positions. Therefore:
-/// - The end of a line is a valid text position. `text.len()` is a valid text position.
+/// - The end of a line is a valid text position. e.g. `text.len()` is a valid text position.
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
 ///
