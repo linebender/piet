@@ -77,6 +77,8 @@ pub struct HitTestTextPosition {
 }
 
 #[derive(Debug, Default, PartialEq)]
+/// Hit test metrics, returned as part of [`hit_test_text_position`](../piet/trait.TextLayout.html#tymethod.hit_test_text_position)
+/// and [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
 pub struct HitTestMetrics {
     pub text_position: usize,
     pub is_text: bool,
