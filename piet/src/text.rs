@@ -42,10 +42,15 @@ pub trait TextLayout {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
 
-    /// Given a Point, determine the corresponding text position
+    /// Given a Point, determine the corresponding text position.
+    ///
+    /// `HitTestPoint` field `is_inside` returns true if the tested point falls within the bounds of the text.
+    /// Some text position will always be returned; if the tested point is inside, it returns the appropriate text
+    /// position; if it's outside, it will return the nearest text position (either 0 or text.len()).
+
     fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
-    /// Given a text position, determine the corresponding pixel location
+    /// Given a text position, determine the corresponding pixel location.
     /// (currently consider the text layout just one line)
     ///
     /// Note: if text position is not at grapheme boundary, rounds the boundary to the text position of the
