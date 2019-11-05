@@ -47,7 +47,6 @@ pub(crate) fn point_x_in_grapheme(
         }
 
         res.is_inside = true;
-        res.metrics.is_text = true;
         Some(res)
     } else {
         None
@@ -108,7 +107,6 @@ mod test {
         let expected_curr = Some(HitTestPoint {
             metrics: HitTestMetrics {
                 text_position: 2,
-                is_text: true,
                 ..Default::default()
             },
             is_inside: true,
@@ -117,7 +115,6 @@ mod test {
         let expected_next = Some(HitTestPoint {
             metrics: HitTestMetrics {
                 text_position: 4,
-                is_text: true,
                 ..Default::default()
             },
             is_inside: true,

@@ -602,10 +602,7 @@ impl TextLayout for D2DTextLayout {
             count_until_utf16(&self.text, text_position_16).unwrap_or(self.text.len());
 
         HitTestPoint {
-            metrics: HitTestMetrics {
-                text_position,
-                is_text: htp.metrics.is_text(),
-            },
+            metrics: HitTestMetrics { text_position },
             is_inside: htp.is_inside,
         }
     }
@@ -639,7 +636,6 @@ impl TextLayout for D2DTextLayout {
                     },
                     metrics: HitTestMetrics {
                         text_position: text_position, // no need to use directwrite return value
-                        is_text: http.metrics.is_text(),
                     },
                 }
             })

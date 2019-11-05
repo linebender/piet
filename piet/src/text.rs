@@ -79,7 +79,6 @@ pub struct HitTestTextPosition {
 /// and [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
 pub struct HitTestMetrics {
     pub text_position: usize,
-    pub is_text: bool,
     // TODO:
     // consider adding other metrics as needed, such as those provided in
     // [DWRITE_HIT_TEST_METRICS](https://docs.microsoft.com/en-us/windows/win32/api/dwrite/ns-dwrite-dwrite_hit_test_metrics).
