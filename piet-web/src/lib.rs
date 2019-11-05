@@ -632,7 +632,6 @@ impl TextLayout for WebTextLayout {
                 point: Point { x, y: 0.0 },
                 metrics: HitTestMetrics {
                     text_position: text_len,
-                    is_text: true,
                 },
             });
         }
@@ -655,7 +654,6 @@ impl TextLayout for WebTextLayout {
                 point: Point { x, y: 0.0 },
                 metrics: HitTestMetrics {
                     text_position: text_position,
-                    is_text: true,
                 },
             })
         } else {
@@ -667,7 +665,6 @@ impl TextLayout for WebTextLayout {
                 },
                 metrics: HitTestMetrics {
                     text_position: text_len,
-                    is_text: true,
                 },
             })
         }

@@ -52,7 +52,6 @@ pub(crate) fn point_x_in_grapheme(
         }
 
         res.is_inside = true;
-        res.metrics.is_text = true;
         Some(res)
     } else {
         None

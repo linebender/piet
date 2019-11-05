@@ -618,7 +618,6 @@ impl TextLayout for CairoTextLayout {
                 },
                 metrics: HitTestMetrics {
                     text_position: text_len,
-                    is_text: true,
                 },
             });
         }
@@ -637,7 +636,6 @@ impl TextLayout for CairoTextLayout {
                 point: Point { x: point_x, y: 0.0 },
                 metrics: HitTestMetrics {
                     text_position: text_position,
-                    is_text: true,
                 },
             })
         } else {
@@ -649,7 +647,6 @@ impl TextLayout for CairoTextLayout {
                 },
                 metrics: HitTestMetrics {
                     text_position: text_len,
-                    is_text: true,
                 },
             })
         }
