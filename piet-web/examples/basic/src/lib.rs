@@ -148,7 +148,14 @@ mod test {
             full_width,
             3.0,
         );
-        assert_eq!(full_layout.hit_test_text_position(11).unwrap().metrics.text_position, 10)
+        assert_eq!(
+            full_layout
+                .hit_test_text_position(11)
+                .unwrap()
+                .metrics
+                .text_position,
+            10
+        )
     }
 
     pub fn test_hit_test_text_position_complex_0(ctx: &mut WebRenderContext) {
