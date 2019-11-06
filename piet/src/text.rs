@@ -31,9 +31,12 @@ pub trait TextLayoutBuilder {
 
 /// # Text Layout
 ///
-/// A text position is defined in utf-8 code units, as is standard for Rust strings.
+/// ## Text Position
+///
+/// A text position is the offset in the underlying string, defined in utf-8 code units, as is standard for Rust strings.
 ///
 /// However, text position is also related to valid cursor positions. Therefore:
+/// - The beginning of a line has text positiong `0`.
 /// - The end of a line is a valid text position. e.g. `text.len()` is a valid text position.
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
@@ -42,22 +45,46 @@ pub trait TextLayout {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
 
-    /// Given a Point, determine the corresponding text position.
+    /// Given a `Point`, determine the corresponding text position.
     ///
-    /// `HitTestPoint` field `is_inside` returns true if the tested point falls within the bounds of the text.
+    /// ## Return value:
+    /// Returns a `HitTestPoint` describing the results of the test.
+    ///
+    /// `HitTestPoint` field `is_inside` returns true if the tested point falls within the bounds of the text, `false` otherwise.
+    ///
+    /// `HitTestTextPosition` field `metrics` is a `HitTestMetrics` struct. `HitTestMetrics` field `text_position` is the text
+    /// position closest to the tested point.
+    ///
+    /// ## Notes:
+    ///
     /// Some text position will always be returned; if the tested point is inside, it returns the appropriate text
-    /// position; if it's outside, it will return the nearest text position (either 0 or text.len()).
-
+    /// position; if it's outside, it will return the nearest text position (either `0` or `text.len()`).
+    ///
+    /// For more on text positions, see docs for the [`TextLayout`
+    /// trait](../piet/trait.TextLayout.html)
     fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
     /// Given a text position, determine the corresponding pixel location.
     /// (currently consider the text layout just one line)
     ///
-    /// Note: if text position is not at grapheme boundary, rounds the boundary to the text position of the
-    /// grapheme cluster it is a part of. Returned text position is the original text position.
+    /// ## Return value:
+    /// Returns a `HitTestTextPosition` describing the results of the test.
     ///
-    /// Note: in directwrite, if text position is not at code point boundary, this method will
-    /// panic. Cairo and web are more lenient and may not panic.
+    /// `HitTestTextPosition` field `point` is the point offset of the boundary of the
+    /// grapheme cluster that the text position is a part of.
+    ///
+    /// `HitTestTextPosition` field `metrics` is a `HitTestMetrics` struct. `HitTestMetrics` field `text_position` is the original text position (unless out of bounds).
+    ///
+    /// ## Notes:
+    /// In directwrite, if text position is not at code point boundary, this method will panic.
+    /// Cairo and web are more lenient and may not panic.
+    ///
+    /// For text position that is greater than `text.len()`, web/cairo will return the
+    /// `HitTestTextPosition` as if `text_position == text.len()`. In directwrite, the method will
+    /// panic, as the text position is out of bounds.
+    ///
+    /// For more on text positions, see docs for the [`TextLayout`
+    /// trait](../piet/trait.TextLayout.html)
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition>;
 }
 
@@ -73,6 +100,9 @@ pub struct HitTestPoint {
 }
 
 /// return values for [`hit_test_text_position`](../piet/trait.TextLayout.html#tymethod.hit_test_text_position).
+/// - `metrics.text_position` will give you the text position.
+/// - `point` is the width offset of the leading edge of the grapheme cluster containing the text
+/// position.
 #[derive(Debug, Default)]
 pub struct HitTestTextPosition {
     pub point: Point,
