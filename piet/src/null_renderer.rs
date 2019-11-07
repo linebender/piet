@@ -7,6 +7,7 @@ use kurbo::{Affine, Point, Rect, Shape};
 use crate::{
     Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
     InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    LineMetric,
 };
 
 /// A render context that doesn't render.
@@ -160,6 +161,22 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
 impl TextLayout for NullTextLayout {
     fn width(&self) -> f64 {
         42.0
+    }
+
+    fn update_width(&self, _new_width: f64) -> Self {
+        Self
+    }
+
+    fn line_text(line_number: usize) -> String {
+        "".into()
+    }
+
+    fn line_metric(line_number: usize) -> LineMetric {
+        LineMetric::default()
+    }
+
+    fn line_count() -> usize {
+        0
     }
 
     fn hit_test_point(&self, _point: Point) -> HitTestPoint {

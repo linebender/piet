@@ -31,6 +31,27 @@ pub trait TextLayoutBuilder {
 
 /// # Text Layout
 ///
+/// ## Line Breaks
+///
+/// A text layout may be broken into multiple lines in order to fit within a given width. Line breaking is generally done
+/// between words (whitespace-separated)
+///
+/// When resizing the width of the text layout, calling [`update_width`][] on the text layout will
+/// recalculate line breaks and return a new `TextLayout`.
+///
+/// [Line text][]  and [line metrics][] can be accessed line-by-line by 0-indexed line number.
+///
+/// [Line metrics] include:
+/// - line length offset from text layout beginning (in code units)
+/// - line width offset from text layout beginning
+/// - (line length + trailing whitespace) offset from text layout beginning (in code units)
+/// - (line width  + trailing whitespace) offset from text layout beginning
+///
+/// The trailing whitespace distinction is important. Lines are broken at the grapheme boundary after
+/// whitespace, but that whitepace is not necessarily rendered since it's just the trailing
+/// whitepace at the end of a line. Keeping the trailing whitespace data available allows API
+/// consumers to determine their own trailing whitespace strategy.
+///
 /// ## Text Position
 ///
 /// A text position is the offset in the underlying string, defined in utf-8 code units, as is standard for Rust strings.
@@ -41,9 +62,28 @@ pub trait TextLayoutBuilder {
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
 ///
+// TODO update hit testing for line breaking
 pub trait TextLayout {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
+
+
+    /// Used for changing the width of a text layout. Given a width, returns a [`TextLayout`]
+    /// struct with recalculated lines and line metrics.
+    // TODO: Should this take &self or self? I'd say maybe; perhaps the old struct should be kept around
+    // to help with caching.
+    fn update_width(&self, new_width: f64) -> Self;
+
+    /// Given a line number, return a reference to that line's underlying string.
+    // TODO can I return &str without viral lifetime?
+    fn line_text(line_number: usize) -> String;
+
+    /// Given a line number, return a reference to that line's metrics.
+    // TODO can I return &LineMetricr without viral lifetime?
+    fn line_metric(line_number: usize) -> LineMetric;
+
+    /// Returns total number of lines in the text layout.
+    fn line_count() -> usize;
 
     /// Given a `Point`, determine the corresponding text position.
     ///
@@ -92,6 +132,34 @@ pub trait TextLayout {
     /// [`HitTestTextPosition`]: struct.HitTestTextPosition.html
     /// [`HitTestMetrics`]: struct.HitTestMetrics.html
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition>;
+}
+
+/// Metadata about each line in a text layout.
+#[derive(Debug, Default)]
+pub struct LineMetric {
+    /// Line length (in code units), but offset from the beginning of the text. So it's the length
+    /// of this line summed with the lengths of all the lines before it.
+    ///
+    /// Does not include trailing whitespace.
+    pub line_length_offset: usize,
+
+    /// Line width, but offset from the beginning of the text. So it's the width
+    /// of this line summed with the widths of all the lines before it.
+    ///
+    /// Does not include trailing whitespace.
+    pub line_width_offset: f64,
+
+    /// Line length (in code units), but offset from the beginning of the text. So it's the length
+    /// of this line summed with the lengths of all the lines before it.
+    ///
+    /// Includes trailing whitespace.
+    pub line_length_trailing_whitespace_offset: usize,
+
+    /// Line width, but offset from the beginning of the text. So it's the width
+    /// of this line summed with the widths of all the lines before it.
+    ///
+    /// Includes trailing whitespace.
+    pub line_width_trailing_whitespace_offset: f64,
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
