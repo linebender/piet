@@ -167,15 +167,15 @@ impl TextLayout for NullTextLayout {
         Self
     }
 
-    fn line_text(line_number: usize) -> String {
+    fn line_text(&self, _line_number: usize) -> String {
         "".into()
     }
 
-    fn line_metric(line_number: usize) -> LineMetric {
+    fn line_metric(&self, _line_number: usize) -> LineMetric {
         LineMetric::default()
     }
 
-    fn line_count() -> usize {
+    fn line_count(&self) -> usize {
         0
     }
 
