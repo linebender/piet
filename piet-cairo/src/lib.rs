@@ -738,6 +738,19 @@ mod test {
             full_width,
             3.0,
         );
+        assert_close_to(
+            full_layout.hit_test_text_position(11).unwrap().point.x as f64,
+            full_width,
+            3.0,
+        );
+        assert_eq!(
+            full_layout
+                .hit_test_text_position(11)
+                .unwrap()
+                .metrics
+                .text_position,
+            10
+        )
     }
 
     #[test]
