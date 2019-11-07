@@ -75,11 +75,9 @@ pub trait TextLayout {
     fn update_width(&self, new_width: f64) -> Self;
 
     /// Given a line number, return a reference to that line's underlying string.
-    // TODO can I return &str without viral lifetime?
     fn line_text(&self, line_number: usize) -> String;
 
     /// Given a line number, return a reference to that line's metrics.
-    // TODO can I return &LineMetricr without viral lifetime?
     fn line_metric(&self, line_number: usize) -> LineMetric;
 
     /// Returns total number of lines in the text layout.
