@@ -594,9 +594,9 @@ impl TextLayout for CairoTextLayout {
             // since it's not a hit, check if closer to start or finish
             // and move the appropriate search boundary
             if point.x < grapheme_bounds.leading {
-                right = grapheme_bounds.curr_idx as usize; // should this be -1?
+                right -= 1;
             } else if point.x > grapheme_bounds.trailing {
-                left = grapheme_bounds.curr_idx as usize; // should this be +1?
+                left += 1;
             }
         }
     }
