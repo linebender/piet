@@ -594,9 +594,9 @@ impl TextLayout for CairoTextLayout {
             // since it's not a hit, check if closer to start or finish
             // and move the appropriate search boundary
             if point.x < grapheme_bounds.leading {
-                right = grapheme_bounds.curr_idx as usize; // should this be -1?
+                right = middle;
             } else if point.x > grapheme_bounds.trailing {
-                left = grapheme_bounds.curr_idx as usize; // should this be +1?
+                left = middle;
             }
         }
     }
@@ -1004,7 +1004,7 @@ mod test {
 
     #[test]
     #[cfg(target_os = "linux")]
-    fn test_hit_test_point_complex() {
+    fn test_hit_test_point_complex_0() {
         // Notes on this input:
         // 6 code points
         // 7 utf-16 code units (1/1/1/1/1/2)
@@ -1053,7 +1053,7 @@ mod test {
 
     #[test]
     #[cfg(target_os = "macos")]
-    fn test_hit_test_point_complex() {
+    fn test_hit_test_point_complex_0() {
         // Notes on this input:
         // 6 code points
         // 7 utf-16 code units (1/1/1/1/1/2)
@@ -1100,5 +1100,63 @@ mod test {
         assert_eq!(pt.metrics.text_position, 14);
         let pt = layout.hit_test_point(Point::new(43.0, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_hit_test_point_complex_1() {
+        // this input caused an infinite loop in the binary search when test position
+        // > 21.0 && < 28.0
+        //
+        // This corresponds to the char 'y' in the input.
+        let input = "tßßypi";
+
+        let mut text_layout = CairoText::new();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
+        println!("text pos 3: {:?}", layout.hit_test_text_position(3)); // 13.0
+        println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 13.0
+        println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 21.0
+        println!("text pos 6: {:?}", layout.hit_test_text_position(6)); // 28.0
+        println!("text pos 7: {:?}", layout.hit_test_text_position(7)); // 36.0
+        println!("text pos 8: {:?}", layout.hit_test_text_position(8)); // 39.0, end
+
+        let pt = layout.hit_test_point(Point::new(27.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 6);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn test_hit_test_point_complex_1() {
+        // this input caused an infinite loop in the binary search when test position
+        // > 21.0 && < 28.0
+        //
+        // This corresponds to the char 'y' in the input.
+        let input = "tßßypi";
+
+        let mut text_layout = CairoText::new();
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
+        println!("text pos 3: {:?}", layout.hit_test_text_position(3)); // 13.0
+        println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 13.0
+        println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 21.0
+        println!("text pos 6: {:?}", layout.hit_test_text_position(6)); // 28.0
+        println!("text pos 7: {:?}", layout.hit_test_text_position(7)); // 36.0
+        println!("text pos 8: {:?}", layout.hit_test_text_position(8)); // 39.0, end
+
+        let pt = layout.hit_test_point(Point::new(27.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 6);
     }
 }

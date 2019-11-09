@@ -609,9 +609,9 @@ impl TextLayout for WebTextLayout {
             // since it's not a hit, check if closer to start or finish
             // and move the appropriate search boundary
             if point.x < grapheme_bounds.leading {
-                right = grapheme_bounds.curr_idx as usize; // should this be -1?
+                right = middle;
             } else if point.x > grapheme_bounds.trailing {
-                left = grapheme_bounds.curr_idx as usize; // should this be +1?
+                left = middle;
             }
         }
     }

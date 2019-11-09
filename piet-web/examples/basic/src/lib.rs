@@ -54,8 +54,11 @@ fn run_tests(ctx: &mut WebRenderContext) {
     test::test_hit_test_point_basic(ctx);
     console::log_1(&"test hit_test_point_basic complete".into());
 
-    test::test_hit_test_point_complex(ctx);
-    console::log_1(&"test hit_test_point_complex complete".into());
+    test::test_hit_test_point_complex_0(ctx);
+    console::log_1(&"test hit_test_point_complex_0 complete".into());
+
+    test::test_hit_test_point_complex_1(ctx);
+    console::log_1(&"test hit_test_point_complex_1 complete".into());
 }
 
 mod test {
@@ -368,7 +371,7 @@ mod test {
     }
 
     // NOTE brittle test
-    pub fn test_hit_test_point_complex(ctx: &mut WebRenderContext) {
+    pub fn test_hit_test_point_complex_0(ctx: &mut WebRenderContext) {
         // Notes on this input:
         // 6 code points
         // 7 utf-16 code units (1/1/1/1/1/2)
@@ -413,5 +416,32 @@ mod test {
         assert_eq!(pt.metrics.text_position, 14);
         let pt = layout.hit_test_point(Point::new(40.0, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
+    }
+
+    pub fn test_hit_test_point_complex_1(ctx: &mut WebRenderContext) {
+        // this input caused an infinite loop in the binary search when test position
+        // > 21.0 && < 28.0
+        //
+        // This corresponds to the char 'y' in the input.
+        let input = "tßßypi";
+
+        let text_layout = ctx;
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
+        println!("text pos 3: {:?}", layout.hit_test_text_position(3)); // 13.0
+        println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 13.0
+        println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 21.0
+        println!("text pos 6: {:?}", layout.hit_test_text_position(6)); // 28.0
+        println!("text pos 7: {:?}", layout.hit_test_text_position(7)); // 36.0
+        println!("text pos 8: {:?}", layout.hit_test_text_position(8)); // 39.0, end
+
+        let pt = layout.hit_test_point(Point::new(27.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 6);
     }
 }
