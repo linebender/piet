@@ -597,6 +597,8 @@ impl TextLayout for CairoTextLayout {
                 right = middle;
             } else if point.x > grapheme_bounds.trailing {
                 left = middle;
+            } else {
+                unreachable!("hit_test_point conditional is exhaustive");
             }
         }
     }
