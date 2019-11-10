@@ -13,7 +13,6 @@ members = [
 
 default-members = [
     "piet",
-    "piet-cairo",
     "piet-common",
     "piet-test",
     "piet-web",
