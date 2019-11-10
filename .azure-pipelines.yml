@@ -19,6 +19,18 @@ jobs:
       - bash: sudo apt-get install libcairo2
         condition: eq(variables['Agent.OS'], 'Linux')
 
+      - task: DownloadGitHubRelease@0
+        inputs:
+          userRepository: preshing/cairo-windows
+          defaultVersionType: 'latest'
+          itemPattern: '*.zip'
+        condition: eq(variables['Agent.OS'], 'Windows_NT')
+
+      - task: ExtractFiles@1
+        inputs:
+          archiveFilePatterns: cairo-windows-1.15.12.zip
+        condition: eq(variables['Agent.OS'], 'Windows_NT')
+
       - template: ci/install-rust.yml
         parameters:
           rust_version: stable
