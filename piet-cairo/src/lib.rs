@@ -596,7 +596,7 @@ impl TextLayout for CairoTextLayout {
             if point.x < grapheme_bounds.leading {
                 right = middle;
             } else if point.x > grapheme_bounds.trailing {
-                left = middle;
+                left = middle + 1;
             } else {
                 unreachable!("hit_test_point conditional is exhaustive");
             }
@@ -914,7 +914,7 @@ mod test {
 
     #[test]
     #[cfg(target_os = "linux")]
-    fn test_hit_test_point_basic() {
+    fn test_hit_test_point_basic_0() {
         let mut text_layout = CairoText::new();
 
         let font = text_layout
@@ -961,7 +961,7 @@ mod test {
 
     #[test]
     #[cfg(target_os = "macos")]
-    fn test_hit_test_point_basic() {
+    fn test_hit_test_point_basic_0() {
         let mut text_layout = CairoText::new();
 
         let font = text_layout
@@ -1002,6 +1002,70 @@ mod test {
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0); // first text position
         assert_eq!(pt.is_inside, false);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    // for testing that 'middle' assignment in binary search is correct
+    fn test_hit_test_point_basic_1() {
+        let mut text_layout = CairoText::new();
+
+        // base condition, one grapheme
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout.new_text_layout(&font, "t").build().unwrap();
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+
+        // two graphemes (to check that middle moves)
+        let pt = layout.hit_test_point(Point::new(1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+
+        let layout = text_layout.new_text_layout(&font, "te").build().unwrap();
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
+
+        let pt = layout.hit_test_point(Point::new(1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(4.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 1);
+        let pt = layout.hit_test_point(Point::new(6.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 1);
+        let pt = layout.hit_test_point(Point::new(11.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    // for testing that 'middle' assignment in binary search is correct
+    fn test_hit_test_point_basic_1() {
+        let mut text_layout = CairoText::new();
+
+        // base condition, one grapheme
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout.new_text_layout(&font, "t").build().unwrap();
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+
+        // two graphemes (to check that middle moves)
+        let pt = layout.hit_test_point(Point::new(1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+
+        let layout = text_layout.new_text_layout(&font, "te").build().unwrap();
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
+
+        let pt = layout.hit_test_point(Point::new(1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(4.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 1);
+        let pt = layout.hit_test_point(Point::new(6.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 1);
+        let pt = layout.hit_test_point(Point::new(11.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
     }
 
     #[test]

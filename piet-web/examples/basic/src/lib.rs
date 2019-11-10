@@ -51,8 +51,11 @@ fn run_tests(ctx: &mut WebRenderContext) {
     test::test_hit_test_text_position_complex_1(ctx);
     console::log_1(&"test hit_test_text_position_complex_1 complete".into());
 
-    test::test_hit_test_point_basic(ctx);
-    console::log_1(&"test hit_test_point_basic complete".into());
+    test::test_hit_test_point_basic_0(ctx);
+    console::log_1(&"test hit_test_point_basic complete_0".into());
+
+    test::test_hit_test_point_basic_1(ctx);
+    console::log_1(&"test hit_test_point_basic complete_1".into());
 
     test::test_hit_test_point_complex_0(ctx);
     console::log_1(&"test hit_test_point_complex_0 complete".into());
@@ -325,7 +328,7 @@ mod test {
     }
 
     // NOTE brittle test
-    pub fn test_hit_test_point_basic(ctx: &mut WebRenderContext) {
+    pub fn test_hit_test_point_basic_0(ctx: &mut WebRenderContext) {
         let text_layout = ctx;
 
         let font = text_layout
@@ -368,6 +371,35 @@ mod test {
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0); // first text position
         assert_eq!(pt.is_inside, false);
+    }
+
+    pub fn test_hit_test_point_basic_1(ctx: &mut WebRenderContext) {
+        let text_layout = ctx;
+
+        // base condition, one grapheme
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout.new_text_layout(&font, "t").build().unwrap();
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+
+        // two graphemes (to check that middle moves)
+        let pt = layout.hit_test_point(Point::new(1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+
+        let layout = text_layout.new_text_layout(&font, "te").build().unwrap();
+        println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
+        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
+
+        let pt = layout.hit_test_point(Point::new(1.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(4.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 1);
+        let pt = layout.hit_test_point(Point::new(6.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 1);
+        let pt = layout.hit_test_point(Point::new(11.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 2);
     }
 
     // NOTE brittle test

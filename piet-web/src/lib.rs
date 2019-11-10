@@ -611,7 +611,7 @@ impl TextLayout for WebTextLayout {
             if point.x < grapheme_bounds.leading {
                 right = middle;
             } else if point.x > grapheme_bounds.trailing {
-                left = middle;
+                left = middle + 1;
             } else {
                 unreachable!("hit_test_point conditional is exhaustive");
             }
