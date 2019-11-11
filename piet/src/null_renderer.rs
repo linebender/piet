@@ -163,12 +163,12 @@ impl TextLayout for NullTextLayout {
         Self
     }
 
-    fn line_text(&self, _line_number: usize) -> &str {
-        ""
+    fn line_text(&self, _line_number: usize) -> Option<&str> {
+        None
     }
 
-    fn line_metric(&self, _line_number: usize) -> &LineMetric {
-        &Self::LINE_METRIC
+    fn line_metric(&self, _line_number: usize) -> Option<&LineMetric> {
+        None
     }
 
     fn line_count(&self) -> usize {
@@ -182,15 +182,6 @@ impl TextLayout for NullTextLayout {
     fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
         None
     }
-}
-
-impl NullTextLayout {
-    const LINE_METRIC: LineMetric = LineMetric {
-        line_length_offset: 0,
-        line_length_trailing_whitespace_offset: 0,
-        line_width_offset: 0.0,
-        line_width_trailing_whitespace_offset: 0.0,
-    };
 }
 
 impl IntoBrush<NullRenderContext> for NullBrush {
