@@ -135,7 +135,7 @@ impl Text for NullText {
         NullFontBuilder
     }
 
-    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str, _width: f64) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
 }
