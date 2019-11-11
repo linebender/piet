@@ -75,10 +75,10 @@ pub trait TextLayout {
     fn update_width(&self, new_width: f64) -> Self;
 
     /// Given a line number, return a reference to that line's underlying string.
-    fn line_text(&self, line_number: usize) -> String;
+    fn line_text(&self, line_number: usize) -> &str;
 
     /// Given a line number, return a reference to that line's metrics.
-    fn line_metric(&self, line_number: usize) -> LineMetric;
+    fn line_metric(&self, line_number: usize) -> &LineMetric;
 
     /// Returns total number of lines in the text layout.
     fn line_count(&self) -> usize;
