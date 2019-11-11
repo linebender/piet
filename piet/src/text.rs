@@ -12,7 +12,7 @@ pub trait Text {
 
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder;
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str, width: f64) -> Self::TextLayoutBuilder;
 }
 
 pub trait FontBuilder {
