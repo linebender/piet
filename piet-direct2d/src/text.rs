@@ -252,7 +252,7 @@ pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<u
 #[cfg(test)]
 mod test {
     use crate::*;
-    use piet::TextLayout;
+    use piet::{TextLayout, Text, FontBuilder, TextLayoutBuilder};
 
     // - x: calculated value
     // - target: f64
@@ -275,33 +275,33 @@ mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4])
+            .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
             .build()
             .unwrap();
         let piet_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3])
+            .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
             .build()
             .unwrap();
         let pie_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..2])
+            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
             .build()
             .unwrap();
         let pi_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..1])
+            .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
             .build()
             .unwrap();
         let p_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, "").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, "", std::f64::INFINITY).build().unwrap();
         let null_width = layout.width();
 
-        let full_layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let full_layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
         let full_width = full_layout.width();
 
         assert_close_to(
@@ -348,7 +348,7 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
@@ -377,7 +377,7 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
@@ -415,18 +415,18 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2])
+            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
             .build()
             .unwrap();
         let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9])
+            .new_text_layout(&font, &input[0..9], std::f64::INFINITY)
             .build()
             .unwrap();
         let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10])
+            .new_text_layout(&font, &input[0..10], std::f64::INFINITY)
             .build()
             .unwrap();
 
@@ -494,7 +494,7 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "piet text!")
+            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
             .build()
             .unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 20.302734375
@@ -541,7 +541,7 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.275390625
         println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 18.0
         println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 24.46875
