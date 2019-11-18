@@ -9,8 +9,12 @@ use piet_web::WebRenderContext;
 
 use piet_test::draw_test_picture;
 
+extern crate console_error_panic_hook;
+use std::panic;
+
 #[wasm_bindgen]
 pub fn run() {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
     let window = window().unwrap();
     let canvas = window
         .document()
