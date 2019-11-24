@@ -3,9 +3,10 @@
 
 mod conv;
 mod d2d;
+pub mod d3d;
 mod dwrite;
 
-pub use d2d::{D2DDevice, D2DFactory};
+pub use d2d::{DeviceContext as D2DDeviceContext, D2DDevice, D2DFactory};
 pub use dwrite::DwriteFactory;
 
 use crate::conv::{
@@ -40,7 +41,7 @@ use dwrite::{TextFormat, TextFormatBuilder};
 pub struct D2DRenderContext<'a> {
     factory: &'a D2DFactory,
     inner_text: D2DText<'a>,
-    rt: &'a mut DeviceContext,
+    rt: &'a mut D2DDeviceContext,
 
     /// The context state stack. There is always at least one, until finishing.
     ctx_stack: Vec<CtxState>,
