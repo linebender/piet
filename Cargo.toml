@@ -7,7 +7,8 @@ members = [
     "piet-direct2d",
     "piet-test",
     "piet-web",
-    "piet-web/examples/basic"
+    "piet-web/examples/basic",
+    "piet-svg"
 ]
 
 default-members = [
@@ -16,5 +17,6 @@ default-members = [
     "piet-common",
     "piet-test",
     "piet-web",
-    "piet-web/examples/basic"
+    "piet-web/examples/basic",
+    "piet-svg"
 ]
