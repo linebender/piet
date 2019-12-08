@@ -47,7 +47,7 @@ impl StrokeStyle {
         self.dash = Some((dashes, offset));
     }
 
-    pub fn set_miter_limit(mut self, miter_limit: f64) {
+    pub fn set_miter_limit(&mut self, miter_limit: f64) {
         self.miter_limit = Some(miter_limit);
     }
 }
