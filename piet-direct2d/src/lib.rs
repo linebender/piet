@@ -2,7 +2,7 @@
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
 mod conv;
-mod d2d;
+pub mod d2d;
 pub mod d3d;
 mod dwrite;
 
