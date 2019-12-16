@@ -6,19 +6,24 @@ pub(crate) fn fetch_line_metrics(layout: &DwTextLayout) -> Vec<LineMetric> {
     layout.get_line_metrics(&mut dw_line_metrics);
 
     let mut metrics: Vec<_> = dw_line_metrics.iter()
-        .scan(0, |line_start_offset_agg, &line_metric| {
+        .scan((0, 0.0), |(line_start_offset_agg, height_agg), &line_metric| {
             let line_start_offset = *line_start_offset_agg;
             let line_length_trailing_whitespace_offset = line_start_offset + line_metric.length() as usize;
             let line_length_offset = line_length_trailing_whitespace_offset - line_metric.trailing_whitespace_length() as usize;
+
+            let cum_height = *height_agg + line_metric.height() as f64;
 
             let res = LineMetric {
                 line_start_offset,
                 line_length_offset,
                 line_length_trailing_whitespace_offset,
+                cum_height,
 
             };
 
+            // update cumulative state
             *line_start_offset_agg = line_length_trailing_whitespace_offset;
+            *height_agg = cum_height;
 
             Some(res)
         })
@@ -56,6 +61,8 @@ mod test {
     //
     // dwrite may split even smaller than a word (hyphenation?), but we
     // don't want to worry about that here yet. TODO
+    //
+    // TODO figure out how to deal with height floats
     #[test]
     fn test_fetch_line_metrics() {
         // Setup input, width, and expected
@@ -67,21 +74,25 @@ mod test {
                 line_start_offset: 0,
                 line_length_offset: 4,
                 line_length_trailing_whitespace_offset: 5,
+                cum_height: 15.9609375,
             },
             LineMetric {
                 line_start_offset: 5,
                 line_length_offset: 9,
                 line_length_trailing_whitespace_offset: 10,
+                cum_height: 31.921875,
             },
             LineMetric {
                 line_start_offset: 10,
                 line_length_offset: 14,
                 line_length_trailing_whitespace_offset: 15,
+                cum_height: 47.8828125,
             },
             LineMetric {
                 line_start_offset: 15,
                 line_length_offset: 19,
                 line_length_trailing_whitespace_offset: 19,
+                cum_height: 63.84375,
             },
         ];
 
@@ -91,11 +102,13 @@ mod test {
                 line_start_offset: 0,
                 line_length_offset: 9,
                 line_length_trailing_whitespace_offset: 10,
+                cum_height: 15.9609375,
             },
             LineMetric {
                 line_start_offset: 10,
                 line_length_offset: 19,
                 line_length_trailing_whitespace_offset: 19,
+                cum_height: 31.921875,
             },
         ];
 
@@ -105,6 +118,7 @@ mod test {
                 line_start_offset: 0,
                 line_length_offset: 19,
                 line_length_trailing_whitespace_offset: 19,
+                cum_height: 15.9609375,
             },
         ];
 
@@ -114,6 +128,7 @@ mod test {
                 line_start_offset: 0,
                 line_length_offset: 0,
                 line_length_trailing_whitespace_offset: 0,
+                cum_height: 15.9609375,
             },
         ];
 

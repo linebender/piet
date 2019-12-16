@@ -155,6 +155,9 @@ pub struct LineMetric {
 
 //    /// Line width, includes trailing whitespace.
 //    pub line_width_trailing_whitespace: f64,
+
+    /// Cumulative line height
+     pub cum_height: f64,
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
