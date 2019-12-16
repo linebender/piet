@@ -5,7 +5,7 @@ pub(crate) fn fetch_line_metrics(layout: &DwTextLayout) -> Vec<LineMetric> {
     let mut dw_line_metrics = Vec::new();
     layout.get_line_metrics(&mut dw_line_metrics);
 
-    dw_line_metrics.iter()
+    let mut metrics: Vec<_> = dw_line_metrics.iter()
         .scan(0, |line_start_offset_agg, &line_metric| {
             let line_start_offset = *line_start_offset_agg;
             let line_length_trailing_whitespace_offset = line_start_offset + line_metric.length() as usize;
@@ -22,7 +22,16 @@ pub(crate) fn fetch_line_metrics(layout: &DwTextLayout) -> Vec<LineMetric> {
 
             Some(res)
         })
-        .collect()
+        .collect();
+
+    // dwrite adds a null terminator to string, so the last index should be shortened by one.
+    // Assume that there must be at least one layout item?
+    if let Some(last) = metrics.last_mut() {
+        last.line_length_offset -= 1;
+        last.line_length_trailing_whitespace_offset -= 1;
+    }
+
+    metrics
 }
 
 #[cfg(test)]
@@ -30,22 +39,95 @@ mod test {
     use super::*;
     use super::super::*;
 
+    fn test_metrics_with_width(width: f64, expected: Vec<LineMetric>, input: &str, text_layout: &mut D2DText, font: &D2DFont) {
+        let layout = text_layout.new_text_layout(&font, input, width).build().unwrap();
+        let line_metrics = fetch_line_metrics(&layout.layout);
+
+        println!("{:#?}", layout.line_metrics);
+        assert_eq!(line_metrics, expected);
+    }
+
+    // Test at three different widths: small, medium, large.
+    // - small is every word being split.
+    // - medium is one split.
+    // - large is no split.
+    //
+    // Also test empty string input
+    //
+    // dwrite may split even smaller than a word (hyphenation?), but we
+    // don't want to worry about that here yet. TODO
     #[test]
     fn test_fetch_line_metrics() {
+        // Setup input, width, and expected
+        let input = "piet text most best";
+
+        let width_small = 30.0;
+        let expected_small = vec![
+            LineMetric {
+                line_start_offset: 0,
+                line_length_offset: 4,
+                line_length_trailing_whitespace_offset: 5,
+            },
+            LineMetric {
+                line_start_offset: 5,
+                line_length_offset: 9,
+                line_length_trailing_whitespace_offset: 10,
+            },
+            LineMetric {
+                line_start_offset: 10,
+                line_length_offset: 14,
+                line_length_trailing_whitespace_offset: 15,
+            },
+            LineMetric {
+                line_start_offset: 15,
+                line_length_offset: 19,
+                line_length_trailing_whitespace_offset: 19,
+            },
+        ];
+
+        let width_medium = 60.0;
+        let expected_medium = vec![
+            LineMetric {
+                line_start_offset: 0,
+                line_length_offset: 9,
+                line_length_trailing_whitespace_offset: 10,
+            },
+            LineMetric {
+                line_start_offset: 10,
+                line_length_offset: 19,
+                line_length_trailing_whitespace_offset: 19,
+            },
+        ];
+
+        let width_large = 100.0;
+        let expected_large = vec![
+            LineMetric {
+                line_start_offset: 0,
+                line_length_offset: 19,
+                line_length_trailing_whitespace_offset: 19,
+            },
+        ];
+
+        let empty_input = "";
+        let expected_empty = vec![
+            LineMetric {
+                line_start_offset: 0,
+                line_length_offset: 0,
+                line_length_trailing_whitespace_offset: 0,
+            },
+        ];
+
+        // setup dwrite layout
         let dwrite = directwrite::factory::Factory::new().unwrap();
-
-        let input = "piet text is the greatest";
-
         let mut text_layout = D2DText::new(&dwrite);
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input, 25.0).build().unwrap();
 
-        let line_metrics = fetch_line_metrics(&layout.layout);
-
-        println!("{:#?}", layout.line_metrics);
-        assert_eq!(line_metrics.len(), 0);
+        test_metrics_with_width(width_small, expected_small, input, &mut text_layout, &font);
+        test_metrics_with_width(width_medium, expected_medium, input, &mut text_layout, &font);
+        test_metrics_with_width(width_large, expected_large, input, &mut text_layout, &font);
+        test_metrics_with_width(width_small, expected_empty, empty_input, &mut text_layout, &font);
     }
 }

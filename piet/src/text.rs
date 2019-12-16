@@ -133,7 +133,7 @@ pub trait TextLayout {
 }
 
 /// Metadata about each line in a text layout.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct LineMetric {
     /// Index (in code units) of the start of the line, offset from the beginning of the text.
     pub line_start_offset: usize,
