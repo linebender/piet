@@ -4,7 +4,7 @@
 mod conv;
 pub mod d2d;
 pub mod d3d;
-mod dwrite;
+pub mod dwrite;
 
 pub use d2d::{DeviceContext as D2DDeviceContext, D2DDevice, D2DFactory};
 pub use dwrite::DwriteFactory;
