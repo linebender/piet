@@ -63,7 +63,7 @@ pub trait TextLayoutBuilder {
 /// occur.
 ///
 // TODO update hit testing for line breaking
-pub trait TextLayout {
+pub trait TextLayout: Clone {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
 
@@ -133,7 +133,7 @@ pub trait TextLayout {
 }
 
 /// Metadata about each line in a text layout.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct LineMetric {
     /// Index (in code units) of the start of the line, offset from the beginning of the text.
     pub line_start_offset: usize,

@@ -28,6 +28,7 @@ pub struct D2DFontBuilder<'a> {
     name: String,
 }
 
+#[derive(Clone)]
 pub struct D2DTextLayout {
     text: String,
     line_metrics: Vec<LineMetric>,
@@ -67,7 +68,6 @@ impl<'a> Text for D2DText<'a> {
         }
     }
 
-    // TODO: should we use Option instead of infinity for no line breaks?
     fn new_text_layout(&mut self, font: &Self::Font, text: &str, width: f64) -> Self::TextLayoutBuilder {
         // Same consideration as above, we clone the font and text for lifetime
         // reasons.

@@ -31,6 +31,7 @@ pub struct NullFont;
 #[doc(hidden)]
 pub struct NullFontBuilder;
 
+#[derive(Clone)]
 #[doc(hidden)]
 pub struct NullTextLayout;
 #[doc(hidden)]
