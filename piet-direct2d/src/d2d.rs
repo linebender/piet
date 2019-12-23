@@ -230,7 +230,7 @@ impl DeviceContext {
     }
 
     /// docs
-    pub unsafe fn get_raw(self) -> *mut ID2D1DeviceContext {
+    pub unsafe fn get_raw(&self) -> *mut ID2D1DeviceContext {
         self.0.as_raw()
     }
 
