@@ -229,6 +229,11 @@ impl DeviceContext {
         DeviceContext(ptr)
     }
 
+    /// docs
+    pub unsafe fn get_raw(self) -> *mut ID2D1DeviceContext {
+        self.0.as_raw()
+    }
+
     /// Create a bitmap from a DXGI surface.
     ///
     /// Most often, this bitmap will be used to set the target of a
