@@ -5,9 +5,9 @@
 ///
 /// `dash` has two parts. The Vec<f64> pattern array and an offset. The array
 /// represents alternating lengths to be drawn and undrawn repeatedly. The offset
-/// specifes how far into the pattern it should start. If your platform does not
-/// support an odd number of lengths in this array, you may concatenate the array
-/// to itself to reach an even count.
+/// specifes how far into the pattern it should start. On platforms that do not
+/// support an odd number of lengths in the array, the implementation may
+/// concatenate two copies of the array to reach an even count.
 ///
 /// `miter_limit` controls how corners are drawn when `line_join` is set to
 /// Miter. Will draw corners as `Bevel` instead of `Miter` if the limit is
