@@ -1,6 +1,21 @@
 //! Options for drawing paths.
 
 /// Options for drawing stroked lines.
+/// Most of these are self explanatory, but some aren't.
+///
+/// `dash` has two parts. The Vec<f64> pattern array and an offset. The array
+/// represents alternating lengths to be drawn and undrawn repeatedly. The offset
+/// specifes how far into the pattern it should start. If your platform does not
+/// support an odd number of lengths in this array, you may concatenate the array
+/// to itself to reach an even count.
+///
+/// `miter_limit` controls how corners are drawn when `line_join` is set to
+/// Miter. Will draw corners as `Bevel` instead of `Miter` if the limit is
+/// reached. See the reference below on how `miter_limit` is calculated.
+///
+/// See
+/// https://www.adobe.com/content/dam/acom/en/devnet/actionscript/articles/psrefman.pdf
+/// for more information and examples
 #[derive(Clone, PartialEq, Debug)]
 pub struct StrokeStyle {
     pub line_join: Option<LineJoin>,
