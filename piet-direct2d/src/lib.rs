@@ -109,7 +109,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         }
     }
 
-    fn current_transform(&self) -> Affine {
+    pub fn current_transform(&self) -> Affine {
         // This is an unwrap because we protect the invariant.
         self.ctx_stack.last().unwrap().transform
     }
@@ -423,6 +423,10 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         self.ctx_stack.last_mut().unwrap().transform *= transform;
         self.rt
             .set_transform(&affine_to_matrix3x2f(self.current_transform()));
+    }
+
+    fn current_transform(&self) -> Affine {
+        self.current_transform()
     }
 
     fn make_image(

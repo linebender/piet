@@ -255,6 +255,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.transform(affine_to_matrix(transform));
     }
 
+    fn current_transform(&self) -> Affine {
+        matrix_to_affine(self.ctx.get_matrix())
+    }
+
     fn make_image(
         &mut self,
         width: usize,
@@ -490,6 +494,12 @@ fn affine_to_matrix(affine: Affine) -> Matrix {
         x0: a[4],
         y0: a[5],
     }
+}
+
+fn matrix_to_affine(matrix: Matrix) -> Affine {
+    Affine::new([
+        matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0,
+    ])
 }
 
 fn scale_matrix(scale: f64) -> Matrix {

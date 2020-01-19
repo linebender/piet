@@ -262,6 +262,13 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         let _ = self.ctx.transform(a[0], a[1], a[2], a[3], a[4], a[5]);
     }
 
+    fn current_transform(&self) -> Affine {
+        // todo
+        // current_transform() and get_transform() currently not implemented:
+        // https://github.com/rustwasm/wasm-bindgen/blob/f8354b3a88de013845a304ea77d8b9b9286a0d7b/crates/web-sys/webidls/enabled/CanvasRenderingContext2D.webidl#L136
+        Affine::default()
+    }
+
     fn make_image(
         &mut self,
         width: usize,
