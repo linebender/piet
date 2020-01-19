@@ -80,7 +80,7 @@ where
     ///
     /// TODO: figure out how to document lifetime and rebuilding requirements. Should
     /// that be the responsibility of the client, or should the back-end take
-    /// responsiblity? We could have a cache that is flushed when the Direct2D
+    /// responsibility? We could have a cache that is flushed when the Direct2D
     /// render target is rebuilt. Solid brushes are super lightweight, but
     /// other potentially retained objects will be heavier.
     fn solid_brush(&mut self, color: Color) -> Self::Brush;
@@ -185,6 +185,9 @@ where
     /// The image is scaled to the provided `rect`. It will be squashed if
     /// aspect ratios don't match.
     fn draw_image(&mut self, image: &Self::Image, rect: impl Into<Rect>, interp: InterpolationMode);
+
+    /// Returns the transformations currently applied to the context.
+    fn current_transform(&self) -> Affine;
 }
 
 /// A trait for various types that can be used as brushes. These include

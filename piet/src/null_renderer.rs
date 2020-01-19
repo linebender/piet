@@ -117,6 +117,10 @@ impl RenderContext for NullRenderContext {
         _interp: InterpolationMode,
     ) {
     }
+
+    fn current_transform(&self) -> Affine {
+        Affine::default()
+    }
 }
 
 impl Text for NullText {
