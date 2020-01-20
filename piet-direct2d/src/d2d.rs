@@ -168,6 +168,10 @@ impl D2DFactory {
         wrap(hr, ptr, D2DDevice)
     }
 
+    pub unsafe fn get_raw(&self) -> *mut ID2D1Factory1 {
+        self.0.as_raw()
+    }
+
     pub fn create_path_geometry(&self) -> Result<PathGeometry, Error> {
         unsafe {
             let mut ptr = null_mut();
