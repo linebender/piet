@@ -107,6 +107,11 @@ impl DwriteFactory {
             wrap(hr, ptr, DwriteFactory)
         }
     }
+
+    pub fn get_raw(&self) -> *mut IDWriteFactory {
+        self.0.as_raw()
+    }
+
 }
 
 impl<'a> TextFormatBuilder<'a> {
