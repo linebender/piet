@@ -112,6 +112,9 @@ impl DwriteFactory {
         self.0.as_raw()
     }
 
+    pub unsafe fn from_raw(raw: *mut IDWriteFactory) -> Self {
+        Self(ComPtr::from_raw(raw))
+    }
 }
 
 impl<'a> TextFormatBuilder<'a> {
