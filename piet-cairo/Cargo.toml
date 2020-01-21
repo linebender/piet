@@ -14,7 +14,7 @@ piet = { version = "0.0.7", path = "../piet" }
 unicode-segmentation = "1.3.0"
 
 [dependencies.cairo-rs]
-version = "0.7.1"
+version = "0.8.0"
 # We don't need glib
 default-features = false
 
@@ -22,6 +22,6 @@ default-features = false
 piet-test = { version = "0.0.7", path = "../piet-test" }
 
 [dev-dependencies.cairo-rs]
-version = "0.7.1"
+version = "0.8.0"
 features = ["png"]
 default-features = false

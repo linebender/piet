@@ -18,11 +18,11 @@ piet = { version = "0.0.7", path = "../piet" }
 piet-cairo = { version = "0.0.7", path = "../piet-cairo", optional = true }
 piet-direct2d = { version = "0.0.7", path = "../piet-direct2d", optional = true }
 piet-web = { version = "0.0.7", path = "../piet-web", optional = true }
-cairo-rs = { version = "0.7.1", default_features = false, optional = true}
+cairo-rs = { version = "0.8.0", default_features = false, optional = true}
 
 [target.'cfg(not(any(target_arch="wasm32", target_os="windows")))'.dependencies]
 piet-cairo = { version = "0.0.7", path = "../piet-cairo" }
-cairo-rs = { version = "0.7.1", default_features = false}
+cairo-rs = { version = "0.8.0", default_features = false}
 
 [target.'cfg(target_os="windows")'.dependencies]
 piet-direct2d = { version = "0.0.7", path = "../piet-direct2d" }
