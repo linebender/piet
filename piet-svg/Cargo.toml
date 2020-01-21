@@ -1,14 +1,14 @@
 [package]
 name = "piet-svg"
-version = "0.0.7"
+version = "0.0.8"
 authors = ["Benjamin Saunders <ben.e.saunders@gmail.com>"]
 edition = "2018"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/linebender/piet"
 
 [dependencies]
-piet = { version = "0.0.7", path = "../piet" }
+piet = { version = "0.0.8", path = "../piet" }
 svg = "0.6"
 
 [dev-dependencies]
-piet-test = { version = "0.0.7", path = "../piet-test" }
+piet-test = { version = "0.0.8", path = "../piet-test" }
