@@ -236,6 +236,10 @@ impl piet::RenderContext for RenderContext {
         self.state.xf *= transform;
     }
 
+    fn current_transform(&self) -> Affine {
+        self.state.xf
+    }
+
     fn make_image(
         &mut self,
         _width: usize,
