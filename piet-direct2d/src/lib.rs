@@ -109,11 +109,6 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         }
     }
 
-    pub fn current_transform(&self) -> Affine {
-        // This is an unwrap because we protect the invariant.
-        self.ctx_stack.last().unwrap().transform
-    }
-
     fn pop_state(&mut self) {
         // This is an unwrap because we protect the invariant.
         let old_state = self.ctx_stack.pop().unwrap();
@@ -426,7 +421,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn current_transform(&self) -> Affine {
-        self.current_transform()
+        // This is an unwrap because we protect the invariant.
+        self.ctx_stack.last().unwrap().transform
     }
 
     fn make_image(
