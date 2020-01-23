@@ -2,9 +2,12 @@
 name = "piet-svg"
 version = "0.0.8"
 authors = ["Benjamin Saunders <ben.e.saunders@gmail.com>"]
+description = "SVG backend for piet 2D graphics abstraction."
 edition = "2018"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/linebender/piet"
+keywords = ["graphics", "2d"]
+categories = ["rendering::graphics-api"]
 
 [dependencies]
 piet = { version = "0.0.8", path = "../piet" }
