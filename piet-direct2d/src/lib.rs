@@ -17,9 +17,6 @@ use crate::conv::{
 use std::borrow::Cow;
 use std::convert::TryInto;
 
-use winapi::shared::basetsd::UINT32;
-use winapi::um::dcommon::D2D_SIZE_U;
-
 use winapi::um::d2d1::{
     D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
     D2D1_DRAW_TEXT_OPTIONS_NONE, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
@@ -123,7 +120,7 @@ fn path_from_shape(
     let mut sink = path.open()?;
     sink.set_fill_mode(fill_rule);
     let mut need_close = false;
-    for el in shape.to_bez_path(1e-3) {
+    for el in shape.to_bez_path(BEZ_TOLERANCE) {
         match el {
             PathEl::MoveTo(p) => {
                 if need_close {
