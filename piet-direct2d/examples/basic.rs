@@ -1,4 +1,5 @@
 //! Basic example of rendering on Direct2D.
+// TODO cleanup, much of this now exists in d3d.rs
 
 use std::ptr::null_mut;
 
