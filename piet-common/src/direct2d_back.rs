@@ -2,22 +2,10 @@
 
 use std::fmt;
 
-// --- old block of imports
-//use direct2d::enums::BitmapOptions;
-//use direct2d::image::Bitmap;
-//use direct2d::render_target::RenderTag;
-//use direct2d::RenderTarget;
-//use direct3d11::flags::{BindFlags, CreateDeviceFlags};
-//use direct3d11::helpers::ComWrapper;
-//use dxgi::flags::Format;
-
-// --- new block of imports
-// d3d11 interface, enough for drawing d2d
 use piet_direct2d::d3d::{
     D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
 };
 
-// -- end change in import block
 use piet::{ErrorKind, ImageFormat};
 
 #[doc(hidden)]
