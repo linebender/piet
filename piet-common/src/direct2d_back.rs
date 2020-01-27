@@ -13,7 +13,9 @@ use std::fmt;
 
 // --- new block of imports
 // d3d11 interface, enough for drawing d2d
-use piet_direct2d::d3d::{D3D11Device, D3D11DeviceContext, D3D11Texture2D, DXGI_MAP_READ, TextureMode};
+use piet_direct2d::d3d::{
+    D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
+};
 
 // -- end change in import block
 use piet::{ErrorKind, ImageFormat};
@@ -118,7 +120,8 @@ impl Device {
         let mut context = self.device.create_device_context().unwrap();
 
         // Create a texture to render to
-        let tex = self.d3d
+        let tex = self
+            .d3d
             .create_texture(width as u32, height as u32, TextureMode::Target)
             .unwrap();
 
@@ -163,7 +166,8 @@ impl<'a> BitmapTarget<'a> {
             return Err(piet::new_error(ErrorKind::NotSupported));
         }
         self.context.end_draw()?;
-        let temp_texture = self.d3d
+        let temp_texture = self
+            .d3d
             .create_texture(self.width as u32, self.height as u32, TextureMode::Read)
             .unwrap();
 

@@ -11,8 +11,7 @@ use winapi::shared::winerror::{HRESULT, SUCCEEDED, S_OK};
 use winapi::um::dwrite::{
     DWriteCreateFactory, IDWriteFactory, IDWriteTextFormat, IDWriteTextLayout,
     DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS, DWRITE_TEXT_METRICS,
-    DWRITE_HIT_TEST_METRICS,
+    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS, DWRITE_TEXT_METRICS,
 };
 use winapi::Interface;
 
@@ -281,14 +280,18 @@ impl TextLayout {
         }
     }
 
-    pub fn hit_test_text_position(&self, position: u32, trailing: bool) -> Option<HitTestTextPosition> {
+    pub fn hit_test_text_position(
+        &self,
+        position: u32,
+        trailing: bool,
+    ) -> Option<HitTestTextPosition> {
         let trailing = if trailing { 0 } else { 1 };
         unsafe {
             let (mut x, mut y) = (0.0, 0.0);
             let mut metrics = std::mem::zeroed();
-            let res =
-                self.0
-                    .HitTestTextPosition(position, trailing, &mut x, &mut y, &mut metrics);
+            let res = self
+                .0
+                .HitTestTextPosition(position, trailing, &mut x, &mut y, &mut metrics);
             if res != S_OK {
                 return None;
             }

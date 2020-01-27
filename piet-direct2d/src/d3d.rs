@@ -18,7 +18,6 @@ use winapi::Interface;
 
 use wio::com::ComPtr;
 
-
 #[derive(Debug)]
 pub struct Error(HRESULT);
 

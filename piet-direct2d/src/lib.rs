@@ -6,7 +6,7 @@ pub mod d2d;
 pub mod d3d;
 pub mod dwrite;
 
-pub use d2d::{DeviceContext as D2DDeviceContext, D2DDevice, D2DFactory};
+pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
 
 use crate::conv::{
@@ -32,7 +32,7 @@ use piet::{
     StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
-use d2d::{Bitmap, Brush, DeviceContext, PathGeometry, FillRule};
+use d2d::{Bitmap, Brush, DeviceContext, FillRule, PathGeometry};
 use dwrite::{TextFormat, TextFormatBuilder};
 
 pub struct D2DRenderContext<'a> {
@@ -406,7 +406,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 }
 
-impl<'a> IntoBrush<D2DRenderContext<'a>> for Brush{
+impl<'a> IntoBrush<D2DRenderContext<'a>> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut D2DRenderContext,
@@ -440,11 +440,7 @@ impl<'a> Text for D2DText<'a> {
         }
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-    ) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
         D2DTextLayoutBuilder {
             text: text.to_owned(),
             builder: dwrite::TextLayoutBuilder::new(self.dwrite)
@@ -470,7 +466,8 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
     fn build(self) -> Result<Self::Out, Error> {
         Ok(D2DTextLayout {
             text: self.text,
-            layout: self.builder
+            layout: self
+                .builder
                 .width(1e6) // TODO: probably want to support wrapping
                 .height(1e6)
                 .build()?,
