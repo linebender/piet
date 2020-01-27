@@ -51,6 +51,9 @@ pub enum Error {
 }
 
 /// A Direct2D factory object.
+///
+/// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
+/// that end-users directly use this struct.
 pub struct D2DFactory(ComPtr<ID2D1Factory1>);
 
 /// A Direct2D device.
@@ -60,6 +63,9 @@ pub struct D2DDevice(ComPtr<ID2D1Device>);
 ///
 /// This type is a thin wrapper for
 /// [ID2D1DeviceContext](https://docs.microsoft.com/en-us/windows/win32/api/d2d1_1/nn-d2d1_1-id2d1devicecontext).
+///
+/// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
+/// that end-users directly use this struct.
 pub struct DeviceContext(ComPtr<ID2D1DeviceContext>);
 
 pub struct PathGeometry(ComPtr<ID2D1PathGeometry>);

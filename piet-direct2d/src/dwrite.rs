@@ -27,6 +27,8 @@ pub enum Error {
     WinapiError(HRESULT),
 }
 
+/// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
+/// that end-users directly use this struct.
 pub struct DwriteFactory(ComPtr<IDWriteFactory>);
 
 #[derive(Clone)]
