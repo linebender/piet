@@ -174,7 +174,8 @@ impl D2DFactory {
         wrap(hr, ptr, D2DDevice)
     }
 
-    pub unsafe fn get_raw(&self) -> *mut ID2D1Factory1 {
+    /// Get the raw pointer
+    pub fn get_raw(&self) -> *mut ID2D1Factory1 {
         self.0.as_raw()
     }
 
@@ -239,8 +240,8 @@ impl DeviceContext {
         DeviceContext(ptr)
     }
 
-    /// docs
-    pub unsafe fn get_raw(&self) -> *mut ID2D1DeviceContext {
+    /// Get the raw pointer
+    pub fn get_raw(&self) -> *mut ID2D1DeviceContext {
         self.0.as_raw()
     }
 
