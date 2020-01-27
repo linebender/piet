@@ -112,7 +112,7 @@ impl Device {
 
     /// Create a new bitmap target.
     pub fn bitmap_target(
-        &mut self, //TODO this changed to mut, double check that this it ok
+        &mut self,
         width: usize,
         height: usize,
         pix_scale: f64,
