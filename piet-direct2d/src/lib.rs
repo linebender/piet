@@ -603,7 +603,7 @@ mod test {
 
     #[test]
     fn test_hit_test_text_position_basic() {
-        let dwrite = directwrite::factory::Factory::new().unwrap();
+        let dwrite = DwriteFactory::new().unwrap();
         let mut text_layout = D2DText::new(&dwrite);
 
         let input = "piet text!";
@@ -676,7 +676,7 @@ mod test {
 
     #[test]
     fn test_hit_test_text_position_complex_0() {
-        let dwrite = directwrite::factory::Factory::new().unwrap();
+        let dwrite = DwriteFactory::new().unwrap();
 
         let input = "é";
         assert_eq!(input.len(), 2);
@@ -738,7 +738,7 @@ mod test {
 
     #[test]
     fn test_hit_test_text_position_complex_1() {
-        let dwrite = directwrite::factory::Factory::new().unwrap();
+        let dwrite = DwriteFactory::new().unwrap();
 
         // Notes on this input:
         // 6 code points
@@ -823,7 +823,7 @@ mod test {
 
     #[test]
     fn test_hit_test_point_basic() {
-        let dwrite = directwrite::factory::Factory::new().unwrap();
+        let dwrite = DwriteFactory::new().unwrap();
 
         let mut text_layout = D2DText::new(&dwrite);
 
@@ -865,7 +865,7 @@ mod test {
 
     #[test]
     fn test_hit_test_point_complex() {
-        let dwrite = directwrite::factory::Factory::new().unwrap();
+        let dwrite = DwriteFactory::new().unwrap();
 
         // Notes on this input:
         // 6 code points
