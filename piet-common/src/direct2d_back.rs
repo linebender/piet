@@ -1,7 +1,5 @@
 //! Support for piet Direct2D back-end.
 
-use std::fmt;
-
 use piet_direct2d::d3d::{
     D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
 };
