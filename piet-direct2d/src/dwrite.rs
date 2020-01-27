@@ -4,13 +4,15 @@
 #![allow(unused)]
 
 use std::fmt::{Debug, Display, Formatter};
+use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
-use winapi::shared::winerror::{HRESULT, SUCCEEDED};
+use winapi::shared::winerror::{HRESULT, SUCCEEDED, S_OK};
 use winapi::um::dwrite::{
     DWriteCreateFactory, IDWriteFactory, IDWriteTextFormat, IDWriteTextLayout,
     DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
     DWRITE_FONT_WEIGHT_NORMAL, DWRITE_LINE_METRICS, DWRITE_TEXT_METRICS,
+    DWRITE_HIT_TEST_METRICS,
 };
 use winapi::Interface;
 
@@ -253,6 +255,115 @@ impl TextLayout {
             let mut result = std::mem::zeroed();
             self.0.GetMetrics(&mut result);
             result
+        }
+    }
+
+    pub fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint {
+        unsafe {
+            let mut trail = 0;
+            let mut inside = 0;
+            let mut metrics = MaybeUninit::uninit();
+            self.0.HitTestPoint(
+                point_x,
+                point_y,
+                &mut trail,
+                &mut inside,
+                metrics.as_mut_ptr(),
+            );
+
+            HitTestPoint {
+                metrics: metrics.assume_init().into(),
+                is_inside: inside != 0,
+                is_trailing_hit: trail != 0,
+            }
+        }
+    }
+
+    pub fn hit_test_text_position(&self, position: u32, trailing: bool) -> Option<HitTestTextPosition> {
+        let trailing = if trailing { 0 } else { 1 };
+        unsafe {
+            let (mut x, mut y) = (0.0, 0.0);
+            let mut metrics = std::mem::zeroed();
+            let res =
+                self.0
+                    .HitTestTextPosition(position, trailing, &mut x, &mut y, &mut metrics);
+            if res != S_OK {
+                return None;
+            }
+
+            Some(HitTestTextPosition {
+                metrics: metrics.into(),
+                point_x: x,
+                point_y: y,
+            })
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+/// Results from calling `hit_test_point` on a TextLayout.
+pub struct HitTestPoint {
+    /// The output geometry fully enclosing the hit-test location. When is_inside is set to false,
+    /// this structure represents the geometry enclosing the edge closest to the hit-test location.
+    pub metrics: HitTestMetrics,
+    /// An output flag that indicates whether the hit-test location is inside the text string. When
+    /// false, the position nearest the text's edge is returned.
+    pub is_inside: bool,
+    /// An output flag that indicates whether the hit-test location is at the leading or the
+    /// trailing side of the character. When is_inside is set to false, this value is set according
+    /// to the output hitTestMetrics->textPosition value to represent the edge closest to the
+    /// hit-test location.
+    pub is_trailing_hit: bool,
+}
+
+#[derive(Copy, Clone)]
+/// Results from calling `hit_test_text_position` on a TextLayout.
+pub struct HitTestTextPosition {
+    /// The output pixel location X, relative to the top-left location of the layout box.
+    pub point_x: f32,
+    /// The output pixel location Y, relative to the top-left location of the layout box.
+    pub point_y: f32,
+
+    /// The output geometry fully enclosing the specified text position.
+    pub metrics: HitTestMetrics,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+/// Describes the region obtained by a hit test.
+pub struct HitTestMetrics {
+    /// The first text position within the hit region.
+    pub text_position: u32,
+    /// The number of text positions within the hit region.
+    pub length: u32,
+    /// The x-coordinate of the upper-left corner of the hit region.
+    pub left: f32,
+    /// The y-coordinate of the upper-left corner of the hit region.
+    pub top: f32,
+    /// The width of the hit region.
+    pub width: f32,
+    /// The height of the hit region.
+    pub height: f32,
+    /// The BIDI level of the text positions within the hit region.
+    pub bidi_level: u32,
+    /// Non-zero if the hit region contains text; otherwise, `0`.
+    pub is_text: bool,
+    /// Non-zero if the text range is trimmed; otherwise, `0`.
+    pub is_trimmed: bool,
+}
+
+impl From<DWRITE_HIT_TEST_METRICS> for HitTestMetrics {
+    fn from(metrics: DWRITE_HIT_TEST_METRICS) -> Self {
+        HitTestMetrics {
+            text_position: metrics.textPosition,
+            length: metrics.length,
+            left: metrics.left,
+            top: metrics.top,
+            width: metrics.width,
+            height: metrics.height,
+            bidi_level: metrics.bidiLevel,
+            is_text: metrics.isText != 0,
+            is_trimmed: metrics.isTrimmed != 0,
         }
     }
 }

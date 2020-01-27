@@ -487,67 +487,65 @@ impl TextLayout for D2DTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        unimplemented!();
-//        // lossy from f64 to f32, but shouldn't have too much impact
-//        let htp = self.layout.hit_test_point(point.x as f32, point.y as f32);
-//
-//        // Round up to next grapheme cluster boundary if directwrite
-//        // reports a trailing hit.
-//        let text_position_16 = if htp.is_trailing_hit {
-//            htp.metrics.text_position() + htp.metrics.length()
-//        } else {
-//            htp.metrics.text_position()
-//        } as usize;
-//
-//        // Convert text position from utf-16 code units to
-//        // utf-8 code units.
-//        // Strategy: count up in utf16 and utf8 simultaneously, stop when
-//        // utf-16 text position reached.
-//        //
-//        // TODO ask about text_position, it looks like windows returns last index;
-//        // can't use the text_position of last index from directwrite, it has an extra code unit.
-//        let text_position =
-//            count_until_utf16(&self.text, text_position_16).unwrap_or(self.text.len());
-//
-//        HitTestPoint {
-//            metrics: HitTestMetrics { text_position },
-//            is_inside: htp.is_inside,
-//        }
+        // lossy from f64 to f32, but shouldn't have too much impact
+        let htp = self.layout.hit_test_point(point.x as f32, point.y as f32);
+
+        // Round up to next grapheme cluster boundary if directwrite
+        // reports a trailing hit.
+        let text_position_16 = if htp.is_trailing_hit {
+            htp.metrics.text_position + htp.metrics.length
+        } else {
+            htp.metrics.text_position
+        } as usize;
+
+        // Convert text position from utf-16 code units to
+        // utf-8 code units.
+        // Strategy: count up in utf16 and utf8 simultaneously, stop when
+        // utf-16 text position reached.
+        //
+        // TODO ask about text_position, it looks like windows returns last index;
+        // can't use the text_position of last index from directwrite, it has an extra code unit.
+        let text_position =
+            count_until_utf16(&self.text, text_position_16).unwrap_or(self.text.len());
+
+        HitTestPoint {
+            metrics: HitTestMetrics { text_position },
+            is_inside: htp.is_inside,
+        }
     }
 
     // Can panic if text position is not at a code point boundary, or if it's out of bounds.
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
-        unimplemented!();
-//        // Note: Directwrite will just return the line width if text position is
-//        // out of bounds. This is what want for piet; return line width for the last text position
-//        // (equal to line.len()). This is basically returning line width for the last cursor
-//        // position.
-//
-//        // Now convert the utf8 index to utf16.
-//        // This can panic;
-//        let idx_16 = count_utf16(&self.text[0..text_position]);
-//
-//        // panic or Result are also fine options for dealing with overflow. Using Option here
-//        // because it's already present and convenient.
-//        // TODO this should probably go before convertin to utf16, since that's relatively slow
-//        let idx_16 = idx_16.try_into().ok()?;
-//
-//        // TODO quick fix until directwrite fixes bool bug
-//        let trailing = true;
-//
-//        self.layout
-//            .hit_test_text_position(idx_16, trailing)
-//            .map(|http| {
-//                HitTestTextPosition {
-//                    point: Point {
-//                        x: http.point_x as f64,
-//                        y: http.point_y as f64,
-//                    },
-//                    metrics: HitTestMetrics {
-//                        text_position: text_position, // no need to use directwrite return value
-//                    },
-//                }
-//            })
+        // Note: Directwrite will just return the line width if text position is
+        // out of bounds. This is what want for piet; return line width for the last text position
+        // (equal to line.len()). This is basically returning line width for the last cursor
+        // position.
+
+        // Now convert the utf8 index to utf16.
+        // This can panic;
+        let idx_16 = count_utf16(&self.text[0..text_position]);
+
+        // panic or Result are also fine options for dealing with overflow. Using Option here
+        // because it's already present and convenient.
+        // TODO this should probably go before convertin to utf16, since that's relatively slow
+        let idx_16 = idx_16.try_into().ok()?;
+
+        // TODO quick fix until directwrite fixes bool bug
+        let trailing = true;
+
+        self.layout
+            .hit_test_text_position(idx_16, trailing)
+            .map(|http| {
+                HitTestTextPosition {
+                    point: Point {
+                        x: http.point_x as f64,
+                        y: http.point_y as f64,
+                    },
+                    metrics: HitTestMetrics {
+                        text_position, // no need to use directwrite return value
+                    },
+                }
+            })
     }
 }
 
