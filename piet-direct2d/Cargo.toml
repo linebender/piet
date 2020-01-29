@@ -12,12 +12,12 @@ categories = ["rendering::graphics-api"]
 [dependencies]
 piet = { version = "0.0.8", path = "../piet" }
 
-direct2d = "0.2.0"
-directwrite = "0.1.4"
-dxgi = "0.1.7"
-winapi = "0.3.7"
+wio = "0.2.2"
+
+[dependencies.winapi]
+version = "0.3.8"
+features = [ "d2d1", "d2d1_1", "d3d11", "dxgi" ]
 
 [dev-dependencies]
-direct3d11 = "0.1.7"
 image = "0.22.1"
 piet-test = { version = "0.0.8", path = "../piet-test" }

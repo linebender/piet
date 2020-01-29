@@ -4,7 +4,7 @@ use piet::{Color, ImageFormat, RenderContext};
 use piet_common::Device;
 
 fn main() {
-    let device = Device::new().unwrap();
+    let mut device = Device::new().unwrap();
     let width = 640;
     let height = 480;
     let mut bitmap = device.bitmap_target(width, height, 1.0).unwrap();
