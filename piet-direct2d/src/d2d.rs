@@ -245,6 +245,12 @@ impl DeviceContext {
         self.0.as_raw()
     }
 
+    /// Get the Com ptr
+    /// TODO rename to `inner`, like for D3D11Device?
+    pub fn get_comptr(&self) -> &ComPtr<ID2D1DeviceContext> {
+        &self.0
+    }
+
     /// Create a bitmap from a DXGI surface.
     ///
     /// Most often, this bitmap will be used to set the target of a
