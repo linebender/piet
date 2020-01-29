@@ -12,11 +12,6 @@ pub use piet_direct2d::*;
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
 
-/// The associated brush type for this backend.
-///
-/// This type matches `RenderContext::Brush`
-//pub type Brush = GenericBrush;
-
 /// The associated text factory for this backend.
 ///
 /// This type matches `RenderContext::Text`
@@ -41,11 +36,6 @@ pub type PietTextLayout = D2DTextLayout;
 ///
 /// This type matches `RenderContext::Text::TextLayoutBuilder`
 pub type PietTextLayoutBuilder<'a> = D2DTextLayoutBuilder<'a>;
-
-/// The associated image type for this backend.
-///
-/// This type matches `RenderContext::Image`
-//pub type Image = Bitmap;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {
