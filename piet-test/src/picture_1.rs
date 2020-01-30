@@ -51,7 +51,7 @@ fn draw_cubic_bezier<V: Into<Point>>(
     rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0);
     rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0);
 
-    for p in [p0, p1, p2, p3].into_iter() {
+    for p in [p0, p1, p2, p3].iter() {
         let dot = circle(*p, 1.5, 20);
         rc.fill(&dot, &handle_brush);
     }
