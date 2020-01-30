@@ -234,7 +234,7 @@ impl TextLayout {
                 .0
                 .GetLineMetrics(buf.as_mut_ptr(), cap, &mut actual_count);
             if hr == E_NOT_SUFFICIENT_BUFFER {
-                buf.reserve((actual_count - cap) as usize);
+                buf.reserve(actual_count as usize - buf.len());
                 hr = self
                     .0
                     .GetLineMetrics(buf.as_mut_ptr(), actual_count, &mut actual_count);
