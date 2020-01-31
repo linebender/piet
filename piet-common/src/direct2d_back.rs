@@ -172,3 +172,18 @@ impl<'a> BitmapTarget<'a> {
         Ok(raw_pixels)
     }
 }
+
+impl<'a> Drop for BitmapTarget<'a> {
+    fn drop(&mut self) {
+        let _ = self.context.end_draw();
+    }
+}
+
+mod tests {
+    #[test]
+    fn bitmap_target_drop() {
+        let mut device = crate::Device::new().unwrap();
+        let bitmap_target = device.bitmap_target(640, 480, 1.0);
+        std::mem::drop(bitmap_target);
+    }
+}
