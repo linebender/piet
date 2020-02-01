@@ -20,7 +20,7 @@ pub type Brush = piet_cairo::Brush;
 /// The associated text factory for this backend.
 ///
 /// This type matches `RenderContext::Text`
-pub type PietText<'a> = CairoText;
+pub type PietText<'a> = CairoText<'a>;
 
 /// The associated font type for this backend.
 ///

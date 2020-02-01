@@ -4,6 +4,7 @@ mod grapheme;
 
 use std::borrow::Cow;
 use std::fmt;
+use std::marker::PhantomData;
 
 use cairo::{
     BorrowError, Context, Filter, FontFace, FontOptions, FontSlant, FontWeight, Format,
@@ -26,7 +27,7 @@ pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
     ctx: &'a mut Context,
-    text: CairoText,
+    text: CairoText<'a>,
 }
 
 impl<'a> CairoRenderContext<'a> {
@@ -38,7 +39,7 @@ impl<'a> CairoRenderContext<'a> {
     pub fn new(ctx: &mut Context) -> CairoRenderContext {
         CairoRenderContext {
             ctx,
-            text: CairoText,
+            text: CairoText(PhantomData),
         }
     }
 }
@@ -52,7 +53,9 @@ pub enum Brush {
 
 /// Right now, we don't need any state, as the "toy text API" treats the
 /// access to system font information as a global. This will change.
-pub struct CairoText;
+// we use a phantom lifetime here to match the API of the d2d backend,
+// and the likely API of something with access to system font information.
+pub struct CairoText<'a>(PhantomData<&'a ()>);
 
 pub struct CairoFont(ScaledFont);
 
@@ -125,7 +128,7 @@ macro_rules! set_gradient_stops {
 impl<'a> RenderContext for CairoRenderContext<'a> {
     type Brush = Brush;
 
-    type Text = CairoText;
+    type Text = CairoText<'a>;
     type TextLayout = CairoTextLayout;
 
     type Image = ImageSurface;
@@ -356,17 +359,17 @@ impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
     }
 }
 
-impl CairoText {
+impl<'a> CairoText<'a> {
     /// Create a new factory that satisfies the piet `Text` trait.
     ///
     /// No state is needed for now because the current implementation is just
     /// toy text, but that will change when proper text is implemented.
-    pub fn new() -> CairoText {
-        CairoText
+    pub fn new() -> CairoText<'a> {
+        CairoText(PhantomData)
     }
 }
 
-impl Text for CairoText {
+impl<'a> Text for CairoText<'a> {
     type Font = CairoFont;
     type FontBuilder = CairoFontBuilder;
     type TextLayout = CairoTextLayout;
