@@ -137,11 +137,11 @@ impl<'a> BitmapTarget<'a> {
 
     /// Get raw RGBA pixels from the bitmap.
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        self.context.end_draw()?;
         // TODO: convert other formats.
         if fmt != ImageFormat::RgbaPremul {
             return Err(piet::new_error(ErrorKind::NotSupported));
         }
-        self.context.end_draw()?;
         let temp_texture = self
             .d3d
             .create_texture(self.width as u32, self.height as u32, TextureMode::Read)
