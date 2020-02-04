@@ -1,6 +1,11 @@
-use piet::kurbo::Line;
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::Path;
+
+use png::{ColorType, Encoder, Info, StreamWriter, Writer};
 
 use piet::{Color, ImageFormat, RenderContext};
+use piet::kurbo::Line;
 use piet_common::Device;
 
 fn main() {
@@ -14,12 +19,14 @@ fn main() {
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0);
     rc.finish().unwrap();
     let raw_pixels = bitmap.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
-    image::save_buffer(
-        "temp-image.png",
-        &raw_pixels,
+
+    let file = BufWriter::new(File::create(Path::new("temp-image.png")).unwrap());
+    let mut encoder = Encoder::new(
+        file,
         width as u32,
         height as u32,
-        image::ColorType::RGBA(8),
-    )
-    .unwrap();
+    );
+    encoder.set_color(ColorType::RGBA);
+    encoder.write_header().unwrap()
+        .write_image_data(&raw_pixels).unwrap();
 }
