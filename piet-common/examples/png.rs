@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
 
-use png::{ColorType, Encoder, Info, StreamWriter, Writer};
+use png::{ColorType, Encoder};
 
 use piet::{Color, ImageFormat, RenderContext};
 use piet::kurbo::Line;
@@ -20,7 +20,7 @@ fn main() {
     rc.finish().unwrap();
     let raw_pixels = bitmap.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
 
-    let file = BufWriter::new(File::create(Path::new("temp-image.png")).unwrap());
+    let file = BufWriter::new(File::create("temp-image.png").unwrap());
     let mut encoder = Encoder::new(
         file,
         width as u32,
