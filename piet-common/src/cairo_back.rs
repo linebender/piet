@@ -8,6 +8,11 @@ use piet::{ErrorKind, ImageFormat};
 
 #[doc(hidden)]
 pub use piet_cairo::*;
+use std::io::BufWriter;
+use std::fs::File;
+
+/// For saving to file functionality
+use png::{Encoder, ColorType};
 
 /// The `RenderContext` for the Cairo backend, which is selected.
 pub type Piet<'a> = CairoRenderContext<'a>;
@@ -120,5 +125,20 @@ impl<'a> BitmapTarget<'a> {
             }
         }
         Ok(raw_data)
+    }
+
+    pub fn save_to_file(self, path: &str) -> Result<(), piet::Error> {
+        let height = self.surface.get_height();
+        let width = self.surface.get_width();
+        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let file = BufWriter::new(File::create(path)
+            .map_err(|e| Into::<Box<dyn std::error::Error>>::into(e))?);
+        let mut encoder = Encoder::new(file, width as u32, height as u32);
+        encoder.set_color(ColorType::RGBA);
+        encoder.write_header()
+            .map_err(|e| Into::<Box<dyn std::error::Error>>::into(e))?
+            .write_image_data(&image)
+            .map_err(|e| Into::<Box<dyn std::error::Error>>::into(e))?;
+        Ok(())
     }
 }
