@@ -9,6 +9,12 @@ use piet::{ErrorKind, ImageFormat};
 #[doc(hidden)]
 pub use piet_direct2d::*;
 
+/// For saving to file functionality
+use png::{ColorType, Encoder};
+use std::io::BufWriter;
+use std::fs::File;
+use std::path::Path;
+
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
 
@@ -170,6 +176,22 @@ impl<'a> BitmapTarget<'a> {
             raw_pixels.set_len(self.width * self.height * 4);
         }
         Ok(raw_pixels)
+    }
+
+    /// Save bitmap to RGBA PNG file
+    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+        let height = self.surface.get_height();
+        let width = self.surface.get_width();
+        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let file = BufWriter::new(File::create(path)
+            .map_err(|e| Into::<Box<_>>::into(e))?);
+        let mut encoder = Encoder::new(file, width as u32, height as u32);
+        encoder.set_color(ColorType::RGBA);
+        encoder.write_header()
+            .map_err(|e| Into::<Box<_>>::into(e))?
+            .write_image_data(&image)
+            .map_err(|e| Into::<Box<_>>::into(e))?;
+        Ok(())
     }
 }
 
