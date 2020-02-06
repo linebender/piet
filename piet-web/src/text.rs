@@ -130,7 +130,7 @@ impl TextLayout for WebTextLayout {
         // with the border of the grapheme cluster.
 
         // null case
-        if self.text.len() == 0 {
+        if self.text.is_empty() {
             return HitTestPoint::default();
         }
 

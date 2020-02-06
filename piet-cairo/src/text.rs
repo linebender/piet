@@ -43,6 +43,7 @@ impl<'a> CairoText<'a> {
     ///
     /// No state is needed for now because the current implementation is just
     /// toy text, but that will change when proper text is implemented.
+    #[allow(clippy::new_without_default)]
     pub fn new() -> CairoText<'a> {
         CairoText(PhantomData)
     }
@@ -107,7 +108,7 @@ impl TextLayout for CairoTextLayout {
         // with the border of the grapheme cluster.
 
         // null case
-        if self.text.len() == 0 {
+        if self.text.is_empty() {
             return HitTestPoint::default();
         }
 

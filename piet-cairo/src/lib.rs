@@ -1,3 +1,6 @@
+// allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
+#![allow(clippy::identity_op)]
+
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
 mod text;
