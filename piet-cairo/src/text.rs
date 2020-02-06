@@ -2,17 +2,13 @@ mod grapheme;
 
 use std::marker::PhantomData;
 
-use cairo::{
-    FontFace, FontOptions, FontSlant, FontWeight,
-    Matrix, ScaledFont,
-};
+use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use piet::kurbo::Point;
 
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics,
-    HitTestPoint, HitTestTextPosition,
-    RoundInto, Text, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, RoundInto, Text,
+    TextLayout, TextLayoutBuilder,
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -210,7 +206,7 @@ impl TextLayout for CairoTextLayout {
             Some(HitTestTextPosition {
                 point: Point { x: point_x, y: 0.0 },
                 metrics: HitTestMetrics {
-                    text_position: text_position,
+                    text_position,
                 },
             })
         } else {
@@ -238,7 +234,6 @@ fn scale_matrix(scale: f64) -> Matrix {
         y0: 0.0,
     }
 }
-
 
 #[cfg(test)]
 mod test {

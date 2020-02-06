@@ -5,20 +5,18 @@ mod text;
 use std::borrow::Cow;
 use std::fmt;
 
-use cairo::{
-    BorrowError, Context, Filter, Format,
-    ImageSurface, Matrix, Status, SurfacePattern,
-};
+use cairo::{BorrowError, Context, Filter, Format, ImageSurface, Matrix, Status, SurfacePattern};
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient,
-    ImageFormat, InterpolationMode, IntoBrush, LineCap,
-    LineJoin, RenderContext, StrokeStyle,
+    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
+    LineCap, LineJoin, RenderContext, StrokeStyle,
 };
 
-pub use crate::text::{CairoText, CairoTextLayout, CairoFont, CairoFontBuilder, CairoTextLayoutBuilder};
+pub use crate::text::{
+    CairoFont, CairoFontBuilder, CairoText, CairoTextLayout, CairoTextLayoutBuilder,
+};
 
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
@@ -445,4 +443,3 @@ fn matrix_to_affine(matrix: Matrix) -> Affine {
         matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0,
     ])
 }
-

@@ -7,14 +7,13 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::Point;
 
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint,
-    HitTestTextPosition,
-    Text, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, Text, TextLayout,
+    TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::WebRenderContext;
 use self::grapheme::point_x_in_grapheme;
+use crate::WebRenderContext;
 
 #[derive(Clone)]
 pub struct WebFont {
@@ -47,7 +46,6 @@ enum FontStyle {
     Italic,
     Oblique(Option<f64>),
 }
-
 
 impl<'a> Text for WebRenderContext<'a> {
     type Font = WebFont;
@@ -234,7 +232,7 @@ impl TextLayout for WebTextLayout {
             Some(HitTestTextPosition {
                 point: Point { x, y: 0.0 },
                 metrics: HitTestMetrics {
-                    text_position: text_position,
+                    text_position,
                 },
             })
         } else {

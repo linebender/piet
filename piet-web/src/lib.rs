@@ -15,12 +15,11 @@ use web_sys::{
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    Color, Error, FixedGradient, GradientStop,
-    ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
-    RenderContext, StrokeStyle,
+    Color, Error, FixedGradient, GradientStop, ImageFormat, InterpolationMode, IntoBrush, LineCap,
+    LineJoin, RenderContext, StrokeStyle,
 };
 
-pub use text::{WebTextLayout};
+pub use text::WebTextLayout;
 
 pub struct WebRenderContext<'a> {
     ctx: &'a mut CanvasRenderingContext2d,
@@ -445,4 +444,3 @@ impl<'a> WebRenderContext<'a> {
 fn byte_to_frac(byte: u32) -> f64 {
     ((byte & 255) as f64) * (1.0 / 255.0)
 }
-
