@@ -64,7 +64,7 @@ pub(crate) struct GraphemeBoundaries {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::*;
+    use crate::text::*;
 
     #[test]
     fn test_grapheme_boundaries() {
