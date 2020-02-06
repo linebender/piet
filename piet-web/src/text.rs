@@ -231,9 +231,7 @@ impl TextLayout for WebTextLayout {
 
             Some(HitTestTextPosition {
                 point: Point { x, y: 0.0 },
-                metrics: HitTestMetrics {
-                    text_position,
-                },
+                metrics: HitTestMetrics { text_position },
             })
         } else {
             // iterated to end boundary
