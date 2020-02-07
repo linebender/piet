@@ -1,5 +1,5 @@
-use piet::{Color, RenderContext};
 use piet::kurbo::Line;
+use piet::{Color, RenderContext};
 use piet_common::Device;
 
 fn main() {
@@ -13,5 +13,7 @@ fn main() {
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0);
     rc.finish().unwrap();
 
-    bitmap.save_to_file("temp-image.png").expect("file save error");
+    bitmap
+        .save_to_file("temp-image.png")
+        .expect("file save error");
 }
