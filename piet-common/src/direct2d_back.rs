@@ -180,8 +180,8 @@ impl<'a> BitmapTarget<'a> {
 
     /// Save bitmap to RGBA PNG file
     pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
-        let height = self.surface.get_height();
-        let width = self.surface.get_width();
+        let height = self.height;
+        let width = self.width;
         let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(|e| Into::<Box<_>>::into(e))?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
