@@ -119,7 +119,7 @@ impl TextLayout for D2DTextLayout {
         // TODO ask about text_position, it looks like windows returns last index;
         // can't use the text_position of last index from directwrite, it has an extra code unit.
         let text_position =
-            count_until_utf16(&self.text, text_position_16).unwrap_or(self.text.len());
+            count_until_utf16(&self.text, text_position_16).unwrap_or_else(|| self.text.len());
 
         HitTestPoint {
             metrics: HitTestMetrics { text_position },
@@ -182,6 +182,7 @@ pub(crate) fn count_utf16(s: &str) -> usize {
 pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<usize> {
     let mut utf8_count = 0;
     let mut utf16_count = 0;
+    #[allow(clippy::explicit_counter_loop)]
     for &b in s.as_bytes() {
         if (b as i8) >= -0x40 {
             utf16_count += 1;

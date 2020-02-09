@@ -1,4 +1,7 @@
 #![cfg(windows)]
+// allows for nice formatting for e.g. new_buf[i * 4 + 0] = premul(buf[i * 4 + 0, a)
+#![allow(clippy::identity_op)]
+
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
 mod conv;
@@ -66,7 +69,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         let inner_text = D2DText::new(dwrite);
         D2DRenderContext {
             factory,
-            inner_text: inner_text,
+            inner_text,
             rt,
             ctx_stack: vec![CtxState::default()],
             err: Ok(()),
