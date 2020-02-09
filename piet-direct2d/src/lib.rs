@@ -22,9 +22,8 @@ use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED}
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient,
-    ImageFormat, InterpolationMode, IntoBrush, RenderContext,
-    StrokeStyle,
+    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
+    RenderContext, StrokeStyle,
 };
 
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
@@ -396,4 +395,3 @@ impl<'a> IntoBrush<D2DRenderContext<'a>> for Brush {
         Cow::Borrowed(self)
     }
 }
-

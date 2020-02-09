@@ -6,9 +6,8 @@ use std::convert::TryInto;
 use piet::kurbo::Point;
 
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics,
-    HitTestPoint, HitTestTextPosition,
-    Text, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 use crate::d2d;
@@ -203,8 +202,8 @@ pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<u
 
 #[cfg(test)]
 mod test {
-    use crate::*;
     use super::*;
+    use crate::*;
 
     // - x: calculated value
     // - target: f64
