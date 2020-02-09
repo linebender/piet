@@ -1,3 +1,5 @@
+//! Text functionality for Piet svg backend
+
 use piet::kurbo::Point;
 use piet::{new_error, Error, ErrorKind, HitTestPoint, HitTestTextPosition};
 

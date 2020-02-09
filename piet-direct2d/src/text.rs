@@ -1,3 +1,5 @@
+//! Text functionality for Piet direct2d backend
+
 pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
 

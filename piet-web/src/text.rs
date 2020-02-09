@@ -1,3 +1,5 @@
+//! Text functionality for Piet web backend
+
 mod grapheme;
 
 use std::borrow::Cow;

@@ -1,3 +1,5 @@
+//! Text functionality for Piet cairo backend
+
 mod grapheme;
 
 use std::marker::PhantomData;
