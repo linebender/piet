@@ -55,52 +55,61 @@ jobs:
           profile: minimal
           override: true
 
-      - name: cargo clippy (no-svg)
+      - name: cargo clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --all -- -D warnings
-        if: contains(matrix.os, 'ubuntu') != true
-
-      - name: cargo clippy (svg)
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all --all-features -- -D warnings
-        if: contains(matrix.os, 'ubuntu')
-
 
       - name: cargo test --all
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all
-        if: contains(matrix.os, 'ubuntu') != true
 
-      - name: cargo test --all --all-features
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --all-features
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: Run rustc -D warnings in druid/
+      - name: Run rustc -D warnings in piet/
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: --manifest-path=druid/Cargo.toml -- -D warnings
+          args: --manifest-path=piet/Cargo.toml -- -D warnings
 
-      - name: Run rustc -d warnings in druid/druid-shell
+      - name: Run rustc -D warnings in piet-cairo/
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: --manifest-path=druid-shell/Cargo.toml -- -D warnings
+          args: --manifest-path=piet-cairo/Cargo.toml -- -D warnings
+        if: contains(matrix.os, 'windows') != true
 
-      - name: Run rustc -d warnings in druid/druid-derive
+      - name: Run rustc -D warnings in piet-common/
         uses: actions-rs/cargo@v1
         with:
           command: rustc
-          args: --manifest-path=druid-derive/Cargo.toml -- -D warnings
+          args: --manifest-path=piet-common/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-direct2d/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-direct2d/Cargo.toml -- -D warnings
+        if: contains(matrix.os, 'windows')
+
+      - name: Run rustc -D warnings in piet-svg/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-svg/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-test/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-test/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-web/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-web/Cargo.toml -- -D warnings
 
   test-nightly:
     runs-on: ${{ matrix.os }}
@@ -160,7 +169,7 @@ jobs:
           profile: minimal
           override: true
 
-      - name: check docs in druid/
+      - name: check docs in piet/
         uses: actions-rs/cargo@v1
         with:
           command: doc
