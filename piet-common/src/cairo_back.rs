@@ -1,3 +1,6 @@
+// allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
+#![allow(clippy::identity_op)]
+
 //! Support for piet Cairo back-end.
 
 use std::marker::PhantomData;
@@ -89,7 +92,7 @@ impl<'a> BitmapTarget<'a> {
     ///
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
-    pub fn render_context<'b>(&'b mut self) -> CairoRenderContext<'b> {
+    pub fn render_context(&mut self) -> CairoRenderContext {
         CairoRenderContext::new(&mut self.cr)
     }
 
@@ -108,7 +111,7 @@ impl<'a> BitmapTarget<'a> {
         let buf = self
             .surface
             .get_data()
-            .map_err(|e| Into::<Box<dyn std::error::Error>>::into(e))?;
+            .map_err(Into::<Box<dyn std::error::Error>>::into)?;
         for y in 0..height {
             let src_off = y * stride;
             let dst_off = y * width * 4;

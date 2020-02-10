@@ -100,6 +100,8 @@ impl Color {
     /// which is perhaps not ideal (the clipping might change the hue). See
     /// https://github.com/d3/d3-color/issues/33 for discussion.
     #[allow(non_snake_case)]
+    #[allow(clippy::many_single_char_names)]
+    #[allow(clippy::unreadable_literal)]
     pub fn hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
         // The reverse transformation from Lab to XYZ, see
         // https://en.wikipedia.org/wiki/CIELAB_color_space

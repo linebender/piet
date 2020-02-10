@@ -2,15 +2,19 @@
 //!
 //! Text and images are unimplemented and will always return errors.
 
+mod text;
+
 use std::borrow::Cow;
 use std::{io, mem};
 
 use piet::kurbo::{Affine, Point, Rect, Shape};
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, HitTestPoint, HitTestTextPosition,
-    ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin, StrokeStyle,
+    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
+    LineCap, LineJoin, StrokeStyle,
 };
 use svg::node::Node;
+
+pub use crate::text::{Text, TextLayout};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -31,7 +35,7 @@ impl RenderContext {
             state: State::default(),
             doc: svg::Document::new(),
             next_id: 0,
-            text: Text(()),
+            text: Text::new(),
         }
     }
 
@@ -400,67 +404,6 @@ impl IntoBrush<RenderContext> for Brush {
 fn fmt_color(color: &Color) -> String {
     match color {
         Color::Rgba32(x) => format!("#{:08x}", x),
-    }
-}
-
-/// SVG text (unimplemented)
-pub struct Text(());
-
-impl piet::Text for Text {
-    type Font = Font;
-    type FontBuilder = FontBuilder;
-    type TextLayout = TextLayout;
-    type TextLayoutBuilder = TextLayoutBuilder;
-
-    fn new_font_by_name(&mut self, _name: &str, _size: f64) -> FontBuilder {
-        FontBuilder(())
-    }
-
-    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str) -> TextLayoutBuilder {
-        TextLayoutBuilder(())
-    }
-}
-
-/// SVG font builder (unimplemented)
-pub struct FontBuilder(());
-
-impl piet::FontBuilder for FontBuilder {
-    type Out = Font;
-
-    fn build(self) -> Result<Font> {
-        Err(new_error(ErrorKind::NotSupported))
-    }
-}
-
-/// SVG font (unimplemented)
-pub struct Font(());
-
-impl piet::Font for Font {}
-
-pub struct TextLayoutBuilder(());
-
-impl piet::TextLayoutBuilder for TextLayoutBuilder {
-    type Out = TextLayout;
-
-    fn build(self) -> Result<TextLayout> {
-        Err(new_error(ErrorKind::NotSupported))
-    }
-}
-
-/// SVG text layout (unimplemented)
-pub struct TextLayout(());
-
-impl piet::TextLayout for TextLayout {
-    fn width(&self) -> f64 {
-        unimplemented!()
-    }
-
-    fn hit_test_point(&self, _point: Point) -> HitTestPoint {
-        unimplemented!()
-    }
-
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
-        unimplemented!()
     }
 }
 
