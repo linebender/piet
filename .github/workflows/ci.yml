@@ -1,0 +1,176 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    name: rustfmt
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: rustfmt
+          override: true
+
+      - name: install rustfmt
+        run: rustup component add rustfmt
+
+      - name: cargo fmt
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  test-stable:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, windows-2019, ubuntu-latest]
+    name: cargo test stable
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          profile: minimal
+          override: true
+
+      - name: cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all -- -D warnings
+
+      - name: cargo test --all
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+      - name: Run rustc -D warnings in piet/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-cairo/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-cairo/Cargo.toml -- -D warnings
+        if: contains(matrix.os, 'windows') != true
+
+      - name: Run rustc -D warnings in piet-common/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-common/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-direct2d/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-direct2d/Cargo.toml -- -D warnings
+        if: contains(matrix.os, 'windows')
+
+      - name: Run rustc -D warnings in piet-svg/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-svg/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-test/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-test/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-web/
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-web/Cargo.toml -- -D warnings
+
+  test-nightly:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, windows-2019, ubuntu-latest]
+    name: cargo test nightly
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+
+      - name: cargo test --all
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all
+
+  check-docs:
+    name: Docs
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, windows-2019, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: install cairo
+        run: brew install cairo
+        if: contains(matrix.os, 'mac')
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          override: true
+
+      - name: check docs in piet/
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --document-private-items-
