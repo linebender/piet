@@ -27,7 +27,7 @@ fn circle<V: Into<Point>>(center: V, radius: f64, num_segments: usize) -> BezPat
     }
 
     path.close_path();
-    return path;
+    path
 }
 
 fn draw_cubic_bezier<V: Into<Point>>(

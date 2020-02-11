@@ -29,6 +29,7 @@ pub struct RenderContext {
 
 impl RenderContext {
     /// Construct an empty `RenderContext`
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             stack: Vec::new(),
@@ -273,6 +274,8 @@ struct Attrs<'a> {
 }
 
 impl Attrs<'_> {
+    // allow clippy warning for `width != 1.0` in if statement
+    #[allow(clippy::float_cmp)]
     fn apply_to(&self, node: &mut impl Node) {
         node.assign("transform", xf_val(&self.xf));
         if let Some(id) = self.clip {
@@ -414,6 +417,8 @@ pub struct Image(());
 struct Id(u64);
 
 impl Id {
+    // TODO allowing clippy warning temporarily. But this should be changed to impl Display
+    #[allow(clippy::inherent_to_string)]
     fn to_string(self) -> String {
         const ALPHABET: &[u8; 52] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         let mut out = String::with_capacity(4);
