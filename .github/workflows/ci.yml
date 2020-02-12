@@ -61,6 +61,13 @@ jobs:
           command: clippy
           args: --all -- -D warnings
 
+      - name: cargo test --all (not windows)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --exclude piet-direct2d
+        if: contains(matrix.os, 'windows') != true
+
       - name: cargo test --all (windows)
         uses: actions-rs/cargo@v1
         with:
@@ -138,11 +145,20 @@ jobs:
           profile: minimal
           override: true
 
-      - name: cargo test --all
+      - name: cargo test --all (not windows)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all
+          args: --all --exclude piet-direct2d
+        if: contains(matrix.os, 'windows') != true
+
+      - name: cargo test --all (windows)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --exclude piet-cairo
+        if: contains(matrix.os, 'windows')
+
 
   check-docs:
     name: Docs
