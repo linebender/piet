@@ -28,6 +28,7 @@ pub enum Error {
 
 /// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
 /// that end-users directly use this struct.
+#[derive(Clone)]
 pub struct DwriteFactory(ComPtr<IDWriteFactory>);
 
 #[derive(Clone)]
