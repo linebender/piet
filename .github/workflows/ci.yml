@@ -65,7 +65,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: ['--all', '--exclude piet-cairo']
+          args: --all --exclude piet-cairo
         if: contains(matrix.os, 'windows')
 
       - name: Run rustc -D warnings in piet/
