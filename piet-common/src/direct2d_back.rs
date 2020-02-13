@@ -131,7 +131,7 @@ impl<'a> BitmapTarget<'a> {
     ///
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
-    pub fn render_context<'b>(&'b mut self) -> D2DRenderContext<'b> {
+    pub fn render_context(&mut self) -> D2DRenderContext {
         D2DRenderContext::new(self.d2d, self.dwrite, &mut self.context)
     }
 
