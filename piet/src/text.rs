@@ -62,8 +62,7 @@ pub trait TextLayoutBuilder {
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
 ///
-#[derive(Clone)]
-pub trait TextLayout {
+pub trait TextLayout: Clone {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
 
@@ -133,7 +132,7 @@ pub trait TextLayout {
 }
 
 /// Metadata about each line in a text layout.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct LineMetric {
     /// Index (in code units) of the start of the line, offset from the beginning of the text.
     pub line_start_offset: usize,

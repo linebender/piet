@@ -27,6 +27,7 @@ pub struct WebFont {
 
 pub struct WebFontBuilder(WebFont);
 
+#[derive(Clone)]
 pub struct WebTextLayout {
     ctx: CanvasRenderingContext2d,
     // TODO like cairo, should this be pub(crate)?

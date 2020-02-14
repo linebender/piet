@@ -26,6 +26,7 @@ pub struct D2DFontBuilder<'a> {
     name: String,
 }
 
+#[derive(Clone)]
 pub struct D2DTextLayout {
     pub text: String,
     pub layout: dwrite::TextLayout,

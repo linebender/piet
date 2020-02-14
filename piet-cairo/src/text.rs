@@ -32,6 +32,7 @@ pub struct CairoFontBuilder {
     size: f64,
 }
 
+#[derive(Clone)]
 pub struct CairoTextLayout {
     // TODO should these fields be pub(crate)?
     pub font: ScaledFont,

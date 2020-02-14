@@ -57,6 +57,7 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
 }
 
 /// SVG text layout (unimplemented)
+#[derive(Clone)]
 pub struct TextLayout(());
 
 impl piet::TextLayout for TextLayout {
