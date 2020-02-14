@@ -27,7 +27,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.stroke(RoundedRect::new(145.0, 45.0, 185.0, 85.0, 5.0), &brush, 1.0);
 
     let font = rc.text().new_font_by_name("Segoe UI", 12.0).build()?;
-    let layout = rc.text().new_text_layout(&font, "Hello piet!").build()?;
+    let layout = rc.text().new_text_layout(&font, "Hello piet!", std::f64::INFINITY).build()?;
     let w: f64 = layout.width();
     let brush = rc.solid_brush(Color::rgba8(0x80, 0x00, 0x00, 0xC0));
     rc.draw_text(&layout, (80.0, 10.0), &brush);
@@ -50,7 +50,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
 
     let clip_path = star(Point::new(90.0, 45.0), 10.0, 30.0, 24);
     rc.clip(clip_path);
-    let layout = rc.text().new_text_layout(&font, "Clipped text").build()?;
+    let layout = rc.text().new_text_layout(&font, "Clipped text", std::f64::INFINITY).build()?;
     rc.draw_text(&layout, (80.0, 50.0), &brush);
     Ok(())
 }

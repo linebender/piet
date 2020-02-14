@@ -62,7 +62,7 @@ pub trait TextLayoutBuilder {
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
 ///
-// TODO update hit testing for line breaking
+#[derive(Clone)]
 pub trait TextLayout {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
@@ -133,17 +133,18 @@ pub trait TextLayout {
 }
 
 /// Metadata about each line in a text layout.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub struct LineMetric {
+    /// Index (in code units) of the start of the line, offset from the beginning of the text.
+    pub line_start_offset: usize,
+
     /// Line length (in code units), but offset from the beginning of the text. So it's the length
     /// of this line summed with the lengths of all the lines before it.
     ///
     /// Does not include trailing whitespace.
     pub line_length_offset: usize,
 
-    /// Line width, but offset from the beginning of the text. So it's the width
-    /// of this line summed with the widths of all the lines before it.
-    ///
+    /// Line width.
     /// Does not include trailing whitespace.
     pub line_width_offset: f64,
 
@@ -153,11 +154,10 @@ pub struct LineMetric {
     /// Includes trailing whitespace.
     pub line_length_trailing_whitespace_offset: usize,
 
-    /// Line width, but offset from the beginning of the text. So it's the width
-    /// of this line summed with the widths of all the lines before it.
+    /// Line width.
     ///
     /// Includes trailing whitespace.
-    pub line_width_trailing_whitespace_offset: f64,
+    pub line_width_trailing_whitespace: f64,
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
