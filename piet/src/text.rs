@@ -142,22 +142,14 @@ pub struct LineMetric {
     /// of this line summed with the lengths of all the lines before it.
     ///
     /// Does not include trailing whitespace.
-    pub line_length_offset: usize,
+    pub line_end_offset: usize,
 
     /// Line width.
     /// Does not include trailing whitespace.
-    pub line_width_offset: f64,
+    pub cumulative_width: f64,
 
-    /// Line length (in code units), but offset from the beginning of the text. So it's the length
-    /// of this line summed with the lengths of all the lines before it.
-    ///
-    /// Includes trailing whitespace.
-    pub line_length_trailing_whitespace_offset: usize,
-
-    /// Line width.
-    ///
-    /// Includes trailing whitespace.
-    pub line_width_trailing_whitespace: f64,
+    /// Length (in code units) of trailing whitespace.
+    pub trailing_whitespace: f64,
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
