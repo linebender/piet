@@ -205,7 +205,6 @@ pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<u
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::*;
 
     // - x: calculated value
     // - target: f64

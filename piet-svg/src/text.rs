@@ -9,6 +9,7 @@ type Result<T> = std::result::Result<T, Error>;
 pub struct Text(());
 
 impl Text {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Text(())
     }

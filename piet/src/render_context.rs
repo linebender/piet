@@ -33,9 +33,8 @@ pub enum ImageFormat {
 }
 
 impl ImageFormat {
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn bytes_per_pixel(&self) -> usize {
-        match *self {
+    pub fn bytes_per_pixel(self) -> usize {
+        match self {
             ImageFormat::Rgb => 3,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => 4,
             _ => panic!(),

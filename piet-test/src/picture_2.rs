@@ -38,6 +38,9 @@ fn make_image_data(width: usize, height: usize, format: ImageFormat) -> Vec<u8> 
             let b = !r;
             let r2 = ((x as f64) - 8.0).powi(2) + ((y as f64) - 8.0).powi(2);
             let a = (255.0 * (-0.01 * r2).exp()) as u8;
+
+            // allows for nice vertical formatting for `result[ix + 0]`
+            #[allow(clippy::identity_op)]
             match format {
                 ImageFormat::RgbaSeparate => {
                     result[ix + 0] = r;
