@@ -14,6 +14,7 @@ pub enum ErrorKind {
     BackendError(Box<dyn std::error::Error>),
     #[doc(hidden)]
     _NonExhaustive,
+    MissingFeature,
 }
 
 /// Create a new error of the given kind.
