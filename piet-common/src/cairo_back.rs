@@ -4,7 +4,6 @@
 //! Support for piet Cairo back-end.
 
 use std::fs::File;
-use std::io::BufWriter;
 use std::marker::PhantomData;
 use std::path::Path;
 
@@ -15,6 +14,7 @@ use png::{ColorType, Encoder};
 use piet::{ErrorKind, ImageFormat};
 #[doc(hidden)]
 pub use piet_cairo::*;
+use std::io::BufWriter;
 
 /// The `RenderContext` for the Cairo backend, which is selected.
 pub type Piet<'a> = CairoRenderContext<'a>;
@@ -130,6 +130,7 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Save bitmap to RGBA PNG file
+    #[cfg(feature = "npg")]
     pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
         let height = self.surface.get_height();
         let width = self.surface.get_width();
@@ -143,5 +144,13 @@ impl<'a> BitmapTarget<'a> {
             .write_image_data(&image)
             .map_err(|e| Into::<Box<_>>::into(e))?;
         Ok(())
+    }
+
+    /// Stub for feature is missing
+    #[cfg(not(feature = "npg"))]
+    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+        Err(piet::error::new_error(
+            piet::error::ErrorKind::InvalidInput,
+        ))
     }
 }
