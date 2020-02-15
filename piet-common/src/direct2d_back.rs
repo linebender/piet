@@ -1,19 +1,18 @@
 //! Support for piet Direct2D back-end.
 
-use piet_direct2d::d3d::{
-    D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
-};
-
-use piet::{ErrorKind, ImageFormat};
-
-#[doc(hidden)]
-pub use piet_direct2d::*;
-
-/// For saving to file functionality
-use png::{ColorType, Encoder};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
+
+/// For saving to file functionality
+use png::{ColorType, Encoder};
+
+use piet::{ErrorKind, ImageFormat};
+#[doc(hidden)]
+pub use piet_direct2d::*;
+use piet_direct2d::d3d::{
+    D3D11Device, D3D11DeviceContext, D3D11Texture2D, DXGI_MAP_READ, TextureMode,
+};
 
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
@@ -179,6 +178,7 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Save bitmap to RGBA PNG file
+    #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
         let height = self.height;
         let width = self.width;
@@ -192,6 +192,14 @@ impl<'a> BitmapTarget<'a> {
             .write_image_data(&image)
             .map_err(|e| Into::<Box<_>>::into(e))?;
         Ok(())
+    }
+
+    /// Stub for feature is missing
+    #[cfg(not(feature = "png"))]
+    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+        Err(piet::error::new_error(
+            piet::error::ErrorKind::MissingFeature,
+        ))
     }
 }
 
