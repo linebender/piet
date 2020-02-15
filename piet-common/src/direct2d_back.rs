@@ -7,12 +7,12 @@ use std::path::Path;
 /// For saving to file functionality
 use png::{ColorType, Encoder};
 
-use piet::{ErrorKind, ImageFormat};
+use piet::{new_error, ErrorKind, ImageFormat};
+use piet_direct2d::d3d::{
+    D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
+};
 #[doc(hidden)]
 pub use piet_direct2d::*;
-use piet_direct2d::d3d::{
-    D3D11Device, D3D11DeviceContext, D3D11Texture2D, DXGI_MAP_READ, TextureMode,
-};
 
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
@@ -197,9 +197,7 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
-        Err(piet::error::new_error(
-            piet::error::ErrorKind::MissingFeature,
-        ))
+        Err(new_error(ErrorKind::MissingFeature))
     }
 }
 

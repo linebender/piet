@@ -11,7 +11,7 @@ use cairo::{Context, Format, ImageSurface};
 /// For saving to file functionality
 use png::{ColorType, Encoder};
 
-use piet::{ErrorKind, ImageFormat};
+use piet::{new_error, ErrorKind, ImageFormat};
 #[doc(hidden)]
 pub use piet_cairo::*;
 use std::io::BufWriter;
@@ -149,8 +149,6 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "npg"))]
     pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
-        Err(piet::error::new_error(
-            piet::error::ErrorKind::InvalidInput,
-        ))
+        Err(new_error(ErrorKind::MissingFeature))
     }
 }
