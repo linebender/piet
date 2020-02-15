@@ -28,6 +28,7 @@ pub enum Error {
 
 /// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
 /// that end-users directly use this struct.
+#[derive(Clone)]
 pub struct DwriteFactory(ComPtr<IDWriteFactory>);
 
 #[derive(Clone)]
@@ -115,6 +116,10 @@ impl DwriteFactory {
         self.0.as_raw()
     }
 
+    /// Create from raw pointer
+    ///
+    /// # Safety
+    /// TODO
     pub unsafe fn from_raw(raw: *mut IDWriteFactory) -> Self {
         Self(ComPtr::from_raw(raw))
     }
@@ -219,6 +224,7 @@ impl<'a> TextLayoutBuilder<'a> {
 }
 
 #[allow(overflowing_literals)]
+#[allow(clippy::unreadable_literal)]
 const E_NOT_SUFFICIENT_BUFFER: HRESULT = 0x8007007A;
 
 impl TextLayout {

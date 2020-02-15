@@ -168,6 +168,9 @@ impl D2DFactory {
     }
 
     // Would it be safe to take &ComPtr<IDXGIDevice> here?
+    /// Create D2D Device
+    /// # Safety
+    /// TODO
     pub unsafe fn create_device(&self, dxgi_device: *mut IDXGIDevice) -> Result<D2DDevice, Error> {
         let mut ptr = null_mut();
         let hr = self.0.CreateDevice(dxgi_device, &mut ptr);
@@ -236,6 +239,9 @@ impl DeviceContext {
     ///
     /// Marked as unsafe because the device must be in a good state.
     /// This *might* be overly conservative.
+    ///
+    /// # Safety
+    /// TODO
     pub unsafe fn new(ptr: ComPtr<ID2D1DeviceContext>) -> DeviceContext {
         DeviceContext(ptr)
     }
@@ -260,6 +266,9 @@ impl DeviceContext {
     ///
     /// The `unsafe` might be conservative, but we assume the `dxgi`
     /// argument is in good shape to be a target.
+    ///
+    /// # Safety
+    /// TODO
     pub unsafe fn create_bitmap_from_dxgi(
         &self,
         dxgi: &ComPtr<IDXGISurface>,
@@ -545,7 +554,7 @@ impl DeviceContext {
 }
 
 impl PathGeometry {
-    pub fn open<'a>(&'a mut self) -> Result<GeometrySink<'a>, Error> {
+    pub fn open(&mut self) -> Result<GeometrySink, Error> {
         unsafe {
             let mut ptr = null_mut();
             let hr = (self.0).Open(&mut ptr);

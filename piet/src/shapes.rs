@@ -41,6 +41,7 @@ pub enum LineCap {
 }
 
 impl StrokeStyle {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> StrokeStyle {
         StrokeStyle {
             line_join: None,

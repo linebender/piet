@@ -33,8 +33,8 @@ pub enum ImageFormat {
 }
 
 impl ImageFormat {
-    pub fn bytes_per_pixel(&self) -> usize {
-        match *self {
+    pub fn bytes_per_pixel(self) -> usize {
+        match self {
             ImageFormat::Rgb => 3,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => 4,
             _ => panic!(),

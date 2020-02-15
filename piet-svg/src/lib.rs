@@ -2,15 +2,19 @@
 //!
 //! Text and images are unimplemented and will always return errors.
 
+mod text;
+
 use std::borrow::Cow;
 use std::{io, mem};
 
 use piet::kurbo::{Affine, Point, Rect, Shape};
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, HitTestPoint, HitTestTextPosition,
-    ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin, StrokeStyle,
+    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
+    LineCap, LineJoin, StrokeStyle,
 };
 use svg::node::Node;
+
+pub use crate::text::{Text, TextLayout};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -25,13 +29,14 @@ pub struct RenderContext {
 
 impl RenderContext {
     /// Construct an empty `RenderContext`
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             stack: Vec::new(),
             state: State::default(),
             doc: svg::Document::new(),
             next_id: 0,
-            text: Text(()),
+            text: Text::new(),
         }
     }
 
@@ -269,6 +274,8 @@ struct Attrs<'a> {
 }
 
 impl Attrs<'_> {
+    // allow clippy warning for `width != 1.0` in if statement
+    #[allow(clippy::float_cmp)]
     fn apply_to(&self, node: &mut impl Node) {
         node.assign("transform", xf_val(&self.xf));
         if let Some(id) = self.clip {
@@ -403,67 +410,6 @@ fn fmt_color(color: &Color) -> String {
     }
 }
 
-/// SVG text (unimplemented)
-pub struct Text(());
-
-impl piet::Text for Text {
-    type Font = Font;
-    type FontBuilder = FontBuilder;
-    type TextLayout = TextLayout;
-    type TextLayoutBuilder = TextLayoutBuilder;
-
-    fn new_font_by_name(&mut self, _name: &str, _size: f64) -> FontBuilder {
-        FontBuilder(())
-    }
-
-    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str) -> TextLayoutBuilder {
-        TextLayoutBuilder(())
-    }
-}
-
-/// SVG font builder (unimplemented)
-pub struct FontBuilder(());
-
-impl piet::FontBuilder for FontBuilder {
-    type Out = Font;
-
-    fn build(self) -> Result<Font> {
-        Err(new_error(ErrorKind::NotSupported))
-    }
-}
-
-/// SVG font (unimplemented)
-pub struct Font(());
-
-impl piet::Font for Font {}
-
-pub struct TextLayoutBuilder(());
-
-impl piet::TextLayoutBuilder for TextLayoutBuilder {
-    type Out = TextLayout;
-
-    fn build(self) -> Result<TextLayout> {
-        Err(new_error(ErrorKind::NotSupported))
-    }
-}
-
-/// SVG text layout (unimplemented)
-pub struct TextLayout(());
-
-impl piet::TextLayout for TextLayout {
-    fn width(&self) -> f64 {
-        unimplemented!()
-    }
-
-    fn hit_test_point(&self, _point: Point) -> HitTestPoint {
-        unimplemented!()
-    }
-
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
-        unimplemented!()
-    }
-}
-
 /// SVG image (unimplemented)
 pub struct Image(());
 
@@ -471,6 +417,8 @@ pub struct Image(());
 struct Id(u64);
 
 impl Id {
+    // TODO allowing clippy warning temporarily. But this should be changed to impl Display
+    #[allow(clippy::inherent_to_string)]
     fn to_string(self) -> String {
         const ALPHABET: &[u8; 52] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         let mut out = String::with_capacity(4);
