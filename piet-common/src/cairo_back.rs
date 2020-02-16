@@ -3,18 +3,19 @@
 
 //! Support for piet Cairo back-end.
 
+use cairo::{Context, Format, ImageSurface};
+#[cfg(feature = "png")]
+use png::{ColorType, Encoder};
+#[cfg(feature = "png")]
 use std::fs::File;
+#[cfg(feature = "png")]
+use std::io::BufWriter;
 use std::marker::PhantomData;
 use std::path::Path;
-
-use cairo::{Context, Format, ImageSurface};
-/// For saving to file functionality
-use png::{ColorType, Encoder};
 
 use piet::{new_error, ErrorKind, ImageFormat};
 #[doc(hidden)]
 pub use piet_cairo::*;
-use std::io::BufWriter;
 
 /// The `RenderContext` for the Cairo backend, which is selected.
 pub type Piet<'a> = CairoRenderContext<'a>;
@@ -148,7 +149,7 @@ impl<'a> BitmapTarget<'a> {
 
     /// Stub for feature is missing
     #[cfg(not(feature = "npg"))]
-    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+    pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
         Err(new_error(ErrorKind::MissingFeature))
     }
 }

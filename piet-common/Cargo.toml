@@ -23,6 +23,7 @@ cairo-rs = { version = "0.8.0", default_features = false, optional = true}
 [target.'cfg(not(any(target_arch="wasm32", target_os="windows")))'.dependencies]
 piet-cairo = { version = "0.0.9", path = "../piet-cairo" }
 cairo-rs = { version = "0.8.0", default_features = false}
+png = { version = "0.15.3", optional = true }
 
 [target.'cfg(target_os="windows")'.dependencies]
 piet-direct2d = { version = "0.0.9", path = "../piet-direct2d" }
@@ -30,8 +31,6 @@ direct2d = "0.2.0"
 directwrite = "0.1.4"
 dxgi = "0.1.7"
 direct3d11 = "0.1.7"
-
-[target.'cfg(not(target_arch="wasm32"))'.dependencies]
 png = { version = "0.15.3", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
