@@ -131,7 +131,7 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Save bitmap to RGBA PNG file
-    #[cfg(feature = "npg")]
+    #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
         let height = self.surface.get_height();
         let width = self.surface.get_width();
@@ -148,7 +148,7 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Stub for feature is missing
-    #[cfg(not(feature = "npg"))]
+    #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
         Err(new_error(ErrorKind::MissingFeature))
     }
