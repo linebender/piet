@@ -1,10 +1,13 @@
 //! Support for piet Direct2D back-end.
 
+#[cfg(feature = "png")]
 use std::fs::File;
+#[cfg(feature = "png")]
 use std::io::BufWriter;
 use std::path::Path;
 
 /// For saving to file functionality
+#[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
 use piet::{new_error, ErrorKind, ImageFormat};
@@ -196,7 +199,7 @@ impl<'a> BitmapTarget<'a> {
 
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
-    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+    pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
         Err(new_error(ErrorKind::MissingFeature))
     }
 }
