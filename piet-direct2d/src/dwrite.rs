@@ -51,6 +51,7 @@ pub struct TextLayoutBuilder<'a> {
     height: Option<f32>,
 }
 
+#[derive(Clone)]
 pub struct TextLayout(ComPtr<IDWriteTextLayout>);
 
 impl From<HRESULT> for Error {

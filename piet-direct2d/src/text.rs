@@ -9,7 +9,7 @@ use piet::kurbo::Point;
 
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, Text, TextLayout,
-    TextLayoutBuilder,
+    TextLayoutBuilder, LineMetric,
 };
 
 use crate::d2d;
@@ -61,7 +61,7 @@ impl<'a> Text for D2DText<'a> {
         }
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str, _width: f64) -> Self::TextLayoutBuilder {
         D2DTextLayoutBuilder {
             text: text.to_owned(),
             builder: dwrite::TextLayoutBuilder::new(self.dwrite)
@@ -100,6 +100,27 @@ impl TextLayout for D2DTextLayout {
     fn width(&self) -> f64 {
         self.layout.get_metrics().width as f64
     }
+
+    #[allow(clippy::unimplemented)]
+    fn update_width(&self, _new_width: f64) -> Self {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_text(&self, _line_number: usize) -> Option<&str> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_metric(&self, _line_number: usize) -> Option<&LineMetric> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_count(&self) -> usize {
+        unimplemented!();
+    }
+
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // lossy from f64 to f32, but shouldn't have too much impact
