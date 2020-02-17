@@ -6,8 +6,8 @@ use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
     Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
-    InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
-    LineMetric,
+    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 /// A render context that doesn't render.
@@ -136,7 +136,12 @@ impl Text for NullText {
         NullFontBuilder
     }
 
-    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str, _width: f64) -> Self::TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        _font: &Self::Font,
+        _text: &str,
+        _width: f64,
+    ) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
 }
@@ -160,7 +165,6 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
 }
 
 impl TextLayout for NullTextLayout {
-
     fn width(&self) -> f64 {
         42.0
     }

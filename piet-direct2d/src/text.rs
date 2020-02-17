@@ -8,8 +8,8 @@ use std::convert::TryInto;
 use piet::kurbo::Point;
 
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, Text, TextLayout,
-    TextLayoutBuilder, LineMetric,
+    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
+    TextLayout, TextLayoutBuilder,
 };
 
 use crate::d2d;
@@ -61,7 +61,12 @@ impl<'a> Text for D2DText<'a> {
         }
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str, _width: f64) -> Self::TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+        _width: f64,
+    ) -> Self::TextLayoutBuilder {
         D2DTextLayoutBuilder {
             text: text.to_owned(),
             builder: dwrite::TextLayoutBuilder::new(self.dwrite)
@@ -120,7 +125,6 @@ impl TextLayout for D2DTextLayout {
     fn line_count(&self) -> usize {
         unimplemented!();
     }
-
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // lossy from f64 to f32, but shouldn't have too much impact

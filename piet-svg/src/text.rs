@@ -25,7 +25,12 @@ impl piet::Text for Text {
         FontBuilder(())
     }
 
-    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str, _width: f64) -> TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        _font: &Self::Font,
+        _text: &str,
+        _width: f64,
+    ) -> TextLayoutBuilder {
         TextLayoutBuilder(())
     }
 }

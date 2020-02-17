@@ -9,8 +9,8 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::Point;
 
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, Text, TextLayout,
-    TextLayoutBuilder, LineMetric,
+    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
+    TextLayout, TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -66,7 +66,12 @@ impl<'a> Text for WebRenderContext<'a> {
         WebFontBuilder(font)
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str, _width: f64) -> Self::TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+        _width: f64,
+    ) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
@@ -145,7 +150,6 @@ impl TextLayout for WebTextLayout {
     fn line_count(&self) -> usize {
         unimplemented!();
     }
-
 
     // first assume one line.
     // TODO do with lines
