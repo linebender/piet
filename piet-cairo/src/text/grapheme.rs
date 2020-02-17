@@ -74,7 +74,8 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, "piet").build().unwrap();
+        let layout =
+            text_layout.new_text_layout(&font, "piet", std::f64::INFINITY).build().unwrap();
 
         let expected_3 = GraphemeBoundaries {
             curr_idx: 3,
