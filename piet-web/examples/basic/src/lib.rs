@@ -90,33 +90,33 @@ mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4])
+            .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
             .build()
             .unwrap();
         let piet_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3])
+            .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
             .build()
             .unwrap();
         let pie_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..2])
+            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
             .build()
             .unwrap();
         let pi_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..1])
+            .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
             .build()
             .unwrap();
         let p_width = layout.width();
 
-        let layout = text_layout.new_text_layout(&font, "").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, "", std::f64::INFINITY).build().unwrap();
         let null_width = layout.width();
 
-        let full_layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let full_layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
         let full_width = full_layout.width();
 
         assert_close_to(
@@ -173,7 +173,7 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
@@ -201,7 +201,7 @@ mod test {
 
         //let mut text_layout = D2DText::new();
         //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
-        //let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        //let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
         //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
@@ -215,7 +215,7 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
@@ -250,18 +250,18 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2])
+            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
             .build()
             .unwrap();
         let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9])
+            .new_text_layout(&font, &input[0..9], std::f64::INFINITY)
             .build()
             .unwrap();
         let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10])
+            .new_text_layout(&font, &input[0..10], std::f64::INFINITY)
             .build()
             .unwrap();
 
@@ -336,7 +336,7 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "piet text!")
+            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
             .build()
             .unwrap();
         console::log_1(&format!("text pos 4: {:?}", layout.hit_test_text_position(4)).into()); // 23.432432174682617
@@ -381,14 +381,14 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, "t").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, "t", std::f64::INFINITY).build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
 
         // two graphemes (to check that middle moves)
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
 
-        let layout = text_layout.new_text_layout(&font, "te").build().unwrap();
+        let layout = text_layout.new_text_layout(&font, "te", std::f64::INFINITY).build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
 
@@ -416,7 +416,7 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
         console::log_1(&format!("text pos 2: {:?}", layout.hit_test_text_position(2)).into()); // 7.108108043670654
         console::log_1(&format!("text pos 9: {:?}", layout.hit_test_text_position(9)).into()); // 19.29729652404785
         console::log_1(&format!("text pos 10: {:?}", layout.hit_test_text_position(10)).into()); // 26.91891860961914
@@ -462,7 +462,7 @@ mod test {
             .new_font_by_name("sans-serif", 12.0)
             .build()
             .unwrap();
-        let layout = text_layout.new_text_layout(&font, input).build().unwrap();
+        let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
         println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0

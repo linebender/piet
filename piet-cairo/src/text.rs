@@ -10,7 +10,7 @@ use piet::kurbo::Point;
 
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, RoundInto, Text,
-    TextLayout, TextLayoutBuilder,
+    TextLayout, TextLayoutBuilder, LineMetric,
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -67,7 +67,7 @@ impl<'a> Text for CairoText<'a> {
         }
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str, _width: f64) -> Self::TextLayoutBuilder {
         let text_layout = CairoTextLayout {
             font: font.0.clone(),
             text: text.to_owned(),
@@ -102,6 +102,26 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
         self.font.text_extents(&self.text).x_advance
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn update_width(&self, _new_width: f64) -> Self {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_text(&self, _line_number: usize) -> Option<&str> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_metric(&self, _line_number: usize) -> Option<&LineMetric> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_count(&self) -> usize {
+        unimplemented!();
     }
 
     // first assume one line.

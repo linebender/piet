@@ -10,7 +10,7 @@ use piet::kurbo::Point;
 
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, Text, TextLayout,
-    TextLayoutBuilder,
+    TextLayoutBuilder, LineMetric,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -66,7 +66,7 @@ impl<'a> Text for WebRenderContext<'a> {
         WebFontBuilder(font)
     }
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, font: &Self::Font, text: &str, _width: f64) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
@@ -125,6 +125,27 @@ impl TextLayout for WebTextLayout {
             .map(|m| m.width())
             .expect("Text measurement failed")
     }
+
+    #[allow(clippy::unimplemented)]
+    fn update_width(&self, _new_width: f64) -> Self {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_text(&self, _line_number: usize) -> Option<&str> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_metric(&self, _line_number: usize) -> Option<&LineMetric> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_count(&self) -> usize {
+        unimplemented!();
+    }
+
 
     // first assume one line.
     // TODO do with lines
