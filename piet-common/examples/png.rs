@@ -2,6 +2,8 @@ use piet::kurbo::Line;
 use piet::{Color, RenderContext};
 use piet_common::Device;
 
+/// Feature "png" needed for save_to_file() and it's disabled by default for optionsl dependencies
+/// cargo run --example png --features png
 fn main() {
     let mut device = Device::new().unwrap();
     let width = 640;

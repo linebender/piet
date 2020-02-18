@@ -10,7 +10,7 @@ use std::path::Path;
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
-use piet::{new_error, ErrorKind, ImageFormat};
+use piet::{ErrorKind, ImageFormat};
 use piet_direct2d::d3d::{
     D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
 };
@@ -200,7 +200,7 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
-        Err(new_error(ErrorKind::MissingFeature))
+        Err(piet::new_error(ErrorKind::MissingFeature))
     }
 }
 
