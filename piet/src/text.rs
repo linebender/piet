@@ -81,7 +81,7 @@ pub trait TextLayout: Clone {
     fn line_text(&self, line_number: usize) -> Option<&str>;
 
     /// Given a line number, return a reference to that line's metrics.
-    fn line_metric(&self, line_number: usize) -> Option<&LineMetric>;
+    fn line_metric(&self, line_number: usize) -> Option<LineMetric>;
 
     /// Returns total number of lines in the text layout.
     fn line_count(&self) -> usize;
@@ -139,20 +139,29 @@ pub trait TextLayout: Clone {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LineMetric {
     /// Index (in code units) of the start of the line, offset from the beginning of the text.
-    pub line_start_offset: usize,
+    pub start_offset: usize,
 
     /// Line length (in code units), but offset from the beginning of the text. So it's the length
     /// of this line summed with the lengths of all the lines before it.
     ///
     /// Does not include trailing whitespace.
-    pub line_end_offset: usize,
+    pub end_offset: usize,
 
-    /// Line width.
-    /// Does not include trailing whitespace.
+    /// Length in (in code units) of current line's trailing whitespace.
+    pub trailing_whitespace: usize,
+
+    /// Line width in pixels, including all previous lines.
+    /// Does not include trailing whitespace for current line.
     pub cumulative_width: f64,
 
-    /// Length (in code units) of trailing whitespace.
-    pub trailing_whitespace: f64,
+    /// Distance (in pixels) of the baseline of the line from the top of the line
+    pub baseline: f64,
+
+    /// Line height in pixels
+    pub height: f64,
+
+    /// Cumulative line height in pixels (includes previous line heights)
+    pub cumulative_height: f64,
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).

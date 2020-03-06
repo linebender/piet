@@ -177,7 +177,7 @@ impl TextLayout for NullTextLayout {
         None
     }
 
-    fn line_metric(&self, _line_number: usize) -> Option<&LineMetric> {
+    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
         None
     }
 
