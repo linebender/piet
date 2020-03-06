@@ -142,7 +142,7 @@ impl TextLayout for WebTextLayout {
     }
 
     #[allow(clippy::unimplemented)]
-    fn line_metric(&self, _line_number: usize) -> Option<&LineMetric> {
+    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
         unimplemented!();
     }
 
