@@ -150,9 +150,8 @@ pub struct LineMetric {
     /// Length in (in code units) of current line's trailing whitespace.
     pub trailing_whitespace: usize,
 
-    /// Line width in pixels, including all previous lines.
-    /// Does not include trailing whitespace for current line.
-    pub cumulative_width: f64,
+    /// Line width in pixels
+    pub width: f64,
 
     /// Distance (in pixels) of the baseline of the line from the top of the line
     pub baseline: f64,
