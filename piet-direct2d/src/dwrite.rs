@@ -266,6 +266,18 @@ impl TextLayout {
         }
     }
 
+    pub fn set_max_width(&self, max_width: f64) -> Result<(), Error> {
+        unsafe {
+            let hr = self.0.SetMaxWidth(max_width as f32);
+
+            if SUCCEEDED(hr) {
+                Ok(())
+            } else {
+                Err(hr.into())
+            }
+        }
+    }
+
     pub fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint {
         unsafe {
             let mut trail = 0;

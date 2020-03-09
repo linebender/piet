@@ -114,9 +114,17 @@ impl TextLayout for D2DTextLayout {
         self.layout.get_metrics().width as f64
     }
 
-    #[allow(clippy::unimplemented)]
-    fn update_width(&self, _new_width: f64) -> Self {
-        unimplemented!();
+    fn update_width(&self, new_width: f64) -> Self {
+        let layout = self.layout.clone();
+        layout
+            .set_max_width(new_width)
+            .expect("not sure how to handle error yet");
+
+        Self {
+            text: self.text.clone(),
+            line_metrics: fetch_line_metrics(&layout),
+            layout,
+        }
     }
 
     fn line_text(&self, line_number: usize) -> Option<&str> {
@@ -596,6 +604,36 @@ mod test {
         assert_eq!(layout.line_text(2), Some("most"));
         assert_eq!(layout.line_text(3), Some("best"));
         assert_eq!(layout.line_text(4), None);
+    }
+
+    #[test]
+    fn test_change_width() {
+        let input = "piet text most best";
+        let width_small = 30.0;
+        let width_medium = 60.0;
+        let width_large = 1000.0;
+
+        let dwrite = dwrite::DwriteFactory::new().unwrap();
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let small_layout = text_layout
+            .new_text_layout(&font, input, width_small)
+            .build()
+            .unwrap();
+
+        assert_eq!(small_layout.line_count(), 4);
+        assert_eq!(small_layout.line_text(0), Some("piet"));
+
+        let medium_layout = small_layout.update_width(width_medium);
+        assert_eq!(medium_layout.line_count(), 2);
+        assert_eq!(medium_layout.line_text(0), Some("piet text"));
+
+        let wide_layout = medium_layout.update_width(width_large);
+        assert_eq!(wide_layout.line_count(), 1);
+        assert_eq!(wide_layout.line_text(0), Some("piet text most best"));
     }
 
     #[test]
