@@ -1,5 +1,7 @@
 //! Text functionality for Piet direct2d backend
 
+mod lines;
+
 pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
 
@@ -12,6 +14,7 @@ use piet::{
     TextLayout, TextLayoutBuilder,
 };
 
+use self::lines::fetch_line_metrics;
 use crate::d2d;
 use crate::dwrite::{self, TextFormat, TextFormatBuilder};
 
@@ -29,6 +32,8 @@ pub struct D2DFontBuilder<'a> {
 #[derive(Clone)]
 pub struct D2DTextLayout {
     pub text: String,
+    // currently calculated on build
+    line_metrics: Vec<LineMetric>,
     pub layout: dwrite::TextLayout,
 }
 
@@ -65,12 +70,14 @@ impl<'a> Text for D2DText<'a> {
         &mut self,
         font: &Self::Font,
         text: &str,
-        _width: f64,
+        width: f64,
     ) -> Self::TextLayoutBuilder {
         D2DTextLayoutBuilder {
             text: text.to_owned(),
             builder: dwrite::TextLayoutBuilder::new(self.dwrite)
                 .format(&font.0)
+                .width(width as f32)
+                .height(1e6)
                 .text(text),
         }
     }
@@ -90,13 +97,14 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
     type Out = D2DTextLayout;
 
     fn build(self) -> Result<Self::Out, Error> {
+        let layout = self.builder.build()?;
+
+        let line_metrics = fetch_line_metrics(&layout);
+
         Ok(D2DTextLayout {
             text: self.text,
-            layout: self
-                .builder
-                .width(1e6) // TODO: probably want to support wrapping
-                .height(1e6)
-                .build()?,
+            line_metrics,
+            layout,
         })
     }
 }
