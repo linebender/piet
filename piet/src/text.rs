@@ -141,25 +141,26 @@ pub struct LineMetric {
     /// Index (in code units) of the start of the line, offset from the beginning of the text.
     pub start_offset: usize,
 
-    /// Line length (in code units), but offset from the beginning of the text. So it's the length
+    /// Line length (in UTF-8 code units), but offset from the beginning of the text. So it's the length
     /// of this line summed with the lengths of all the lines before it.
     ///
-    /// Does not include trailing whitespace.
+    /// Includes trailing whitespace.
     pub end_offset: usize,
 
-    /// Length in (in code units) of current line's trailing whitespace.
+    /// Length in (in UTF-8 code units) of current line's trailing whitespace.
     pub trailing_whitespace: usize,
 
-    /// Line width in pixels
+    // TOOD remove
+    /// Line width
     pub width: f64,
 
-    /// Distance (in pixels) of the baseline from the top of the line
+    /// Distance of the baseline from the top of the line
     pub baseline: f64,
 
-    /// Line height in pixels
+    /// Line height
     pub height: f64,
 
-    /// Cumulative line height in pixels (includes previous line heights)
+    /// Cumulative line height (includes previous line heights)
     pub cumulative_height: f64,
 }
 
