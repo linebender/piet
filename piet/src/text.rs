@@ -153,7 +153,7 @@ pub struct LineMetric {
     /// Line width in pixels
     pub width: f64,
 
-    /// Distance (in pixels) of the baseline of the line from the top of the line
+    /// Distance (in pixels) of the baseline from the top of the line
     pub baseline: f64,
 
     /// Line height in pixels
