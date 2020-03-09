@@ -266,6 +266,7 @@ impl TextLayout {
         }
     }
 
+    // TODO should this be &mut?
     pub fn set_max_width(&self, max_width: f64) -> Result<(), Error> {
         unsafe {
             let hr = self.0.SetMaxWidth(max_width as f32);
