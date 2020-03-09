@@ -119,19 +119,18 @@ impl TextLayout for D2DTextLayout {
         unimplemented!();
     }
 
-    #[allow(clippy::unimplemented)]
-    fn line_text(&self, _line_number: usize) -> Option<&str> {
-        unimplemented!();
+    fn line_text(&self, line_number: usize) -> Option<&str> {
+        self.line_metrics
+            .get(line_number)
+            .map(|lm| &self.text[lm.start_offset..(lm.end_offset - lm.trailing_whitespace)])
     }
 
-    #[allow(clippy::unimplemented)]
-    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
-        unimplemented!();
+    fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
+        self.line_metrics.get(line_number).cloned()
     }
 
-    #[allow(clippy::unimplemented)]
     fn line_count(&self) -> usize {
-        unimplemented!();
+        self.line_metrics.len()
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
@@ -573,6 +572,30 @@ mod test {
         assert_eq!(pt.metrics.text_position, 14);
         let pt = layout.hit_test_point(Point::new(35.0, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
+    }
+
+    #[test]
+    fn test_basic_multiline() {
+        let input = "piet text most best";
+        let width_small = 30.0;
+
+        let dwrite = dwrite::DwriteFactory::new().unwrap();
+        let mut text_layout = D2DText::new(&dwrite);
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+        let layout = text_layout
+            .new_text_layout(&font, input, width_small)
+            .build()
+            .unwrap();
+
+        assert_eq!(layout.line_count(), 4);
+        assert_eq!(layout.line_text(0), Some("piet"));
+        assert_eq!(layout.line_text(1), Some("text"));
+        assert_eq!(layout.line_text(2), Some("most"));
+        assert_eq!(layout.line_text(3), Some("best"));
+        assert_eq!(layout.line_text(4), None);
     }
 
     #[test]
