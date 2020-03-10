@@ -110,7 +110,7 @@ impl TextLayout for CairoTextLayout {
     }
 
     #[allow(clippy::unimplemented)]
-    fn update_width(&self, _new_width: f64) -> Self {
+    fn update_width(&mut self, _new_width: f64) -> Result<(), Error> {
         unimplemented!();
     }
 

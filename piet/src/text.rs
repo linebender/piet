@@ -75,7 +75,7 @@ pub trait TextLayout: Clone {
     /// struct with recalculated lines and line metrics.
     // TODO: Should this take &self or self? I'd say maybe; perhaps the old struct should be kept around
     // to help with caching.
-    fn update_width(&self, new_width: f64) -> Self;
+    fn update_width(&mut self, new_width: f64) -> Result<(), Error>;
 
     /// Given a line number, return a reference to that line's underlying string.
     fn line_text(&self, line_number: usize) -> Option<&str>;

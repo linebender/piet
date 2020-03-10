@@ -169,8 +169,8 @@ impl TextLayout for NullTextLayout {
         42.0
     }
 
-    fn update_width(&self, _new_width: f64) -> Self {
-        Self
+    fn update_width(&mut self, _new_width: f64) -> Result<(), Error> {
+        Ok(())
     }
 
     fn line_text(&self, _line_number: usize) -> Option<&str> {

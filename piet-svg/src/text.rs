@@ -71,7 +71,7 @@ impl piet::TextLayout for TextLayout {
     }
 
     #[allow(clippy::unimplemented)]
-    fn update_width(&self, _new_width: f64) -> Self {
+    fn update_width(&mut self, _new_width: f64) -> Result<()> {
         unimplemented!();
     }
 
