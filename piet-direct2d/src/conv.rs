@@ -150,7 +150,12 @@ pub(crate) fn convert_stroke_style(
             let width_recip = if width == 0.0 { 1.0 } else { width.recip() };
             assert!(dashes.len() <= 0xffff_ffff);
             (
-                Some(dashes.iter().map(|x| *x as f32 * width_recip).collect()),
+                Some(
+                    dashes
+                        .iter()
+                        .map(|x| *x as f32 * width_recip)
+                        .collect::<Vec<f32>>(),
+                ),
                 D2D1_DASH_STYLE_CUSTOM,
                 *off as f32,
             )
@@ -166,6 +171,5 @@ pub(crate) fn convert_stroke_style(
         dashStyle: dash_style,
         dashOffset: dash_off,
     };
-    let dashes = dashes.as_ref().map(|v: &Vec<_>| v.as_slice());
-    Ok(factory.create_stroke_style(&props, dashes)?)
+    Ok(factory.create_stroke_style(&props, dashes.as_deref())?)
 }
