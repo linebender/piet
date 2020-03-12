@@ -11,6 +11,7 @@ use std::path::Path;
 use png::{ColorType, Encoder};
 
 use piet::{ErrorKind, ImageFormat};
+use piet_direct2d::d2d::{Bitmap, Brush as D2DBrush};
 use piet_direct2d::d3d::{
     D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
 };
@@ -19,6 +20,11 @@ pub use piet_direct2d::*;
 
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
+
+/// The associated brush type for this backend.
+///
+/// This type matches `RenderContext::Brush`
+pub type Brush = D2DBrush;
 
 /// The associated text factory for this backend.
 ///
@@ -44,6 +50,11 @@ pub type PietTextLayout = D2DTextLayout;
 ///
 /// This type matches `RenderContext::Text::TextLayoutBuilder`
 pub type PietTextLayoutBuilder<'a> = D2DTextLayoutBuilder<'a>;
+
+/// The associated image type for this backend.
+///
+/// This type matches `RenderContext::Image`
+pub type Image = Bitmap;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {
