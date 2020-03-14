@@ -304,26 +304,58 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         })
     }
 
+    #[inline]
     fn draw_image(
         &mut self,
         image: &Self::Image,
-        rect: impl Into<Rect>,
-        _interp: InterpolationMode,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
     ) {
-        let result = self.with_save(|rc| {
-            let rect = rect.into();
-            let _ = rc.ctx.translate(rect.x0, rect.y0);
-            let _ = rc.ctx.scale(
-                rect.width() / (image.width as f64),
-                rect.height() / (image.height as f64),
-            );
-            rc.ctx
-                .draw_image_with_html_canvas_element(&image.inner, 0.0, 0.0)
-                .wrap()
-        });
-        if let Err(e) = result {
-            self.err = Err(e);
-        }
+        draw_image(self, image, None, dst_rect.into(), interp);
+    }
+
+    #[inline]
+    fn draw_image_area(
+        &mut self,
+        image: &Self::Image,
+        src_rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    ) {
+        draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
+    }
+}
+
+fn draw_image<'a>(
+    ctx: &mut WebRenderContext<'a>,
+    image: &<WebRenderContext<'a> as RenderContext>::Image,
+    src_rect: Option<Rect>,
+    dst_rect: Rect,
+    _interp: InterpolationMode,
+) {
+    let result = ctx.with_save(|rc| {
+        // TODO: Implement InterpolationMode::NearestNeighbor in software
+        //       See for inspiration http://phrogz.net/tmp/canvas_image_zoom.html
+        let src_rect = match src_rect {
+            Some(src_rect) => src_rect,
+            None => Rect::new(0.0, 0.0, image.width as f64, image.height as f64),
+        };
+        rc.ctx
+            .draw_image_with_html_canvas_element_and_sw_and_sh_and_dx_and_dy_and_dw_and_dh(
+                &image.inner,
+                src_rect.x0,
+                src_rect.y0,
+                src_rect.width(),
+                src_rect.height(),
+                dst_rect.x0,
+                dst_rect.y0,
+                dst_rect.width(),
+                dst_rect.height(),
+            )
+            .wrap()
+    });
+    if let Err(e) = result {
+        ctx.err = Err(e);
     }
 }
 

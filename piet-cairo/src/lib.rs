@@ -299,30 +299,63 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Ok(image)
     }
 
+    #[inline]
     fn draw_image(
         &mut self,
         image: &Self::Image,
-        rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        let _ = self.with_save(|rc| {
-            let surface_pattern = SurfacePattern::create(image);
-            let filter = match interp {
-                InterpolationMode::NearestNeighbor => Filter::Nearest,
-                InterpolationMode::Bilinear => Filter::Bilinear,
-            };
-            surface_pattern.set_filter(filter);
-            let rect = rect.into();
-            rc.ctx.translate(rect.x0, rect.y0);
-            rc.ctx.scale(
-                rect.width() / (image.get_width() as f64),
-                rect.height() / (image.get_height() as f64),
-            );
-            rc.ctx.set_source(&surface_pattern);
-            rc.ctx.paint();
-            Ok(())
-        });
+        draw_image(self, image, None, dst_rect.into(), interp);
     }
+
+    #[inline]
+    fn draw_image_area(
+        &mut self,
+        image: &Self::Image,
+        src_rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    ) {
+        draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
+    }
+}
+
+fn draw_image<'a>(
+    ctx: &mut CairoRenderContext<'a>,
+    image: &<CairoRenderContext<'a> as RenderContext>::Image,
+    src_rect: Option<Rect>,
+    dst_rect: Rect,
+    interp: InterpolationMode,
+) {
+    let _ = ctx.with_save(|rc| {
+        let surface_pattern = SurfacePattern::create(image);
+        let filter = match interp {
+            InterpolationMode::NearestNeighbor => Filter::Nearest,
+            InterpolationMode::Bilinear => Filter::Bilinear,
+        };
+        surface_pattern.set_filter(filter);
+        let src_rect = match src_rect {
+            Some(src_rect) => src_rect,
+            None => Rect::new(
+                0.0,
+                0.0,
+                image.get_width() as f64,
+                image.get_height() as f64,
+            ),
+        };
+        let scale_x = dst_rect.width() / src_rect.width();
+        let scale_y = dst_rect.height() / src_rect.height();
+        rc.clip(dst_rect);
+        rc.ctx.translate(
+            dst_rect.x0 - scale_x * src_rect.x0,
+            dst_rect.y0 - scale_y * src_rect.y0,
+        );
+        rc.ctx.scale(scale_x, scale_y);
+        rc.ctx.set_source(&surface_pattern);
+        rc.ctx.paint();
+        Ok(())
+    });
 }
 
 impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
