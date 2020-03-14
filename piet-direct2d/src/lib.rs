@@ -371,19 +371,56 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         Ok(bitmap)
     }
 
+    #[inline]
     fn draw_image(
         &mut self,
         image: &Self::Image,
-        rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        let interp = match interp {
-            InterpolationMode::NearestNeighbor => D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-            InterpolationMode::Bilinear => D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-        };
-        self.rt
-            .draw_bitmap(&image, &rect_to_rectf(rect.into()), 1.0, interp, None);
+        draw_image(self.rt, image, None, dst_rect.into(), interp);
     }
+
+    #[inline]
+    fn draw_image_area(
+        &mut self,
+        image: &Self::Image,
+        src_rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    ) {
+        draw_image(
+            self.rt,
+            image,
+            Some(src_rect.into()),
+            dst_rect.into(),
+            interp,
+        );
+    }
+}
+
+fn draw_image<'a>(
+    rt: &'a mut D2DDeviceContext,
+    image: &<D2DRenderContext<'a> as RenderContext>::Image,
+    src_rect: Option<Rect>,
+    dst_rect: Rect,
+    interp: InterpolationMode,
+) {
+    let interp = match interp {
+        InterpolationMode::NearestNeighbor => D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+        InterpolationMode::Bilinear => D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+    };
+    let src_rect = match src_rect {
+        Some(src_rect) => Some(rect_to_rectf(src_rect)),
+        None => None,
+    };
+    rt.draw_bitmap(
+        &image,
+        &rect_to_rectf(dst_rect),
+        1.0,
+        interp,
+        src_rect.as_ref(),
+    );
 }
 
 impl<'a> IntoBrush<D2DRenderContext<'a>> for Brush {

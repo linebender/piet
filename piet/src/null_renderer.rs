@@ -114,7 +114,15 @@ impl RenderContext for NullRenderContext {
     fn draw_image(
         &mut self,
         _image: &Self::Image,
-        _rect: impl Into<Rect>,
+        _dst_rect: impl Into<Rect>,
+        _interp: InterpolationMode,
+    ) {
+    }
+    fn draw_image_area(
+        &mut self,
+        _image: &Self::Image,
+        _src_rect: impl Into<Rect>,
+        _dst_rect: impl Into<Rect>,
         _interp: InterpolationMode,
     ) {
     }

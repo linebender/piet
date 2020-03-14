@@ -48,6 +48,22 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         InterpolationMode::Bilinear,
     );
 
+    // 3x3 px red image with a single blue pixel in the middle
+    #[rustfmt::skip]
+    let blue_dot_data = [
+        255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255,
+        255, 0, 0, 255, 0, 0, 255, 255, 255, 0, 0, 255,
+        255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255,
+    ];
+    let blue_dot_image = rc.make_image(3, 3, &blue_dot_data, ImageFormat::RgbaPremul)?;
+    // Draw using only the single blue pixel
+    rc.draw_image_area(
+        &blue_dot_image,
+        Rect::new(1.0, 1.0, 2.0, 2.0),
+        Rect::new(160.0, 20.0, 170.0, 30.0),
+        InterpolationMode::NearestNeighbor,
+    );
+
     let clip_path = star(Point::new(90.0, 45.0), 10.0, 30.0, 24);
     rc.clip(clip_path);
     let layout = rc.text().new_text_layout(&font, "Clipped text").build()?;

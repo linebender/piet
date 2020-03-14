@@ -182,9 +182,26 @@ where
 
     /// Draw an image.
     ///
-    /// The image is scaled to the provided `rect`. It will be squashed if
-    /// aspect ratios don't match.
-    fn draw_image(&mut self, image: &Self::Image, rect: impl Into<Rect>, interp: InterpolationMode);
+    /// The `image` is scaled to the provided `dst_rect`.
+    /// It will be squashed if the aspect ratios don't match.
+    fn draw_image(
+        &mut self,
+        image: &Self::Image,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    );
+
+    /// Draw a specified area of an image.
+    ///
+    /// The `src_rect` area of `image` is scaled to the provided `dst_rect`.
+    /// It will be squashed if the aspect ratios don't match.
+    fn draw_image_area(
+        &mut self,
+        image: &Self::Image,
+        src_rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    );
 
     /// Returns the transformations currently applied to the context.
     fn current_transform(&self) -> Affine;
