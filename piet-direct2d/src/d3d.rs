@@ -131,6 +131,8 @@ impl D3D11Device {
         }
     }
 
+    /// # Safety
+    /// TODO
     pub unsafe fn create_swapchain_from_hwnd(
         &self,
         hwnd: winapi::shared::windef::HWND,
