@@ -123,11 +123,11 @@ impl Device {
         // Bind the backing texture to a D2D Bitmap
         let target = unsafe {
             context
-                .create_bitmap_from_dxgi(&tex.as_dxgi(), pix_scale as f32)
+                .create_bitmap_from_dxgi(&tex.as_dxgi(), pix_scale as f32, BitmapOptions::TARGET)
                 .unwrap()
         };
 
-        context.set_target(&target);
+        context.set_target(Some(&target));
         // TODO ask about this? it was in basic.rs, but not here
         context.set_dpi_scale(pix_scale as f32);
         context.begin_draw();

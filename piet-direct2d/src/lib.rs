@@ -26,7 +26,7 @@ use piet::{
     RenderContext, StrokeStyle,
 };
 
-pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
+pub use crate::d2d::{BitmapOptions, D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use crate::dwrite::DwriteFactory;
 pub use crate::text::{D2DFont, D2DFontBuilder, D2DText, D2DTextLayout, D2DTextLayoutBuilder};
 

@@ -3,7 +3,7 @@
 use winapi::shared::dxgi::DXGI_MAP_READ;
 
 use piet::RenderContext;
-use piet_direct2d::D2DRenderContext;
+use piet_direct2d::{BitmapOptions, D2DRenderContext};
 
 use piet_test::draw_test_picture;
 
@@ -45,11 +45,11 @@ fn main() {
     // Bind the backing texture to a D2D Bitmap
     let target = unsafe {
         context
-            .create_bitmap_from_dxgi(&tex.as_dxgi(), HIDPI)
+            .create_bitmap_from_dxgi(&tex.as_dxgi(), HIDPI, BitmapOptions::TARGET)
             .unwrap()
     };
 
-    context.set_target(&target);
+    context.set_target(Some(&target));
     context.set_dpi_scale(HIDPI);
     context.begin_draw();
     let mut piet_context = D2DRenderContext::new(&d2d, &dwrite, &mut context);

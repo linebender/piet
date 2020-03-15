@@ -12,6 +12,8 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::{null, null_mut};
 
+use bitflags::bitflags;
+
 use wio::com::ComPtr;
 
 use winapi::shared::dxgi::{IDXGIDevice, IDXGISurface};
@@ -31,8 +33,9 @@ use winapi::um::d2d1::{
     D2D1_SIZE_U, D2D1_STROKE_STYLE_PROPERTIES,
 };
 use winapi::um::d2d1_1::{
-    ID2D1Bitmap1, ID2D1Device, ID2D1DeviceContext, ID2D1Factory1, D2D1_BITMAP_OPTIONS_NONE,
-    D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1, D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
+    ID2D1Bitmap1, ID2D1Device, ID2D1DeviceContext, ID2D1Factory1, D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+    D2D1_BITMAP_OPTIONS_NONE, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
+    D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
 };
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
@@ -92,6 +95,13 @@ pub struct Layer(ComPtr<ID2D1Layer>);
 pub struct Brush(ComPtr<ID2D1Brush>);
 
 pub struct Bitmap(ComPtr<ID2D1Bitmap1>);
+
+bitflags! {
+    pub struct BitmapOptions: u32 {
+        const TARGET = D2D1_BITMAP_OPTIONS_TARGET;
+        const CANNOT_DRAW = D2D1_BITMAP_OPTIONS_CANNOT_DRAW;
+    }
+}
 
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {
@@ -273,6 +283,7 @@ impl DeviceContext {
         &self,
         dxgi: &ComPtr<IDXGISurface>,
         dpi_scale: f32,
+        options: BitmapOptions,
     ) -> Result<Bitmap, Error> {
         let mut ptr = null_mut();
         let props = D2D1_BITMAP_PROPERTIES1 {
@@ -282,7 +293,7 @@ impl DeviceContext {
             },
             dpiX: 96.0 * dpi_scale,
             dpiY: 96.0 * dpi_scale,
-            bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET,
+            bitmapOptions: options.bits(),
             colorContext: null_mut(),
         };
         let hr = self
@@ -294,8 +305,12 @@ impl DeviceContext {
     /// Set the target for the device context.
     ///
     /// Useful for rendering into bitmaps.
-    pub fn set_target(&mut self, target: &Bitmap) {
-        unsafe { self.0.SetTarget(target.0.as_raw() as *mut ID2D1Image) }
+    pub fn set_target(&mut self, target: Option<&Bitmap>) {
+        let image = match target {
+            Some(target) => target.0.as_raw() as *mut ID2D1Image,
+            None => null_mut(),
+        };
+        unsafe { self.0.SetTarget(image) }
     }
 
     /// Set the dpi scale.
