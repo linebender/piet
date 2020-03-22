@@ -602,6 +602,8 @@ mod test {
         assert_eq!(layout.line_text(4), None);
     }
 
+    // TODO test multiline hit testing
+
     #[test]
     fn test_change_width() {
         let input = "piet text most best";
