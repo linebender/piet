@@ -14,6 +14,7 @@ use piet::{
 };
 
 use unicode_segmentation::UnicodeSegmentation;
+use xi_unicode::LineBreakIterator;
 
 use self::grapheme::point_x_in_grapheme;
 
@@ -37,6 +38,9 @@ pub struct CairoTextLayout {
     // TODO should these fields be pub(crate)?
     pub font: ScaledFont,
     pub text: String,
+
+    // currently calculated on build
+    line_metrics: Vec<LineMetric>,
 }
 
 pub struct CairoTextLayoutBuilder(CairoTextLayout);
@@ -71,11 +75,83 @@ impl<'a> Text for CairoText<'a> {
         &mut self,
         font: &Self::Font,
         text: &str,
-        _width: f64,
+        width: f64,
     ) -> Self::TextLayoutBuilder {
+        // calculating lines
+        // - break lines
+        //     only use hard breaks
+        //     for now, checking line width on every hard break
+        // - calculate the line metrics
+        //
+        // - TODO what happens when even smallest break is wider than width?
+        let mut line_metrics = Vec::new();
+        let mut line_start = 0;
+        let mut prev_break = 0;
+        let mut cum_height = 0.0;
+
+        for (line_break, is_hard_break) in LineBreakIterator::new(text) {
+            if is_hard_break {
+                let curr_str = &text[line_start..line_break];
+                let curr_width = font.0.text_extents(curr_str).x_advance;
+
+                if curr_width > width {
+                    // if current line_break is too wide, use the prev break
+                    // TODO this will create a skip/stutter in the iterator?
+
+                    // first do the line to prev break
+                    let curr_str = &text[line_start..prev_break];
+                    let height = font.0.text_extents(curr_str).height;
+                    cum_height += height;
+
+                    let line_metric = LineMetric {
+                        start_offset: line_start,
+                        end_offset: prev_break,
+                        trailing_whitespace: 0, // TODO how to get this?
+                        width: 0.0,             // TODO this will be removed
+                        baseline: 0.0,          // TODO how to get this?
+                        height,
+                        cumulative_height: cum_height,
+                    };
+                    line_metrics.push(line_metric);
+
+                    // Now handle the graphemes between prev_break and current break
+                    // reset line state
+                    line_start = prev_break;
+
+                    let curr_str = &text[line_start..line_break];
+                    let curr_width = font.0.text_extents(curr_str).x_advance;
+
+                    if curr_width < width {
+                        let height = font.0.text_extents(curr_str).height;
+                        cum_height += height;
+
+                        let line_metric = LineMetric {
+                            start_offset: line_start,
+                            end_offset: prev_break,
+                            trailing_whitespace: 0, // TODO how to get this?
+                            width: 0.0,             // TODO this will be removed
+                            baseline: 0.0,          // TODO how to get this?
+                            height,
+                            cumulative_height: cum_height,
+                        };
+                        line_metrics.push(line_metric);
+
+                        line_start = line_break;
+                        prev_break = line_start;
+                    } else {
+                        continue;
+                    }
+                }
+            } else {
+                prev_break = line_break;
+                continue;
+            }
+        }
+
         let text_layout = CairoTextLayout {
             font: font.0.clone(),
             text: text.to_owned(),
+            line_metrics,
         };
         CairoTextLayoutBuilder(text_layout)
     }
@@ -119,9 +195,8 @@ impl TextLayout for CairoTextLayout {
         unimplemented!();
     }
 
-    #[allow(clippy::unimplemented)]
-    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
-        unimplemented!();
+    fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
+        self.line_metrics.get(line_number).cloned()
     }
 
     #[allow(clippy::unimplemented)]
