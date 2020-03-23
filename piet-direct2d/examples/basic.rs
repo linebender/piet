@@ -95,7 +95,7 @@ fn main() {
         &raw_pixels,
         TEXTURE_WIDTH,
         TEXTURE_HEIGHT,
-        image::ColorType::RGBA(8),
+        image::ColorType::Rgba8,
     )
     .unwrap();
 }
