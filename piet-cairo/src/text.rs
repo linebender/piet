@@ -77,6 +77,11 @@ impl<'a> Text for CairoText<'a> {
         text: &str,
         width: f64,
     ) -> Self::TextLayoutBuilder {
+        // first pass, completely naive and inefficient
+        //
+        // See https://raphlinus.github.io/rust/skribo/text/2019/04/26/skribo-progress.html for
+        // some other ideas for better efficiency
+        //
         // calculating lines
         // - break lines
         //     only use hard breaks
@@ -96,24 +101,32 @@ impl<'a> Text for CairoText<'a> {
 
                 if curr_width > width {
                     // if current line_break is too wide, use the prev break
-                    // TODO this will create a skip/stutter in the iterator?
+                    // TODO how to get trailing_whitespace? Do I need to count whitespace units
+                    // backwards from the last break?
 
+                    // >===================================================
                     // first do the line to prev break
                     let curr_str = &text[line_start..prev_break];
                     let height = font.0.text_extents(curr_str).height;
                     cum_height += height;
 
+                    // TODO this is a guess for how to do baseline. check through testing
+                    // If it's correct, shoudl it be positive or negative? check with d2d
+                    let baseline = font.0.text_extents(curr_str).x_bearing;
+
                     let line_metric = LineMetric {
                         start_offset: line_start,
                         end_offset: prev_break,
-                        trailing_whitespace: 0, // TODO how to get this?
-                        width: 0.0,             // TODO this will be removed
-                        baseline: 0.0,          // TODO how to get this?
+                        trailing_whitespace: 0,
+                        width: 0.0, // TODO this will be removed
+                        baseline,
                         height,
                         cumulative_height: cum_height,
                     };
                     line_metrics.push(line_metric);
+                    // <===================================================
 
+                    // >===================================================
                     // Now handle the graphemes between prev_break and current break
                     // reset line state
                     line_start = prev_break;
@@ -125,12 +138,16 @@ impl<'a> Text for CairoText<'a> {
                         let height = font.0.text_extents(curr_str).height;
                         cum_height += height;
 
+                        // TODO this is a guess for how to do baseline. check through testing
+                        // If it's correct, shoudl it be positive or negative? check with d2d
+                        let baseline = font.0.text_extents(curr_str).x_bearing;
+
                         let line_metric = LineMetric {
                             start_offset: line_start,
                             end_offset: prev_break,
-                            trailing_whitespace: 0, // TODO how to get this?
-                            width: 0.0,             // TODO this will be removed
-                            baseline: 0.0,          // TODO how to get this?
+                            trailing_whitespace: 0,
+                            width: 0.0, // TODO this will be removed
+                            baseline,
                             height,
                             cumulative_height: cum_height,
                         };
@@ -141,6 +158,7 @@ impl<'a> Text for CairoText<'a> {
                     } else {
                         continue;
                     }
+                    // <===================================================
                 }
             } else {
                 prev_break = line_break;
