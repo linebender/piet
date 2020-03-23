@@ -79,6 +79,17 @@ impl<'a> Text for CairoText<'a> {
     ) -> Self::TextLayoutBuilder {
         // first pass, completely naive and inefficient
         //
+        // NOtes:
+        // hard breaks: cr, lf, line break, para char. Mandated by unicode
+        //
+        // So, every time there's a a hard break, must break.
+        //
+        // soft-hyphen, don't need to deal with this round. Looks like automatic hyphenation, but
+        // with unicode codepoint. Don't special case, let if break for now.
+        //
+        // For soft breaks, then I need to check line widths etc.
+        //
+        //
         // See https://raphlinus.github.io/rust/skribo/text/2019/04/26/skribo-progress.html for
         // some other ideas for better efficiency
         //
@@ -103,15 +114,27 @@ impl<'a> Text for CairoText<'a> {
                     // if current line_break is too wide, use the prev break
                     // TODO how to get trailing_whitespace? Do I need to count whitespace units
                     // backwards from the last break?
+                    // Note: Yes, use chars().rev().while(|c| c.is_whitespace()).count()
+                    // Note: is non-breaking space trailing whitespace? Check with dwrite and
+                    // coretext
 
                     // >===================================================
                     // first do the line to prev break
                     let curr_str = &text[line_start..prev_break];
+
+                    // TODO use font extents height (it's different from text extents height,
+                    // which relates to bounding box)
                     let height = font.0.text_extents(curr_str).height;
                     cum_height += height;
 
                     // TODO this is a guess for how to do baseline. check through testing
                     // If it's correct, shoudl it be positive or negative? check with d2d
+                    //
+                    // Note: use FontExtent.ascent
+                    // see https://glyphsapp.com/tutorials/vertical-metrics
+                    // https://stackoverflow.com/questions/27631736/meaning-of-top-ascent-baseline-descent-bottom-and-leading-in-androids-font
+                    // https://www.cairographics.org/manual/cairo-cairo-scaled-font-t.html#cairo-font-extents-t
+                    //
                     let baseline = font.0.text_extents(curr_str).x_bearing;
 
                     let line_metric = LineMetric {
