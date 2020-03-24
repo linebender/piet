@@ -23,7 +23,7 @@ use piet::{
     LineJoin, RenderContext, StrokeStyle,
 };
 
-pub use text::WebTextLayout;
+pub use text::{WebFont, WebFontBuilder, WebTextLayout, WebTextLayoutBuilder};
 
 pub struct WebRenderContext<'a> {
     ctx: &'a mut CanvasRenderingContext2d,
