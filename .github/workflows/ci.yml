@@ -34,6 +34,8 @@ jobs:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test stable
+    env:
+      PKG_CONFIG_ALLOW_CROSS: 1
     steps:
       - uses: actions/checkout@v2
 
@@ -51,6 +53,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: wasm32-unknown-unknown
           components: clippy
           profile: minimal
           override: true
@@ -60,6 +63,12 @@ jobs:
         with:
           command: clippy
           args: --all -- -D warnings
+
+      - name: cargo clippy (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all --exclude piet-cairo --exclude piet-direct2d --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo test --all (not windows)
         uses: actions-rs/cargo@v1
@@ -94,6 +103,12 @@ jobs:
           command: rustc
           args: --manifest-path=piet-common/Cargo.toml -- -D warnings
 
+      - name: Run rustc -D warnings in piet-common/ (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-common/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+
       - name: Run rustc -D warnings in piet-direct2d/
         uses: actions-rs/cargo@v1
         with:
@@ -118,6 +133,12 @@ jobs:
         with:
           command: rustc
           args: --manifest-path=piet-web/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-web/ (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
   test-nightly:
     runs-on: ${{ matrix.os }}
@@ -158,7 +179,6 @@ jobs:
           command: test
           args: --all --exclude piet-cairo
         if: contains(matrix.os, 'windows')
-
 
   check-docs:
     name: Docs
