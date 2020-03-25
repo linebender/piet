@@ -11,6 +11,9 @@ use piet_test::draw_test_picture;
 
 #[wasm_bindgen]
 pub fn run() {
+    #[cfg(feature = "console_error_panic_hook")]
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+
     let window = window().unwrap();
     let canvas = window
         .document()
@@ -349,7 +352,7 @@ mod test {
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
         assert_eq!(pt.metrics.text_position, 4);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.metrics.text_position, 5);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
         assert_eq!(pt.metrics.text_position, 5);
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
@@ -435,13 +438,13 @@ mod test {
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
         assert_eq!(pt.metrics.text_position, 9);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.metrics.text_position, 10);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10);
         let pt = layout.hit_test_point(Point::new(29.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10);
         let pt = layout.hit_test_point(Point::new(32.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.metrics.text_position, 14);
         let pt = layout.hit_test_point(Point::new(35.5, 0.0));
         assert_eq!(pt.metrics.text_position, 14);
         let pt = layout.hit_test_point(Point::new(38.0, 0.0));
