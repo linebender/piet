@@ -84,6 +84,12 @@ jobs:
           args: --all --exclude piet-cairo
         if: contains(matrix.os, 'windows')
 
+      - name: cargo test compile (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p piet-common -p piet-web --no-run --target wasm32-unknown-unknown
+
       - name: Run rustc -D warnings in piet/
         uses: actions-rs/cargo@v1
         with:
@@ -146,6 +152,8 @@ jobs:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test nightly
+    env:
+      PKG_CONFIG_ALLOW_CROSS: 1
     steps:
       - uses: actions/checkout@v2
 
@@ -163,6 +171,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          target: wasm32-unknown-unknown
           profile: minimal
           override: true
 
@@ -179,6 +188,12 @@ jobs:
           command: test
           args: --all --exclude piet-cairo
         if: contains(matrix.os, 'windows')
+
+      - name: cargo test compile (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p piet-common -p piet-web --no-run --target wasm32-unknown-unknown
 
   check-docs:
     name: Docs
