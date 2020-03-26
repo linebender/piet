@@ -14,6 +14,7 @@ cairo = ["piet-cairo", "cairo-rs"]
 web = ["piet-web"]
 
 [dependencies]
+cfg-if = "0.1.10"
 piet = { version = "0.0.11", path = "../piet" }
 piet-cairo = { version = "0.0.11", path = "../piet-cairo", optional = true }
 piet-direct2d = { version = "0.0.11", path = "../piet-direct2d", optional = true }
