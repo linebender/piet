@@ -9,7 +9,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
     // See https://raphlinus.github.io/rust/skribo/text/2019/04/26/skribo-progress.html for
     // some other ideas for better efficiency
     //
-    // NOtes:
+    // Notes:
     // hard breaks: cr, lf, line break, para char. Mandated by unicode
     //
     // So, every time there's a a hard break, must break.
@@ -41,11 +41,6 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
 
             if curr_width > width {
                 // if current line_break is too wide, use the prev break
-                // TODO how to get trailing_whitespace? Do I need to count whitespace units
-                // backwards from the last break?
-                // Note: Yes, use chars().rev().while(|c| c.is_whitespace()).count()
-                // Note: is non-breaking space trailing whitespace? Check with dwrite and
-                // coretext
 
                 // >===================================================
                 // first do the line to prev break
@@ -55,10 +50,13 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
 
                 let baseline = font.0.extents().ascent;
 
+                let line = &text[line_start..prev_break];
+                let trailing_whitespace = count_trailing_whitespace(line);
+
                 let line_metric = LineMetric {
                     start_offset: line_start,
                     end_offset: prev_break,
-                    trailing_whitespace: 0,
+                    trailing_whitespace,
                     baseline,
                     height,
                     cumulative_height: cum_height,
@@ -80,10 +78,12 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
 
                     let baseline = font.0.extents().ascent;
 
+                    let trailing_whitespace = count_trailing_whitespace(curr_str);
+
                     let line_metric = LineMetric {
                         start_offset: line_start,
                         end_offset: prev_break,
-                        trailing_whitespace: 0,
+                        trailing_whitespace,
                         baseline,
                         height,
                         cumulative_height: cum_height,
@@ -104,4 +104,22 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
     }
 
     line_metrics
+}
+
+// Note: is non-breaking space trailing whitespace? Check with dwrite and
+// coretext
+fn count_trailing_whitespace(line: &str) -> usize {
+    line.chars().rev().take_while(|c| c.is_whitespace()).count()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_count_trailing_whitespace() {
+        assert_eq!(count_trailing_whitespace(" 1 "), 1);
+        assert_eq!(count_trailing_whitespace(" 2  "), 2);
+        assert_eq!(count_trailing_whitespace(" 3  \n"), 3);
+    }
 }
