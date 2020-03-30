@@ -35,7 +35,7 @@ pub fn run() {
     let _ = context.scale(dpr, dpr);
 
     let mut piet_context = WebRenderContext::new(&mut context, &window);
-    run_tests(&mut piet_context);
+    //run_tests(&mut piet_context);
 
     // TODO: make the test picture selectable
     draw_test_picture(&mut piet_context, 0).unwrap();
