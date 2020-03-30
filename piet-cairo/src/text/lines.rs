@@ -32,78 +32,104 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
     let mut line_metrics = Vec::new();
     let mut line_start = 0;
     let mut prev_break = 0;
-    let mut cum_height = 0.0;
+    let mut cumulative_height = 0.0;
+
+    // vertical measures constant across all lines for now (cairo toy text)
+    let height = font.0.extents().height;
+    let baseline = font.0.extents().ascent;
 
     for (line_break, is_hard_break) in LineBreakIterator::new(text) {
-        if is_hard_break {
+        if !is_hard_break {
+            // this section is for soft breaks
             let curr_str = &text[line_start..line_break];
             let curr_width = font.0.text_extents(curr_str).x_advance;
 
             if curr_width > width {
-                // if current line_break is too wide, use the prev break
+                // since curr_width is longer than desired line width, it's time to break ending
+                // at the previous break.
 
-                // >===================================================
                 // first do the line to prev break
-
-                let height = font.0.extents().height;
-                cum_height += height;
-
-                let baseline = font.0.extents().ascent;
-
-                let line = &text[line_start..prev_break];
-                let trailing_whitespace = count_trailing_whitespace(line);
-
-                let line_metric = LineMetric {
-                    start_offset: line_start,
-                    end_offset: prev_break,
-                    trailing_whitespace,
+                add_line_metric(
+                    text,
+                    line_start,
+                    prev_break,
                     baseline,
                     height,
-                    cumulative_height: cum_height,
-                };
-                line_metrics.push(line_metric);
-                // <===================================================
+                    &mut cumulative_height,
+                    &mut line_metrics,
+                );
 
-                // >===================================================
-                // Now handle the graphemes between prev_break and current break
-                // reset line state
-                line_start = prev_break;
+                // Now handle the graphemes between prev_break and current break. The
+                // implementation depends on how we're treating a single line that's wider than
+                // desired width. For now, just assume that the word will get cutoff when rendered.
+                //
+                // If it's shorter than desired width, just continue.
 
-                let curr_str = &text[line_start..line_break];
+                let curr_str = &text[prev_break..line_break];
                 let curr_width = font.0.text_extents(curr_str).x_advance;
 
-                if curr_width < width {
-                    let height = font.0.extents().height;
-                    cum_height += height;
-
-                    let baseline = font.0.extents().ascent;
-
-                    let trailing_whitespace = count_trailing_whitespace(curr_str);
-
-                    let line_metric = LineMetric {
-                        start_offset: line_start,
-                        end_offset: prev_break,
-                        trailing_whitespace,
+                if curr_width > width {
+                    add_line_metric(
+                        text,
+                        prev_break,
+                        line_break,
                         baseline,
                         height,
-                        cumulative_height: cum_height,
-                    };
-                    line_metrics.push(line_metric);
-
-                    line_start = line_break;
-                    prev_break = line_start;
-                } else {
-                    continue;
+                        &mut cumulative_height,
+                        &mut line_metrics,
+                    );
                 }
-                // <===================================================
+
+                // update linebreak state
+                line_start = line_break;
+                prev_break = line_break;
+            } else {
+                // Since curr_width < width, don't break and just continue
+                prev_break = line_break;
+                continue;
             }
         } else {
+            // this section is for hard breaks
+            add_line_metric(
+                text,
+                line_start,
+                line_break,
+                baseline,
+                height,
+                &mut cumulative_height,
+                &mut line_metrics,
+            );
+            line_start = line_break;
             prev_break = line_break;
-            continue;
         }
     }
 
     line_metrics
+}
+
+fn add_line_metric(
+    text: &str,
+    start_offset: usize,
+    end_offset: usize,
+    baseline: f64,
+    height: f64,
+    cumulative_height: &mut f64,
+    line_metrics: &mut Vec<LineMetric>,
+) {
+    *cumulative_height += height;
+
+    let line = &text[start_offset..end_offset];
+    let trailing_whitespace = count_trailing_whitespace(line);
+
+    let line_metric = LineMetric {
+        start_offset,
+        end_offset,
+        trailing_whitespace,
+        baseline,
+        height,
+        cumulative_height: *cumulative_height,
+    };
+    line_metrics.push(line_metric);
 }
 
 // Note: is non-breaking space trailing whitespace? Check with dwrite and
