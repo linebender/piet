@@ -100,6 +100,14 @@ impl<'a> Text for CairoText<'a> {
         // - calculate the line metrics
         //
         // - TODO what happens when even smallest break is wider than width?
+        //
+        // Use font extents height (it's different from text extents height,
+        // which relates to bounding box)
+        //
+        // For baseline, use use `FontExtent.ascent`. Needs to be positive?
+        // see https://glyphsapp.com/tutorials/vertical-metrics
+        // https://stackoverflow.com/questions/27631736/meaning-of-top-ascent-baseline-descent-bottom-and-leading-in-androids-font
+        // https://www.cairographics.org/manual/cairo-cairo-scaled-font-t.html#cairo-font-extents-t
         let mut line_metrics = Vec::new();
         let mut line_start = 0;
         let mut prev_break = 0;
@@ -120,22 +128,11 @@ impl<'a> Text for CairoText<'a> {
 
                     // >===================================================
                     // first do the line to prev break
-                    let curr_str = &text[line_start..prev_break];
 
-                    // TODO use font extents height (it's different from text extents height,
-                    // which relates to bounding box)
-                    let height = font.0.text_extents(curr_str).height;
+                    let height = font.0.extents().height;
                     cum_height += height;
 
-                    // TODO this is a guess for how to do baseline. check through testing
-                    // If it's correct, shoudl it be positive or negative? check with d2d
-                    //
-                    // Note: use FontExtent.ascent
-                    // see https://glyphsapp.com/tutorials/vertical-metrics
-                    // https://stackoverflow.com/questions/27631736/meaning-of-top-ascent-baseline-descent-bottom-and-leading-in-androids-font
-                    // https://www.cairographics.org/manual/cairo-cairo-scaled-font-t.html#cairo-font-extents-t
-                    //
-                    let baseline = font.0.text_extents(curr_str).x_bearing;
+                    let baseline = font.0.extents().ascent;
 
                     let line_metric = LineMetric {
                         start_offset: line_start,
@@ -158,12 +155,10 @@ impl<'a> Text for CairoText<'a> {
                     let curr_width = font.0.text_extents(curr_str).x_advance;
 
                     if curr_width < width {
-                        let height = font.0.text_extents(curr_str).height;
+                        let height = font.0.extents().height;
                         cum_height += height;
 
-                        // TODO this is a guess for how to do baseline. check through testing
-                        // If it's correct, shoudl it be positive or negative? check with d2d
-                        let baseline = font.0.text_extents(curr_str).x_bearing;
+                        let baseline = font.0.extents().ascent;
 
                         let line_metric = LineMetric {
                             start_offset: line_start,
