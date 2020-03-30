@@ -18,7 +18,6 @@ pub(crate) fn fetch_line_metrics(layout: &dwrite::TextLayout) -> Vec<LineMetric>
                 start_offset,
                 end_offset,
                 trailing_whitespace,
-                width: 0., // TODO maybe remove width?
                 height: line_metric.height as f64,
                 cumulative_height,
                 baseline: line_metric.baseline as f64,
@@ -82,7 +81,6 @@ mod test {
                 cumulative_height: 15.9609375,
                 baseline: 12.94921875,
                 height: 15.9609375,
-                width: 0.0,
             },
             LineMetric {
                 start_offset: 5,
@@ -91,7 +89,6 @@ mod test {
                 cumulative_height: 31.921875,
                 baseline: 12.94921875,
                 height: 15.9609375,
-                width: 0.0,
             },
             LineMetric {
                 start_offset: 10,
@@ -100,7 +97,6 @@ mod test {
                 cumulative_height: 47.8828125,
                 baseline: 12.94921875,
                 height: 15.9609375,
-                width: 0.0,
             },
             LineMetric {
                 start_offset: 15,
@@ -109,7 +105,6 @@ mod test {
                 cumulative_height: 63.84375,
                 baseline: 12.94921875,
                 height: 15.9609375,
-                width: 0.0,
             },
         ];
 
@@ -122,7 +117,6 @@ mod test {
                 cumulative_height: 15.9609375,
                 baseline: 12.94921875,
                 height: 15.9609375,
-                width: 0.0,
             },
             LineMetric {
                 start_offset: 10,
@@ -131,7 +125,6 @@ mod test {
                 cumulative_height: 31.921875,
                 baseline: 12.94921875,
                 height: 15.9609375,
-                width: 0.0,
             },
         ];
 
@@ -143,7 +136,6 @@ mod test {
             cumulative_height: 15.9609375,
             baseline: 12.94921875,
             height: 15.9609375,
-            width: 0.0,
         }];
 
         let empty_input = "";
@@ -154,7 +146,6 @@ mod test {
             cumulative_height: 15.9609375,
             baseline: 12.94921875,
             height: 15.9609375,
-            width: 0.0,
         }];
 
         // setup dwrite layout

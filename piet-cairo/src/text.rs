@@ -138,7 +138,6 @@ impl<'a> Text for CairoText<'a> {
                         start_offset: line_start,
                         end_offset: prev_break,
                         trailing_whitespace: 0,
-                        width: 0.0, // TODO this will be removed
                         baseline,
                         height,
                         cumulative_height: cum_height,
@@ -164,7 +163,6 @@ impl<'a> Text for CairoText<'a> {
                             start_offset: line_start,
                             end_offset: prev_break,
                             trailing_whitespace: 0,
-                            width: 0.0, // TODO this will be removed
                             baseline,
                             height,
                             cumulative_height: cum_height,

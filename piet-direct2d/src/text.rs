@@ -627,11 +627,11 @@ mod test {
 
         layout.update_width(width_medium).unwrap();
         assert_eq!(layout.line_count(), 2);
-        //assert_eq!(layout.line_text(0), Some("piet text"));
+        assert_eq!(layout.line_text(0), Some("piet text"));
 
-        //layout.update_width(width_large).unwrap();
-        //assert_eq!(layout.line_count(), 1);
-        //assert_eq!(layout.line_text(0), Some("piet text most best"));
+        layout.update_width(width_large).unwrap();
+        assert_eq!(layout.line_count(), 1);
+        assert_eq!(layout.line_text(0), Some("piet text most best"));
     }
 
     #[test]

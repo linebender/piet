@@ -150,10 +150,6 @@ pub struct LineMetric {
     /// Length in (in UTF-8 code units) of current line's trailing whitespace.
     pub trailing_whitespace: usize,
 
-    // TOOD remove
-    /// Line width
-    pub width: f64,
-
     /// Distance of the baseline from the top of the line
     pub baseline: f64,
 
