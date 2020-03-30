@@ -150,27 +150,12 @@ mod test {
 
         // setup dwrite layout
         let dwrite = dwrite::DwriteFactory::new().unwrap();
-        let mut text_layout = D2DText::new(&dwrite);
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+        let mut d2d_text = D2DText::new(&dwrite);
+        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
 
-        test_metrics_with_width(width_small, expected_small, input, &mut text_layout, &font);
-        test_metrics_with_width(
-            width_medium,
-            expected_medium,
-            input,
-            &mut text_layout,
-            &font,
-        );
-        test_metrics_with_width(width_large, expected_large, input, &mut text_layout, &font);
-        test_metrics_with_width(
-            width_small,
-            expected_empty,
-            empty_input,
-            &mut text_layout,
-            &font,
-        );
+        test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
+        test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font);
+        test_metrics_with_width(width_large, expected_large, input, &mut text, &font);
+        test_metrics_with_width(width_small, expected_empty, empty_input, &mut text, &font);
     }
 }

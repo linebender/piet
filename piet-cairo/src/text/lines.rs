@@ -78,15 +78,17 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
                         &mut cumulative_height,
                         &mut line_metrics,
                     );
-                }
 
-                // update linebreak state
-                line_start = line_break;
-                prev_break = line_break;
+                    line_start = line_break;
+                    prev_break = line_break;
+                } else {
+                    // Since curr_width < width, don't break and just continue
+                    line_start = prev_break;
+                    prev_break = line_break;
+                }
             } else {
                 // Since curr_width < width, don't break and just continue
                 prev_break = line_break;
-                continue;
             }
         } else {
             // this section is for hard breaks
@@ -140,7 +142,134 @@ fn count_trailing_whitespace(line: &str) -> usize {
 
 #[cfg(test)]
 mod test {
+    use super::super::*;
     use super::*;
+
+    fn test_metrics_with_width(
+        width: f64,
+        expected: Vec<LineMetric>,
+        input: &str,
+        _text_layout: &mut CairoText, // actually not needed for test?
+        font: &CairoFont,
+    ) {
+        let line_metrics = calculate_line_metrics(input, font, width);
+
+        for (metric, exp) in line_metrics.iter().zip(expected) {
+            println!("calculated: {:?}\nexpected: {:?}", metric, exp);
+
+            assert_eq!(metric.start_offset, exp.start_offset);
+            assert_eq!(metric.end_offset, exp.end_offset);
+            assert_eq!(metric.trailing_whitespace, exp.trailing_whitespace);
+            assert!(
+                metric.cumulative_height < exp.cumulative_height + 1.0
+                    && metric.cumulative_height > exp.cumulative_height - 1.0
+            );
+            assert!(metric.baseline < exp.baseline + 1.0 && metric.baseline > exp.baseline - 1.0);
+            assert!(metric.height < exp.height + 1.0 && metric.height > exp.height - 1.0);
+        }
+    }
+
+    // Test at three different widths: small, medium, large.
+    // - small is every word being split.
+    // - medium is one split.
+    // - large is no split.
+    //
+    // Also test empty string input
+    #[test]
+    fn test_basic_calculate_line_metrics() {
+        // Setup input, width, and expected
+        let input = "piet text most best";
+
+        use xi_unicode::LineBreakIterator;
+        for (offset, line_break) in LineBreakIterator::new(input) {
+            println!("{}:{}", offset, line_break);
+        }
+
+        let width_small = 30.0;
+        let expected_small = vec![
+            LineMetric {
+                start_offset: 0,
+                end_offset: 5,
+                trailing_whitespace: 1,
+                cumulative_height: 14.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+            LineMetric {
+                start_offset: 5,
+                end_offset: 10,
+                trailing_whitespace: 1,
+                cumulative_height: 28.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+            LineMetric {
+                start_offset: 10,
+                end_offset: 15,
+                trailing_whitespace: 1,
+                cumulative_height: 42.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+            LineMetric {
+                start_offset: 15,
+                end_offset: 19,
+                trailing_whitespace: 0,
+                cumulative_height: 56.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+        ];
+
+        let width_medium = 60.0;
+        let expected_medium = vec![
+            LineMetric {
+                start_offset: 0,
+                end_offset: 10,
+                trailing_whitespace: 1,
+                cumulative_height: 14.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+            LineMetric {
+                start_offset: 10,
+                end_offset: 19,
+                trailing_whitespace: 0,
+                cumulative_height: 28.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+        ];
+
+        let width_large = 100.0;
+        let expected_large = vec![LineMetric {
+            start_offset: 0,
+            end_offset: 19,
+            trailing_whitespace: 0,
+            cumulative_height: 14.0,
+            baseline: 12.0,
+            height: 14.0,
+        }];
+
+        let empty_input = "";
+        let expected_empty = vec![LineMetric {
+            start_offset: 0,
+            end_offset: 0,
+            trailing_whitespace: 0,
+            cumulative_height: 14.0,
+            baseline: 12.0,
+            height: 14.0,
+        }];
+
+        // setup cairo layout
+        let mut text = CairoText::new();
+        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+
+        test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
+        test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font);
+        test_metrics_with_width(width_large, expected_large, input, &mut text, &font);
+        test_metrics_with_width(width_small, expected_empty, empty_input, &mut text, &font);
+    }
 
     #[test]
     fn test_count_trailing_whitespace() {
