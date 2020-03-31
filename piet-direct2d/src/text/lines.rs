@@ -150,7 +150,7 @@ mod test {
 
         // setup dwrite layout
         let dwrite = dwrite::DwriteFactory::new().unwrap();
-        let mut d2d_text = D2DText::new(&dwrite);
+        let mut text = D2DText::new(&dwrite);
         let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
 
         test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
