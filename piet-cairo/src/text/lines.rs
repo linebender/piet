@@ -1,8 +1,9 @@
+use cairo::ScaledFont;
 use xi_unicode::LineBreakIterator;
 
-use super::{CairoFont, LineMetric};
+use super::LineMetric;
 
-pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -> Vec<LineMetric> {
+pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) -> Vec<LineMetric> {
     // first pass, completely naive and inefficient. Check at every break to see if line longer
     // than width.
     //
@@ -35,14 +36,14 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
     let mut cumulative_height = 0.0;
 
     // vertical measures constant across all lines for now (cairo toy text)
-    let height = font.0.extents().height;
-    let baseline = font.0.extents().ascent;
+    let height = font.extents().height;
+    let baseline = font.extents().ascent;
 
     for (line_break, is_hard_break) in LineBreakIterator::new(text) {
         if !is_hard_break {
             // this section is for soft breaks
             let curr_str = &text[line_start..line_break];
-            let curr_width = font.0.text_extents(curr_str).x_advance;
+            let curr_width = font.text_extents(curr_str).x_advance;
 
             if curr_width > width {
                 // since curr_width is longer than desired line width, it's time to break ending
@@ -66,7 +67,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &CairoFont, width: f64) -
                 // If it's shorter than desired width, just continue.
 
                 let curr_str = &text[prev_break..line_break];
-                let curr_width = font.0.text_extents(curr_str).x_advance;
+                let curr_width = font.text_extents(curr_str).x_advance;
 
                 if curr_width > width {
                     add_line_metric(
@@ -152,7 +153,7 @@ mod test {
         _text_layout: &mut CairoText, // actually not needed for test?
         font: &CairoFont,
     ) {
-        let line_metrics = calculate_line_metrics(input, font, width);
+        let line_metrics = calculate_line_metrics(input, &font.0, width);
 
         for (metric, exp) in line_metrics.iter().zip(expected) {
             println!("calculated: {:?}\nexpected: {:?}", metric, exp);

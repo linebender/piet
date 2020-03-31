@@ -36,6 +36,7 @@ pub struct CairoFontBuilder {
 #[derive(Clone)]
 pub struct CairoTextLayout {
     // TODO should these fields be pub(crate)?
+    width: f64,
     pub font: ScaledFont,
     pub text: String,
 
@@ -77,9 +78,10 @@ impl<'a> Text for CairoText<'a> {
         text: &str,
         width: f64,
     ) -> Self::TextLayoutBuilder {
-        let line_metrics = lines::calculate_line_metrics(text, font, width);
+        let line_metrics = lines::calculate_line_metrics(text, &font.0, width);
 
         let text_layout = CairoTextLayout {
+            width,
             font: font.0.clone(),
             text: text.to_owned(),
             line_metrics,
@@ -113,26 +115,28 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
+        // TODO this needs to be updated with hit testing
         self.font.text_extents(&self.text).x_advance
     }
 
-    #[allow(clippy::unimplemented)]
-    fn update_width(&mut self, _new_width: f64) -> Result<(), Error> {
-        unimplemented!();
+    fn update_width(&mut self, new_width: f64) -> Result<(), Error> {
+        self.width = new_width;
+        self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
+        Ok(())
     }
 
-    #[allow(clippy::unimplemented)]
-    fn line_text(&self, _line_number: usize) -> Option<&str> {
-        unimplemented!();
+    fn line_text(&self, line_number: usize) -> Option<&str> {
+        self.line_metrics
+            .get(line_number)
+            .map(|lm| &self.text[lm.start_offset..(lm.end_offset - lm.trailing_whitespace)])
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
         self.line_metrics.get(line_number).cloned()
     }
 
-    #[allow(clippy::unimplemented)]
     fn line_count(&self) -> usize {
-        unimplemented!();
+        self.line_metrics.len()
     }
 
     // first assume one line.
