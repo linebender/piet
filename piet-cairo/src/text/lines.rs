@@ -222,7 +222,7 @@ mod test {
             },
         ];
 
-        let width_medium = 60.0;
+        let width_medium = 55.0;
         let expected_medium = vec![
             LineMetric {
                 start_offset: 0,
