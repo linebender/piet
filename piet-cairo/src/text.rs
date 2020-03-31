@@ -156,8 +156,7 @@ impl TextLayout for CairoTextLayout {
         self.line_metrics.len()
     }
 
-    // first assume one line.
-    // TODO do with lines
+    // TODO do with lines and height
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // internal logic is using grapheme clusters, but return the text position associated
         // with the border of the grapheme cluster.
@@ -228,6 +227,7 @@ impl TextLayout for CairoTextLayout {
         }
     }
 
+    // TODO add height
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
         // first need to find line it's on, and get line start offset
         let lm = self
@@ -238,7 +238,6 @@ impl TextLayout for CairoTextLayout {
             .cloned()
             .unwrap_or_else(Default::default);
 
-        println!("hit");
         // Then for the line, do text position
         let line = &self.text[lm.start_offset..lm.end_offset];
         let line_position = text_position - lm.start_offset;
@@ -246,6 +245,7 @@ impl TextLayout for CairoTextLayout {
     }
 }
 
+// NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
 fn hit_test_line_position(
     font: &ScaledFont,
     text: &str,
