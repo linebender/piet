@@ -222,7 +222,7 @@ mod test {
             },
         ];
 
-        let width_medium = 55.0;
+        let width_medium = 60.0;
         let expected_medium = vec![
             LineMetric {
                 start_offset: 0,
@@ -264,7 +264,7 @@ mod test {
 
         // setup cairo layout
         let mut text = CairoText::new();
-        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
 
         test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
         test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font);
