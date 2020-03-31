@@ -80,6 +80,20 @@ impl<'a> Text for CairoText<'a> {
     ) -> Self::TextLayoutBuilder {
         let line_metrics = lines::calculate_line_metrics(text, &font.0, width);
 
+        let widths = line_metrics.iter().map(|lm| {
+            font.0
+                .text_extents(&text[lm.start_offset..lm.end_offset])
+                .x_advance
+        });
+
+        // TODO default width 0?
+        let mut width = 0.0;
+        for w in widths {
+            if w > width {
+                width = w;
+            }
+        }
+
         let text_layout = CairoTextLayout {
             width,
             font: font.0.clone(),
@@ -116,7 +130,10 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
         // TODO this needs to be updated with hit testing
-        self.font.text_extents(&self.text).x_advance
+        // self.font.text_extents(&self.text).x_advance
+
+        // calculated by max x_advance
+        self.width
     }
 
     fn update_width(&mut self, new_width: f64) -> Result<(), Error> {
@@ -212,52 +229,73 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
-        // Using substrings, but now with unicode grapheme awareness
+        // first need to find line it's on, and get line start offset
+        let lm = self
+            .line_metrics
+            .iter()
+            .take_while(|l| l.start_offset < text_position)
+            .last()
+            .cloned()
+            .unwrap_or_else(Default::default);
 
-        let text_len = self.text.len();
+        println!("hit");
+        // Then for the line, do text position
+        let line = &self.text[lm.start_offset..lm.end_offset];
+        let line_position = text_position - lm.start_offset;
+        hit_test_line_position(&self.font, line, line_position)
+    }
+}
 
-        if text_position == 0 {
-            return Some(HitTestTextPosition::default());
-        }
+fn hit_test_line_position(
+    font: &ScaledFont,
+    text: &str,
+    text_position: usize,
+) -> Option<HitTestTextPosition> {
+    // Using substrings with unicode grapheme awareness
 
-        if text_position as usize >= text_len {
-            return Some(HitTestTextPosition {
-                point: Point {
-                    x: self.font.text_extents(&self.text).x_advance,
-                    y: 0.0,
-                },
-                metrics: HitTestMetrics {
-                    text_position: text_len,
-                },
-            });
-        }
+    let text_len = text.len();
 
-        // Already checked that text_position > 0 and text_position < count.
-        // If text position is not at a grapheme boundary, use the text position of current
-        // grapheme cluster. But return the original text position
-        // Use the indices (byte offset, which for our purposes = utf8 code units).
-        let grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
-            .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
+    if text_position == 0 {
+        return Some(HitTestTextPosition::default());
+    }
 
-        if let Some((byte_idx, _s)) = grapheme_indices.last() {
-            let point_x = self.font.text_extents(&self.text[0..byte_idx]).x_advance;
+    if text_position as usize >= text_len {
+        return Some(HitTestTextPosition {
+            point: Point {
+                x: font.text_extents(&text).x_advance,
+                y: 0.0,
+            },
+            metrics: HitTestMetrics {
+                text_position: text_len,
+            },
+        });
+    }
 
-            Some(HitTestTextPosition {
-                point: Point { x: point_x, y: 0.0 },
-                metrics: HitTestMetrics { text_position },
-            })
-        } else {
-            // iterated to end boundary
-            Some(HitTestTextPosition {
-                point: Point {
-                    x: self.font.text_extents(&self.text).x_advance,
-                    y: 0.0,
-                },
-                metrics: HitTestMetrics {
-                    text_position: text_len,
-                },
-            })
-        }
+    // Already checked that text_position > 0 and text_position < count.
+    // If text position is not at a grapheme boundary, use the text position of current
+    // grapheme cluster. But return the original text position
+    // Use the indices (byte offset, which for our purposes = utf8 code units).
+    let grapheme_indices = UnicodeSegmentation::grapheme_indices(text, true)
+        .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
+
+    if let Some((byte_idx, _s)) = grapheme_indices.last() {
+        let point_x = font.text_extents(&text[0..byte_idx]).x_advance;
+
+        Some(HitTestTextPosition {
+            point: Point { x: point_x, y: 0.0 },
+            metrics: HitTestMetrics { text_position },
+        })
+    } else {
+        // iterated to end boundary
+        Some(HitTestTextPosition {
+            point: Point {
+                x: font.text_extents(&text).x_advance,
+                y: 0.0,
+            },
+            metrics: HitTestMetrics {
+                text_position: text_len,
+            },
+        })
     }
 }
 
