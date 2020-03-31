@@ -162,11 +162,11 @@ mod test {
             assert_eq!(metric.end_offset, exp.end_offset);
             assert_eq!(metric.trailing_whitespace, exp.trailing_whitespace);
             assert!(
-                metric.cumulative_height < exp.cumulative_height + 1.0
-                    && metric.cumulative_height > exp.cumulative_height - 1.0
+                metric.cumulative_height < exp.cumulative_height + 3.0
+                    && metric.cumulative_height > exp.cumulative_height - 3.0
             );
-            assert!(metric.baseline < exp.baseline + 1.0 && metric.baseline > exp.baseline - 1.0);
-            assert!(metric.height < exp.height + 1.0 && metric.height > exp.height - 1.0);
+            assert!(metric.baseline < exp.baseline + 3.0 && metric.baseline > exp.baseline - 3.0);
+            assert!(metric.height < exp.height + 3.0 && metric.height > exp.height - 3.0);
         }
     }
 
