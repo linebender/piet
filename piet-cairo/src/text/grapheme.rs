@@ -1,29 +1,31 @@
-use piet::{HitTestPoint, TextLayout};
+use cairo::ScaledFont;
+use piet::HitTestPoint;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::CairoTextLayout;
+use super::hit_test_line_position;
 
-impl CairoTextLayout {
-    pub(crate) fn get_grapheme_boundaries(
-        &self,
-        grapheme_position: usize,
-    ) -> Option<GraphemeBoundaries> {
-        let mut graphemes = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true);
-        let (text_position, _) = graphemes.nth(grapheme_position)?;
-        let (next_text_position, _) = graphemes.next().unwrap_or_else(|| (self.text.len(), ""));
+/// get grapheme boundaries, intended to act on a line of text, not a full text layout that has
+/// both horizontal and vertial components
+pub(crate) fn get_grapheme_boundaries(
+    font: &ScaledFont,
+    text: &str,
+    grapheme_position: usize,
+) -> Option<GraphemeBoundaries> {
+    let mut graphemes = UnicodeSegmentation::grapheme_indices(text, true);
+    let (text_position, _) = graphemes.nth(grapheme_position)?;
+    let (next_text_position, _) = graphemes.next().unwrap_or_else(|| (text.len(), ""));
 
-        let curr_edge = self.hit_test_text_position(text_position)?;
-        let next_edge = self.hit_test_text_position(next_text_position)?;
+    let curr_edge = hit_test_line_position(font, text, text_position)?;
+    let next_edge = hit_test_line_position(font, text, next_text_position)?;
 
-        let res = GraphemeBoundaries {
-            curr_idx: curr_edge.metrics.text_position,
-            next_idx: next_edge.metrics.text_position,
-            leading: curr_edge.point.x,
-            trailing: next_edge.point.x,
-        };
+    let res = GraphemeBoundaries {
+        curr_idx: curr_edge.metrics.text_position,
+        next_idx: next_edge.metrics.text_position,
+        leading: curr_edge.point.x,
+        trailing: next_edge.point.x,
+    };
 
-        Some(res)
-    }
+    Some(res)
 }
 
 pub(crate) fn point_x_in_grapheme(
@@ -68,6 +70,7 @@ mod test {
 
     #[test]
     fn test_grapheme_boundaries() {
+        let text = "piet";
         let mut text_layout = CairoText::new();
 
         let font = text_layout
@@ -75,7 +78,7 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "piet", std::f64::INFINITY)
+            .new_text_layout(&font, text, std::f64::INFINITY)
             .build()
             .unwrap();
 
@@ -88,14 +91,14 @@ mod test {
 
         // test grapheme boundaries
         assert_eq!(
-            layout.get_grapheme_boundaries(3).unwrap().curr_idx,
+            get_grapheme_boundaries(&font.0, text, 3).unwrap().curr_idx,
             expected_3.curr_idx
         );
         assert_eq!(
-            layout.get_grapheme_boundaries(3).unwrap().next_idx,
+            get_grapheme_boundaries(&font.0, text, 3).unwrap().next_idx,
             expected_3.next_idx
         );
-        assert_eq!(layout.get_grapheme_boundaries(4), None);
+        assert_eq!(get_grapheme_boundaries(&font.0, text, 4), None);
     }
 
     #[test]

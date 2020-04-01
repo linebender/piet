@@ -16,7 +16,7 @@ use piet::{
 
 use unicode_segmentation::UnicodeSegmentation;
 
-use self::grapheme::point_x_in_grapheme;
+use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 
 /// Right now, we don't need any state, as the "toy text API" treats the
 /// access to system font information as a global. This will change.
@@ -156,7 +156,6 @@ impl TextLayout for CairoTextLayout {
         self.line_metrics.len()
     }
 
-    // TODO do with lines and height
     // CONTINUE lines and height here, and then refactor.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // internal logic is using grapheme clusters, but return the text position associated
@@ -167,68 +166,9 @@ impl TextLayout for CairoTextLayout {
             return HitTestPoint::default();
         }
 
-        // get bounds
-        // TODO handle if string is not null yet count is 0?
-        let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
-        let end_bounds = match self.get_grapheme_boundaries(end) {
-            Some(bounds) => bounds,
-            None => return HitTestPoint::default(),
-        };
-
-        let start = 0;
-        let start_bounds = match self.get_grapheme_boundaries(start) {
-            Some(bounds) => bounds,
-            None => return HitTestPoint::default(),
-        };
-
-        // first test beyond ends
-        if point.x > end_bounds.trailing {
-            let mut res = HitTestPoint::default();
-            res.metrics.text_position = self.text.len();
-            return res;
-        }
-        if point.x <= start_bounds.leading {
-            return HitTestPoint::default();
-        }
-
-        // then test the beginning and end (common cases)
-        if let Some(hit) = point_x_in_grapheme(point.x, &start_bounds) {
-            return hit;
-        }
-        if let Some(hit) = point_x_in_grapheme(point.x, &end_bounds) {
-            return hit;
-        }
-
-        // Now that we know it's not beginning or end, begin binary search.
-        // Iterative style
-        let mut left = start;
-        let mut right = end;
-        loop {
-            // pick halfway point
-            let middle = left + ((right - left) / 2);
-
-            let grapheme_bounds = match self.get_grapheme_boundaries(middle) {
-                Some(bounds) => bounds,
-                None => return HitTestPoint::default(),
-            };
-
-            if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
-                return hit;
-            }
-
-            // since it's not a hit, check if closer to start or finish
-            // and move the appropriate search boundary
-            if point.x < grapheme_bounds.leading {
-                right = middle;
-            } else if point.x > grapheme_bounds.trailing {
-                left = middle + 1;
-            } else {
-                unreachable!("hit_test_point conditional is exhaustive");
-            }
-        }
+        hit_test_line_point(&self.font, &self.text, &point)
     }
 
-    // TODO add height
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
         // first need to find line it's on, and get line start offset
         let lm = self
@@ -248,7 +188,6 @@ impl TextLayout for CairoTextLayout {
         // In cairo toy text, all baselines and heights are the same.
         // We're counting the first line baseline as 0, and measuring to each line's baseline.
         let y = if count == 0 {
-            // if no lines (e.g. empty string) return 0? TODO check on this behavior
             return Some(HitTestTextPosition::default());
         } else {
             (count - 1) as f64 * lm.height
@@ -267,7 +206,77 @@ impl TextLayout for CairoTextLayout {
     }
 }
 
+// NOTE this is the same as the old, non-line-aware version of hit_test_point
+// Future: instead of passing Font, should there be some other line-level text layout?
+fn hit_test_line_point(font: &ScaledFont, text: &str, point: &Point) -> HitTestPoint {
+    // null case
+    if text.is_empty() {
+        return HitTestPoint::default();
+    }
+
+    // get bounds
+    // TODO handle if string is not null yet count is 0?
+    let end = UnicodeSegmentation::graphemes(text, true).count() - 1;
+    let end_bounds = match get_grapheme_boundaries(font, text, end) {
+        Some(bounds) => bounds,
+        None => return HitTestPoint::default(),
+    };
+
+    let start = 0;
+    let start_bounds = match get_grapheme_boundaries(font, text, start) {
+        Some(bounds) => bounds,
+        None => return HitTestPoint::default(),
+    };
+
+    // first test beyond ends
+    if point.x > end_bounds.trailing {
+        let mut res = HitTestPoint::default();
+        res.metrics.text_position = text.len();
+        return res;
+    }
+    if point.x <= start_bounds.leading {
+        return HitTestPoint::default();
+    }
+
+    // then test the beginning and end (common cases)
+    if let Some(hit) = point_x_in_grapheme(point.x, &start_bounds) {
+        return hit;
+    }
+    if let Some(hit) = point_x_in_grapheme(point.x, &end_bounds) {
+        return hit;
+    }
+
+    // Now that we know it's not beginning or end, begin binary search.
+    // Iterative style
+    let mut left = start;
+    let mut right = end;
+    loop {
+        // pick halfway point
+        let middle = left + ((right - left) / 2);
+
+        let grapheme_bounds = match get_grapheme_boundaries(font, text, middle) {
+            Some(bounds) => bounds,
+            None => return HitTestPoint::default(),
+        };
+
+        if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
+            return hit;
+        }
+
+        // since it's not a hit, check if closer to start or finish
+        // and move the appropriate search boundary
+        if point.x < grapheme_bounds.leading {
+            right = middle;
+        } else if point.x > grapheme_bounds.trailing {
+            left = middle + 1;
+        } else {
+            unreachable!("hit_test_point conditional is exhaustive");
+        }
+    }
+}
+
 // NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
+// Future: instead of passing Font, should there be some other line-level text layout?
 fn hit_test_line_position(
     font: &ScaledFont,
     text: &str,
