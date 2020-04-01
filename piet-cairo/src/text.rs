@@ -166,7 +166,30 @@ impl TextLayout for CairoTextLayout {
             return HitTestPoint::default();
         }
 
-        hit_test_line_point(&self.font, &self.text, &point)
+        // this assumes that all heights/baselines are the same.
+        // Uses line bounding box to do hit testpoint, but with coordinates starting at 0.0 at
+        // first baseline (since it's constant offset, don't have to subtract baseline)
+        let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
+        dbg!(&first_baseline);
+
+        let lm = self
+            .line_metrics
+            .iter()
+            .inspect(|l| {
+                dbg!(l.cumulative_height);
+            })
+            .take_while(|l| l.cumulative_height - first_baseline > point.y)
+            .last()
+            .cloned()
+            .unwrap_or_else(Default::default);
+        dbg!(&lm);
+
+        // Then for the line, do hit test point
+        // Trailing whitespace is remove for the line
+        let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
+        dbg!(line);
+
+        hit_test_line_point(&self.font, line, &point)
     }
 
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
