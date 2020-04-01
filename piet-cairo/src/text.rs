@@ -157,6 +157,7 @@ impl TextLayout for CairoTextLayout {
     }
 
     // TODO do with lines and height
+    // CONTINUE lines and height here, and then refactor.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // internal logic is using grapheme clusters, but return the text position associated
         // with the border of the grapheme cluster.
@@ -953,38 +954,38 @@ mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 29.0)
+            .new_text_layout(&font, &input[0..4], 25.0)
             .build()
             .unwrap();
         let piet_width = layout.width();
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[5..9], 29.0)
+            .new_text_layout(&font, &input[5..9], 25.0)
             .build()
             .unwrap();
         let text_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..8], 29.0)
+            .new_text_layout(&font, &input[5..8], 25.0)
             .build()
             .unwrap();
         let tex_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..7], 29.0)
+            .new_text_layout(&font, &input[5..7], 25.0)
             .build()
             .unwrap();
         let te_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..6], 29.0)
+            .new_text_layout(&font, &input[5..6], 25.0)
             .build()
             .unwrap();
         let t_width = layout.width();
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 26.0)
+            .new_text_layout(&font, input, 25.0)
             .build()
             .unwrap();
 

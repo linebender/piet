@@ -59,7 +59,11 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
                 // at the previous break.
 
                 // Except! what if this break is at first possible break. Then prev_break needs to
-                // be moved to current break
+                // be moved to current break.
+                // This leads to an extra call, in next section, on an empty string for handling
+                // prev_break..line_break. But it's a little clearer without more logic, and when
+                // perf matters all of this will be rewritten anyways. If you think otherwise, add
+                // in a flag after next add_line_metric.
                 if prev_break == line_start {
                     prev_break = line_break;
                 }
