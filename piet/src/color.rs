@@ -177,3 +177,19 @@ impl Color {
     /// Opaque black.
     pub const BLACK: Color = Color::rgb8(0, 0, 0);
 }
+
+impl From<(u8, u8, u8, u8)> for Color {
+    fn from(color: (u8, u8, u8, u8)) -> Color {
+        let (r, g, b, a) = color;
+        Color::from_rgba32_u32(
+            ((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32),
+        )
+    }
+}
+
+impl From<(u8, u8, u8)> for Color {
+    fn from(color: (u8, u8, u8)) -> Color {
+        let (r, g, b) = color;
+        Color::from((r, g, b, 255))
+    }
+}
