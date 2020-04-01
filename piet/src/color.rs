@@ -178,18 +178,36 @@ impl Color {
     pub const BLACK: Color = Color::rgb8(0, 0, 0);
 }
 
-impl From<(u8, u8, u8, u8)> for Color {
-    fn from(color: (u8, u8, u8, u8)) -> Color {
-        let (r, g, b, a) = color;
-        Color::from_rgba32_u32(
-            ((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32),
-        )
+impl From<(u8, u8, u8)> for Color {
+    /// Create a color from a tuple of 8 bit per sample RGB values.
+    fn from(color: (u8, u8, u8)) -> Color {
+        let (r, g, b) = color;
+        Color::rgb8(r, g, b)
     }
 }
 
-impl From<(u8, u8, u8)> for Color {
-    fn from(color: (u8, u8, u8)) -> Color {
+impl From<(u8, u8, u8, u8)> for Color {
+    /// Create a color from a tuple of 8 bit per sample RGBA values.
+    fn from(color: (u8, u8, u8, u8)) -> Color {
+        let (r, g, b, a) = color;
+        Color::rgba8(r, g, b, a)
+    }
+}
+
+impl From<(f64, f64, f64)> for Color {
+    /// Create a color from a tuple of three floating point values, each in the
+    /// range 0.0 to 1.0.
+    fn from(color: (f64, f64, f64)) -> Color {
         let (r, g, b) = color;
-        Color::from((r, g, b, 255))
+        Color::rgb(r, g, b)
+    }
+}
+
+impl From<(f64, f64, f64, f64)> for Color {
+    /// Create a color from a tuple of four floating point values, each in the
+    /// range 0.0 to 1.0.
+    fn from(color: (f64, f64, f64, f64)) -> Color {
+        let (r, g, b, a) = color;
+        Color::rgba(r, g, b, a)
     }
 }
