@@ -21,7 +21,16 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
     // For soft breaks, then I need to check line widths etc.
     //
     //
-    // - TODO what happens when even smallest break is wider than width?
+    // - what happens when even smallest break is wider than width?
+    // One word is considered the smallest unit, don't break below words for now.
+    //
+    // TODO I think there's a bug, where if the width is less than the first word, a blank line
+    // (offsets both 0) becomes the first line. reproduce by setting the width very small.
+    // Or, is this happening all the time (the ghost first line) but I didn't test for it?
+    //
+    // NOTE This is happening at the first word, but I think it could also happen at any word that
+    // is wider than width. Double check this. the solution is to check when prev_break ==
+    // line_start, but need a test for this.
     //
     // Use font extents height (it's different from text extents height,
     // which relates to bounding box)
@@ -48,6 +57,12 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
             if curr_width > width {
                 // since curr_width is longer than desired line width, it's time to break ending
                 // at the previous break.
+
+                // Except! what if this break is at first possible break. Then prev_break needs to
+                // be moved to current break
+                if prev_break == line_start {
+                    prev_break = line_break;
+                }
 
                 // first do the line to prev break
                 add_line_metric(
@@ -170,6 +185,9 @@ mod test {
         }
     }
 
+    // TODO do a super-short length, to make sure the behavior is correct
+    // when first break comes directly after the first word.
+    //
     // Test at three different widths: small, medium, large.
     // - small is every word being split.
     // - medium is one split.

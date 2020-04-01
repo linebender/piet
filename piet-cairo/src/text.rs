@@ -82,7 +82,7 @@ impl<'a> Text for CairoText<'a> {
 
         let widths = line_metrics.iter().map(|lm| {
             font.0
-                .text_extents(&text[lm.start_offset..lm.end_offset])
+                .text_extents(&text[lm.start_offset..lm.end_offset - lm.trailing_whitespace])
                 .x_advance
         });
 
@@ -238,10 +238,31 @@ impl TextLayout for CairoTextLayout {
             .cloned()
             .unwrap_or_else(Default::default);
 
+        let count = self
+            .line_metrics
+            .iter()
+            .take_while(|l| l.start_offset < text_position)
+            .count();
+
+        // In cairo toy text, all baselines and heights are the same.
+        // We're counting the first line baseline as 0, and measuring to each line's baseline.
+        let y = if count == 0 {
+            // if no lines (e.g. empty string) return 0? TODO check on this behavior
+            return Some(HitTestTextPosition::default());
+        } else {
+            (count - 1) as f64 * lm.height
+        };
+
         // Then for the line, do text position
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        // Trailing whitespace is remove for the line
+        let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
         let line_position = text_position - lm.start_offset;
-        hit_test_line_position(&self.font, line, line_position)
+
+        let mut http = hit_test_line_position(&self.font, line, line_position);
+        if let Some(h) = http.as_mut() {
+            h.point.y = y
+        };
+        http
     }
 }
 
@@ -918,5 +939,116 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
         assert_eq!(pt.metrics.text_position, 6);
+    }
+
+    // TODO have macos and linux tests?
+    #[test]
+    fn test_multiline_hit_test_text_position_basic() {
+        let mut text_layout = CairoText::new();
+
+        let input = "piet text!";
+        let font = text_layout
+            .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..4], 29.0)
+            .build()
+            .unwrap();
+        let piet_width = layout.width();
+
+        // "text" should be on second line
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..9], 29.0)
+            .build()
+            .unwrap();
+        let text_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..8], 29.0)
+            .build()
+            .unwrap();
+        let tex_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..7], 29.0)
+            .build()
+            .unwrap();
+        let te_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..6], 29.0)
+            .build()
+            .unwrap();
+        let t_width = layout.width();
+
+        let full_layout = text_layout
+            .new_text_layout(&font, input, 26.0)
+            .build()
+            .unwrap();
+
+        dbg!(&full_layout.line_metrics);
+        // NOTE these heights are representative of baseline-to-baseline measures
+        let line_zero_baseline = 0.0;
+        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+
+        // these just test the x position of text positions on the second line
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+            text_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+            tex_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+            te_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            t_width,
+            3.0,
+        );
+        // This tests that trailing whitespace is not included on the first line width,
+        // even though the text position being tested is trailing whitespace
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.x as f64,
+            piet_width,
+            3.0,
+        );
+
+        // These test y position of text positions on line 1 (0-index)
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+
+        // this tests y position of 0 line
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
     }
 }
