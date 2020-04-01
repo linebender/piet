@@ -1060,7 +1060,7 @@ mod test {
 
         let input = "piet text!";
         let font = text_layout
-            .new_font_by_name("sans-serif", 13.0) // change this for osx
+            .new_font_by_name("sans-serif", 15.0) // change this for osx
             .build()
             .unwrap();
 
