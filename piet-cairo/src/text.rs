@@ -942,14 +942,125 @@ mod test {
         assert_eq!(pt.metrics.text_position, 6);
     }
 
-    // TODO have macos and linux tests?
     #[test]
+    #[cfg(target_os = "linux")]
     fn test_multiline_hit_test_text_position_basic() {
         let mut text_layout = CairoText::new();
 
         let input = "piet text!";
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
+            .build()
+            .unwrap();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..4], 25.0)
+            .build()
+            .unwrap();
+        let piet_width = layout.width();
+
+        // "text" should be on second line
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..9], 25.0)
+            .build()
+            .unwrap();
+        let text_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..8], 25.0)
+            .build()
+            .unwrap();
+        let tex_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..7], 25.0)
+            .build()
+            .unwrap();
+        let te_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[5..6], 25.0)
+            .build()
+            .unwrap();
+        let t_width = layout.width();
+
+        let full_layout = text_layout
+            .new_text_layout(&font, input, 25.0)
+            .build()
+            .unwrap();
+
+        dbg!(&full_layout.line_metrics);
+        // NOTE these heights are representative of baseline-to-baseline measures
+        let line_zero_baseline = 0.0;
+        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+
+        // these just test the x position of text positions on the second line
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+            text_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+            tex_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+            te_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            t_width,
+            3.0,
+        );
+        // This tests that trailing whitespace is not included on the first line width,
+        // even though the text position being tested is trailing whitespace
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.x as f64,
+            piet_width,
+            3.0,
+        );
+
+        // These test y position of text positions on line 1 (0-index)
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+
+        // this tests y position of 0 line
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn test_multiline_hit_test_text_position_basic() {
+        let mut text_layout = CairoText::new();
+
+        let input = "piet text!";
+        let font = text_layout
+            .new_font_by_name("sans-serif", 13.0) // change this for osx
             .build()
             .unwrap();
 
