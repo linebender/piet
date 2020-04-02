@@ -1277,4 +1277,38 @@ mod test {
         assert_eq!(pt.metrics.text_position, 19);
         assert_eq!(pt.is_inside, false);
     }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    // very basic testing that multiline works
+    fn test_multiline_hit_test_point_basic() {
+        let input = "piet text most best";
+        let mut text = CairoText::new();
+
+        let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
+        // this should break into four lines
+        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        println!("text pos 01: {:?}", layout.hit_test_text_position(00)); // (0.0, 0.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(05)); // (0.0, 12.0)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 24.0)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 36.0)
+
+        let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+        let pt = layout.hit_test_point(Point::new(1.0, -1.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, true);
+        let pt = layout.hit_test_point(Point::new(1.0, 00.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
+        assert_eq!(pt.metrics.text_position, 5);
+        let pt = layout.hit_test_point(Point::new(1.0, 18.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 32.0));
+        assert_eq!(pt.metrics.text_position, 15);
+        let pt = layout.hit_test_point(Point::new(1.0, 46.0)); // over
+        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
+    }
 }
