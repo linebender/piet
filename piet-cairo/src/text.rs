@@ -171,17 +171,29 @@ impl TextLayout for CairoTextLayout {
         // first baseline (since it's constant offset, don't have to subtract baseline)
         let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
         dbg!(&first_baseline);
+        dbg!(&self.line_metrics);
+        dbg!(point.y);
 
-        let lm = self
+        // check out of bounds above top
+        if point.y < -1.0 * first_baseline {
+            return HitTestPoint::default();
+        }
+
+        // get the line
+        let mut lm = self
             .line_metrics
             .iter()
-            .inspect(|l| {
-                dbg!(l.cumulative_height);
-            })
-            .take_while(|l| l.cumulative_height - first_baseline > point.y)
-            .last()
-            .cloned()
-            .unwrap_or_else(Default::default);
+            .skip_while(|l| l.cumulative_height - first_baseline < point.y);
+        let lm = match lm.next() {
+            Some(lm) => lm,
+            None => {
+                // this means it went over on y axis, so it returns last text position
+                let mut htp = HitTestPoint::default();
+                htp.metrics.text_position = self.text.len();
+                return htp;
+            }
+        };
+
         dbg!(&lm);
 
         // Then for the line, do hit test point
@@ -189,7 +201,10 @@ impl TextLayout for CairoTextLayout {
         let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
         dbg!(line);
 
-        hit_test_line_point(&self.font, line, &point)
+        let mut htp = hit_test_line_point(&self.font, line, &point);
+        dbg!(&htp);
+        htp.metrics.text_position += lm.start_offset;
+        htp
     }
 
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
@@ -197,7 +212,7 @@ impl TextLayout for CairoTextLayout {
         let lm = self
             .line_metrics
             .iter()
-            .take_while(|l| l.start_offset < text_position)
+            .take_while(|l| l.start_offset <= text_position)
             .last()
             .cloned()
             .unwrap_or_else(Default::default);
@@ -205,7 +220,7 @@ impl TextLayout for CairoTextLayout {
         let count = self
             .line_metrics
             .iter()
-            .take_while(|l| l.start_offset < text_position)
+            .take_while(|l| l.start_offset <= text_position)
             .count();
 
         // In cairo toy text, all baselines and heights are the same.
@@ -217,13 +232,14 @@ impl TextLayout for CairoTextLayout {
         };
 
         // Then for the line, do text position
-        // Trailing whitespace is remove for the line
+        // Trailing whitespace is removed for the line
         let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
         let line_position = text_position - lm.start_offset;
 
         let mut http = hit_test_line_position(&self.font, line, line_position);
         if let Some(h) = http.as_mut() {
-            h.point.y = y
+            h.point.y = y;
+            h.metrics.text_position += lm.start_offset;
         };
         http
     }
@@ -979,7 +995,7 @@ mod test {
     fn test_multiline_hit_test_text_position_basic() {
         let mut text_layout = CairoText::new();
 
-        let input = "piet text!";
+        let input = "piet  text!";
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
@@ -993,25 +1009,25 @@ mod test {
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[5..9], 25.0)
+            .new_text_layout(&font, &input[6..10], 25.0)
             .build()
             .unwrap();
         let text_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..8], 25.0)
+            .new_text_layout(&font, &input[6..9], 25.0)
             .build()
             .unwrap();
         let tex_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..7], 25.0)
+            .new_text_layout(&font, &input[6..8], 25.0)
             .build()
             .unwrap();
         let te_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..6], 25.0)
+            .new_text_layout(&font, &input[6..7], 25.0)
             .build()
             .unwrap();
         let t_width = layout.width();
@@ -1028,23 +1044,29 @@ mod test {
 
         // these just test the x position of text positions on the second line
         assert_close_to(
-            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
             text_width,
             3.0,
         );
         assert_close_to(
-            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
             tex_width,
             3.0,
         );
         assert_close_to(
-            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
             te_width,
             3.0,
         );
         assert_close_to(
-            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
             t_width,
+            3.0,
+        );
+        // This should be beginning of second line
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            0.0,
             3.0,
         );
         // This tests that trailing whitespace is not included on the first line width,
@@ -1056,6 +1078,11 @@ mod test {
         );
 
         // These test y position of text positions on line 1 (0-index)
+        assert_close_to(
+            full_layout.hit_test_text_position(10).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
         assert_close_to(
             full_layout.hit_test_text_position(9).unwrap().point.y as f64,
             line_one_baseline,
@@ -1083,6 +1110,11 @@ mod test {
             line_zero_baseline,
             3.0,
         );
+        assert_close_to(
+            full_layout.hit_test_text_position(4).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
     }
 
     #[test]
@@ -1090,7 +1122,7 @@ mod test {
     fn test_multiline_hit_test_text_position_basic() {
         let mut text_layout = CairoText::new();
 
-        let input = "piet text!";
+        let input = "piet  text!";
         let font = text_layout
             .new_font_by_name("sans-serif", 15.0) // change this for osx
             .build()
@@ -1104,25 +1136,25 @@ mod test {
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[5..9], 25.0)
+            .new_text_layout(&font, &input[6..10], 25.0)
             .build()
             .unwrap();
         let text_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..8], 25.0)
+            .new_text_layout(&font, &input[6..9], 25.0)
             .build()
             .unwrap();
         let tex_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..7], 25.0)
+            .new_text_layout(&font, &input[6..8], 25.0)
             .build()
             .unwrap();
         let te_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[5..6], 25.0)
+            .new_text_layout(&font, &input[6..7], 25.0)
             .build()
             .unwrap();
         let t_width = layout.width();
@@ -1139,23 +1171,29 @@ mod test {
 
         // these just test the x position of text positions on the second line
         assert_close_to(
-            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
             text_width,
             3.0,
         );
         assert_close_to(
-            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
             tex_width,
             3.0,
         );
         assert_close_to(
-            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
             te_width,
             3.0,
         );
         assert_close_to(
-            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
             t_width,
+            3.0,
+        );
+        // This should be beginning of second line
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            0.0,
             3.0,
         );
         // This tests that trailing whitespace is not included on the first line width,
@@ -1167,6 +1205,11 @@ mod test {
         );
 
         // These test y position of text positions on line 1 (0-index)
+        assert_close_to(
+            full_layout.hit_test_text_position(10).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
         assert_close_to(
             full_layout.hit_test_text_position(9).unwrap().point.y as f64,
             line_one_baseline,
@@ -1194,5 +1237,44 @@ mod test {
             line_zero_baseline,
             3.0,
         );
+        assert_close_to(
+            full_layout.hit_test_text_position(4).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    // very basic testing that multiline works
+    fn test_multiline_hit_test_point_basic() {
+        let input = "piet text most best";
+        let mut text = CairoText::new();
+
+        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        // this should break into four lines
+        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        println!("text pos 01: {:?}", layout.hit_test_text_position(00)); // (0.0, 0.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(05)); // (0.0, 13.9999)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 27.9999)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 41.99999)
+
+        let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+        let pt = layout.hit_test_point(Point::new(1.0, -1.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, true);
+        let pt = layout.hit_test_point(Point::new(1.0, 00.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
+        assert_eq!(pt.metrics.text_position, 5);
+        let pt = layout.hit_test_point(Point::new(1.0, 18.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 32.0));
+        assert_eq!(pt.metrics.text_position, 15);
+        let pt = layout.hit_test_point(Point::new(1.0, 46.0)); // over
+        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
     }
 }
