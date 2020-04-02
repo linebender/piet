@@ -129,10 +129,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
-        // TODO this needs to be updated with hit testing
-        // self.font.text_extents(&self.text).x_advance
-
-        // calculated by max x_advance
+        // calculated by max x_advance, on TextLayout build
         self.width
     }
 
@@ -156,7 +153,6 @@ impl TextLayout for CairoTextLayout {
         self.line_metrics.len()
     }
 
-    // CONTINUE lines and height here, and then refactor.
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // internal logic is using grapheme clusters, but return the text position associated
         // with the border of the grapheme cluster.
@@ -168,18 +164,15 @@ impl TextLayout for CairoTextLayout {
 
         // this assumes that all heights/baselines are the same.
         // Uses line bounding box to do hit testpoint, but with coordinates starting at 0.0 at
-        // first baseline (since it's constant offset, don't have to subtract baseline)
+        // first baseline
         let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
-        dbg!(&first_baseline);
-        dbg!(&self.line_metrics);
-        dbg!(point.y);
 
         // check out of bounds above top
         if point.y < -1.0 * first_baseline {
             return HitTestPoint::default();
         }
 
-        // get the line
+        // get the line metric
         let mut lm = self
             .line_metrics
             .iter()
@@ -194,15 +187,11 @@ impl TextLayout for CairoTextLayout {
             }
         };
 
-        dbg!(&lm);
-
         // Then for the line, do hit test point
         // Trailing whitespace is remove for the line
         let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
-        dbg!(line);
 
         let mut htp = hit_test_line_point(&self.font, line, &point);
-        dbg!(&htp);
         htp.metrics.text_position += lm.start_offset;
         htp
     }

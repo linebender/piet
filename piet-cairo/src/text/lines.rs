@@ -20,17 +20,8 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
     //
     // For soft breaks, then I need to check line widths etc.
     //
-    //
     // - what happens when even smallest break is wider than width?
     // One word is considered the smallest unit, don't break below words for now.
-    //
-    // TODO I think there's a bug, where if the width is less than the first word, a blank line
-    // (offsets both 0) becomes the first line. reproduce by setting the width very small.
-    // Or, is this happening all the time (the ghost first line) but I didn't test for it?
-    //
-    // NOTE This is happening at the first word, but I think it could also happen at any word that
-    // is wider than width. Double check this. the solution is to check when prev_break ==
-    // line_start, but need a test for this.
     //
     // Use font extents height (it's different from text extents height,
     // which relates to bounding box)
@@ -62,7 +53,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
                 // be moved to current break.
                 // This leads to an extra call, in next section, on an empty string for handling
                 // prev_break..line_break. But it's a little clearer without more logic, and when
-                // perf matters all of this will be rewritten anyways. If you think otherwise, add
+                // perf matters all of this will be rewritten anyways. If desired otherwise, add
                 // in a flag after next add_line_metric.
                 if prev_break == line_start {
                     prev_break = line_break;
@@ -154,7 +145,7 @@ fn add_line_metric(
     line_metrics.push(line_metric);
 }
 
-// Note: is non-breaking space trailing whitespace? Check with dwrite and
+// TODO: is non-breaking space trailing whitespace? Check with dwrite and
 // coretext
 fn count_trailing_whitespace(line: &str) -> usize {
     line.chars().rev().take_while(|c| c.is_whitespace()).count()
@@ -190,7 +181,10 @@ mod test {
     }
 
     // TODO do a super-short length, to make sure the behavior is correct
-    // when first break comes directly after the first word.
+    // when first break comes directly after the first word. I think I fixed it, but should have a
+    // more explicit test.
+    //
+    // TODO add a macos specific test (I fudged this one to work for now)
     //
     // Test at three different widths: small, medium, large.
     // - small is every word being split.
