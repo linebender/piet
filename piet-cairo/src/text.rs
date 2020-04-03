@@ -78,6 +78,7 @@ impl<'a> Text for CairoText<'a> {
         text: &str,
         width: f64,
     ) -> Self::TextLayoutBuilder {
+        // TODO Should probably move the calculations to `build` step
         let line_metrics = lines::calculate_line_metrics(text, &font.0, width);
 
         let widths = line_metrics.iter().map(|lm| {

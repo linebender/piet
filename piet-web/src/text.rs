@@ -16,7 +16,6 @@ use piet::{
 use unicode_segmentation::UnicodeSegmentation;
 
 use self::grapheme::point_x_in_grapheme;
-use self::lines::calculate_line_metrics;
 use crate::WebRenderContext;
 
 #[derive(Clone)]
@@ -123,7 +122,7 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
         self.ctx.set_font(&self.font.get_font_string());
 
         let line_metrics =
-            calculate_line_metrics(&self.text, &self.ctx, self.width, self.font.size);
+            lines::calculate_line_metrics(&self.text, &self.ctx, self.width, self.font.size);
 
         let widths = line_metrics.iter().map(|lm| {
             text_width(
@@ -147,32 +146,29 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
 
 impl TextLayout for WebTextLayout {
     fn width(&self) -> f64 {
-        //cairo:
-        //self.font.text_extents(&self.text).x_advance
-        self.ctx
-            .measure_text(&self.text)
-            .map(|m| m.width())
-            .expect("Text measurement failed")
+        // precalculated on textlayout build
+        self.width
     }
 
-    #[allow(clippy::unimplemented)]
-    fn update_width(&mut self, _new_width: f64) -> Result<(), Error> {
-        unimplemented!();
+    fn update_width(&mut self, new_width: f64) -> Result<(), Error> {
+        self.width = new_width;
+        self.line_metrics =
+            lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
+        Ok(())
     }
 
-    #[allow(clippy::unimplemented)]
-    fn line_text(&self, _line_number: usize) -> Option<&str> {
-        unimplemented!();
+    fn line_text(&self, line_number: usize) -> Option<&str> {
+        self.line_metrics
+            .get(line_number)
+            .map(|lm| &self.text[lm.start_offset..(lm.end_offset - lm.trailing_whitespace)])
     }
 
-    #[allow(clippy::unimplemented)]
-    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
-        unimplemented!();
+    fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
+        self.line_metrics.get(line_number).cloned()
     }
 
-    #[allow(clippy::unimplemented)]
     fn line_count(&self) -> usize {
-        unimplemented!();
+        self.line_metrics.len()
     }
 
     // first assume one line.
