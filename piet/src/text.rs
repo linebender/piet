@@ -73,8 +73,6 @@ pub trait TextLayout: Clone {
 
     /// Used for changing the width of a text layout. Given a width, returns a [`TextLayout`]
     /// struct with recalculated lines and line metrics.
-    // TODO: Should this take &self or self? I'd say maybe; perhaps the old struct should be kept around
-    // to help with caching.
     fn update_width(&mut self, new_width: f64) -> Result<(), Error>;
 
     /// Given a line number, return a reference to that line's underlying string.

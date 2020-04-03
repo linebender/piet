@@ -1021,7 +1021,6 @@ mod test {
             .build()
             .unwrap();
 
-        dbg!(&full_layout.line_metrics);
         // NOTE these heights are representative of baseline-to-baseline measures
         let line_zero_baseline = 0.0;
         let line_one_baseline = full_layout.line_metric(1).unwrap().height;
@@ -1148,7 +1147,6 @@ mod test {
             .build()
             .unwrap();
 
-        dbg!(&full_layout.line_metrics);
         // NOTE these heights are representative of baseline-to-baseline measures
         let line_zero_baseline = 0.0;
         let line_one_baseline = full_layout.line_metric(1).unwrap().height;
