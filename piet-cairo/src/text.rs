@@ -87,12 +87,7 @@ impl<'a> Text for CairoText<'a> {
         });
 
         // TODO default width 0?
-        let mut width = 0.0;
-        for w in widths {
-            if w > width {
-                width = w;
-            }
-        }
+        let width = widths.fold(0.0, |a: f64, b| a.max(b));
 
         let text_layout = CairoTextLayout {
             width,
