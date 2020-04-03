@@ -29,19 +29,38 @@ pub use piet::*;
 #[doc(hidden)]
 pub use piet::kurbo;
 
-#[cfg(any(
-    feature = "cairo",
-    not(any(target_arch = "wasm32", target_os = "windows", feature = "direct2d"))
-))]
-#[path = "cairo_back.rs"]
-mod backend;
-
-#[cfg(any(feature = "d2d", all(target_os = "windows", not(feature = "cairo"))))]
-#[path = "direct2d_back.rs"]
-mod backend;
-
-#[cfg(any(feature = "web", target_arch = "wasm32"))]
-#[path = "web_back.rs"]
-mod backend;
+cfg_if::cfg_if! {
+    // if we have explicitly asked for cairo *or* we are not wasm, web, or windows:
+    if #[cfg(any(feature = "cairo", not(any(target_arch = "wasm32", feature="web", target_os = "windows"))))] {
+        #[path = "cairo_back.rs"]
+        mod backend;
+    } else if #[cfg(target_os = "windows")] {
+        #[path = "direct2d_back.rs"]
+        mod backend;
+    } else if #[cfg(any(feature = "web", target_arch = "wasm32"))] {
+        #[path = "web_back.rs"]
+        mod backend;
+    } else {
+        compile_error!("could not select an appropriate backend");
+    }
+}
 
 pub use backend::*;
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    // Make sure all the common types exist and don't get accidentally removed
+    #[allow(dead_code)]
+    struct Types<'a> {
+        piet: Piet<'a>,
+        brush: Brush,
+        piet_text: PietText<'a>,
+        piet_font: PietFont,
+        piet_font_builder: PietFontBuilder<'a>,
+        piet_text_layout: PietTextLayout,
+        piet_text_layout_builder: PietTextLayoutBuilder<'a>,
+        image: Image,
+    }
+}

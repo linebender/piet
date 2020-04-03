@@ -11,6 +11,9 @@ use piet_test::draw_test_picture;
 
 #[wasm_bindgen]
 pub fn run() {
+    #[cfg(feature = "console_error_panic_hook")]
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+
     let window = window().unwrap();
     let canvas = window
         .document()

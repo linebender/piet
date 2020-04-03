@@ -3,12 +3,17 @@
 
 //! Support for piet Cairo back-end.
 
-use std::marker::PhantomData;
-
 use cairo::{Context, Format, ImageSurface};
+#[cfg(feature = "png")]
+use png::{ColorType, Encoder};
+#[cfg(feature = "png")]
+use std::fs::File;
+#[cfg(feature = "png")]
+use std::io::BufWriter;
+use std::marker::PhantomData;
+use std::path::Path;
 
 use piet::{ErrorKind, ImageFormat};
-
 #[doc(hidden)]
 pub use piet_cairo::*;
 
@@ -123,5 +128,28 @@ impl<'a> BitmapTarget<'a> {
             }
         }
         Ok(raw_data)
+    }
+
+    /// Save bitmap to RGBA PNG file
+    #[cfg(feature = "png")]
+    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+        let height = self.surface.get_height();
+        let width = self.surface.get_width();
+        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let file = BufWriter::new(File::create(path).map_err(|e| Into::<Box<_>>::into(e))?);
+        let mut encoder = Encoder::new(file, width as u32, height as u32);
+        encoder.set_color(ColorType::RGBA);
+        encoder
+            .write_header()
+            .map_err(|e| Into::<Box<_>>::into(e))?
+            .write_image_data(&image)
+            .map_err(|e| Into::<Box<_>>::into(e))?;
+        Ok(())
+    }
+
+    /// Stub for feature is missing
+    #[cfg(not(feature = "png"))]
+    pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
+        Err(piet::new_error(ErrorKind::MissingFeature))
     }
 }

@@ -1,16 +1,30 @@
 //! Support for piet Direct2D back-end.
 
+#[cfg(feature = "png")]
+use std::fs::File;
+#[cfg(feature = "png")]
+use std::io::BufWriter;
+use std::path::Path;
+
+/// For saving to file functionality
+#[cfg(feature = "png")]
+use png::{ColorType, Encoder};
+
+use piet::{ErrorKind, ImageFormat};
+use piet_direct2d::d2d::{Bitmap, Brush as D2DBrush};
 use piet_direct2d::d3d::{
     D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
 };
-
-use piet::{ErrorKind, ImageFormat};
-
 #[doc(hidden)]
 pub use piet_direct2d::*;
 
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
+
+/// The associated brush type for this backend.
+///
+/// This type matches `RenderContext::Brush`
+pub type Brush = D2DBrush;
 
 /// The associated text factory for this backend.
 ///
@@ -36,6 +50,11 @@ pub type PietTextLayout = D2DTextLayout;
 ///
 /// This type matches `RenderContext::Text::TextLayoutBuilder`
 pub type PietTextLayoutBuilder<'a> = D2DTextLayoutBuilder<'a>;
+
+/// The associated image type for this backend.
+///
+/// This type matches `RenderContext::Image`
+pub type Image = Bitmap;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {
@@ -170,6 +189,29 @@ impl<'a> BitmapTarget<'a> {
             raw_pixels.set_len(self.width * self.height * 4);
         }
         Ok(raw_pixels)
+    }
+
+    /// Save bitmap to RGBA PNG file
+    #[cfg(feature = "png")]
+    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+        let height = self.height;
+        let width = self.width;
+        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let file = BufWriter::new(File::create(path).map_err(|e| Into::<Box<_>>::into(e))?);
+        let mut encoder = Encoder::new(file, width as u32, height as u32);
+        encoder.set_color(ColorType::RGBA);
+        encoder
+            .write_header()
+            .map_err(|e| Into::<Box<_>>::into(e))?
+            .write_image_data(&image)
+            .map_err(|e| Into::<Box<_>>::into(e))?;
+        Ok(())
+    }
+
+    /// Stub for feature is missing
+    #[cfg(not(feature = "png"))]
+    pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
+        Err(piet::new_error(ErrorKind::MissingFeature))
     }
 }
 

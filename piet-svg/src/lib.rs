@@ -255,14 +255,36 @@ impl piet::RenderContext for RenderContext {
         Err(new_error(ErrorKind::NotSupported))
     }
 
+    #[inline]
     fn draw_image(
         &mut self,
-        _image: &Self::Image,
-        _rect: impl Into<Rect>,
-        _interp: InterpolationMode,
+        image: &Self::Image,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
     ) {
-        unimplemented!()
+        draw_image(self, image, None, dst_rect.into(), interp);
     }
+
+    #[inline]
+    fn draw_image_area(
+        &mut self,
+        image: &Self::Image,
+        src_rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
+        interp: InterpolationMode,
+    ) {
+        draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
+    }
+}
+
+fn draw_image(
+    _ctx: &mut RenderContext,
+    _image: &<RenderContext as piet::RenderContext>::Image,
+    _src_rect: Option<Rect>,
+    _dst_rect: Rect,
+    _interp: InterpolationMode,
+) {
+    unimplemented!()
 }
 
 #[derive(Default)]

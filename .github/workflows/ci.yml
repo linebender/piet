@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     name: rustfmt
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -34,8 +34,10 @@ jobs:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test stable
+    env:
+      PKG_CONFIG_ALLOW_CROSS: 1
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install cairo
         run: brew install cairo
@@ -51,6 +53,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: wasm32-unknown-unknown
           components: clippy
           profile: minimal
           override: true
@@ -60,6 +63,12 @@ jobs:
         with:
           command: clippy
           args: --all -- -D warnings
+
+      - name: cargo clippy (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all --exclude piet-cairo --exclude piet-direct2d --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo test --all (not windows)
         uses: actions-rs/cargo@v1
@@ -74,6 +83,12 @@ jobs:
           command: test
           args: --all --exclude piet-cairo
         if: contains(matrix.os, 'windows')
+
+      - name: cargo test compile (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p piet-common -p piet-web --no-run --target wasm32-unknown-unknown
 
       - name: Run rustc -D warnings in piet/
         uses: actions-rs/cargo@v1
@@ -93,6 +108,12 @@ jobs:
         with:
           command: rustc
           args: --manifest-path=piet-common/Cargo.toml -- -D warnings
+
+      - name: Run rustc -D warnings in piet-common/ (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-common/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
 
       - name: Run rustc -D warnings in piet-direct2d/
         uses: actions-rs/cargo@v1
@@ -119,14 +140,22 @@ jobs:
           command: rustc
           args: --manifest-path=piet-web/Cargo.toml -- -D warnings
 
+      - name: Run rustc -D warnings in piet-web/ (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: rustc
+          args: --manifest-path=piet-web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+
   test-nightly:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test nightly
+    env:
+      PKG_CONFIG_ALLOW_CROSS: 1
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install cairo
         run: brew install cairo
@@ -142,6 +171,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
+          target: wasm32-unknown-unknown
           profile: minimal
           override: true
 
@@ -159,6 +189,11 @@ jobs:
           args: --all --exclude piet-cairo
         if: contains(matrix.os, 'windows')
 
+      - name: cargo test compile (wasm32)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -p piet-common -p piet-web --no-run --target wasm32-unknown-unknown
 
   check-docs:
     name: Docs
@@ -167,7 +202,7 @@ jobs:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: install cairo
         run: brew install cairo
