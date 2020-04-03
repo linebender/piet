@@ -1,6 +1,7 @@
 //! Text functionality for Piet web backend
 
 mod grapheme;
+mod lines;
 
 use std::borrow::Cow;
 
@@ -15,6 +16,7 @@ use piet::{
 use unicode_segmentation::UnicodeSegmentation;
 
 use self::grapheme::point_x_in_grapheme;
+use self::lines::calculate_line_metrics;
 use crate::WebRenderContext;
 
 #[derive(Clone)]
@@ -33,12 +35,17 @@ pub struct WebTextLayout {
     // TODO like cairo, should this be pub(crate)?
     pub font: WebFont,
     pub text: String,
+
+    // Calculated on build
+    line_metrics: Vec<LineMetric>,
+    width: f64,
 }
 
 pub struct WebTextLayoutBuilder {
     ctx: CanvasRenderingContext2d,
     font: WebFont,
     text: String,
+    width: f64,
 }
 
 /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
@@ -70,7 +77,7 @@ impl<'a> Text for WebRenderContext<'a> {
         &mut self,
         font: &Self::Font,
         text: &str,
-        _width: f64,
+        width: f64,
     ) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
@@ -78,6 +85,7 @@ impl<'a> Text for WebRenderContext<'a> {
             ctx: self.ctx.clone(),
             font: font.clone(),
             text: text.to_owned(),
+            width,
         }
     }
 }
@@ -113,10 +121,26 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
 
     fn build(self) -> Result<Self::Out, Error> {
         self.ctx.set_font(&self.font.get_font_string());
+
+        let line_metrics =
+            calculate_line_metrics(&self.text, &self.ctx, self.width, self.font.size);
+
+        let widths = line_metrics.iter().map(|lm| {
+            text_width(
+                &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace],
+                &self.ctx,
+            )
+        });
+
+        // TODO default width 0?
+        let width = widths.fold(0.0, |a: f64, b| a.max(b));
+
         Ok(WebTextLayout {
             ctx: self.ctx,
             font: self.font,
             text: self.text,
+            line_metrics,
+            width,
         })
     }
 }
@@ -274,4 +298,10 @@ impl TextLayout for WebTextLayout {
             })
         }
     }
+}
+
+pub(crate) fn text_width(text: &str, ctx: &CanvasRenderingContext2d) -> f64 {
+    ctx.measure_text(text)
+        .map(|m| m.width())
+        .expect("Text measurement failed")
 }
