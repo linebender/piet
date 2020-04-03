@@ -39,18 +39,20 @@ pub trait TextLayoutBuilder {
 /// ## Line Breaks
 ///
 /// A text layout may be broken into multiple lines in order to fit within a given width. Line breaking is generally done
-/// between words (whitespace-separated)
+/// between words (whitespace-separated).
 ///
 /// When resizing the width of the text layout, calling [`update_width`][] on the text layout will
-/// recalculate line breaks and return a new `TextLayout`.
+/// recalculate line breaks and modify in-place.
 ///
-/// [Line text][]  and [line metrics][] can be accessed line-by-line by 0-indexed line number.
+/// A line's text and [`LineMetric`][]s can be accessed line-by-line by 0-indexed line number.
 ///
-/// [Line metrics] include:
-/// - line length offset from text layout beginning (in code units)
-/// - line width offset from text layout beginning
-/// - (line length + trailing whitespace) offset from text layout beginning (in code units)
-/// - (line width  + trailing whitespace) offset from text layout beginning
+/// Fields on ['LineMetric`] include:
+/// - line start offset from text layout beginning (in UTF-8 code units)
+/// - line end offset from text layout beginning (in UTF-8 code units)
+/// - line trailing whitespace (in UTF-8 code units)
+/// - line's baseline, distance of the baseline from the top of the line
+/// - line height
+/// - cumulative line height (includes previous line heights)
 ///
 /// The trailing whitespace distinction is important. Lines are broken at the grapheme boundary after
 /// whitespace, but that whitepace is not necessarily rendered since it's just the trailing
@@ -66,6 +68,9 @@ pub trait TextLayoutBuilder {
 /// - The end of a line is a valid text position. e.g. `text.len()` is a valid text position.
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
+///
+/// [`update_width`]: trait.TextLayout.html#tymethod.update_width
+/// [`LineMetric`]: struct.LineMetric.html
 ///
 pub trait TextLayout: Clone {
     /// Measure the advance width of the text.
