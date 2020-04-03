@@ -253,7 +253,7 @@ impl TextLayout for WebTextLayout {
 }
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_point
-// Future: instead of passing Font, should there be some other line-level text layout?
+// Future: instead of passing ctx, should there be some other line-level text layout?
 fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: &Point) -> HitTestPoint {
     // null case
     if text.is_empty() {
@@ -322,7 +322,7 @@ fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: &Point
 }
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
-// Future: instead of passing Font, should there be some other line-level text layout?
+// Future: instead of passing ctx, should there be some other line-level text layout?
 fn hit_test_line_position(
     ctx: &CanvasRenderingContext2d,
     text: &str,
