@@ -15,7 +15,7 @@ use piet::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 
-use self::grapheme::point_x_in_grapheme;
+use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 use crate::WebRenderContext;
 
 #[derive(Clone)]
@@ -171,8 +171,6 @@ impl TextLayout for WebTextLayout {
         self.line_metrics.len()
     }
 
-    // first assume one line.
-    // TODO do with lines
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         // internal logic is using grapheme clusters, but return the text position associated
         // with the border of the grapheme cluster.
@@ -182,117 +180,199 @@ impl TextLayout for WebTextLayout {
             return HitTestPoint::default();
         }
 
-        // get bounds
-        // TODO handle if string is not null yet count is 0?
-        let end = UnicodeSegmentation::graphemes(self.text.as_str(), true).count() - 1;
-        let end_bounds = match self.get_grapheme_boundaries(end) {
-            Some(bounds) => bounds,
-            None => return HitTestPoint::default(),
-        };
+        // this assumes that all heights/baselines are the same.
+        // Uses line bounding box to do hit testpoint, but with coordinates starting at 0.0 at
+        // first baseline
+        let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
 
-        let start = 0;
-        let start_bounds = match self.get_grapheme_boundaries(start) {
-            Some(bounds) => bounds,
-            None => return HitTestPoint::default(),
-        };
-
-        // first test beyond ends
-        if point.x > end_bounds.trailing {
-            let mut res = HitTestPoint::default();
-            res.metrics.text_position = self.text.len();
-            return res;
-        }
-        if point.x <= start_bounds.leading {
+        // check out of bounds above top
+        if point.y < -1.0 * first_baseline {
             return HitTestPoint::default();
         }
 
-        // then test the beginning and end (common cases)
-        if let Some(hit) = point_x_in_grapheme(point.x, &start_bounds) {
-            return hit;
-        }
-        if let Some(hit) = point_x_in_grapheme(point.x, &end_bounds) {
-            return hit;
-        }
-
-        // Now that we know it's not beginning or end, begin binary search.
-        // Iterative style
-        let mut left = start;
-        let mut right = end;
-        loop {
-            // pick halfway point
-            let middle = left + ((right - left) / 2);
-
-            let grapheme_bounds = match self.get_grapheme_boundaries(middle) {
-                Some(bounds) => bounds,
-                None => return HitTestPoint::default(),
-            };
-
-            if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
-                return hit;
+        // get the line metric
+        let mut lm = self
+            .line_metrics
+            .iter()
+            .skip_while(|l| l.cumulative_height - first_baseline < point.y);
+        let lm = match lm.next() {
+            Some(lm) => lm,
+            None => {
+                // this means it went over on y axis, so it returns last text position
+                let mut htp = HitTestPoint::default();
+                htp.metrics.text_position = self.text.len();
+                return htp;
             }
+        };
 
-            // since it's not a hit, check if closer to start or finish
-            // and move the appropriate search boundary
-            if point.x < grapheme_bounds.leading {
-                right = middle;
-            } else if point.x > grapheme_bounds.trailing {
-                left = middle + 1;
-            } else {
-                unreachable!("hit_test_point conditional is exhaustive");
-            }
-        }
+        // Then for the line, do hit test point
+        // Trailing whitespace is remove for the line
+        let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
+
+        let mut htp = hit_test_line_point(&self.ctx, line, &point);
+        htp.metrics.text_position += lm.start_offset;
+        htp
     }
 
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
-        // Using substrings, but now with unicode grapheme awareness
+        // first need to find line it's on, and get line start offset
+        let lm = self
+            .line_metrics
+            .iter()
+            .take_while(|l| l.start_offset <= text_position)
+            .last()
+            .cloned()
+            .unwrap_or_else(Default::default);
 
-        let text_len = self.text.len();
+        let count = self
+            .line_metrics
+            .iter()
+            .take_while(|l| l.start_offset <= text_position)
+            .count();
 
-        if text_position == 0 {
+        // In web toy text, all baselines and heights are the same.
+        // We're counting the first line baseline as 0, and measuring to each line's baseline.
+        let y = if count == 0 {
             return Some(HitTestTextPosition::default());
-        }
-
-        if text_position as usize >= text_len {
-            let x = self.width();
-
-            return Some(HitTestTextPosition {
-                point: Point { x, y: 0.0 },
-                metrics: HitTestMetrics {
-                    text_position: text_len,
-                },
-            });
-        }
-
-        // Already checked that text_position > 0 and text_position < count.
-        // If text position is not at a grapheme boundary, use the text position of current
-        // grapheme cluster. But return the original text position
-        // Use the indices (byte offset, which for our purposes = utf8 code units).
-        let grapheme_indices = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true)
-            .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
-
-        if let Some((byte_idx, _s)) = grapheme_indices.last() {
-            let x = self
-                .ctx
-                .measure_text(&self.text[0..byte_idx])
-                .map(|m| m.width())
-                .expect("Text measurement failed");
-
-            Some(HitTestTextPosition {
-                point: Point { x, y: 0.0 },
-                metrics: HitTestMetrics { text_position },
-            })
         } else {
-            // iterated to end boundary
-            Some(HitTestTextPosition {
-                point: Point {
-                    x: self.width(),
-                    y: 0.0,
-                },
-                metrics: HitTestMetrics {
-                    text_position: text_len,
-                },
-            })
+            (count - 1) as f64 * lm.height
+        };
+
+        // Then for the line, do text position
+        // Trailing whitespace is removed for the line
+        let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
+        let line_position = text_position - lm.start_offset;
+
+        let mut http = hit_test_line_position(&self.ctx, line, line_position);
+        if let Some(h) = http.as_mut() {
+            h.point.y = y;
+            h.metrics.text_position += lm.start_offset;
+        };
+        http
+    }
+}
+
+// NOTE this is the same as the old, non-line-aware version of hit_test_point
+// Future: instead of passing Font, should there be some other line-level text layout?
+fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: &Point) -> HitTestPoint {
+    // null case
+    if text.is_empty() {
+        return HitTestPoint::default();
+    }
+
+    // get bounds
+    // TODO handle if string is not null yet count is 0?
+    let end = UnicodeSegmentation::graphemes(text, true).count() - 1;
+    let end_bounds = match get_grapheme_boundaries(ctx, text, end) {
+        Some(bounds) => bounds,
+        None => return HitTestPoint::default(),
+    };
+
+    let start = 0;
+    let start_bounds = match get_grapheme_boundaries(ctx, text, start) {
+        Some(bounds) => bounds,
+        None => return HitTestPoint::default(),
+    };
+
+    // first test beyond ends
+    if point.x > end_bounds.trailing {
+        let mut res = HitTestPoint::default();
+        res.metrics.text_position = text.len();
+        return res;
+    }
+    if point.x <= start_bounds.leading {
+        return HitTestPoint::default();
+    }
+
+    // then test the beginning and end (common cases)
+    if let Some(hit) = point_x_in_grapheme(point.x, &start_bounds) {
+        return hit;
+    }
+    if let Some(hit) = point_x_in_grapheme(point.x, &end_bounds) {
+        return hit;
+    }
+
+    // Now that we know it's not beginning or end, begin binary search.
+    // Iterative style
+    let mut left = start;
+    let mut right = end;
+    loop {
+        // pick halfway point
+        let middle = left + ((right - left) / 2);
+
+        let grapheme_bounds = match get_grapheme_boundaries(ctx, text, middle) {
+            Some(bounds) => bounds,
+            None => return HitTestPoint::default(),
+        };
+
+        if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
+            return hit;
         }
+
+        // since it's not a hit, check if closer to start or finish
+        // and move the appropriate search boundary
+        if point.x < grapheme_bounds.leading {
+            right = middle;
+        } else if point.x > grapheme_bounds.trailing {
+            left = middle + 1;
+        } else {
+            unreachable!("hit_test_point conditional is exhaustive");
+        }
+    }
+}
+
+// NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
+// Future: instead of passing Font, should there be some other line-level text layout?
+fn hit_test_line_position(
+    ctx: &CanvasRenderingContext2d,
+    text: &str,
+    text_position: usize,
+) -> Option<HitTestTextPosition> {
+    // Using substrings with unicode grapheme awareness
+
+    let text_len = text.len();
+
+    if text_position == 0 {
+        return Some(HitTestTextPosition::default());
+    }
+
+    if text_position as usize >= text_len {
+        return Some(HitTestTextPosition {
+            point: Point {
+                x: text_width(text, ctx),
+                y: 0.0,
+            },
+            metrics: HitTestMetrics {
+                text_position: text_len,
+            },
+        });
+    }
+
+    // Already checked that text_position > 0 and text_position < count.
+    // If text position is not at a grapheme boundary, use the text position of current
+    // grapheme cluster. But return the original text position
+    // Use the indices (byte offset, which for our purposes = utf8 code units).
+    let grapheme_indices = UnicodeSegmentation::grapheme_indices(text, true)
+        .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
+
+    if let Some((byte_idx, _s)) = grapheme_indices.last() {
+        let point_x = text_width(&text[0..byte_idx], ctx);
+
+        Some(HitTestTextPosition {
+            point: Point { x: point_x, y: 0.0 },
+            metrics: HitTestMetrics { text_position },
+        })
+    } else {
+        // iterated to end boundary
+        Some(HitTestTextPosition {
+            point: Point {
+                x: text_width(text, ctx),
+                y: 0.0,
+            },
+            metrics: HitTestMetrics {
+                text_position: text_len,
+            },
+        })
     }
 }
 
