@@ -382,6 +382,9 @@ pub(crate) fn text_width(text: &str, ctx: &CanvasRenderingContext2d) -> f64 {
         .expect("Text measurement failed")
 }
 
+// NOTE these tests are currently only working on chrome.
+// Since it's so finicky, not sure it's worth making it work on both chrome and firefox until we
+// address the underlying brittlness
 #[cfg(test)]
 pub(crate) mod test {
     use piet::kurbo::Point;
@@ -876,5 +879,174 @@ pub(crate) mod test {
 
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
         assert_eq!(pt.metrics.text_position, 6);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_multiline_hit_test_text_position_basic() {
+        let (window, mut context) = setup_ctx();
+        let ctx = WebRenderContext::new(&mut context, &window);
+        let mut text_layout = ctx;
+
+        let input = "piet  text!";
+        let font = text_layout
+            .new_font_by_name("sans-serif", 15.0) // change this for osx
+            .build()
+            .unwrap();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..4], 25.0)
+            .build()
+            .unwrap();
+        let piet_width = layout.width();
+
+        // "text" should be on second line
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..10], 25.0)
+            .build()
+            .unwrap();
+        let text_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..9], 25.0)
+            .build()
+            .unwrap();
+        let tex_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..8], 25.0)
+            .build()
+            .unwrap();
+        let te_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..7], 25.0)
+            .build()
+            .unwrap();
+        let t_width = layout.width();
+
+        let full_layout = text_layout
+            .new_text_layout(&font, input, 25.0)
+            .build()
+            .unwrap();
+
+        // NOTE these heights are representative of baseline-to-baseline measures
+        let line_zero_baseline = 0.0;
+        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+
+        // these just test the x position of text positions on the second line
+        assert_close_to(
+            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
+            text_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+            tex_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+            te_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+            t_width,
+            3.0,
+        );
+        // This should be beginning of second line
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            0.0,
+            3.0,
+        );
+        // This tests that trailing whitespace is not included on the first line width,
+        // even though the text position being tested is trailing whitespace
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.x as f64,
+            piet_width,
+            3.0,
+        );
+
+        // These test y position of text positions on line 1 (0-index)
+        assert_close_to(
+            full_layout.hit_test_text_position(10).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+
+        // this tests y position of 0 line
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(4).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
+    }
+
+    // very basic testing that multiline works
+    #[wasm_bindgen_test]
+    fn test_multiline_hit_test_point_basic() {
+        let input = "piet text most best";
+
+        let (window, mut context) = setup_ctx();
+        let ctx = WebRenderContext::new(&mut context, &window);
+        let mut text = ctx;
+
+        let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();
+        // this should break into four lines
+        // Had to shift font in order to break at 4 lines (larger font than cairo, wider lines)
+        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        console::log_1(&format!("text pos 01: {:?}", layout.hit_test_text_position(00)).into()); // (0.0,0.0)
+        console::log_1(&format!("text pos 06: {:?}", layout.hit_test_text_position(05)).into()); // (0.0, 16.8)
+        console::log_1(&format!("text pos 11: {:?}", layout.hit_test_text_position(10)).into()); // (0.0, 33.6)
+        console::log_1(&format!("text pos 16: {:?}", layout.hit_test_text_position(15)).into()); // (0.0, 50.4)
+        console::log_1(&format!("lm 0: {:?}", layout.line_metric(0)).into());
+        console::log_1(&format!("lm 1: {:?}", layout.line_metric(1)).into());
+        console::log_1(&format!("lm 2: {:?}", layout.line_metric(2)).into());
+        console::log_1(&format!("lm 3: {:?}", layout.line_metric(3)).into());
+
+        // approx 13.5 baseline, and 17 height
+        let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+        let pt = layout.hit_test_point(Point::new(1.0, -1.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, true);
+        let pt = layout.hit_test_point(Point::new(1.0, 00.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
+        assert_eq!(pt.metrics.text_position, 5);
+        let pt = layout.hit_test_point(Point::new(1.0, 21.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 38.0));
+        assert_eq!(pt.metrics.text_position, 15);
+        let pt = layout.hit_test_point(Point::new(1.0, 55.0)); // over
+        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
     }
 }
