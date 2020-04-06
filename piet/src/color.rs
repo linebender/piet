@@ -171,43 +171,31 @@ impl Color {
         }
     }
 
+    /// Convert a color value to four 8-bit rgba values.
+    pub fn as_rgba_u8(&self) -> (u8, u8, u8, u8) {
+        let rgba = self.as_rgba_u32();
+        (
+            (rgba >> 24 & 255) as u8,
+            ((rgba >> 16) & 255) as u8,
+            ((rgba >> 8) & 255) as u8,
+            (rgba & 255) as u8,
+        )
+    }
+
+    /// Convert a color value to four f64 values, each in the range 0.0 to 1.0.
+    pub fn as_rgba_f64(rgba: &Color) -> (f64, f64, f64, f64) {
+        let rgba = rgba.as_rgba_u32();
+        (
+            (rgba >> 24) as f64 / 255.0,
+            ((rgba >> 16) & 255) as f64 / 255.0,
+            ((rgba >> 8) & 255) as f64 / 255.0,
+            (rgba & 255) as f64 / 255.0,
+        )
+    }
+
     /// Opaque white.
     pub const WHITE: Color = Color::rgb8(0xff, 0xff, 0xff);
 
     /// Opaque black.
     pub const BLACK: Color = Color::rgb8(0, 0, 0);
-}
-
-impl From<(u8, u8, u8)> for Color {
-    /// Create a color from a tuple of 8 bit per sample RGB values.
-    fn from(color: (u8, u8, u8)) -> Color {
-        let (r, g, b) = color;
-        Color::rgb8(r, g, b)
-    }
-}
-
-impl From<(u8, u8, u8, u8)> for Color {
-    /// Create a color from a tuple of 8 bit per sample RGBA values.
-    fn from(color: (u8, u8, u8, u8)) -> Color {
-        let (r, g, b, a) = color;
-        Color::rgba8(r, g, b, a)
-    }
-}
-
-impl From<(f64, f64, f64)> for Color {
-    /// Create a color from a tuple of three floating point values, each in the
-    /// range 0.0 to 1.0.
-    fn from(color: (f64, f64, f64)) -> Color {
-        let (r, g, b) = color;
-        Color::rgb(r, g, b)
-    }
-}
-
-impl From<(f64, f64, f64, f64)> for Color {
-    /// Create a color from a tuple of four floating point values, each in the
-    /// range 0.0 to 1.0.
-    fn from(color: (f64, f64, f64, f64)) -> Color {
-        let (r, g, b, a) = color;
-        Color::rgba(r, g, b, a)
-    }
 }
