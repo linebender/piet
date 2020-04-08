@@ -111,7 +111,7 @@ impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
 
 impl TextLayout for D2DTextLayout {
     fn width(&self) -> f64 {
-        self.layout.get_metrics().width as f64
+        self.layout.get_metrics().widthIncludingTrailingWhitespace as f64
     }
 
     /// given a new max width, update width of text layout to fit within the max width
@@ -138,8 +138,17 @@ impl TextLayout for D2DTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        // Before hit testing, need to convert point.y to have 0.0 at upper left corner (dwrite
+        // style) instead of at first line baseline.
+        let first_baseline = self
+            .line_metrics
+            .get(0)
+            .map(|lm| lm.baseline)
+            .unwrap_or(0.0);
+        let y = point.y + first_baseline;
+
         // lossy from f64 to f32, but shouldn't have too much impact
-        let htp = self.layout.hit_test_point(point.x as f32, point.y as f32);
+        let htp = self.layout.hit_test_point(point.x as f32, y as f32);
 
         // Round up to next grapheme cluster boundary if directwrite
         // reports a trailing hit.
@@ -181,8 +190,7 @@ impl TextLayout for D2DTextLayout {
         // TODO this should probably go before convertin to utf16, since that's relatively slow
         let idx_16 = idx_16.try_into().ok()?;
 
-        // TODO quick fix until directwrite fixes bool bug
-        let trailing = true;
+        let trailing = false;
 
         self.layout
             .hit_test_text_position(idx_16, trailing)
@@ -249,6 +257,7 @@ mod test {
     fn assert_close_to(x: f64, target: f64, tolerance: f64) {
         let min = target - tolerance;
         let max = target + tolerance;
+        println!("x: {}, target: {}", x, target);
         assert!(x <= max && x >= min);
     }
 
@@ -602,8 +611,6 @@ mod test {
         assert_eq!(layout.line_text(4), None);
     }
 
-    // TODO test multiline hit testing
-
     #[test]
     fn test_change_width() {
         let input = "piet text most best";
@@ -632,6 +639,216 @@ mod test {
         layout.update_width(width_large).unwrap();
         assert_eq!(layout.line_count(), 1);
         assert_eq!(layout.line_text(0), Some("piet text most best"));
+    }
+
+    // NOTE be careful, windows will break lines at the sub-word level!
+    #[test]
+    fn test_multiline_hit_test_text_position_basic() {
+        let dwrite = dwrite::DwriteFactory::new().unwrap();
+        let mut text_layout = D2DText::new(&dwrite);
+
+        let input = "piet  text!";
+        let font = text_layout
+            .new_font_by_name("sans-serif", 15.0)
+            .build()
+            .unwrap();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..4], 30.0)
+            .build()
+            .unwrap();
+        let piet_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..3], 30.0)
+            .build()
+            .unwrap();
+        let pie_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..5], 30.0)
+            .build()
+            .unwrap();
+        let piet_space_width = layout.width();
+
+        // "text" should be on second line
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..10], 30.0)
+            .build()
+            .unwrap();
+        let text_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..9], 30.0)
+            .build()
+            .unwrap();
+        let tex_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..8], 30.0)
+            .build()
+            .unwrap();
+        let te_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[6..7], 30.0)
+            .build()
+            .unwrap();
+        let t_width = layout.width();
+
+        let full_layout = text_layout
+            .new_text_layout(&font, input, 30.0)
+            .build()
+            .unwrap();
+        println!("lm: {:#?}", full_layout.line_metrics);
+        println!("layout width: {:#?}", full_layout.width());
+
+        println!("'pie': {}", pie_width);
+        println!("'piet': {}", piet_width);
+        println!("'piet ': {}", piet_space_width);
+        println!("'text': {}", text_width);
+        println!("'tex': {}", tex_width);
+        println!("'te': {}", te_width);
+        println!("'t': {}", t_width);
+
+        // NOTE these heights are representative of baseline-to-baseline measures
+        let line_zero_baseline = 0.0;
+        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+
+        // these just test the x position of text positions on the second line
+        assert_close_to(
+            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
+            text_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+            tex_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+            te_width,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+            t_width,
+            3.0,
+        );
+        // This should be beginning of second line
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+            0.0,
+            3.0,
+        );
+
+        assert_close_to(
+            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
+            pie_width,
+            3.0,
+        );
+
+        // This tests that trailing whitespace is (or is not?) included in the first line width.
+        // hit testing gives back something close to the full width (not line width) of text
+        // layout.
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.x as f64,
+            piet_space_width,
+            3.0,
+        );
+
+        // These test y position of text positions on line 1 (0-index)
+        assert_close_to(
+            full_layout.hit_test_text_position(10).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(9).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(8).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(7).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(6).unwrap().point.y as f64,
+            line_one_baseline,
+            3.0,
+        );
+
+        // this tests y position of 0 line
+        assert_close_to(
+            full_layout.hit_test_text_position(5).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
+        assert_close_to(
+            full_layout.hit_test_text_position(4).unwrap().point.y as f64,
+            line_zero_baseline,
+            3.0,
+        );
+    }
+
+    #[test]
+    // very basic testing that multiline works
+    fn test_multiline_hit_test_point_basic() {
+        let input = "piet text most best";
+
+        let dwrite = dwrite::DwriteFactory::new().unwrap();
+        let mut text = D2DText::new(&dwrite);
+
+        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        // this should break into four lines
+        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        println!("{}", layout.line_metric(0).unwrap().baseline); // 12.94...
+        println!("text pos 01: {:?}", layout.hit_test_text_position(00)); // (0.0, 0.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(05)); // (0.0, 15.96...)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 31.92...)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 47.88...)
+
+        let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+        let pt = layout.hit_test_point(Point::new(1.0, -1.0));
+        println!("{:?}", pt);
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, true);
+        let pt = layout.hit_test_point(Point::new(1.0, 00.0));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
+        assert_eq!(pt.metrics.text_position, 5);
+        let pt = layout.hit_test_point(Point::new(1.0, 20.0));
+        assert_eq!(pt.metrics.text_position, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 36.0));
+        assert_eq!(pt.metrics.text_position, 15);
+
+        // over on y axis, but x still affects the text position
+        let best_layout = text
+            .new_text_layout(&font, "best", std::f64::INFINITY)
+            .build()
+            .unwrap();
+        println!("layout width: {:#?}", best_layout.width()); // 22.48...
+
+        let pt = layout.hit_test_point(Point::new(1.0, 52.0));
+        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(22.0, 52.0));
+        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(24.0, 52.0));
+        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
     }
 
     #[test]

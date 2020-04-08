@@ -304,7 +304,7 @@ impl TextLayout {
         position: u32,
         trailing: bool,
     ) -> Option<HitTestTextPosition> {
-        let trailing = if trailing { 0 } else { 1 };
+        let trailing = trailing as i32;
         unsafe {
             let (mut x, mut y) = (0.0, 0.0);
             let mut metrics = std::mem::zeroed();
