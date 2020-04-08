@@ -749,9 +749,7 @@ mod test {
             3.0,
         );
 
-        // This tests that trailing whitespace is (or is not?) included in the first line width.
-        // hit testing gives back something close to the full width (not line width) of text
-        // layout.
+        // This tests that trailing whitespace is included in the first line width.
         assert_close_to(
             full_layout.hit_test_text_position(5).unwrap().point.x as f64,
             piet_space_width,

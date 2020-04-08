@@ -83,7 +83,7 @@ impl<'a> Text for CairoText<'a> {
 
         let widths = line_metrics.iter().map(|lm| {
             font.0
-                .text_extents(&text[lm.start_offset..lm.end_offset - lm.trailing_whitespace])
+                .text_extents(&text[lm.start_offset..lm.end_offset])
                 .x_advance
         });
 
@@ -138,7 +138,7 @@ impl TextLayout for CairoTextLayout {
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_metrics
             .get(line_number)
-            .map(|lm| &self.text[lm.start_offset..(lm.end_offset - lm.trailing_whitespace)])
+            .map(|lm| &self.text[lm.start_offset..(lm.end_offset)])
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
@@ -185,7 +185,7 @@ impl TextLayout for CairoTextLayout {
 
         // Then for the line, do hit test point
         // Trailing whitespace is remove for the line
-        let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
+        let line = &self.text[lm.start_offset..lm.end_offset];
 
         let mut htp = hit_test_line_point(&self.font, line, &point);
         htp.metrics.text_position += lm.start_offset;
@@ -218,7 +218,7 @@ impl TextLayout for CairoTextLayout {
 
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
-        let line = &self.text[lm.start_offset..lm.end_offset - lm.trailing_whitespace];
+        let line = &self.text[lm.start_offset..lm.end_offset];
         let line_position = text_position - lm.start_offset;
 
         let mut http = hit_test_line_position(&self.font, line, line_position);
@@ -987,10 +987,22 @@ mod test {
             .unwrap();
 
         let layout = text_layout
+            .new_text_layout(&font, &input[0..3], 30.0)
+            .build()
+            .unwrap();
+        let pie_width = layout.width();
+
+        let layout = text_layout
             .new_text_layout(&font, &input[0..4], 25.0)
             .build()
             .unwrap();
         let piet_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..5], 30.0)
+            .build()
+            .unwrap();
+        let piet_space_width = layout.width();
 
         // "text" should be on second line
         let layout = text_layout
@@ -1021,6 +1033,17 @@ mod test {
             .new_text_layout(&font, input, 25.0)
             .build()
             .unwrap();
+
+        println!("lm: {:#?}", full_layout.line_metrics);
+        println!("layout width: {:#?}", full_layout.width());
+
+        println!("'pie': {}", pie_width);
+        println!("'piet': {}", piet_width);
+        println!("'piet ': {}", piet_space_width);
+        println!("'text': {}", text_width);
+        println!("'tex': {}", tex_width);
+        println!("'te': {}", te_width);
+        println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
         let line_zero_baseline = 0.0;
@@ -1053,11 +1076,17 @@ mod test {
             0.0,
             3.0,
         );
-        // This tests that trailing whitespace is not included on the first line width,
-        // even though the text position being tested is trailing whitespace
+
+        assert_close_to(
+            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
+            pie_width,
+            3.0,
+        );
+
+        // This tests that trailing whitespace is included in the first line width.
         assert_close_to(
             full_layout.hit_test_text_position(5).unwrap().point.x as f64,
-            piet_width,
+            piet_space_width,
             3.0,
         );
 
@@ -1113,10 +1142,22 @@ mod test {
             .unwrap();
 
         let layout = text_layout
+            .new_text_layout(&font, &input[0..3], 30.0)
+            .build()
+            .unwrap();
+        let pie_width = layout.width();
+
+        let layout = text_layout
             .new_text_layout(&font, &input[0..4], 25.0)
             .build()
             .unwrap();
         let piet_width = layout.width();
+
+        let layout = text_layout
+            .new_text_layout(&font, &input[0..5], 30.0)
+            .build()
+            .unwrap();
+        let piet_space_width = layout.width();
 
         // "text" should be on second line
         let layout = text_layout
@@ -1147,6 +1188,17 @@ mod test {
             .new_text_layout(&font, input, 25.0)
             .build()
             .unwrap();
+
+        println!("lm: {:#?}", full_layout.line_metrics);
+        println!("layout width: {:#?}", full_layout.width());
+
+        println!("'pie': {}", pie_width);
+        println!("'piet': {}", piet_width);
+        println!("'piet ': {}", piet_space_width);
+        println!("'text': {}", text_width);
+        println!("'tex': {}", tex_width);
+        println!("'te': {}", te_width);
+        println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
         let line_zero_baseline = 0.0;
@@ -1179,11 +1231,17 @@ mod test {
             0.0,
             3.0,
         );
-        // This tests that trailing whitespace is not included on the first line width,
-        // even though the text position being tested is trailing whitespace
+
+        assert_close_to(
+            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
+            pie_width,
+            3.0,
+        );
+
+        // This tests that trailing whitespace is included in the first line width.
         assert_close_to(
             full_layout.hit_test_text_position(5).unwrap().point.x as f64,
-            piet_width,
+            piet_space_width,
             3.0,
         );
 
