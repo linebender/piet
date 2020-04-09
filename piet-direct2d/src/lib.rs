@@ -11,12 +11,14 @@ pub mod dwrite;
 mod text;
 
 use std::borrow::Cow;
+use std::ops::Deref;
 
 use winapi::um::d2d1::{
     D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
     D2D1_DRAW_TEXT_OPTIONS_NONE, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
     D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
 };
+use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
@@ -26,6 +28,7 @@ use piet::{
     RenderContext, StrokeStyle,
 };
 
+use crate::d2d::wrap_unit;
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use crate::dwrite::DwriteFactory;
 pub use crate::text::{D2DFont, D2DFontBuilder, D2DText, D2DTextLayout, D2DTextLayoutBuilder};
@@ -396,6 +399,63 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             dst_rect.into(),
             interp,
         );
+    }
+
+    fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
+        let brush = brush.make_brush(self, || rect);
+        if let Err(e) = self.blurred_rect_raw(rect, blur_radius, brush) {
+            eprintln!("error in drawing blurred rect: {:?}", e);
+        }
+    }
+}
+
+impl<'a> D2DRenderContext<'a> {
+    // This is split out to unify error reporting, as there are lots of opportunities for
+    // errors in resource creation.
+    fn blurred_rect_raw(
+        &mut self,
+        rect: Rect,
+        blur_radius: f64,
+        brush: Cow<Brush>,
+    ) -> Result<(), Error> {
+        let rect_exp = rect.expand();
+        let widthf = rect_exp.width() as f32;
+        let heightf = rect_exp.height() as f32;
+        // Note: we're being fairly dumb about choosing the bitmap size, not taking
+        // dpi scaling into account.
+        let brt = self.rt.create_compatible_render_target(widthf, heightf)?;
+        // Is it necessary to clear, or can we count on it being in a cleared
+        // state when it's created?
+        let clear_color = winapi::um::d2d1::D2D1_COLOR_F {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.0,
+        };
+        let draw_rect = rect_to_rectf(rect - rect_exp.origin().to_vec2());
+        unsafe {
+            brt.BeginDraw();
+            brt.Clear(&clear_color);
+            brt.FillRectangle(&draw_rect, brush.as_raw());
+            let mut tag1 = 0;
+            let mut tag2 = 0;
+            let hr = brt.EndDraw(&mut tag1, &mut tag2);
+            wrap_unit(hr)?;
+        }
+        // It might be slightly cleaner to create the effect on `brt`, but it should
+        // be fine, as it's "compatible".
+        let effect = self.rt.create_blur_effect(blur_radius)?;
+        let bitmap = brt.get_bitmap()?;
+        effect.set_input(0, bitmap.deref());
+        let offset = to_point2f(rect_exp.origin());
+        self.rt.draw_image_effect(
+            &effect,
+            Some(offset),
+            None,
+            D2D1_INTERPOLATION_MODE_LINEAR,
+            D2D1_COMPOSITE_MODE_SOURCE_OVER,
+        );
+        Ok(())
     }
 }
 

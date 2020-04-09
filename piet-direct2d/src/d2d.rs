@@ -16,24 +16,29 @@ use wio::com::ComPtr;
 
 use winapi::shared::dxgi::{IDXGIDevice, IDXGISurface};
 use winapi::shared::dxgiformat::DXGI_FORMAT_R8G8B8A8_UNORM;
+use winapi::shared::minwindef::TRUE;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::d2d1::{
-    D2D1CreateFactory, ID2D1Bitmap, ID2D1Brush, ID2D1Geometry, ID2D1GeometrySink,
-    ID2D1GradientStopCollection, ID2D1Image, ID2D1Layer, ID2D1PathGeometry, ID2D1SolidColorBrush,
-    ID2D1StrokeStyle, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BEZIER_SEGMENT,
-    D2D1_BITMAP_INTERPOLATION_MODE, D2D1_BRUSH_PROPERTIES, D2D1_COLOR_F, D2D1_DEBUG_LEVEL_WARNING,
-    D2D1_DRAW_TEXT_OPTIONS, D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS,
-    D2D1_FACTORY_TYPE_MULTI_THREADED, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
-    D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING,
-    D2D1_GAMMA_2_2, D2D1_GRADIENT_STOP, D2D1_LAYER_OPTIONS_NONE, D2D1_LAYER_PARAMETERS,
+    D2D1CreateFactory, ID2D1Bitmap, ID2D1BitmapRenderTarget, ID2D1Brush, ID2D1Geometry,
+    ID2D1GeometrySink, ID2D1GradientStopCollection, ID2D1Image, ID2D1Layer, ID2D1PathGeometry,
+    ID2D1SolidColorBrush, ID2D1StrokeStyle, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BEZIER_SEGMENT,
+    D2D1_BITMAP_INTERPOLATION_MODE, D2D1_BRUSH_PROPERTIES, D2D1_COLOR_F,
+    D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DEBUG_LEVEL_WARNING, D2D1_DRAW_TEXT_OPTIONS,
+    D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS, D2D1_FACTORY_TYPE_MULTI_THREADED,
+    D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_CLOSED,
+    D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING, D2D1_GAMMA_2_2,
+    D2D1_GRADIENT_STOP, D2D1_LAYER_OPTIONS_NONE, D2D1_LAYER_PARAMETERS,
     D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_MATRIX_3X2_F, D2D1_POINT_2F,
     D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_RECT_F, D2D1_SIZE_F,
     D2D1_SIZE_U, D2D1_STROKE_STYLE_PROPERTIES,
 };
 use winapi::um::d2d1_1::{
-    ID2D1Bitmap1, ID2D1Device, ID2D1DeviceContext, ID2D1Factory1, D2D1_BITMAP_OPTIONS_NONE,
-    D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1, D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
+    ID2D1Bitmap1, ID2D1Device, ID2D1DeviceContext, ID2D1Effect, ID2D1Factory1,
+    D2D1_BITMAP_OPTIONS_NONE, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
+    D2D1_COMPOSITE_MODE, D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_INTERPOLATION_MODE,
+    D2D1_PROPERTY_TYPE_FLOAT,
 };
+use winapi::um::d2d1effects::{CLSID_D2D1GaussianBlur, D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
 
@@ -93,6 +98,12 @@ pub struct Brush(ComPtr<ID2D1Brush>);
 
 pub struct Bitmap(ComPtr<ID2D1Bitmap1>);
 
+pub struct Effect(ComPtr<ID2D1Effect>);
+
+// Note: there may be an opportunity here to combine with the version in
+// piet-common direct2d_back, but the use cases are somewhat different.
+pub struct BitmapRenderTarget(ComPtr<ID2D1BitmapRenderTarget>);
+
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {
         Error::WinapiError(hr)
@@ -139,12 +150,16 @@ where
     }
 }
 
-fn wrap_unit(hr: HRESULT) -> Result<(), Error> {
+pub(crate) fn wrap_unit(hr: HRESULT) -> Result<(), Error> {
     if SUCCEEDED(hr) {
         Ok(())
     } else {
         Err(hr.into())
     }
+}
+
+fn optional<T>(val: &Option<T>) -> *const T {
+    val.as_ref().map(|x| x as *const T).unwrap_or(null())
 }
 
 impl D2DFactory {
@@ -350,8 +365,8 @@ impl DeviceContext {
         unsafe {
             self.0.FillGeometry(
                 geom.0.as_raw() as *mut ID2D1Geometry,
-                brush.0.as_raw(),
-                opacity_brush.map(|b| b.0.as_raw()).unwrap_or(null_mut()),
+                brush.as_raw(),
+                opacity_brush.map(|b| b.as_raw()).unwrap_or(null_mut()),
             );
         }
     }
@@ -366,9 +381,9 @@ impl DeviceContext {
         unsafe {
             self.0.DrawGeometry(
                 geom.0.as_raw() as *mut ID2D1Geometry,
-                brush.0.as_raw(),
+                brush.as_raw(),
                 width,
-                style.map(|b| b.0.as_raw()).unwrap_or(null_mut()),
+                style.map(|ss| ss.0.as_raw()).unwrap_or(null_mut()),
             );
         }
     }
@@ -376,10 +391,7 @@ impl DeviceContext {
     pub(crate) fn create_layer(&mut self, size: Option<D2D1_SIZE_F>) -> Result<Layer, Error> {
         unsafe {
             let mut ptr = null_mut();
-            let hr = self.0.CreateLayer(
-                size.as_ref().map(|r| r as *const _).unwrap_or(null()),
-                &mut ptr,
-            );
+            let hr = self.0.CreateLayer(optional(&size), &mut ptr);
             wrap(hr, ptr, Layer)
         }
     }
@@ -527,7 +539,7 @@ impl DeviceContext {
     ) {
         unsafe {
             self.0
-                .DrawTextLayout(origin, layout.get_raw(), brush.0.as_raw(), options);
+                .DrawTextLayout(origin, layout.get_raw(), brush.as_raw(), options);
         }
     }
 
@@ -549,6 +561,79 @@ impl DeviceContext {
                 interp_mode,
                 src_rect.map(|r| r as *const _).unwrap_or(null()),
             );
+        }
+    }
+
+    // Discussion question: should we be using stddev instead of radius?
+    pub(crate) fn create_blur_effect(&mut self, radius: f64) -> Result<Effect, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self
+                .0
+                .deref()
+                .CreateEffect(&CLSID_D2D1GaussianBlur, &mut ptr);
+            let effect = wrap(hr, ptr, Effect)?;
+            let val = radius as f32;
+            let hr = effect.0.SetValue(
+                D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION,
+                D2D1_PROPERTY_TYPE_FLOAT,
+                &val as *const _ as *const _,
+                std::mem::size_of_val(&val) as u32,
+            );
+            wrap_unit(hr)?;
+            Ok(effect)
+        }
+    }
+
+    // This is basically equivalent to an override of ID2D1DeviceContext::DrawImage method
+    // https://docs.microsoft.com/en-us/windows/win32/api/d2d1_1/nf-d2d1_1-id2d1devicecontext-drawimage(id2d1effect_constd2d1_point_2f_constd2d1_rect_f_d2d1_interpolation_mode_d2d1_composite_mode)
+    pub(crate) fn draw_image_effect(
+        &mut self,
+        effect: &Effect,
+        target_offset: Option<D2D1_POINT_2F>,
+        image_rect: Option<D2D1_RECT_F>,
+        interpolation_mode: D2D1_INTERPOLATION_MODE,
+        composite_mode: D2D1_COMPOSITE_MODE,
+    ) {
+        unsafe {
+            let mut ptr = null_mut();
+            effect.0.GetOutput(&mut ptr);
+            let output = ComPtr::from_raw(ptr);
+            self.0.DrawImage(
+                output.as_raw(),
+                optional(&target_offset),
+                optional(&image_rect),
+                interpolation_mode,
+                composite_mode,
+            );
+        }
+    }
+
+    // Note: the pixel size is not specified. As a potential future optimization,
+    // we can be more sophisticated in choosing a pixel size.
+    pub(crate) fn create_compatible_render_target(
+        &mut self,
+        width_f: f32,
+        height_f: f32,
+    ) -> Result<BitmapRenderTarget, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let size_f = D2D1_SIZE_F {
+                width: width_f,
+                height: height_f,
+            };
+            // It might be slightly cleaner to not specify the format, but we want
+            // premultiplied alpha even if for whatever reason the parent render target
+            // doesn't have that.
+            let format = D2D1_PIXEL_FORMAT {
+                format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+            };
+            let options = D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE;
+            let hr =
+                self.0
+                    .CreateCompatibleRenderTarget(&size_f, null(), &format, options, &mut ptr);
+            wrap(hr, ptr, BitmapRenderTarget)
         }
     }
 }
@@ -640,6 +725,51 @@ impl<'a> GeometrySink<'a> {
 impl Bitmap {
     pub fn get_size(&self) -> D2D1_SIZE_F {
         unsafe { self.0.GetSize() }
+    }
+}
+
+impl Effect {
+    /// Set the effect's input.
+    ///
+    /// Safety concern: is this capturing the lifetime of the input? What happens
+    /// if the input is deallocated before the effect is actually run? This is not
+    /// adequately documented, but we will be conservative in actual usage.
+    pub(crate) fn set_input(&self, index: u32, input: &ID2D1Image) {
+        unsafe {
+            self.0.SetInput(index, input, TRUE);
+        }
+    }
+}
+
+impl BitmapRenderTarget {
+    // Get the bitmap.
+    //
+    // We could return a wrapped object, but it doesn't seem worth it.
+    pub(crate) fn get_bitmap(&self) -> Result<ComPtr<ID2D1Bitmap>, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self.0.GetBitmap(&mut ptr);
+            wrap(hr, ptr, |com_ptr| com_ptr)
+        }
+    }
+}
+
+// Note: this approach is a bit different than other wrapped types; it's basically
+// optimized for usage in unsafe code.
+impl Deref for BitmapRenderTarget {
+    type Target = ID2D1BitmapRenderTarget;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Brush {
+    // This impl is provided for blurred rectangle drawing. There are other ways
+    // to factor this (for example, by making methods available on the bitmap
+    // render target).
+    pub(crate) fn as_raw(&self) -> *mut ID2D1Brush {
+        self.0.as_raw()
     }
 }
 

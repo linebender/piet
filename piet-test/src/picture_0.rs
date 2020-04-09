@@ -43,6 +43,8 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         Ok(())
     })?;
 
+    rc.blurred_rect(Rect::new(155.0, 55.0, 185.0, 85.0), 5.0, &Color::BLACK);
+
     let image_data = make_image_data(256, 256);
     let image = rc.make_image(256, 256, &image_data, ImageFormat::RgbaSeparate)?;
     rc.draw_image(
@@ -74,6 +76,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         .new_text_layout(&font, "Clipped text", std::f64::INFINITY)
         .build()?;
     rc.draw_text(&layout, (80.0, 50.0), &brush);
+
     Ok(())
 }
 

@@ -326,6 +326,20 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     ) {
         draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
     }
+
+    fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
+        let brush = brush.make_brush(self, || rect);
+        self.ctx.set_shadow_blur(blur_radius);
+        let color = match *brush {
+            Brush::Solid(rgba) => format_color(rgba),
+            // Gradients not yet implemented.
+            Brush::Gradient(_) => "#f0f".into(),
+        };
+        self.ctx.set_shadow_color(&color);
+        self.ctx
+            .fill_rect(rect.x0, rect.y0, rect.width(), rect.height());
+        self.ctx.set_shadow_color("none");
+    }
 }
 
 fn draw_image(
@@ -401,22 +415,18 @@ impl WebRenderContext<'_> {
     /// Web canvas is super stateful, and we're trying to have more retained stuff.
     /// This is part of the impedance matching.
     fn set_brush(&mut self, brush: &Brush, is_fill: bool) {
+        let value = self.brush_value(&brush);
+        if is_fill {
+            self.ctx.set_fill_style(&value);
+        } else {
+            self.ctx.set_stroke_style(&value);
+        }
+    }
+
+    fn brush_value(&self, brush: &Brush) -> JsValue {
         match *brush {
-            Brush::Solid(rgba) => {
-                let color_str = format_color(rgba);
-                if is_fill {
-                    self.ctx.set_fill_style(&JsValue::from_str(&color_str));
-                } else {
-                    self.ctx.set_stroke_style(&JsValue::from_str(&color_str));
-                }
-            }
-            Brush::Gradient(ref gradient) => {
-                if is_fill {
-                    self.ctx.set_fill_style(&JsValue::from(gradient));
-                } else {
-                    self.ctx.set_stroke_style(&JsValue::from(gradient));
-                }
-            }
+            Brush::Solid(rgba) => JsValue::from_str(&format_color(rgba)),
+            Brush::Gradient(ref gradient) => JsValue::from(gradient),
         }
     }
 

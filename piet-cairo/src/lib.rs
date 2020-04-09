@@ -3,6 +3,7 @@
 
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
+mod blurred_rect;
 mod text;
 
 use std::borrow::Cow;
@@ -10,7 +11,7 @@ use std::fmt;
 
 use cairo::{BorrowError, Context, Filter, Format, ImageSurface, Matrix, Status, SurfacePattern};
 
-use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape};
+use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
 use piet::{
     new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
@@ -319,6 +320,13 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     ) {
         draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
     }
+
+    fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
+        let brush = brush.make_brush(self, || rect);
+        let (image, origin) = crate::blurred_rect::compute_blurred_rect(rect, blur_radius);
+        self.set_brush(&*brush);
+        self.ctx.mask_surface(&image, origin.x, origin.y);
+    }
 }
 
 fn draw_image<'a>(
@@ -337,12 +345,7 @@ fn draw_image<'a>(
         surface_pattern.set_filter(filter);
         let src_rect = match src_rect {
             Some(src_rect) => src_rect,
-            None => Rect::new(
-                0.0,
-                0.0,
-                image.get_width() as f64,
-                image.get_height() as f64,
-            ),
+            None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
         };
         let scale_x = dst_rect.width() / src_rect.width();
         let scale_y = dst_rect.height() / src_rect.height();
