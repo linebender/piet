@@ -22,7 +22,7 @@ pub fn run() {
         .unwrap()
         .dyn_into::<HtmlCanvasElement>()
         .unwrap();
-    let mut context = canvas
+    let context = canvas
         .get_context("2d")
         .unwrap()
         .unwrap()
@@ -34,7 +34,7 @@ pub fn run() {
     canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
     let _ = context.scale(dpr, dpr);
 
-    let mut piet_context = WebRenderContext::new(&mut context, &window);
+    let mut piet_context = WebRenderContext::new(context, window);
 
     // TODO: make the test picture selectable
     draw_test_picture(&mut piet_context, 0).unwrap();

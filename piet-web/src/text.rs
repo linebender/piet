@@ -439,7 +439,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_basic() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         let input = "piet text!";
@@ -532,7 +532,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_0() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         let input = "é";
@@ -614,7 +614,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_1() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         // Notes on this input:
@@ -713,7 +713,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_0() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         let font = text_layout
@@ -762,7 +762,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_1() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         // base condition, one grapheme
@@ -801,7 +801,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_0() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         // Notes on this input:
@@ -856,7 +856,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_1() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         // this input caused an infinite loop in the binary search when test position
@@ -890,7 +890,7 @@ pub(crate) mod test {
     #[wasm_bindgen_test]
     fn test_multiline_hit_test_text_position_basic() {
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
         let input = "piet  text!";
@@ -1049,7 +1049,7 @@ pub(crate) mod test {
         let input = "piet text most best";
 
         let (window, mut context) = setup_ctx();
-        let ctx = WebRenderContext::new(&mut context, &window);
+        let ctx = WebRenderContext::new(context, window);
         let mut text = ctx;
 
         let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();

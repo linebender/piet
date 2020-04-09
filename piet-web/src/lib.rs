@@ -26,18 +26,20 @@ use piet::{
 pub use text::{WebFont, WebFontBuilder, WebTextLayout, WebTextLayoutBuilder};
 
 pub struct WebRenderContext<'a> {
-    ctx: &'a mut CanvasRenderingContext2d,
+    ctx: CanvasRenderingContext2d,
     /// Used for creating image bitmaps and possibly other resources.
-    window: &'a Window,
+    window: Window,
     err: Result<(), Error>,
+    phantom: std::marker::PhantomData<&'a ()>,
 }
 
 impl<'a> WebRenderContext<'a> {
-    pub fn new(ctx: &'a mut CanvasRenderingContext2d, window: &'a Window) -> WebRenderContext<'a> {
+    pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext<'a> {
         WebRenderContext {
             ctx,
             window,
             err: Ok(()),
+            phantom: std::marker::PhantomData,
         }
     }
 }
@@ -326,9 +328,9 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 }
 
-fn draw_image<'a>(
-    ctx: &mut WebRenderContext<'a>,
-    image: &<WebRenderContext<'a> as RenderContext>::Image,
+fn draw_image(
+    ctx: &mut WebRenderContext,
+    image: &<WebRenderContext as RenderContext>::Image,
     src_rect: Option<Rect>,
     dst_rect: Rect,
     _interp: InterpolationMode,
@@ -393,7 +395,7 @@ fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
     }
 }
 
-impl<'a> WebRenderContext<'a> {
+impl WebRenderContext<'_> {
     /// Set the source pattern to the brush.
     ///
     /// Web canvas is super stateful, and we're trying to have more retained stuff.
