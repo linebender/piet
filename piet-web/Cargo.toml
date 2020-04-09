@@ -17,8 +17,17 @@ piet = { version = "0.0.11", path = "../piet" }
 unicode-segmentation = "1.6.0"
 wasm-bindgen = "0.2.59"
 js-sys = "0.3.36"
+xi-unicode = "0.2.0"
 
 [dependencies.web-sys]
 version = "0.3.36"
 features = ["Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
+    "Document", "Element", "HtmlCanvasElement", "ImageBitmap", "ImageData", "TextMetrics"]
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.0"
+
+[dev-dependencies.web-sys]
+version = "0.3.36"
+features = ["console", "Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
     "Document", "Element", "HtmlCanvasElement", "ImageBitmap", "ImageData", "TextMetrics"]

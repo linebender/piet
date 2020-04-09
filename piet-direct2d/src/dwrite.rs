@@ -51,6 +51,7 @@ pub struct TextLayoutBuilder<'a> {
     height: Option<f32>,
 }
 
+#[derive(Clone)]
 pub struct TextLayout(ComPtr<IDWriteTextLayout>);
 
 impl From<HRESULT> for Error {
@@ -265,6 +266,18 @@ impl TextLayout {
         }
     }
 
+    pub fn set_max_width(&mut self, max_width: f64) -> Result<(), Error> {
+        unsafe {
+            let hr = self.0.SetMaxWidth(max_width as f32);
+
+            if SUCCEEDED(hr) {
+                Ok(())
+            } else {
+                Err(hr.into())
+            }
+        }
+    }
+
     pub fn hit_test_point(&self, point_x: f32, point_y: f32) -> HitTestPoint {
         unsafe {
             let mut trail = 0;
@@ -291,7 +304,7 @@ impl TextLayout {
         position: u32,
         trailing: bool,
     ) -> Option<HitTestTextPosition> {
-        let trailing = if trailing { 0 } else { 1 };
+        let trailing = trailing as i32;
         unsafe {
             let (mut x, mut y) = (0.0, 0.0);
             let mut metrics = std::mem::zeroed();

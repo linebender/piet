@@ -1,34 +1,36 @@
-use piet::{HitTestPoint, TextLayout};
+use piet::HitTestPoint;
 use unicode_segmentation::UnicodeSegmentation;
+use web_sys::CanvasRenderingContext2d;
 
-use crate::WebTextLayout;
+use super::hit_test_line_position;
 
 // currently copied and pasted from cairo backend.
 //
 // However, not cleaning up because cairo and web implementations should diverge soon; and putting this
 // code in `piet` core doesn't really make sense as it's implementation specific.
 //
-impl WebTextLayout {
-    pub(crate) fn get_grapheme_boundaries(
-        &self,
-        grapheme_position: usize,
-    ) -> Option<GraphemeBoundaries> {
-        let mut graphemes = UnicodeSegmentation::grapheme_indices(self.text.as_str(), true);
-        let (text_position, _) = graphemes.nth(grapheme_position)?;
-        let (next_text_position, _) = graphemes.next().unwrap_or_else(|| (self.text.len(), ""));
+/// get grapheme boundaries, intended to act on a line of text, not a full text layout that has
+/// both horizontal and vertial components
+pub(crate) fn get_grapheme_boundaries(
+    ctx: &CanvasRenderingContext2d,
+    text: &str,
+    grapheme_position: usize,
+) -> Option<GraphemeBoundaries> {
+    let mut graphemes = UnicodeSegmentation::grapheme_indices(text, true);
+    let (text_position, _) = graphemes.nth(grapheme_position)?;
+    let (next_text_position, _) = graphemes.next().unwrap_or_else(|| (text.len(), ""));
 
-        let curr_edge = self.hit_test_text_position(text_position)?;
-        let next_edge = self.hit_test_text_position(next_text_position)?;
+    let curr_edge = hit_test_line_position(ctx, text, text_position)?;
+    let next_edge = hit_test_line_position(ctx, text, next_text_position)?;
 
-        let res = GraphemeBoundaries {
-            curr_idx: curr_edge.metrics.text_position,
-            next_idx: next_edge.metrics.text_position,
-            leading: curr_edge.point.x,
-            trailing: next_edge.point.x,
-        };
+    let res = GraphemeBoundaries {
+        curr_idx: curr_edge.metrics.text_position,
+        next_idx: next_edge.metrics.text_position,
+        leading: curr_edge.point.x,
+        trailing: next_edge.point.x,
+    };
 
-        Some(res)
-    }
+    Some(res)
 }
 
 pub(crate) fn point_x_in_grapheme(

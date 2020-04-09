@@ -12,7 +12,12 @@ pub trait Text {
 
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
-    fn new_text_layout(&mut self, font: &Self::Font, text: &str) -> Self::TextLayoutBuilder;
+    fn new_text_layout(
+        &mut self,
+        font: &Self::Font,
+        text: &str,
+        width: f64,
+    ) -> Self::TextLayoutBuilder;
 }
 
 pub trait FontBuilder {
@@ -31,6 +36,29 @@ pub trait TextLayoutBuilder {
 
 /// # Text Layout
 ///
+/// ## Line Breaks
+///
+/// A text layout may be broken into multiple lines in order to fit within a given width. Line breaking is generally done
+/// between words (whitespace-separated).
+///
+/// When resizing the width of the text layout, calling [`update_width`][] on the text layout will
+/// recalculate line breaks and modify in-place.
+///
+/// A line's text and [`LineMetric`][]s can be accessed line-by-line by 0-indexed line number.
+///
+/// Fields on ['LineMetric`] include:
+/// - line start offset from text layout beginning (in UTF-8 code units)
+/// - line end offset from text layout beginning (in UTF-8 code units)
+/// - line trailing whitespace (in UTF-8 code units)
+/// - line's baseline, distance of the baseline from the top of the line
+/// - line height
+/// - cumulative line height (includes previous line heights)
+///
+/// The trailing whitespace distinction is important. Lines are broken at the grapheme boundary after
+/// whitespace, but that whitepace is not necessarily rendered since it's just the trailing
+/// whitepace at the end of a line. Keeping the trailing whitespace data available allows API
+/// consumers to determine their own trailing whitespace strategy.
+///
 /// ## Text Position
 ///
 /// A text position is the offset in the underlying string, defined in utf-8 code units, as is standard for Rust strings.
@@ -41,9 +69,25 @@ pub trait TextLayoutBuilder {
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
 ///
-pub trait TextLayout {
+/// [`update_width`]: trait.TextLayout.html#tymethod.update_width
+/// [`LineMetric`]: struct.LineMetric.html
+///
+pub trait TextLayout: Clone {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
+
+    /// Used for changing the width of a text layout. Given a width, returns a [`TextLayout`]
+    /// struct with recalculated lines and line metrics.
+    fn update_width(&mut self, new_width: f64) -> Result<(), Error>;
+
+    /// Given a line number, return a reference to that line's underlying string.
+    fn line_text(&self, line_number: usize) -> Option<&str>;
+
+    /// Given a line number, return a reference to that line's metrics.
+    fn line_metric(&self, line_number: usize) -> Option<LineMetric>;
+
+    /// Returns total number of lines in the text layout.
+    fn line_count(&self) -> usize;
 
     /// Given a `Point`, determine the corresponding text position.
     ///
@@ -92,6 +136,31 @@ pub trait TextLayout {
     /// [`HitTestTextPosition`]: struct.HitTestTextPosition.html
     /// [`HitTestMetrics`]: struct.HitTestMetrics.html
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition>;
+}
+
+/// Metadata about each line in a text layout.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct LineMetric {
+    /// Index (in code units) of the start of the line, offset from the beginning of the text.
+    pub start_offset: usize,
+
+    /// Line length (in UTF-8 code units), but offset from the beginning of the text. So it's the length
+    /// of this line summed with the lengths of all the lines before it.
+    ///
+    /// Includes trailing whitespace.
+    pub end_offset: usize,
+
+    /// Length in (in UTF-8 code units) of current line's trailing whitespace.
+    pub trailing_whitespace: usize,
+
+    /// Distance of the baseline from the top of the line
+    pub baseline: f64,
+
+    /// Line height
+    pub height: f64,
+
+    /// Cumulative line height (includes previous line heights)
+    pub cumulative_height: f64,
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).

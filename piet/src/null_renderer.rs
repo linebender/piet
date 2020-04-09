@@ -6,7 +6,8 @@ use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
     Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
-    InterpolationMode, IntoBrush, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextLayout,
+    TextLayoutBuilder,
 };
 
 /// A render context that doesn't render.
@@ -31,6 +32,7 @@ pub struct NullFont;
 pub struct NullFontBuilder;
 
 #[doc(hidden)]
+#[derive(Clone)]
 pub struct NullTextLayout;
 #[doc(hidden)]
 pub struct NullTextLayoutBuilder;
@@ -142,7 +144,12 @@ impl Text for NullText {
         NullFontBuilder
     }
 
-    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        _font: &Self::Font,
+        _text: &str,
+        _width: f64,
+    ) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
 }
@@ -168,6 +175,22 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
 impl TextLayout for NullTextLayout {
     fn width(&self) -> f64 {
         42.0
+    }
+
+    fn update_width(&mut self, _new_width: f64) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn line_text(&self, _line_number: usize) -> Option<&str> {
+        None
+    }
+
+    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
+        None
+    }
+
+    fn line_count(&self) -> usize {
+        0
     }
 
     fn hit_test_point(&self, _point: Point) -> HitTestPoint {

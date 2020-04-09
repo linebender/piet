@@ -1,7 +1,7 @@
 //! Text functionality for Piet svg backend
 
 use piet::kurbo::Point;
-use piet::{new_error, Error, ErrorKind, HitTestPoint, HitTestTextPosition};
+use piet::{new_error, Error, ErrorKind, HitTestPoint, HitTestTextPosition, LineMetric};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -25,7 +25,12 @@ impl piet::Text for Text {
         FontBuilder(())
     }
 
-    fn new_text_layout(&mut self, _font: &Self::Font, _text: &str) -> TextLayoutBuilder {
+    fn new_text_layout(
+        &mut self,
+        _font: &Self::Font,
+        _text: &str,
+        _width: f64,
+    ) -> TextLayoutBuilder {
         TextLayoutBuilder(())
     }
 }
@@ -57,11 +62,32 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
 }
 
 /// SVG text layout (unimplemented)
+#[derive(Clone)]
 pub struct TextLayout(());
 
 impl piet::TextLayout for TextLayout {
     fn width(&self) -> f64 {
         unimplemented!()
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn update_width(&mut self, _new_width: f64) -> Result<()> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_text(&self, _line_number: usize) -> Option<&str> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
+        unimplemented!();
+    }
+
+    #[allow(clippy::unimplemented)]
+    fn line_count(&self) -> usize {
+        unimplemented!();
     }
 
     fn hit_test_point(&self, _point: Point) -> HitTestPoint {
