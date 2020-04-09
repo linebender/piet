@@ -7,7 +7,7 @@ use piet::{Color, RenderContext};
 #[cfg(not(target_arch = "wasm32"))]
 use piet_common::Device;
 
-/// Feature "png" needed for save_to_file() and it's disabled by default for optionsl dependencies
+/// Feature "png" needed for save_to_file() and it's disabled by default for optional dependencies
 /// cargo run --example png --features png
 fn main() {
     #[cfg(not(target_arch = "wasm32"))]
@@ -21,6 +21,7 @@ fn main() {
         let brush = rc.solid_brush(Color::rgb8(0x00, 0x00, 0x80));
         rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0);
         rc.finish().unwrap();
+        std::mem::drop(rc);
 
         bitmap
             .save_to_file("temp-image.png")

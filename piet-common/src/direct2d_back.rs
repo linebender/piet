@@ -240,6 +240,8 @@ mod tests {
         let mut target = device.bitmap_target(640, 480, 1.0).unwrap();
         let mut piet = target.render_context();
         piet.clip(Rect::ZERO);
+        piet.finish().unwrap();
+        std::mem::drop(piet);
         target.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
     }
 }

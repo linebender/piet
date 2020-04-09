@@ -85,6 +85,15 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
             self.rt.pop_layer();
         }
     }
+
+    /// Check whether drawing operations have finished.
+    ///
+    /// Clients should call this before extracting or presenting the contents of
+    /// the drawing surface.
+    pub fn assert_finished(&mut self) {
+        assert!(self.ctx_stack.last().unwrap().n_layers_pop == 0,
+            "Need to call finish() before using the contents");
+    }
 }
 
 // The setting of 1e-3 is extremely conservative (absolutely no
@@ -456,6 +465,12 @@ impl<'a> D2DRenderContext<'a> {
             D2D1_COMPOSITE_MODE_SOURCE_OVER,
         );
         Ok(())
+    }
+}
+
+impl<'a> Drop for D2DRenderContext<'a> {
+    fn drop(&mut self) {
+        assert!(self.ctx_stack.is_empty(), "Render context dropped without finish() call");
     }
 }
 
