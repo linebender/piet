@@ -183,7 +183,7 @@ impl Color {
     }
 
     /// Convert a color value to four f64 values, each in the range 0.0 to 1.0.
-    pub fn as_rgba_f64(rgba: &Color) -> (f64, f64, f64, f64) {
+    pub fn as_rgba(rgba: &Color) -> (f64, f64, f64, f64) {
         let rgba = rgba.as_rgba_u32();
         (
             (rgba >> 24) as f64 / 255.0,
