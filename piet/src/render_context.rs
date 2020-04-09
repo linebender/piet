@@ -204,14 +204,15 @@ where
     );
 
     /// Draw a rectangle with Gaussian blur.
+    ///
+    /// The blur radius is sometimes referred to as the "standard deviation" of
+    /// the blur.
     fn blurred_rect(
         &mut self,
         rect: Rect,
         blur_radius: f64,
         brush: &impl IntoBrush<Self>,
-    ) {
-        unimplemented!()
-    }
+    );
 
     /// Returns the transformations currently applied to the context.
     fn current_transform(&self) -> Affine;

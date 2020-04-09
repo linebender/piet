@@ -275,6 +275,15 @@ impl piet::RenderContext for RenderContext {
     ) {
         draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
     }
+
+    fn blurred_rect(
+        &mut self,
+        _rect: Rect,
+        _blur_radius: f64,
+        _brush: &impl IntoBrush<Self>,
+    ) {
+        unimplemented!()
+    }
 }
 
 fn draw_image(
