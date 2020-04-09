@@ -221,11 +221,27 @@ impl<'a> Drop for BitmapTarget<'a> {
     }
 }
 
+#[cfg(test)]
 mod tests {
+    use super::*;
+    use piet::kurbo::*;
+    use piet::*;
+
     #[test]
     fn bitmap_target_drop() {
-        let mut device = crate::Device::new().unwrap();
-        let bitmap_target = device.bitmap_target(640, 480, 1.0);
+        let mut device = Device::new().unwrap();
+        let bitmap_target = device.bitmap_target(640, 480, 1.0).unwrap();
         std::mem::drop(bitmap_target);
+    }
+
+    #[test]
+    fn into_raw_pixels() {
+        let mut device = Device::new().unwrap();
+        let mut target = device.bitmap_target(640, 480, 1.0).unwrap();
+        let mut piet = target.render_context();
+        piet.clip(Rect::ZERO);
+        piet.finish().unwrap();
+        std::mem::drop(piet);
+        target.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
     }
 }
