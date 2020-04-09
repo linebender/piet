@@ -370,9 +370,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             // This should be unreachable, we caught it above.
             _ => return Err(new_error(ErrorKind::NotSupported)),
         };
-        let bitmap = self
-            .rt
-            .create_bitmap(width, height, &buf, alpha_mode)?;
+        let bitmap = self.rt.create_bitmap(width, height, &buf, alpha_mode)?;
         Ok(bitmap)
     }
 

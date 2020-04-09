@@ -336,7 +336,8 @@ impl<'a> RenderContext for WebRenderContext<'a> {
             Brush::Gradient(_) => "#f0f".into(),
         };
         self.ctx.set_shadow_color(&color);
-        self.ctx.fill_rect(rect.x0, rect.y0, rect.width(), rect.height());
+        self.ctx
+            .fill_rect(rect.x0, rect.y0, rect.width(), rect.height());
         self.ctx.set_shadow_color("none");
     }
 }
@@ -424,12 +425,8 @@ impl WebRenderContext<'_> {
 
     fn brush_value(&self, brush: &Brush) -> JsValue {
         match *brush {
-            Brush::Solid(rgba) => {
-                JsValue::from_str(&format_color(rgba))
-            }
-            Brush::Gradient(ref gradient) => {
-                JsValue::from(gradient)
-            }
+            Brush::Solid(rgba) => JsValue::from_str(&format_color(rgba)),
+            Brush::Gradient(ref gradient) => JsValue::from(gradient),
         }
     }
 

@@ -127,13 +127,7 @@ impl RenderContext for NullRenderContext {
     ) {
     }
 
-    fn blurred_rect(
-        &mut self,
-        _rect: Rect,
-        _blur_radius: f64,
-        _brush: &impl IntoBrush<Self>,
-    ) {
-    }
+    fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {}
 
     fn current_transform(&self) -> Affine {
         Affine::default()
