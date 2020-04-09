@@ -18,8 +18,6 @@ use piet::{
     LineCap, LineJoin, RenderContext, StrokeStyle,
 };
 
-use crate::blurred_rect::compute_blurred_rect;
-
 pub use crate::text::{
     CairoFont, CairoFontBuilder, CairoText, CairoTextLayout, CairoTextLayoutBuilder,
 };
@@ -325,7 +323,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
-        let (image, origin) = compute_blurred_rect(rect, blur_radius);
+        let (image, origin) = crate::blurred_rect::compute_blurred_rect(rect, blur_radius);
         self.set_brush(&*brush);
         self.ctx.mask_surface(&image, origin.x, origin.y);
     }

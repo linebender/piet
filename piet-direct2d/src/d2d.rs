@@ -100,7 +100,8 @@ pub struct Bitmap(ComPtr<ID2D1Bitmap1>);
 
 pub struct Effect(ComPtr<ID2D1Effect>);
 
-// TODO: consider combining with piet-common direct2d_back version.
+// Note: there may be an opportunity here to combine with the version in
+// piet-common direct2d_back, but the use cases are somewhat different.
 pub struct BitmapRenderTarget(ComPtr<ID2D1BitmapRenderTarget>);
 
 impl From<HRESULT> for Error {

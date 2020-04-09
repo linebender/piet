@@ -13,7 +13,7 @@ use piet::kurbo::{Point, Rect};
 /// Extent to which to expand the blur.
 const BLUR_EXTENT: f64 = 2.5;
 
-pub fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
+pub(crate) fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
     let radius_recip = radius.recip();
     let xmax = rect.width() * radius_recip;
     let ymax = rect.height() * radius_recip;
@@ -30,7 +30,7 @@ pub fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
             (255.0 * 0.25) * (compute_erf7(x) + compute_erf7(xmax - x))
         })
         .collect::<Vec<_>>();
-    // TODO: don't panic on error
+    // TODO: maybe not panic on error (but likely to happen only in extreme cases such as OOM)
     let mut image = ImageSurface::create(Format::A8, width as i32, height as i32).unwrap();
     let stride = image.get_stride() as usize;
     {
