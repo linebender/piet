@@ -289,6 +289,9 @@ mod test {
     }
 
     #[test]
+    #[cfg(target_os = "linux")]
+    // TODO determine if we need to test macos too for this. I don't think it's a big deal right
+    // now, just wanted to make sure hard breaks work.
     fn test_basic_calculate_line_metrics_hard_break() {
         // Setup input, width, and expected
         let input = "piet\ntext most\nbest";

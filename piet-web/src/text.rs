@@ -438,7 +438,7 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_basic() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -531,7 +531,7 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_0() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -613,7 +613,7 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_1() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -712,7 +712,7 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_0() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -761,7 +761,7 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_1() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -800,7 +800,7 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_0() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -855,7 +855,7 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_1() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -889,7 +889,7 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     fn test_multiline_hit_test_text_position_basic() {
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text_layout = ctx;
 
@@ -1048,7 +1048,7 @@ pub(crate) mod test {
     fn test_multiline_hit_test_point_basic() {
         let input = "piet text most best";
 
-        let (window, mut context) = setup_ctx();
+        let (window, context) = setup_ctx();
         let ctx = WebRenderContext::new(context, window);
         let mut text = ctx;
 
