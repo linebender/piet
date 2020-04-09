@@ -1,6 +1,6 @@
 [package]
 name = "piet-common"
-version = "0.0.11"
+version = "0.0.12"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Selection of a single preferred back-end for piet"
 license = "MIT/Apache-2.0"
@@ -15,19 +15,19 @@ web = ["piet-web"]
 
 [dependencies]
 cfg-if = "0.1.10"
-piet = { version = "0.0.11", path = "../piet" }
-piet-cairo = { version = "0.0.11", path = "../piet-cairo", optional = true }
-piet-direct2d = { version = "0.0.11", path = "../piet-direct2d", optional = true }
-piet-web = { version = "0.0.11", path = "../piet-web", optional = true }
+piet = { version = "0.0.12", path = "../piet" }
+piet-cairo = { version = "0.0.12", path = "../piet-cairo", optional = true }
+piet-direct2d = { version = "0.0.12", path = "../piet-direct2d", optional = true }
+piet-web = { version = "0.0.12", path = "../piet-web", optional = true }
 cairo-rs = { version = "0.8.1", default_features = false, optional = true}
 
 [target.'cfg(not(any(target_arch="wasm32", target_os="windows")))'.dependencies]
-piet-cairo = { version = "0.0.11", path = "../piet-cairo" }
+piet-cairo = { version = "0.0.12", path = "../piet-cairo" }
 cairo-rs = { version = "0.8.1", default_features = false}
 png = { version = "0.16.1", optional = true }
 
 [target.'cfg(target_os="windows")'.dependencies]
-piet-direct2d = { version = "0.0.11", path = "../piet-direct2d" }
+piet-direct2d = { version = "0.0.12", path = "../piet-direct2d" }
 direct2d = "0.2.0"
 directwrite = "0.1.4"
 dxgi = "0.1.7"
@@ -35,4 +35,4 @@ direct3d11 = "0.1.7"
 png = { version = "0.16.1", optional = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-piet-web = { version = "0.0.11", path = "../piet-web" }
+piet-web = { version = "0.0.12", path = "../piet-web" }
