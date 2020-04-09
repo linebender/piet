@@ -56,6 +56,7 @@ fn main() {
     // TODO: report errors more nicely than these unwraps.
     draw_test_picture(&mut piet_context, test_picture_number).unwrap();
     piet_context.finish().unwrap();
+    std::mem::drop(piet_context);
     context.end_draw().unwrap();
 
     let temp_texture = d3d

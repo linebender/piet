@@ -91,8 +91,10 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
     /// Clients should call this before extracting or presenting the contents of
     /// the drawing surface.
     pub fn assert_finished(&mut self) {
-        assert!(self.ctx_stack.last().unwrap().n_layers_pop == 0,
-            "Need to call finish() before using the contents");
+        assert!(
+            self.ctx_stack.last().unwrap().n_layers_pop == 0,
+            "Need to call finish() before using the contents"
+        );
     }
 }
 
@@ -470,7 +472,10 @@ impl<'a> D2DRenderContext<'a> {
 
 impl<'a> Drop for D2DRenderContext<'a> {
     fn drop(&mut self) {
-        assert!(self.ctx_stack.is_empty(), "Render context dropped without finish() call");
+        assert!(
+            self.ctx_stack.is_empty(),
+            "Render context dropped without finish() call"
+        );
     }
 }
 
