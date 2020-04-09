@@ -188,19 +188,23 @@ impl TextLayout for WebTextLayout {
         }
 
         // get the line metric
+        let mut is_y_inside = true;
         let mut lm = self
             .line_metrics
             .iter()
             .skip_while(|l| l.cumulative_height - first_baseline < point.y);
-        let lm = match lm.next() {
-            Some(lm) => lm,
-            None => {
-                // this means it went over on y axis, so it returns last text position
-                let mut htp = HitTestPoint::default();
-                htp.metrics.text_position = self.text.len();
-                return htp;
-            }
-        };
+        let lm = lm
+            .next()
+            .or_else(|| {
+                // This means it went over the last line, so return the last line.
+                is_y_inside = false;
+                self.line_metrics.last()
+            })
+            .cloned() // TODO remove this clone?
+            .unwrap_or_else(|| {
+                is_y_inside = false;
+                Default::default()
+            });
 
         // Then for the line, do hit test point
         // Trailing whitespace is remove for the line
@@ -208,6 +212,11 @@ impl TextLayout for WebTextLayout {
 
         let mut htp = hit_test_line_point(&self.ctx, line, &point);
         htp.metrics.text_position += lm.start_offset;
+
+        if !is_y_inside {
+            htp.is_inside = false;
+        }
+
         htp
     }
 
@@ -1071,7 +1080,23 @@ pub(crate) mod test {
         assert_eq!(pt.metrics.text_position, 10);
         let pt = layout.hit_test_point(Point::new(1.0, 38.0));
         assert_eq!(pt.metrics.text_position, 15);
-        let pt = layout.hit_test_point(Point::new(1.0, 55.0)); // over
+
+        // over on y axis, but x still affects the text position
+        let best_layout = text
+            .new_text_layout(&font, "best", std::f64::INFINITY)
+            .build()
+            .unwrap();
+        console::log_1(&format!("layout width: {:#?}", best_layout.width()).into()); // 26.0...
+
+        let pt = layout.hit_test_point(Point::new(1.0, 55.0));
+        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(25.0, 55.0));
+        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(27.0, 55.0));
         assert_eq!(pt.metrics.text_position, 19);
         assert_eq!(pt.is_inside, false);
     }
