@@ -183,12 +183,12 @@ impl TextLayout for WebTextLayout {
         let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
 
         // check out of bounds above top
-        if point.y < -1.0 * first_baseline {
-            return HitTestPoint::default();
-        }
-
-        // get the line metric
+        // out of bounds on bottom during iteration
         let mut is_y_inside = true;
+        if point.y < -1.0 * first_baseline {
+            is_y_inside = false
+        };
+
         let mut lm = self
             .line_metrics
             .iter()
@@ -1066,9 +1066,6 @@ pub(crate) mod test {
         console::log_1(&format!("lm 3: {:?}", layout.line_metric(3)).into());
 
         // approx 13.5 baseline, and 17 height
-        let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         assert_eq!(pt.metrics.text_position, 0);
         assert_eq!(pt.is_inside, true);
@@ -1086,7 +1083,7 @@ pub(crate) mod test {
             .new_text_layout(&font, "best", std::f64::INFINITY)
             .build()
             .unwrap();
-        console::log_1(&format!("layout width: {:#?}", best_layout.width()).into()); // 26.0...
+        console::log_1(&format!("layout width: {:#?}", best_layout.width()).into()); // 22.55...
 
         let pt = layout.hit_test_point(Point::new(1.0, 55.0));
         assert_eq!(pt.metrics.text_position, 15);
@@ -1098,6 +1095,25 @@ pub(crate) mod test {
 
         let pt = layout.hit_test_point(Point::new(27.0, 55.0));
         assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
+
+        // under
+        let piet_layout = text
+            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .build()
+            .unwrap();
+        console::log_1(&format!("layout width: {:#?}", piet_layout.width()).into()); // 24.49...
+
+        let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(25.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
         assert_eq!(pt.is_inside, false);
     }
 }

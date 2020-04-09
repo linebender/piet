@@ -847,6 +847,25 @@ mod test {
         let pt = layout.hit_test_point(Point::new(24.0, 52.0));
         assert_eq!(pt.metrics.text_position, 19);
         assert_eq!(pt.is_inside, false);
+
+        // under
+        let piet_layout = text
+            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .build()
+            .unwrap();
+        println!("layout width: {:#?}", piet_layout.width()); // 23.58...
+
+        let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(23.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_inside, false);
     }
 
     #[test]

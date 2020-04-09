@@ -164,12 +164,13 @@ impl TextLayout for CairoTextLayout {
         let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
 
         // check out of bounds above top
+        // out of bounds on bottom during iteration
+        let mut is_y_inside = true;
         if point.y < -1.0 * first_baseline {
-            return HitTestPoint::default();
-        }
+            is_y_inside = false
+        };
 
         // get the line metric
-        let mut is_y_inside = true;
         let mut lm = self
             .line_metrics
             .iter()
@@ -1309,9 +1310,6 @@ mod test {
         println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 27.9999)
         println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 41.99999)
 
-        let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         assert_eq!(pt.metrics.text_position, 0);
         assert_eq!(pt.is_inside, true);
@@ -1341,6 +1339,25 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(27.0, 46.0));
         assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
+
+        // under
+        let piet_layout = text
+            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .build()
+            .unwrap();
+        println!("layout width: {:#?}", piet_layout.width()); // 27.0...
+
+        let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(26.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(28.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
         assert_eq!(pt.is_inside, false);
     }
 
@@ -1359,9 +1376,6 @@ mod test {
         println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 24.0)
         println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 36.0)
 
-        let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         assert_eq!(pt.metrics.text_position, 0);
         assert_eq!(pt.is_inside, true);
@@ -1391,6 +1405,25 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(27.0, 46.0));
         assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.is_inside, false);
+
+        // under
+        let piet_layout = text
+            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .build()
+            .unwrap();
+        println!("layout width: {:#?}", piet_layout.width()); // ???
+
+        let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(25.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.is_inside, false);
+
+        let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
+        assert_eq!(pt.metrics.text_position, 5);
         assert_eq!(pt.is_inside, false);
     }
 }
