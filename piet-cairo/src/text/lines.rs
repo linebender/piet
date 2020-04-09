@@ -289,6 +289,59 @@ mod test {
     }
 
     #[test]
+    fn test_basic_calculate_line_metrics_hard_break() {
+        // Setup input, width, and expected
+        let input = "piet\ntext most\nbest";
+
+        use xi_unicode::LineBreakIterator;
+        for (offset, line_break) in LineBreakIterator::new(input) {
+            println!("{}:{}", offset, line_break);
+        }
+
+        let width_small = 25.0;
+        let expected_small = vec![
+            LineMetric {
+                start_offset: 0,
+                end_offset: 5,
+                trailing_whitespace: 1,
+                cumulative_height: 14.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+            LineMetric {
+                start_offset: 5,
+                end_offset: 10,
+                trailing_whitespace: 1,
+                cumulative_height: 28.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+            LineMetric {
+                start_offset: 10,
+                end_offset: 15,
+                trailing_whitespace: 1,
+                cumulative_height: 42.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+            LineMetric {
+                start_offset: 15,
+                end_offset: 19,
+                trailing_whitespace: 0,
+                cumulative_height: 56.0,
+                baseline: 12.0,
+                height: 14.0,
+            },
+        ];
+
+        // setup cairo layout
+        let mut text = CairoText::new();
+        let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
+
+        test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
+    }
+
+    #[test]
     fn test_count_trailing_whitespace() {
         assert_eq!(count_trailing_whitespace(" 1 "), 1);
         assert_eq!(count_trailing_whitespace(" 2  "), 2);
