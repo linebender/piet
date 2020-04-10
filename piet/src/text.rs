@@ -16,7 +16,7 @@ pub trait Text {
         &mut self,
         font: &Self::Font,
         text: &str,
-        width: f64,
+        width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder;
 }
 
@@ -76,9 +76,11 @@ pub trait TextLayout: Clone {
     /// Measure the advance width of the text.
     fn width(&self) -> f64;
 
-    /// Used for changing the width of a text layout. Given a width, returns a [`TextLayout`]
-    /// struct with recalculated lines and line metrics.
-    fn update_width(&mut self, new_width: f64) -> Result<(), Error>;
+    /// Change the width of this `TextLayout`.
+    ///
+    /// This may be an `f64`, or `None` if this layout is not constrained;
+    /// `None` is equivalent to `std::f64::INFINITY`.
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error>;
 
     /// Given a line number, return a reference to that line's underlying string.
     fn line_text(&self, line_number: usize) -> Option<&str>;

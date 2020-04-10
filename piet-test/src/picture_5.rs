@@ -12,7 +12,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
 
     let layout = rc
         .text()
-        .new_text_layout(&font, "piet text!", std::f64::INFINITY)
+        .new_text_layout(&font, "piet text!", None)
         .build()?;
 
     let width = layout.width();

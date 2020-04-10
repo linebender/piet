@@ -29,7 +29,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let font = rc.text().new_font_by_name("Segoe UI", 12.0).build()?;
     let layout = rc
         .text()
-        .new_text_layout(&font, "Hello piet!", std::f64::INFINITY)
+        .new_text_layout(&font, "Hello piet!", None)
         .build()?;
     let w: f64 = layout.width();
     let brush = rc.solid_brush(Color::rgba8(0x80, 0x00, 0x00, 0xC0));
@@ -73,7 +73,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clip(clip_path);
     let layout = rc
         .text()
-        .new_text_layout(&font, "Clipped text", std::f64::INFINITY)
+        .new_text_layout(&font, "Clipped text", None)
         .build()?;
     rc.draw_text(&layout, (80.0, 50.0), &brush);
 

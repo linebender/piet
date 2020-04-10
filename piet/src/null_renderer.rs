@@ -150,7 +150,7 @@ impl Text for NullText {
         &mut self,
         _font: &Self::Font,
         _text: &str,
-        _width: f64,
+        _width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
@@ -179,7 +179,7 @@ impl TextLayout for NullTextLayout {
         42.0
     }
 
-    fn update_width(&mut self, _new_width: f64) -> Result<(), Error> {
+    fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         Ok(())
     }
 

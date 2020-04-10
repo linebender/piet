@@ -29,7 +29,7 @@ impl piet::Text for Text {
         &mut self,
         _font: &Self::Font,
         _text: &str,
-        _width: f64,
+        _width: impl Into<Option<f64>>,
     ) -> TextLayoutBuilder {
         TextLayoutBuilder(())
     }
@@ -71,7 +71,7 @@ impl piet::TextLayout for TextLayout {
     }
 
     #[allow(clippy::unimplemented)]
-    fn update_width(&mut self, _new_width: f64) -> Result<()> {
+    fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<()> {
         unimplemented!();
     }
 

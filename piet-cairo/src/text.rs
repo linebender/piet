@@ -76,9 +76,11 @@ impl<'a> Text for CairoText<'a> {
         &mut self,
         font: &Self::Font,
         text: &str,
-        width: f64,
+        width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
         // TODO Should probably move the calculations to `build` step
+        let width = width.into().unwrap_or(std::f64::INFINITY);
+
         let line_metrics = lines::calculate_line_metrics(text, &font.0, width);
 
         let widths = line_metrics.iter().map(|lm| {
@@ -87,7 +89,6 @@ impl<'a> Text for CairoText<'a> {
                 .x_advance
         });
 
-        // TODO default width 0?
         let width = widths.fold(0.0, |a: f64, b| a.max(b));
 
         let text_layout = CairoTextLayout {
@@ -129,9 +130,20 @@ impl TextLayout for CairoTextLayout {
         self.width
     }
 
-    fn update_width(&mut self, new_width: f64) -> Result<(), Error> {
-        self.width = new_width;
+    // TODO refactor this to use same code as new_text_layout
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+
         self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
+
+        let widths = self.line_metrics.iter().map(|lm| {
+            self.font
+                .text_extents(&self.text[lm.start_offset..lm.end_offset])
+                .x_advance
+        });
+
+        self.width = widths.fold(0.0, |a: f64, b| a.max(b));
+
         Ok(())
     }
 
