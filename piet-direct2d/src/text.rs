@@ -70,8 +70,10 @@ impl<'a> Text for D2DText<'a> {
         &mut self,
         font: &Self::Font,
         text: &str,
-        width: f64,
+        width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
+        let width = width.into().unwrap_or(std::f64::INFINITY);
+
         D2DTextLayoutBuilder {
             text: text.to_owned(),
             builder: dwrite::TextLayoutBuilder::new(self.dwrite)
@@ -116,7 +118,9 @@ impl TextLayout for D2DTextLayout {
 
     /// given a new max width, update width of text layout to fit within the max width
     // TODO add this doc to trait method? or is this windows specific?
-    fn update_width(&mut self, new_width: f64) -> Result<(), Error> {
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+
         self.layout.set_max_width(new_width)?;
         self.line_metrics = fetch_line_metrics(&self.layout);
 
@@ -273,37 +277,37 @@ mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
+            .new_text_layout(&font, &input[0..4], None)
             .build()
             .unwrap();
         let piet_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
+            .new_text_layout(&font, &input[0..3], None)
             .build()
             .unwrap();
         let pie_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
+            .new_text_layout(&font, &input[0..2], None)
             .build()
             .unwrap();
         let pi_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
+            .new_text_layout(&font, &input[0..1], None)
             .build()
             .unwrap();
         let p_width = layout.width();
 
         let layout = text_layout
-            .new_text_layout(&font, "", std::f64::INFINITY)
+            .new_text_layout(&font, "", None)
             .build()
             .unwrap();
         let null_width = layout.width();
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(&font, input, None)
             .build()
             .unwrap();
         let full_width = full_layout.width();
@@ -353,7 +357,7 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(&font, input, None)
             .build()
             .unwrap();
 
@@ -369,7 +373,7 @@ mod test {
 
         //let mut text_layout = D2DText::new();
         //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
-        //let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
+        //let layout = text_layout.new_text_layout(&font, input, None).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
         //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
@@ -385,7 +389,7 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(&font, input, None)
             .build()
             .unwrap();
 
@@ -426,20 +430,20 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(&font, input, None)
             .build()
             .unwrap();
 
         let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
+            .new_text_layout(&font, &input[0..2], None)
             .build()
             .unwrap();
         let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9], std::f64::INFINITY)
+            .new_text_layout(&font, &input[0..9], None)
             .build()
             .unwrap();
         let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10], std::f64::INFINITY)
+            .new_text_layout(&font, &input[0..10], None)
             .build()
             .unwrap();
 
@@ -507,7 +511,7 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
+            .new_text_layout(&font, "piet text!", None)
             .build()
             .unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 20.302734375
@@ -555,7 +559,7 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(&font, input, None)
             .build()
             .unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.275390625
@@ -830,10 +834,7 @@ mod test {
         assert_eq!(pt.metrics.text_position, 15);
 
         // over on y axis, but x still affects the text position
-        let best_layout = text
-            .new_text_layout(&font, "best", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let best_layout = text.new_text_layout(&font, "best", None).build().unwrap();
         println!("layout width: {:#?}", best_layout.width()); // 22.48...
 
         let pt = layout.hit_test_point(Point::new(1.0, 52.0));
@@ -849,10 +850,7 @@ mod test {
         assert_eq!(pt.is_inside, false);
 
         // under
-        let piet_layout = text
-            .new_text_layout(&font, "piet ", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let piet_layout = text.new_text_layout(&font, "piet ", None).build().unwrap();
         println!("layout width: {:#?}", piet_layout.width()); // 23.58...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under

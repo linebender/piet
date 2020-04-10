@@ -76,8 +76,10 @@ impl<'a> Text for WebRenderContext<'a> {
         &mut self,
         font: &Self::Font,
         text: &str,
-        width: f64,
+        width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
+        let width = width.into().unwrap_or(std::f64::INFINITY);
+
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
@@ -128,7 +130,6 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
             .iter()
             .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx));
 
-        // TODO default width 0?
         let width = widths.fold(0.0, |a: f64, b| a.max(b));
 
         Ok(WebTextLayout {
@@ -147,10 +148,20 @@ impl TextLayout for WebTextLayout {
         self.width
     }
 
-    fn update_width(&mut self, new_width: f64) -> Result<(), Error> {
-        self.width = new_width;
+    // TODO refactor this to use same code as build
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+
         self.line_metrics =
             lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
+
+        let widths = self
+            .line_metrics
+            .iter()
+            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx));
+
+        self.width = widths.fold(0.0, |a: f64, b| a.max(b));
+
         Ok(())
     }
 
