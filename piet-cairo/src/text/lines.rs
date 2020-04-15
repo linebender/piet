@@ -210,6 +210,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(target_os = "linux")]
     fn test_hard_soft_break_end() {
         // This tests that the hard break is not handled before the soft break when the hard break
         // exceeds text layout width. In this case, it's the last line `best text!` which is too
@@ -219,6 +220,37 @@ mod test {
 
         let mut text = CairoText::new();
         let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let line_metrics = calculate_line_metrics(input, &font.0, width);
+
+        // Some print debugging, in case font size/width needs to be changed in future because of
+        // brittle tests
+        println!(
+            "{}: \"piet text \"",
+            font.0.text_extents("piet text ").x_advance
+        );
+        for lm in &line_metrics {
+            let line_text = &input[lm.start_offset..lm.end_offset];
+            println!(
+                "{}: {:?}",
+                font.0.text_extents(line_text).x_advance,
+                line_text
+            );
+        }
+
+        assert_eq!(line_metrics.len(), 5);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn test_hard_soft_break_end() {
+        // This tests that the hard break is not handled before the soft break when the hard break
+        // exceeds text layout width. In this case, it's the last line `best text!` which is too
+        // long. The line should be soft-broken at the space before the EOL breaks.
+        let input = "piet text is the best text!";
+        let width = 50.0;
+
+        let mut text = CairoText::new();
+        let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();
         let line_metrics = calculate_line_metrics(input, &font.0, width);
 
         // Some print debugging, in case font size/width needs to be changed in future because of
