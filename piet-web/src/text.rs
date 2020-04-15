@@ -36,7 +36,7 @@ pub struct WebTextLayout {
     pub text: String,
 
     // Calculated on build
-    line_metrics: Vec<LineMetric>,
+    pub(crate) line_metrics: Vec<LineMetric>,
     width: f64,
 }
 

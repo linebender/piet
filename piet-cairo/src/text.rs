@@ -41,7 +41,7 @@ pub struct CairoTextLayout {
     pub text: String,
 
     // currently calculated on build
-    line_metrics: Vec<LineMetric>,
+    pub(crate) line_metrics: Vec<LineMetric>,
 }
 
 pub struct CairoTextLayoutBuilder(CairoTextLayout);
