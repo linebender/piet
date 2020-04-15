@@ -117,6 +117,35 @@ pub(crate) fn calculate_line_metrics(
             }
         } else {
             // this section is for hard breaks
+
+            // even when there's a hard break, need to check first to see if width is too wide. If
+            // it is, need to break at the previous soft break first.
+            let curr_str = &text[line_start..line_break];
+            let curr_width = text_width(curr_str, ctx);
+
+            if curr_width > width {
+                // if line is too wide but can't break down anymore, just skip to the next
+                // add_line_metric. But here, since prev_break is not equal to line_start, that
+                // means there another break opportunity so take it.
+                //
+                // TODO consider refactoring to make more parallel with above soft break
+                // comparison.
+                if prev_break != line_start {
+                    add_line_metric(
+                        text,
+                        line_start,
+                        prev_break,
+                        baseline,
+                        height,
+                        &mut cumulative_height,
+                        &mut line_metrics,
+                    );
+
+                    line_start = prev_break;
+                }
+            }
+
+            // now do the hard break
             add_line_metric(
                 text,
                 line_start,
