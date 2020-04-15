@@ -103,6 +103,35 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
             }
         } else {
             // this section is for hard breaks
+
+            // even when there's a hard break, need to check first to see if width is too wide. If
+            // it is, need to break at the previous soft break first.
+            let curr_str = &text[line_start..line_break];
+            let curr_width = font.text_extents(curr_str).x_advance;
+
+            if curr_width > width {
+                // if line is too wide but can't break down anymore, just skip to the next
+                // add_line_metric. But here, since prev_break is not equal to line_start, that
+                // means there another break opportunity so take it.
+                //
+                // TODO consider refactoring to make more parallel with above soft break
+                // comparison.
+                if prev_break != line_start {
+                    add_line_metric(
+                        text,
+                        line_start,
+                        prev_break,
+                        baseline,
+                        height,
+                        &mut cumulative_height,
+                        &mut line_metrics,
+                    );
+
+                    line_start = prev_break;
+                }
+            }
+
+            // now do the hard break
             add_line_metric(
                 text,
                 line_start,
@@ -180,6 +209,65 @@ mod test {
         }
     }
 
+    #[test]
+    fn test_hard_soft_break_end() {
+        // This tests that the hard break is not handled before the soft break when the hard break
+        // exceeds text layout width. In this case, it's the last line `best text!` which is too
+        // long. The line should be soft-broken at the space before the EOL breaks.
+        let input = "piet text is the best text!";
+        let width = 50.0;
+
+        let mut text = CairoText::new();
+        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let line_metrics = calculate_line_metrics(input, &font.0, width);
+
+        // Some print debugging, in case font size/width needs to be changed in future because of
+        // brittle tests
+        println!(
+            "{}: \"piet text \"",
+            font.0.text_extents("piet text ").x_advance
+        );
+        for lm in &line_metrics {
+            let line_text = &input[lm.start_offset..lm.end_offset];
+            println!(
+                "{}: {:?}",
+                font.0.text_extents(line_text).x_advance,
+                line_text
+            );
+        }
+
+        assert_eq!(line_metrics.len(), 5);
+    }
+
+    #[test]
+    fn test_hard_soft_break_start() {
+        // this tests that a single word followed by hard break that exceeds layout width is
+        // correctly broken, and that there is no extra line metric created (e.g. a [0,0] line offset preceding)
+        let input = "piet\ntext";
+        let width = 10.0;
+
+        let mut text = CairoText::new();
+        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let line_metrics = calculate_line_metrics(input, &font.0, width);
+
+        // Some print debugging, in case font size/width needs to be changed in future because of
+        // brittle tests
+        println!("{}: \"piet\n\"", font.0.text_extents("piet\n").x_advance);
+        println!("{}: \"text\"", font.0.text_extents("text").x_advance);
+        for lm in &line_metrics {
+            let line_text = &input[lm.start_offset..lm.end_offset];
+            println!(
+                "{}: {:?}",
+                font.0.text_extents(line_text).x_advance,
+                line_text
+            );
+        }
+
+        println!("line_metrics: {:?}", line_metrics);
+
+        assert_eq!(line_metrics.len(), 2);
+    }
+
     // TODO do a super-short length, to make sure the behavior is correct
     // when first break comes directly after the first word. I think I fixed it, but should have a
     // more explicit test.
@@ -238,7 +326,7 @@ mod test {
             },
         ];
 
-        let width_medium = 60.0;
+        let width_medium = 70.0;
         let expected_medium = vec![
             LineMetric {
                 start_offset: 0,
@@ -258,7 +346,7 @@ mod test {
             },
         ];
 
-        let width_large = 100.0;
+        let width_large = 125.0;
         let expected_large = vec![LineMetric {
             start_offset: 0,
             end_offset: 19,
@@ -281,6 +369,19 @@ mod test {
         // setup cairo layout
         let mut text = CairoText::new();
         let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
+
+        println!(
+            "piet text width: {}",
+            font.0.text_extents("piet text").x_advance
+        ); // 55
+        println!(
+            "most best width: {}",
+            font.0.text_extents("most best").x_advance
+        ); // 65
+        println!(
+            "piet text most best width: {}",
+            font.0.text_extents("piet text most best").x_advance
+        ); // 124
 
         test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
         test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font);
