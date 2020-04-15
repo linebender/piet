@@ -12,8 +12,8 @@ use std::ops::Deref;
 use js_sys::{Float64Array, Reflect};
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{
-    CanvasGradient, CanvasRenderingContext2d, CanvasWindingRule, HtmlCanvasElement, ImageData,
-    Window,
+    CanvasGradient, CanvasRenderingContext2d, CanvasWindingRule, DomMatrix, HtmlCanvasElement,
+    ImageData, Window,
 };
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
@@ -247,10 +247,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 
     fn current_transform(&self) -> Affine {
-        // todo
-        // current_transform() and get_transform() currently not implemented:
-        // https://github.com/rustwasm/wasm-bindgen/blob/f8354b3a88de013845a304ea77d8b9b9286a0d7b/crates/web-sys/webidls/enabled/CanvasRenderingContext2D.webidl#L136
-        Affine::default()
+        matrix_to_affine(self.ctx.get_transform().unwrap())
     }
 
     fn make_image(
@@ -502,4 +499,15 @@ impl WebRenderContext<'_> {
 
 fn byte_to_frac(byte: u32) -> f64 {
     ((byte & 255) as f64) * (1.0 / 255.0)
+}
+
+fn matrix_to_affine(matrix: DomMatrix) -> Affine {
+    Affine::new([
+        matrix.a(),
+        matrix.b(),
+        matrix.c(),
+        matrix.d(),
+        matrix.e(),
+        matrix.f(),
+    ])
 }
