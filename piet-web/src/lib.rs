@@ -211,8 +211,19 @@ impl<'a> RenderContext for WebRenderContext<'a> {
         self.ctx.set_font(&layout.font.get_font_string());
         self.set_brush(&*brush, true);
         let pos = pos.into();
-        if let Err(e) = self.ctx.fill_text(&layout.text, pos.x, pos.y).wrap() {
-            self.err = Err(e);
+        for lm in &layout.line_metrics {
+            let draw_line = self
+                .ctx
+                .fill_text(
+                    &layout.text[lm.start_offset..lm.end_offset],
+                    pos.x,
+                    pos.y + lm.cumulative_height - lm.height,
+                )
+                .wrap();
+
+            if let Err(e) = draw_line {
+                self.err = Err(e);
+            }
         }
     }
 

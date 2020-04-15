@@ -213,8 +213,13 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.ctx.set_scaled_font(&layout.font);
         self.set_brush(&*brush);
         let pos = pos.into();
-        self.ctx.move_to(pos.x, pos.y);
-        self.ctx.show_text(&layout.text);
+
+        for lm in &layout.line_metrics {
+            self.ctx
+                .move_to(pos.x, pos.y + lm.cumulative_height - lm.height);
+            self.ctx
+                .show_text(&layout.text[lm.start_offset..lm.end_offset]);
+        }
     }
 
     fn save(&mut self) -> Result<(), Error> {

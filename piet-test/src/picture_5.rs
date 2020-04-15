@@ -15,11 +15,17 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         .new_text_layout(&font, "piet text!", None)
         .build()?;
 
+    let layout_multiline = rc
+        .text()
+        .new_text_layout(&font, "piet text is the best text!", 50.0)
+        .build()?;
+
     let width = layout.width();
 
     let brush = rc.solid_brush(Color::rgba8(0x00, 0x80, 0x80, 0xF0));
 
     rc.draw_text(&layout, (100.0, 50.0), &brush);
+    rc.draw_text(&layout_multiline, (20.0, 50.0), &brush);
 
     // underline text
     rc.stroke(Line::new((100.0, 52.0), (100.0 + width, 52.0)), &brush, 1.0);
