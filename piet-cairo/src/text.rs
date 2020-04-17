@@ -1317,8 +1317,8 @@ mod test {
         let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
         // this should break into four lines
         let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
-        println!("text pos 01: {:?}", layout.hit_test_text_position(00)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(05)); // (0.0, 13.9999)
+        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 13.9999)
         println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 27.9999)
         println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 41.99999)
 
@@ -1383,8 +1383,8 @@ mod test {
         let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
         // this should break into four lines
         let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
-        println!("text pos 01: {:?}", layout.hit_test_text_position(00)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(05)); // (0.0, 12.0)
+        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 12.0)
         println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 24.0)
         println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 36.0)
 

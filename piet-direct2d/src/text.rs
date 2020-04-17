@@ -812,8 +812,8 @@ mod test {
         // this should break into four lines
         let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
         println!("{}", layout.line_metric(0).unwrap().baseline); // 12.94...
-        println!("text pos 01: {:?}", layout.hit_test_text_position(00)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(05)); // (0.0, 15.96...)
+        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 15.96...)
         println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 31.92...)
         println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 47.88...)
 
