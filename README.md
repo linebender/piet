@@ -3,7 +3,7 @@
 [![Documentation](https://docs.rs/piet/badge.svg)](https://docs.rs/piet)
 [![Build Status](https://travis-ci.com/linebender/piet.svg?branch=master)](https://travis-ci.com/linebender/piet)
 
-Blah blah trivial PR.
+Blah blah trivial PR. #2
 
 This repo holds an API for 2D graphics drawing.
 
