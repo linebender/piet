@@ -413,7 +413,7 @@ pub(crate) mod test {
 
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    fn setup_ctx<'a>() -> (Window, CanvasRenderingContext2d) {
+    fn setup_ctx() -> (Window, CanvasRenderingContext2d) {
         let window = window().unwrap();
         let document = window.document().unwrap();
 
@@ -1067,8 +1067,8 @@ pub(crate) mod test {
         // this should break into four lines
         // Had to shift font in order to break at 4 lines (larger font than cairo, wider lines)
         let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
-        console::log_1(&format!("text pos 01: {:?}", layout.hit_test_text_position(00)).into()); // (0.0,0.0)
-        console::log_1(&format!("text pos 06: {:?}", layout.hit_test_text_position(05)).into()); // (0.0, 16.8)
+        console::log_1(&format!("text pos 01: {:?}", layout.hit_test_text_position(0)).into()); // (0.0,0.0)
+        console::log_1(&format!("text pos 06: {:?}", layout.hit_test_text_position(5)).into()); // (0.0, 16.8)
         console::log_1(&format!("text pos 11: {:?}", layout.hit_test_text_position(10)).into()); // (0.0, 33.6)
         console::log_1(&format!("text pos 16: {:?}", layout.hit_test_text_position(15)).into()); // (0.0, 50.4)
         console::log_1(&format!("lm 0: {:?}", layout.line_metric(0)).into());

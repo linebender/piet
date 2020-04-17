@@ -7,7 +7,7 @@ on:
 jobs:
   rustfmt:
     runs-on: ubuntu-latest
-    name: rustfmt
+    name: cargo fmt
     steps:
       - uses: actions/checkout@v2
 
@@ -33,9 +33,7 @@ jobs:
     strategy:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
-    name: cargo test stable
-    env:
-      PKG_CONFIG_ALLOW_CROSS: 1
+    name: cargo clippy+test
     steps:
       - uses: actions/checkout@v2
 
@@ -53,6 +51,51 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: clippy
+          profile: minimal
+          override: true
+
+      - name: cargo clippy (windows)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --all-targets --exclude piet-cairo -- -D warnings
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo clippy (not windows)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --all-targets --exclude piet-direct2d -- -D warnings
+        if: contains(matrix.os, 'windows') != true
+
+      - name: cargo test (windows)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --exclude piet-cairo
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo test (not windows)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --exclude piet-direct2d
+        if: contains(matrix.os, 'windows') != true
+
+  test-stable-wasm:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, windows-2019, ubuntu-latest]
+    name: cargo clippy+test (wasm32)
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
           target: wasm32-unknown-unknown
           components: clippy
           profile: minimal
@@ -62,89 +105,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all -- -D warnings
+          args: --workspace --all-targets --exclude piet-cairo --exclude piet-direct2d --target wasm32-unknown-unknown -- -D warnings
 
-      - name: cargo clippy (wasm32)
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all --exclude piet-cairo --exclude piet-direct2d --target wasm32-unknown-unknown -- -D warnings
-
-      - name: cargo test --all (not windows)
+      - name: cargo test compile
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --exclude piet-direct2d
-        if: contains(matrix.os, 'windows') != true
-
-      - name: cargo test --all (windows)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --exclude piet-cairo
-        if: contains(matrix.os, 'windows')
-
-      - name: cargo test compile (wasm32)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: -p piet-common -p piet-web --no-run --target wasm32-unknown-unknown
-
-      - name: Run rustc -D warnings in piet/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet/Cargo.toml -- -D warnings
-
-      - name: Run rustc -D warnings in piet-cairo/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-cairo/Cargo.toml -- -D warnings
-        if: contains(matrix.os, 'windows') != true
-
-      - name: Run rustc -D warnings in piet-common/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-common/Cargo.toml -- -D warnings
-
-      - name: Run rustc -D warnings in piet-common/ (wasm32)
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-common/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
-
-      - name: Run rustc -D warnings in piet-direct2d/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-direct2d/Cargo.toml -- -D warnings
-        if: contains(matrix.os, 'windows')
-
-      - name: Run rustc -D warnings in piet-svg/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-svg/Cargo.toml -- -D warnings
-
-      - name: Run rustc -D warnings in piet-test/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-test/Cargo.toml -- -D warnings
-
-      - name: Run rustc -D warnings in piet-web/
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-web/Cargo.toml -- -D warnings
-
-      - name: Run rustc -D warnings in piet-web/ (wasm32)
-        uses: actions-rs/cargo@v1
-        with:
-          command: rustc
-          args: --manifest-path=piet-web/Cargo.toml --target wasm32-unknown-unknown -- -D warnings
+          args: --workspace --exclude piet-cairo --exclude piet-direct2d --no-run --target wasm32-unknown-unknown
 
   test-nightly:
     runs-on: ${{ matrix.os }}
@@ -152,8 +119,6 @@ jobs:
       matrix:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     name: cargo test nightly
-    env:
-      PKG_CONFIG_ALLOW_CROSS: 1
     steps:
       - uses: actions/checkout@v2
 
@@ -171,29 +136,22 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
-          target: wasm32-unknown-unknown
           profile: minimal
           override: true
 
-      - name: cargo test --all (not windows)
+      - name: cargo test (windows)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all --exclude piet-direct2d
-        if: contains(matrix.os, 'windows') != true
-
-      - name: cargo test --all (windows)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all --exclude piet-cairo
+          args: --workspace --exclude piet-cairo
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test compile (wasm32)
+      - name: cargo test (not windows)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: -p piet-common -p piet-web --no-run --target wasm32-unknown-unknown
+          args: --workspace --exclude piet-direct2d
+        if: contains(matrix.os, 'windows') != true
 
   check-docs:
     name: Docs

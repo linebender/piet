@@ -107,20 +107,12 @@ mod test {
         };
 
         let expected_curr = Some(HitTestPoint {
-            metrics: HitTestMetrics {
-                text_position: 2,
-                ..Default::default()
-            },
+            metrics: HitTestMetrics { text_position: 2 },
             is_inside: true,
-            ..Default::default()
         });
         let expected_next = Some(HitTestPoint {
-            metrics: HitTestMetrics {
-                text_position: 4,
-                ..Default::default()
-            },
+            metrics: HitTestMetrics { text_position: 4 },
             is_inside: true,
-            ..Default::default()
         });
 
         assert_eq!(point_x_in_grapheme(10.0, &bounds), expected_curr);

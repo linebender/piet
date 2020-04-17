@@ -17,8 +17,7 @@ const HIDPI: f32 = 2.0;
 
 fn main() {
     let test_picture_number = std::env::args()
-        .skip(1)
-        .next()
+        .nth(1)
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(0);
 
