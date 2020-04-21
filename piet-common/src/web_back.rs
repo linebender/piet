@@ -6,6 +6,15 @@ pub use piet_web::*;
 
 use std::fmt;
 use std::marker::PhantomData;
+use std::path::Path;
+
+#[cfg(feature = "png")]
+use std::fs::File;
+#[cfg(feature = "png")]
+use std::io::BufWriter;
+
+#[cfg(feature = "png")]
+use png::{ColorType, Encoder};
 
 use wasm_bindgen::JsCast;
 
