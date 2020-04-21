@@ -38,4 +38,4 @@ png = { version = "0.16.1", optional = true }
 piet-web = { version = "0.0.12", path = "../piet-web" }
 web-sys = { version = "0.3.36", features = ["console", "Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule", "Document", "Element", "HtmlCanvasElement", "ImageBitmap", "ImageData", "TextMetrics"] }
 wasm-bindgen = "0.2.59"
-
+png = { version = "0.16.1", optional = true }
