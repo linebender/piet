@@ -120,6 +120,29 @@ impl<'a> BitmapTarget<'a> {
         // ImageDate is in RGBA order. This should be the same as expected on the output.
         Ok(img_data.data().0)
     }
+
+    /// Save bitmap to RGBA PNG file
+    #[cfg(feature = "png")]
+    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+        let height = self.canvas.height();
+        let width = self.canvas.width();
+        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let file = BufWriter::new(File::create(path).map_err(|e| Into::<Box<_>>::into(e))?);
+        let mut encoder = Encoder::new(file, width as u32, height as u32);
+        encoder.set_color(ColorType::RGBA);
+        encoder
+            .write_header()
+            .map_err(|e| Into::<Box<_>>::into(e))?
+            .write_image_data(&image)
+            .map_err(|e| Into::<Box<_>>::into(e))?;
+        Ok(())
+    }
+
+    /// Stub for feature is missing
+    #[cfg(not(feature = "png"))]
+    pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
+        Err(piet::new_error(ErrorKind::MissingFeature))
+    }
 }
 
 #[derive(Clone, Debug)]
