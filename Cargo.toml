@@ -8,7 +8,8 @@ members = [
     "piet-test",
     "piet-web",
     "piet-web/examples/basic",
-    "piet-svg"
+    "piet-svg",
+    "piet-pathfinder"
 ]
 
 default-members = [
