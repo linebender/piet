@@ -9,16 +9,15 @@ use core_graphics::base::{
 use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::{CGContext, CGLineCap, CGLineJoin};
 use core_graphics::data_provider::CGDataProvider;
-use core_graphics::image::CGImage;
 use core_graphics::geometry::{CGPoint, CGRect, CGSize};
+use core_graphics::image::CGImage;
 
-use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size, Vec2};
+use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, HitTestMetrics,
-    HitTestPoint, HitTestTextPosition, ImageFormat, InterpolationMode, IntoBrush, LineCap,
-    LineJoin, LineMetric, RenderContext, RoundInto, StrokeStyle, Text, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
+    InterpolationMode, IntoBrush, LineCap, LineJoin, LineMetric, RenderContext, RoundInto,
+    StrokeStyle, Text, TextLayout, TextLayoutBuilder,
 };
 
 pub struct CoreGraphicsContext<'a> {
@@ -76,7 +75,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         Brush::Solid(color.as_rgba_u32())
     }
 
-    fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
+    fn gradient(&mut self, _gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
         unimplemented!()
     }
 
@@ -128,9 +127,9 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
 
     fn draw_text(
         &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
+        _layout: &Self::TextLayout,
+        _pos: impl Into<Point>,
+        _brush: &impl IntoBrush<Self>,
     ) {
         unimplemented!()
     }
@@ -149,7 +148,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         Ok(())
     }
 
-    fn transform(&mut self, transform: Affine) {
+    fn transform(&mut self, _transform: Affine) {
         unimplemented!()
     }
 
@@ -418,7 +417,7 @@ fn to_cgsize(size: Size) -> CGSize {
     CGSize::new(size.width, size.height)
 }
 
-fn to_cgrect(rect: impl Into<Rect>) ->  CGRect {
+fn to_cgrect(rect: impl Into<Rect>) -> CGRect {
     let rect = rect.into();
     CGRect::new(&to_cgpoint(rect.origin()), &to_cgsize(rect.size()))
 }
