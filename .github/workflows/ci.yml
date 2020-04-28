@@ -59,21 +59,28 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --workspace --all-targets --exclude piet-cairo -- -D warnings
+          args: --workspace --all-targets --exclude piet-cairo --exclude piet-coregraphics -- -D warnings
         if: contains(matrix.os, 'windows')
 
-      - name: cargo clippy (not windows)
+      - name: cargo clippy (mac)
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --workspace --all-targets --exclude piet-direct2d -- -D warnings
-        if: contains(matrix.os, 'windows') != true
+        if: contains(matrix.os, 'macOS')
+
+      - name: cargo clippy (linux)
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --all-targets --exclude piet-direct2d --exclude piet-coregraphics -- -D warnings
+        if: contains(matrix.os, 'ubuntu')
 
       - name: cargo test (windows)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude piet-cairo
+          args: --workspace --exclude piet-cairo --exclude piet-coregraphics
         if: contains(matrix.os, 'windows')
 
       - name: cargo test (not windows)
@@ -81,7 +88,14 @@ jobs:
         with:
           command: test
           args: --workspace --exclude piet-direct2d
-        if: contains(matrix.os, 'windows') != true
+        if: contains(matrix.os, 'macOS')
+
+      - name: cargo test (not windows)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --exclude piet-direct2d --exclude piet-coregraphics
+        if: contains(matrix.os, 'ubuntu')
 
   test-stable-wasm:
     runs-on: ${{ matrix.os }}
@@ -105,13 +119,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --workspace --all-targets --exclude piet-cairo --exclude piet-direct2d --target wasm32-unknown-unknown -- -D warnings
+          args: --workspace --all-targets --exclude piet-cairo --exclude piet-direct2d --exclude piet-coregraphics --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo test compile
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude piet-cairo --exclude piet-direct2d --no-run --target wasm32-unknown-unknown
+          args: --workspace --exclude piet-cairo --exclude piet-direct2d --exclude piet-coregraphics --no-run --target wasm32-unknown-unknown
 
   test-nightly:
     runs-on: ${{ matrix.os }}
@@ -143,15 +157,22 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude piet-cairo
+          args: --workspace --exclude piet-cairo --exclude piet-coregraphics
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test (not windows)
+      - name: cargo test (mac)
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --workspace --exclude piet-direct2d
-        if: contains(matrix.os, 'windows') != true
+        if: contains(matrix.os, 'macOS')
+
+      - name: cargo test (linux)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --exclude piet-direct2d --exclude piet-coregraphics
+        if: contains(matrix.os, 'ubuntu')
 
   check-docs:
     name: Docs
