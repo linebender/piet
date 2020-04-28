@@ -83,14 +83,14 @@ jobs:
           args: --workspace --exclude piet-cairo --exclude piet-coregraphics
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test (not windows)
+      - name: cargo test (mac)
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --workspace --exclude piet-direct2d
         if: contains(matrix.os, 'macOS')
 
-      - name: cargo test (not windows)
+      - name: cargo test (linux)
         uses: actions-rs/cargo@v1
         with:
           command: test
