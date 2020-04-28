@@ -19,10 +19,13 @@ fn main() {
         8,
         0,
         &CGColorSpace::create_device_rgb(),
-        core_graphics::base::kCGImageAlphaPremultipliedLast
+        core_graphics::base::kCGImageAlphaPremultipliedLast,
     );
     let mut piet = piet_coregraphics::CoreGraphicsContext::new(&mut cg_ctx);
-    piet.fill(Circle::new((100.0, 100.0), 50.0), &Color::rgb8(255, 0, 0).with_alpha(0.5));
+    piet.fill(
+        Circle::new((100.0, 100.0), 50.0),
+        &Color::rgb8(255, 0, 0).with_alpha(0.5),
+    );
     piet.finish().unwrap();
 
     unpremultiply(cg_ctx.data());

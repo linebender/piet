@@ -1,12 +1,18 @@
 //! The CoreGraphics backend for the Piet 2D graphics abstraction.
 
 use std::borrow::Cow;
+use std::sync::Arc;
 
-use core_graphics::base::CGFloat;
+use core_graphics::base::{
+    kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
+};
+use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::{CGContext, CGLineCap, CGLineJoin};
+use core_graphics::data_provider::CGDataProvider;
 use core_graphics::image::CGImage;
+use core_graphics::geometry::{CGPoint, CGRect, CGSize};
 
-use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Vec2};
+use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size, Vec2};
 
 use piet::{
     new_error, Color, Error, ErrorKind, FixedGradient, Font, FontBuilder, HitTestMetrics,
@@ -47,46 +53,6 @@ pub struct CoreGraphicsTextLayout;
 pub struct CoreGraphicsTextLayoutBuilder {}
 
 pub struct CoreGraphicsText;
-
-// TODO: This cannot be used yet because the `piet::RenderContext` trait
-// needs to expose a way to create stroke styles.
-/*pub struct StrokeStyle {
-    line_join: Option<CGLineJoin>,
-    line_cap: Option<CGLineCap>,
-    dash: Option<(Vec<f64>, f64)>,
-    miter_limit: Option<f64>,
-}
-
-impl StrokeStyle {
-    pub fn new() -> StrokeStyle {
-        StrokeStyle {
-            line_join: None,
-            line_cap: None,
-            dash: None,
-            miter_limit: None,
-        }
-    }
-
-    pub fn line_join(mut self, line_join: CGLineJoin) -> Self {
-        self.line_join = Some(line_join);
-        self
-    }
-
-    pub fn line_cap(mut self, line_cap: CGLineCap) -> Self {
-        self.line_cap = Some(line_cap);
-        self
-    }
-
-    pub fn dash(mut self, dashes: Vec<f64>, offset: f64) -> Self {
-        self.dash = Some((dashes, offset));
-        self
-    }
-
-    pub fn miter_limit(mut self, miter_limit: f64) -> Self {
-        self.miter_limit = Some(miter_limit);
-        self
-    }
-}*/
 
 impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Brush = Brush;
@@ -160,7 +126,12 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         &mut self.text
     }
 
-    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>, brush: &impl IntoBrush<Self>) {
+    fn draw_text(
+        &mut self,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IntoBrush<Self>,
+    ) {
         unimplemented!()
     }
 
@@ -189,26 +160,58 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
-        unimplemented!()
+        let data = Arc::new(buf.to_owned());
+        let data_provider = CGDataProvider::from_buffer(data);
+        let (colorspace, bitmap_info, bytes) = match format {
+            ImageFormat::Rgb => (CGColorSpace::create_device_rgb(), 0, 3),
+            ImageFormat::RgbaPremul => (
+                CGColorSpace::create_device_rgb(),
+                kCGImageAlphaPremultipliedLast,
+                4,
+            ),
+            ImageFormat::RgbaSeparate => (CGColorSpace::create_device_rgb(), kCGImageAlphaLast, 4),
+            _ => unimplemented!(),
+        };
+        let bits_per_component = 8;
+        // TODO: we don't know this until drawing time, so defer actual image creation til then.
+        let should_interpolate = true;
+        let rendering_intent = kCGRenderingIntentDefault;
+        let image = CGImage::new(
+            width,
+            height,
+            bits_per_component,
+            bytes * bits_per_component,
+            width * bytes,
+            &colorspace,
+            bitmap_info,
+            &data_provider,
+            should_interpolate,
+            rendering_intent,
+        );
+        Ok(image)
     }
 
     fn draw_image(
         &mut self,
         image: &Self::Image,
         rect: impl Into<Rect>,
-        interp: InterpolationMode,
+        _interp: InterpolationMode,
     ) {
-        unimplemented!()
+        // TODO: apply interpolation mode
+        self.ctx.draw_image(to_cgrect(rect), image);
     }
 
     fn draw_image_area(
         &mut self,
-        _image: &Self::Image,
-        _src_rect: impl Into<Rect>,
-        _dst_rect: impl Into<Rect>,
+        image: &Self::Image,
+        src_rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
         _interp: InterpolationMode,
     ) {
-        unimplemented!()
+        if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
+            // TODO: apply interpolation mode
+            self.ctx.draw_image(to_cgrect(dst_rect), &cropped);
+        }
     }
 
     fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
@@ -405,4 +408,17 @@ impl<'a> CoreGraphicsContext<'a> {
 
 fn byte_to_frac(byte: u32) -> f64 {
     ((byte & 255) as f64) * (1.0 / 255.0)
+}
+
+fn to_cgpoint(point: Point) -> CGPoint {
+    CGPoint::new(point.x as CGFloat, point.y as CGFloat)
+}
+
+fn to_cgsize(size: Size) -> CGSize {
+    CGSize::new(size.width, size.height)
+}
+
+fn to_cgrect(rect: impl Into<Rect>) ->  CGRect {
+    let rect = rect.into();
+    CGRect::new(&to_cgpoint(rect.origin()), &to_cgsize(rect.size()))
 }
