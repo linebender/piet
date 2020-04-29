@@ -20,6 +20,8 @@ pathfinder_canvas = { version = "0.5.0", features = ["pf-text"] }
 pathfinder_geometry = "0.5.1"
 pathfinder_color = "0.5.0"
 pathfinder_resources = "0.5.0"
+pathfinder_content = "0.5.0"
+image = { version = "0.23.4", default-features = false }
 
 [dependencies.cairo-rs]
 version = "0.8.1"
