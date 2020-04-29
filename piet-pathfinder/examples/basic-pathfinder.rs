@@ -24,7 +24,8 @@ use ::{
     pathfinder_resources::embedded::EmbeddedResourceLoader,
     piet::{
         kurbo::{Circle, Rect},
-        Color, RenderContext,
+        Color, FixedLinearGradient, Font, FontBuilder, GradientStop, RenderContext, Text,
+        TextLayout, TextLayoutBuilder,
     },
     piet_pathfinder::PfContext,
 };
@@ -103,23 +104,40 @@ fn main() {
 
 fn use_piet(mut ctx: impl RenderContext) {
     let brush = ctx.solid_brush(Color::WHITE);
+    let cool_brush = ctx
+        .gradient(FixedLinearGradient {
+            start: (300.0, 300.0).into(),
+            end: (400.0, 300.0).into(),
+            stops: vec![
+                GradientStop {
+                    pos: 0.0,
+                    color: Color::rgb8(0, 100, 100),
+                },
+                GradientStop {
+                    pos: 1.0,
+                    color: Color::rgb8(0, 255, 0),
+                },
+            ],
+        })
+        .unwrap();
+    let black_brush = ctx.solid_brush(Color::BLACK);
 
     // Draw walls.
     ctx.clear(Color::BLACK);
     ctx.stroke(
-        Rect::from_points((150.0, 110.0), (75.0, 140.0)),
+        Rect::from_points((100.0, 200.0), (500.0, 400.0)),
         &brush,
-        10.0,
+        5.0,
     );
+    ctx.fill(Rect::from_points((280.0, 300.0), (320.0, 400.0)), &brush);
     ctx.stroke(
         Circle {
-            radius: 10.0,
-            center: (150.0, 150.0).into(),
+            radius: 6.0,
+            center: (310.0, 350.0).into(),
         },
-        &brush,
+        &black_brush,
         2.0,
     );
-    ctx.fill(Rect::from_points((130.0, 190.0), (40.0, 60.0)), &brush);
 
     // Draw door.
 
@@ -132,5 +150,9 @@ fn use_piet(mut ctx: impl RenderContext) {
     path.close_path();
     canvas.stroke_path(path);
     */
+    let text = ctx.text();
+    let font = text.new_font_by_name("DajaVu Sans", 20.0).build().unwrap();
+    let house_text = text.new_text_layout(&font, "house", None).build().unwrap();
+    ctx.draw_text(&house_text, (300.0, 420.0), &cool_brush);
     ctx.finish().unwrap();
 }

@@ -22,17 +22,9 @@ pathfinder_color = "0.5.0"
 pathfinder_resources = "0.5.0"
 pathfinder_content = "0.5.0"
 image = { version = "0.23.4", default-features = false }
-
-[dependencies.cairo-rs]
-version = "0.8.1"
-# We don't need glib
-default-features = false
+skribo = "0.1.0"
 
 [dev-dependencies]
 piet-test = { version = "0.0.12", path = "../piet-test" }
 glutin = "0.24.0"
 
-[dev-dependencies.cairo-rs]
-version = "0.8.1"
-features = ["png"]
-default-features = false

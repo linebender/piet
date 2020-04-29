@@ -1,8 +1,9 @@
 use ::{
     image::RgbaImage,
     pathfinder_canvas::{
-        CanvasImageSource, CanvasRenderingContext2D, ColorU, FillRule, FillStyle,
-        ImageSmoothingQuality, Path2D, RectF, Transform2F, Vector2F,
+        CanvasFontContext, CanvasImageSource, CanvasRenderingContext2D, ColorU, FillRule,
+        FillStyle, ImageSmoothingQuality, LineCap as PfLineCap, LineJoin as PfLineJoin, Path2D,
+        RectF, Transform2F, Vector2F,
     },
     pathfinder_content::{
         gradient::{ColorStop, Gradient},
@@ -12,9 +13,11 @@ use ::{
         kurbo::{Affine, Circle, Line, PathEl, Point, Rect, Shape},
         Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, Font, FontBuilder,
         GradientStop, HitTestPoint, HitTestTextPosition, ImageFormat, InterpolationMode, IntoBrush,
-        LineMetric, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+        LineCap, LineJoin, LineMetric, RenderContext, RoundFrom, RoundInto, StrokeStyle, Text,
+        TextLayout, TextLayoutBuilder,
     },
-    std::{borrow::Cow, convert::TryInto, f32::consts::PI, ops::Deref},
+    skribo::FontCollection,
+    std::{borrow::Cow, convert::TryInto, f32::consts::PI, ops::Deref, sync::Arc},
 };
 
 pub struct PfContext<'a> {
@@ -29,7 +32,8 @@ impl<'a> PfContext<'a> {
 
 impl RenderContext for PfContext<'_> {
     type Brush = FillStyle;
-    type Text = PfText;
+    // TODO the whole text thing needs overhauling, including allowing the user to select fonts.
+    type Text = Self;
     type TextLayout = PfTextLayout;
     type Image = PfImage;
 
@@ -61,7 +65,12 @@ impl RenderContext for PfContext<'_> {
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.render_ctx.set_stroke_style(brush.into_owned());
-        self.render_ctx.set_line_width(width as f32);
+        self.render_ctx.set_line_width(width.round_into());
+        self.render_ctx.set_line_cap(PfLineCap::Butt);
+        self.render_ctx.set_line_join(PfLineJoin::Miter);
+        self.render_ctx.set_miter_limit(10.0);
+        self.render_ctx.set_line_dash(vec![]);
+        self.render_ctx.set_line_dash_offset(0.0);
         self.render_ctx.stroke_path(shape_to_path2d(shape));
     }
 
@@ -72,7 +81,17 @@ impl RenderContext for PfContext<'_> {
         width: f64,
         style: &StrokeStyle,
     ) {
-        todo!()
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        self.render_ctx.set_stroke_style(brush.into_owned());
+        self.render_ctx.set_line_width(width.round_into());
+        self.render_ctx
+            .set_line_cap(linecap_into(style.line_cap.unwrap_or(LineCap::Butt)));
+        self.render_ctx
+            .set_line_join(linejoin_into(style.line_join.unwrap_or(LineJoin::Miter)));
+        self.render_ctx.set_miter_limit(10.0);
+        self.render_ctx.set_line_dash(vec![]);
+        self.render_ctx.set_line_dash_offset(0.0);
+        self.render_ctx.stroke_path(shape_to_path2d(shape));
     }
 
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
@@ -95,7 +114,7 @@ impl RenderContext for PfContext<'_> {
     }
 
     fn text(&mut self) -> &mut Self::Text {
-        todo!()
+        self
     }
 
     fn draw_text(
@@ -104,7 +123,20 @@ impl RenderContext for PfContext<'_> {
         pos: impl Into<Point>,
         brush: &impl IntoBrush<Self>,
     ) {
-        todo!()
+        let pos = pos.into();
+        //self.render_ctx.set_font(layout.font.name.as_str());
+        self.render_ctx.set_font_size(layout.font.size);
+        let metrics = self.render_ctx.measure_text(&layout.text);
+        let bbox = Rect::new(
+            pos.x - f64::round_from(metrics.actual_bounding_box_left),
+            pos.x + f64::round_from(metrics.actual_bounding_box_right),
+            pos.y - f64::round_from(metrics.actual_bounding_box_ascent),
+            pos.y + f64::round_from(metrics.actual_bounding_box_descent),
+        );
+        let brush = brush.make_brush(self, || bbox);
+        self.render_ctx.set_fill_style(brush.into_owned());
+        self.render_ctx
+            .fill_text(&layout.text, point_to_vec2f(pos.into()));
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -200,7 +232,11 @@ impl IntoBrush<PfContext<'_>> for FillStyle {
 }
 
 #[derive(Clone)]
-pub struct PfTextLayout;
+pub struct PfTextLayout {
+    font: PfFont,
+    text: String,
+    width: f64,
+}
 
 impl TextLayout for PfTextLayout {
     fn width(&self) -> f64 {
@@ -232,15 +268,16 @@ impl TextLayout for PfTextLayout {
     }
 }
 
-pub struct PfText;
-
-impl Text for PfText {
+impl Text for PfContext<'_> {
     type FontBuilder = PfFontBuilder;
     type Font = PfFont;
-    type TextLayoutBuilder = PfTextLayoutBuilder;
+    type TextLayoutBuilder = PfTextLayout;
     type TextLayout = PfTextLayout;
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
-        todo!()
+        Self::FontBuilder {
+            name: name.to_string(),
+            size: size.round_into(),
+        }
     }
     fn new_text_layout(
         &mut self,
@@ -248,29 +285,42 @@ impl Text for PfText {
         text: &str,
         width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
-        todo!()
+        let width = width.into().unwrap_or(std::f64::INFINITY);
+        PfTextLayout {
+            font: font.clone(),
+            text: text.to_string(),
+            width,
+        }
     }
 }
 
-pub struct PfFontBuilder;
+pub struct PfFontBuilder {
+    name: String,
+    size: f32,
+}
 
 impl FontBuilder for PfFontBuilder {
     type Out = PfFont;
     fn build(self) -> Result<Self::Out, Error> {
-        todo!()
+        Ok(PfFont {
+            name: self.name,
+            size: self.size,
+        })
     }
 }
 
-pub struct PfFont;
+#[derive(Clone)]
+pub struct PfFont {
+    name: String,
+    size: f32,
+}
 
 impl Font for PfFont {}
 
-pub struct PfTextLayoutBuilder;
-
-impl TextLayoutBuilder for PfTextLayoutBuilder {
-    type Out = PfTextLayout;
+impl TextLayoutBuilder for PfTextLayout {
+    type Out = Self;
     fn build(self) -> Result<Self::Out, Error> {
-        todo!()
+        Ok(self)
     }
 }
 
@@ -342,7 +392,7 @@ fn path_el_iter(path: &mut Path2D, iter: impl Iterator<Item = PathEl>) {
 
 #[inline]
 fn vec2f(x: f64, y: f64) -> Vector2F {
-    Vector2F::new(x as f32, y as f32)
+    Vector2F::new(x.round_into(), y.round_into())
 }
 
 #[inline]
@@ -358,7 +408,7 @@ fn affine_to_transform2f(t: Affine) -> Transform2F {
 #[inline]
 fn rect_to_rectf(r: Rect) -> RectF {
     let Rect { x0, y0, x1, y1 } = r;
-    RectF::new(vec2f(x0, y0), vec2f(x1, y1))
+    RectF::from_points(vec2f(x0, y0), vec2f(x1, y1))
 }
 
 #[inline]
@@ -389,6 +439,24 @@ fn gradientstop_to_colorstop(stop: GradientStop) -> ColorStop {
     ColorStop {
         offset: stop.pos,
         color: map_color(stop.color),
+    }
+}
+
+#[inline]
+fn linecap_into(input: LineCap) -> PfLineCap {
+    match input {
+        LineCap::Butt => PfLineCap::Butt,
+        LineCap::Square => PfLineCap::Square,
+        LineCap::Round => PfLineCap::Round,
+    }
+}
+
+#[inline]
+fn linejoin_into(input: LineJoin) -> PfLineJoin {
+    match input {
+        LineJoin::Miter => PfLineJoin::Miter,
+        LineJoin::Bevel => PfLineJoin::Bevel,
+        LineJoin::Round => PfLineJoin::Round,
     }
 }
 
