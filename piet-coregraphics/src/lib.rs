@@ -122,11 +122,20 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
 
     fn draw_text(
         &mut self,
-        _layout: &Self::TextLayout,
-        _pos: impl Into<Point>,
-        _brush: &impl IntoBrush<Self>,
+        layout: &Self::TextLayout,
+        pos: impl Into<Point>,
+        brush: &impl IntoBrush<Self>,
     ) {
-        unimplemented!()
+        let brush = brush.make_brush(self, || layout.frame_size.to_rect());
+        let pos = pos.into();
+        self.ctx.save();
+        // inverted coordinate system; text is drawn from bottom left corner,
+        // and (0, 0) in context is also bottom left.
+        let y_off = self.ctx.height() as f64 - layout.frame_size.height;
+        self.ctx.translate(pos.x, y_off - pos.y);
+        self.set_fill_brush(&brush);
+        layout.frame.draw(self.ctx);
+        self.ctx.restore();
     }
 
     fn save(&mut self) -> Result<(), Error> {
