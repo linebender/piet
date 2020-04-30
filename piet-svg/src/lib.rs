@@ -9,8 +9,8 @@ use std::{io, mem};
 
 use piet::kurbo::{Affine, Point, Rect, Shape};
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
-    LineCap, LineJoin, StrokeStyle,
+    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
+    StrokeStyle,
 };
 use svg::node::Node;
 
@@ -226,10 +226,7 @@ impl piet::RenderContext for RenderContext {
     }
 
     fn restore(&mut self) -> Result<()> {
-        self.state = self
-            .stack
-            .pop()
-            .ok_or_else(|| new_error(ErrorKind::StackUnbalance))?;
+        self.state = self.stack.pop().ok_or_else(|| Error::StackUnbalance)?;
         Ok(())
     }
 
@@ -252,7 +249,7 @@ impl piet::RenderContext for RenderContext {
         _buf: &[u8],
         _format: ImageFormat,
     ) -> Result<Self::Image> {
-        Err(new_error(ErrorKind::NotSupported))
+        Err(Error::NotSupported)
     }
 
     #[inline]

@@ -42,8 +42,6 @@ use winapi::um::d2d1effects::{CLSID_D2D1GaussianBlur, D2D1_GAUSSIANBLUR_PROP_STA
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
 
-use piet::{new_error, ErrorKind};
-
 use crate::dwrite::TextLayout;
 
 pub enum FillRule {
@@ -134,7 +132,7 @@ impl std::error::Error for Error {
 
 impl From<Error> for piet::Error {
     fn from(e: Error) -> piet::Error {
-        new_error(ErrorKind::BackendError(Box::new(e)))
+        piet::Error::BackendError(Box::new(e))
     }
 }
 

@@ -24,8 +24,8 @@ use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED}
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
-    RenderContext, StrokeStyle,
+    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
+    StrokeStyle,
 };
 
 use crate::d2d::wrap_unit;
@@ -307,7 +307,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn restore(&mut self) -> Result<(), Error> {
         if self.ctx_stack.len() <= 1 {
-            return Err(new_error(ErrorKind::StackUnbalance));
+            return Err(Error::StackUnbalance);
         }
         self.pop_state();
         // Move this code into impl to avoid duplication with transform?
@@ -321,7 +321,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     // to do other stuff, possibly related to incremental paint.
     fn finish(&mut self) -> Result<(), Error> {
         if self.ctx_stack.len() != 1 {
-            return Err(new_error(ErrorKind::StackUnbalance));
+            return Err(Error::StackUnbalance);
         }
         self.pop_state();
         std::mem::replace(&mut self.err, Ok(()))
@@ -349,7 +349,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let alpha_mode = match format {
             ImageFormat::Rgb => D2D1_ALPHA_MODE_IGNORE,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => D2D1_ALPHA_MODE_PREMULTIPLIED,
-            _ => return Err(new_error(ErrorKind::NotSupported)),
+            _ => return Err(Error::NotSupported),
         };
         let buf = match format {
             ImageFormat::Rgb => {
@@ -379,7 +379,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
             ImageFormat::RgbaPremul => Cow::from(buf),
             // This should be unreachable, we caught it above.
-            _ => return Err(new_error(ErrorKind::NotSupported)),
+            _ => return Err(Error::NotSupported),
         };
         let bitmap = self.rt.create_bitmap(width, height, &buf, alpha_mode)?;
         Ok(bitmap)

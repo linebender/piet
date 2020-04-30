@@ -1,9 +1,5 @@
 //! Support for piet Web back-end.
 
-use piet::{ErrorKind, ImageFormat};
-#[doc(hidden)]
-pub use piet_web::*;
-
 use std::fmt;
 use std::marker::PhantomData;
 use std::path::Path;
@@ -15,8 +11,11 @@ use std::io::BufWriter;
 
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
-
 use wasm_bindgen::JsCast;
+
+use piet::ImageFormat;
+#[doc(hidden)]
+pub use piet_web::*;
 
 pub type Piet<'a> = WebRenderContext<'a>;
 
@@ -115,7 +114,7 @@ impl<'a> BitmapTarget<'a> {
         // this is used. It is here for compatibility with druid.
 
         if fmt != ImageFormat::RgbaPremul {
-            return Err(piet::new_error(ErrorKind::NotSupported));
+            return Err(piet::Error::NotSupported);
         }
 
         let width = self.canvas.width() as usize;
@@ -124,7 +123,7 @@ impl<'a> BitmapTarget<'a> {
         let img_data = self
             .context
             .get_image_data(0.0, 0.0, width as f64, height as f64)
-            .map_err(|jsv| piet::new_error(ErrorKind::BackendError(Box::new(JsError::new(jsv)))))?;
+            .map_err(|jsv| piet::Error::BackendError(Box::new(JsError::new(jsv))))?;
 
         // ImageDate is in RGBA order. This should be the same as expected on the output.
         Ok(img_data.data().0)
@@ -150,7 +149,7 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
-        Err(piet::new_error(ErrorKind::MissingFeature))
+        Err(piet::Error::MissingFeature)
     }
 }
 

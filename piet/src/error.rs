@@ -4,35 +4,28 @@ use std::fmt;
 
 /// An error that can occur while rendering 2D graphics.
 #[derive(Debug)]
-pub struct Error(Box<ErrorKind>);
-
-#[derive(Debug)]
-pub enum ErrorKind {
+#[non_exhaustive]
+pub enum Error {
     InvalidInput,
     NotSupported,
     StackUnbalance,
     BackendError(Box<dyn std::error::Error>),
-    #[doc(hidden)]
-    _NonExhaustive,
     MissingFeature,
-}
-
-/// Create a new error of the given kind.
-pub fn new_error(kind: ErrorKind) -> Error {
-    Error(Box::new(kind))
+    MissingFont,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self.0 {
-            ErrorKind::InvalidInput => write!(f, "Invalid input"),
-            ErrorKind::NotSupported => write!(f, "Option not supported"),
-            ErrorKind::StackUnbalance => write!(f, "Stack unbalanced"),
-            ErrorKind::BackendError(ref e) => {
+        match self {
+            Error::InvalidInput => write!(f, "Invalid input"),
+            Error::NotSupported => write!(f, "Option not supported"),
+            Error::StackUnbalance => write!(f, "Stack unbalanced"),
+            Error::MissingFont => write!(f, "A font could not be found"),
+            Error::MissingFeature => write!(f, "A feature is not implemented on this backend"),
+            Error::BackendError(e) => {
                 write!(f, "Backend error: ")?;
                 e.fmt(f)
             }
-            _ => write!(f, "Unknown piet error (case not covered)"),
         }
     }
 }
@@ -41,6 +34,6 @@ impl std::error::Error for Error {}
 
 impl From<Box<dyn std::error::Error>> for Error {
     fn from(e: Box<dyn std::error::Error>) -> Error {
-        new_error(ErrorKind::BackendError(e))
+        Error::BackendError(e)
     }
 }
