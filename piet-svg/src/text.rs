@@ -1,7 +1,7 @@
 //! Text functionality for Piet svg backend
 
 use piet::kurbo::Point;
-use piet::{new_error, Error, ErrorKind, HitTestPoint, HitTestTextPosition, LineMetric};
+use piet::{Error, HitTestPoint, HitTestTextPosition, LineMetric};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -42,7 +42,7 @@ impl piet::FontBuilder for FontBuilder {
     type Out = Font;
 
     fn build(self) -> Result<Font> {
-        Err(new_error(ErrorKind::NotSupported))
+        Err(Error::NotSupported)
     }
 }
 
@@ -57,7 +57,7 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
     type Out = TextLayout;
 
     fn build(self) -> Result<TextLayout> {
-        Err(new_error(ErrorKind::NotSupported))
+        Err(Error::NotSupported)
     }
 }
 

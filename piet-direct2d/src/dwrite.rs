@@ -18,8 +18,6 @@ use winapi::Interface;
 use wio::com::ComPtr;
 use wio::wide::ToWide;
 
-use piet::{new_error, ErrorKind};
-
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
 pub enum Error {
@@ -84,7 +82,7 @@ impl std::error::Error for Error {
 
 impl From<Error> for piet::Error {
     fn from(e: Error) -> piet::Error {
-        new_error(ErrorKind::BackendError(Box::new(e)))
+        piet::Error::BackendError(Box::new(e))
     }
 }
 

@@ -10,7 +10,7 @@ use std::path::Path;
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
-use piet::{ErrorKind, ImageFormat};
+use piet::ImageFormat;
 use piet_direct2d::d2d::{Bitmap, Brush as D2DBrush};
 use piet_direct2d::d3d::{
     D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
@@ -159,7 +159,7 @@ impl<'a> BitmapTarget<'a> {
         self.context.end_draw()?;
         // TODO: convert other formats.
         if fmt != ImageFormat::RgbaPremul {
-            return Err(piet::new_error(ErrorKind::NotSupported));
+            return Err(piet::Error::NotSupported);
         }
         let temp_texture = self
             .d3d
@@ -211,7 +211,7 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
-        Err(piet::new_error(ErrorKind::MissingFeature))
+        Err(piet::Error::MissingFeature)
     }
 }
 

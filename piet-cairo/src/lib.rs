@@ -14,8 +14,8 @@ use cairo::{BorrowError, Context, Filter, Format, ImageSurface, Matrix, Status, 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
-    LineCap, LineJoin, RenderContext, StrokeStyle,
+    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
+    RenderContext, StrokeStyle,
 };
 
 pub use crate::text::{
@@ -254,7 +254,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let cairo_fmt = match format {
             ImageFormat::Rgb => Format::Rgb24,
             ImageFormat::RgbaSeparate | ImageFormat::RgbaPremul => Format::ARgb32,
-            _ => return Err(new_error(ErrorKind::NotSupported)),
+            _ => return Err(Error::NotSupported),
         };
         let mut image = ImageSurface::create(cairo_fmt, width as i32, height as i32).wrap()?;
         // Confident no borrow errors because we just created it.
@@ -298,7 +298,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                             data[dst_off + x * 4 + 3] = a;
                         }
                     }
-                    _ => return Err(new_error(ErrorKind::NotSupported)),
+                    _ => return Err(Error::NotSupported),
                 }
             }
         }

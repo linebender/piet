@@ -13,7 +13,7 @@ use std::io::BufWriter;
 use std::marker::PhantomData;
 use std::path::Path;
 
-use piet::{ErrorKind, ImageFormat};
+use piet::ImageFormat;
 #[doc(hidden)]
 pub use piet_cairo::*;
 
@@ -105,7 +105,7 @@ impl<'a> BitmapTarget<'a> {
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         // TODO: convert other formats.
         if fmt != ImageFormat::RgbaPremul {
-            return Err(piet::new_error(ErrorKind::NotSupported));
+            return Err(piet::Error::NotSupported);
         }
         std::mem::drop(self.cr);
         self.surface.flush();
@@ -150,6 +150,6 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
-        Err(piet::new_error(ErrorKind::MissingFeature))
+        Err(piet::Error::MissingFeature)
     }
 }
