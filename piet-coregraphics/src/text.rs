@@ -21,10 +21,12 @@ pub struct CoreGraphicsFontBuilder(Option<CTFont>);
 
 #[derive(Clone)]
 pub struct CoreGraphicsTextLayout {
+    string: AttributedString,
     framesetter: Framesetter,
     pub(crate) frame: Frame,
     pub(crate) frame_size: Size,
     line_count: usize,
+    width_constraint: f64,
 }
 
 pub struct CoreGraphicsTextLayoutBuilder(CoreGraphicsTextLayout);
@@ -47,8 +49,8 @@ impl Text for CoreGraphicsText {
         text: &str,
         width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
-        let width = width.into().unwrap_or(f64::INFINITY);
-        let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
+        let width_constraint = width.into().unwrap_or(f64::INFINITY);
+        let constraints = CGSize::new(width_constraint as CGFloat, CGFloat::INFINITY);
         let string = AttributedString::new(text, &font.0);
 
         let framesetter = Framesetter::new(&string);
@@ -63,10 +65,12 @@ impl Text for CoreGraphicsText {
 
         let frame_size = Size::new(frame_size.width, frame_size.height);
         let layout = CoreGraphicsTextLayout {
+            string,
             framesetter,
             frame,
             frame_size,
             line_count,
+            width_constraint,
         };
         CoreGraphicsTextLayoutBuilder(layout)
     }
@@ -95,8 +99,20 @@ impl TextLayout for CoreGraphicsTextLayout {
         self.frame_size.width
     }
 
-    fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<(), Error> {
-        unimplemented!()
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        let width = new_width.into().unwrap_or(f64::INFINITY);
+        if width != self.width_constraint {
+            let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
+            let char_range = self.string.range();
+            let (frame_size, _) = self.framesetter.suggest_frame_size(char_range, constraints);
+            let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
+            let path = CGPath::from_rect(rect, None);
+            self.width_constraint = width;
+            self.frame = self.framesetter.create_frame(char_range, &path);
+            self.line_count = self.frame.get_lines().len() as usize;
+            self.frame_size = Size::new(frame_size.width, frame_size.height);
+        }
+        Ok(())
     }
 
     fn line_text(&self, _line_number: usize) -> Option<&str> {

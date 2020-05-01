@@ -5,8 +5,8 @@ use std::path::Path;
 use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::CGContext;
 
-use piet::kurbo::{Circle, Rect, Size};
-use piet::{Color, FontBuilder, RenderContext, Text, TextLayoutBuilder};
+use piet::kurbo::{Circle, Size};
+use piet::{Color, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
@@ -32,7 +32,6 @@ fn main() {
         Circle::new((100.0, 100.0), 50.0),
         &Color::rgb8(255, 0, 0).with_alpha(0.5),
     );
-    piet.fill(Rect::new(0., 0., 200., 200.), &Color::rgba8(0, 0, 255, 128));
 
     let font = piet
         .text()
@@ -40,14 +39,16 @@ fn main() {
         .build()
         .unwrap();
 
-    let layout = piet
+    let mut layout = piet
         .text()
-        .new_text_layout(&font, "this is my cool\nmultiline string, I like it very much, do you also like it? why or why not? Show your work.", 400.0)
+        .new_text_layout(&font, "this is my cool\nmultiline string, I like it very much, do you also like it? why or why not? Show your work.", None)
         .build()
         .unwrap();
 
-    piet.draw_text(&layout, (200.0, 200.0), &Color::BLACK);
     piet.draw_text(&layout, (0., 00.0), &Color::WHITE);
+    layout.update_width(400.).unwrap();
+    piet.draw_text(&layout, (200.0, 200.0), &Color::BLACK);
+    layout.update_width(200.).unwrap();
     piet.draw_text(&layout, (400.0, 400.0), &Color::rgba8(255, 0, 0, 150));
 
     piet.finish().unwrap();

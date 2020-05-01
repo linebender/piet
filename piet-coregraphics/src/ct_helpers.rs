@@ -18,6 +18,7 @@ use core_text::{
     string_attributes,
 };
 
+#[derive(Clone)]
 pub(crate) struct AttributedString(pub(crate) CFMutableAttributedString);
 #[derive(Debug, Clone)]
 pub(crate) struct Framesetter(CTFramesetter);
