@@ -11,7 +11,7 @@ use core_graphics::base::{
 use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::{CGContext, CGLineCap, CGLineJoin};
 use core_graphics::data_provider::CGDataProvider;
-use core_graphics::geometry::{CGPoint, CGRect, CGSize};
+use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::image::CGImage;
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
@@ -143,8 +143,9 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         Ok(())
     }
 
-    fn transform(&mut self, _transform: Affine) {
-        unimplemented!()
+    fn transform(&mut self, transform: Affine) {
+        let transform = to_cgaffine(transform);
+        self.ctx.concat_ctm(transform);
     }
 
     fn make_image(
@@ -213,7 +214,8 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     }
 
     fn current_transform(&self) -> Affine {
-        Default::default()
+        let ctm = self.ctx.get_ctm();
+        from_cgaffine(ctm)
     }
 
     fn status(&mut self) -> Result<(), Error> {
@@ -347,4 +349,14 @@ fn to_cgsize(size: Size) -> CGSize {
 fn to_cgrect(rect: impl Into<Rect>) -> CGRect {
     let rect = rect.into();
     CGRect::new(&to_cgpoint(rect.origin()), &to_cgsize(rect.size()))
+}
+
+fn from_cgaffine(affine: CGAffineTransform) -> Affine {
+    let CGAffineTransform { a, b, c, d, tx, ty } = affine;
+    Affine::new([a, b, c, d, tx, ty])
+}
+
+fn to_cgaffine(affine: Affine) -> CGAffineTransform {
+    let [a, b, c, d, tx, ty] = affine.as_coeffs();
+    CGAffineTransform::new(a, b, c, d, tx, ty)
 }
