@@ -1,27 +1,17 @@
 //! Text related stuff for the coregraphics backend
 
-use core_foundation::array::{CFArray, CFArrayRef};
-use core_foundation::attributed_string::CFMutableAttributedString;
-use core_foundation::base::TCFType;
-use core_foundation::dictionary::CFDictionaryRef;
-use core_foundation::number::CFNumber;
-use core_foundation::string::CFString;
-
-use core_foundation_sys::base::CFRange;
 use core_graphics::base::CGFloat;
 use core_graphics::geometry::{CGPoint, CGRect, CGSize};
 use core_graphics::path::CGPath;
 use core_text::font::{self, CTFont};
-use core_text::frame::{CTFrame, CTFrameRef};
-use core_text::framesetter::{CTFramesetter, CTFramesetterRef};
-use core_text::line::CTLine;
-use core_text::string_attributes;
 
 use piet::kurbo::{Point, Size};
 use piet::{
     Error, Font, FontBuilder, HitTestPoint, HitTestTextPosition, LineMetric, Text, TextLayout,
     TextLayoutBuilder,
 };
+
+use crate::ct_helpers::{AttributedString, Frame, Framesetter};
 
 // inner is an nsfont.
 #[derive(Debug, Clone)]
@@ -31,8 +21,8 @@ pub struct CoreGraphicsFontBuilder(Option<CTFont>);
 
 #[derive(Clone)]
 pub struct CoreGraphicsTextLayout {
-    framesetter: CTFramesetter,
-    pub(crate) frame: CTFrame,
+    framesetter: Framesetter,
+    pub(crate) frame: Frame,
     pub(crate) frame_size: Size,
     line_count: usize,
 }
@@ -59,44 +49,16 @@ impl Text for CoreGraphicsText {
     ) -> Self::TextLayoutBuilder {
         let width = width.into().unwrap_or(f64::INFINITY);
         let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
-        let mut string = CFMutableAttributedString::new();
-        let range = CFRange::init(0, 0);
-        string.replace_str(&CFString::new(text), range);
+        let string = AttributedString::new(text, &font.0);
 
-        let str_len = string.char_len();
-        let char_range = CFRange::init(0, str_len);
-        unsafe {
-            string.set_attribute(
-                char_range,
-                string_attributes::kCTFontAttributeName,
-                font.0.clone(),
-            );
-            string.set_attribute::<CFNumber>(
-                char_range,
-                string_attributes::kCTForegroundColorFromContextAttributeName,
-                1i32.into(),
-            );
-        }
+        let framesetter = Framesetter::new(&string);
+        let char_range = string.range();
 
-        let framesetter = CTFramesetter::new_with_attributed_string(string.as_concrete_TypeRef());
-
-        let mut fit_range = CFRange::init(0, 0);
-        let frame_size = unsafe {
-            CTFramesetterSuggestFrameSizeWithConstraints(
-                framesetter.as_concrete_TypeRef(),
-                char_range,
-                std::ptr::null(),
-                constraints,
-                &mut fit_range,
-            )
-        };
-
+        let (frame_size, _) = framesetter.suggest_frame_size(char_range, constraints);
         let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
         let path = CGPath::from_rect(rect, None);
         let frame = framesetter.create_frame(char_range, &path);
-
-        let lines: CFArray<CTLine> =
-            unsafe { TCFType::wrap_under_get_rule(CTFrameGetLines(frame.as_concrete_TypeRef())) };
+        let lines = frame.get_lines();
         let line_count = lines.len() as usize;
 
         let frame_size = Size::new(frame_size.width, frame_size.height);
@@ -156,17 +118,4 @@ impl TextLayout for CoreGraphicsTextLayout {
     fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
         unimplemented!()
     }
-}
-
-#[link(name = "CoreText", kind = "framework")]
-extern "C" {
-    fn CTFramesetterSuggestFrameSizeWithConstraints(
-        framesetter: CTFramesetterRef,
-        string_range: CFRange,
-        frame_attributes: CFDictionaryRef,
-        constraints: CGSize,
-        fitRange: *mut CFRange,
-    ) -> CGSize;
-
-    fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
 }

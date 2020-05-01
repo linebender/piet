@@ -1,5 +1,6 @@
 //! The CoreGraphics backend for the Piet 2D graphics abstraction.
 
+mod ct_helpers;
 mod text;
 
 use std::borrow::Cow;
@@ -134,7 +135,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         let y_off = self.ctx.height() as f64 - layout.frame_size.height;
         self.ctx.translate(pos.x, y_off - pos.y);
         self.set_fill_brush(&brush);
-        layout.frame.draw(self.ctx);
+        layout.frame.0.draw(self.ctx);
         self.ctx.restore();
     }
 
