@@ -2,6 +2,7 @@
 
 use core_foundation_sys::base::CFRange;
 use core_graphics::base::CGFloat;
+use core_graphics::context::CGContext;
 use core_graphics::geometry::{CGPoint, CGRect, CGSize};
 use core_graphics::path::CGPath;
 use core_text::font::{self, CTFont};
@@ -25,8 +26,9 @@ pub struct CoreGraphicsTextLayout {
     string: String,
     attr_string: AttributedString,
     framesetter: Framesetter,
-    pub(crate) frame: Frame,
-    line_origins: Vec<CGPoint>,
+    pub(crate) frame: Option<Frame>,
+    // distance from the top of the frame to the baseline of each line
+    line_y_positions: Vec<f64>,
     /// offsets in utf8 of lines
     line_offsets: Vec<usize>,
     pub(crate) frame_size: Size,
@@ -91,9 +93,14 @@ impl TextLayout for CoreGraphicsTextLayout {
             let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
             let path = CGPath::from_rect(rect, None);
             self.width_constraint = width;
-            self.frame = self.framesetter.create_frame(char_range, &path);
-            let line_count = self.frame.get_lines().len();
-            self.line_origins = self.frame.get_line_origins(CFRange::init(0, line_count));
+            let frame = self.framesetter.create_frame(char_range, &path);
+            let line_count = frame.get_lines().len();
+            let line_origins = frame.get_line_origins(CFRange::init(0, line_count));
+            self.line_y_positions = line_origins
+                .iter()
+                .map(|l| frame_size.height - l.y)
+                .collect();
+            self.frame = Some(frame);
             self.frame_size = Size::new(frame_size.width, frame_size.height);
             self.rebuild_line_offsets();
         }
@@ -105,12 +112,44 @@ impl TextLayout for CoreGraphicsTextLayout {
             .map(|(start, end)| unsafe { self.string.get_unchecked(start..end) })
     }
 
-    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
-        unimplemented!()
+    fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
+        let lines = self
+            .frame
+            .as_ref()
+            .expect("always inited in ::new")
+            .get_lines();
+        let line = lines.get(line_number.min(isize::max_value() as usize) as isize)?;
+        let line = Line::new(&line);
+        let typo_bounds = line.get_typographic_bounds();
+        let (start_offset, end_offset) = self.line_range(line_number)?;
+        let text = self.line_text(line_number)?;
+        //FIXME: this is just ascii whitespace
+        let trailing_whitespace = text
+            .as_bytes()
+            .iter()
+            .rev()
+            .take_while(|b| match b {
+                b' ' | b'\t' | b'\n' | b'\r' => true,
+                _ => false,
+            })
+            .count();
+        let height = typo_bounds.ascent + typo_bounds.descent + typo_bounds.leading;
+        // this may not be exactly right, but i'm also not sure we ever use this?
+        //  see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
+        let cumulative_height =
+            (self.line_y_positions[line_number] + typo_bounds.descent + typo_bounds.leading).ceil();
+        Some(LineMetric {
+            start_offset,
+            end_offset,
+            trailing_whitespace,
+            baseline: typo_bounds.ascent,
+            height,
+            cumulative_height,
+        })
     }
 
     fn line_count(&self) -> usize {
-        self.line_origins.len()
+        self.line_y_positions.len()
     }
 
     fn hit_test_point(&self, _point: Point) -> HitTestPoint {
@@ -124,38 +163,40 @@ impl TextLayout for CoreGraphicsTextLayout {
 
 impl CoreGraphicsTextLayout {
     fn new(font: &CoreGraphicsFont, text: &str, width_constraint: f64) -> Self {
-        let constraints = CGSize::new(width_constraint as CGFloat, CGFloat::INFINITY);
         let string = AttributedString::new(text, &font.0);
-
         let framesetter = Framesetter::new(&string);
-        let char_range = string.range();
-
-        let (frame_size, _) = framesetter.suggest_frame_size(char_range, constraints);
-        let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
-        let path = CGPath::from_rect(rect, None);
-        let frame = framesetter.create_frame(char_range, &path);
-        let lines = frame.get_lines();
-        let line_origins = frame.get_line_origins(CFRange::init(0, lines.len()));
-
-        let frame_size = Size::new(frame_size.width, frame_size.height);
 
         let mut layout = CoreGraphicsTextLayout {
             string: text.into(),
             attr_string: string,
             framesetter,
-            frame,
-            frame_size,
-            line_origins,
-            width_constraint,
+            // all of this is correctly set in `update_width` below
+            frame: None,
+            frame_size: Size::ZERO,
+            line_y_positions: Vec::new(),
+            // NaN to ensure we always execute code in update_width
+            width_constraint: f64::NAN,
             line_offsets: Vec::new(),
         };
-        layout.rebuild_line_offsets();
+        layout.update_width(width_constraint).unwrap();
         layout
+    }
+
+    pub(crate) fn draw(&self, ctx: &mut CGContext) {
+        self.frame
+            .as_ref()
+            .expect("always inited in ::new")
+            .0
+            .draw(ctx)
     }
 
     /// for each line in a layout, determine its offset in utf8.
     fn rebuild_line_offsets(&mut self) {
-        let lines = self.frame.get_lines();
+        let lines = self
+            .frame
+            .as_ref()
+            .expect("always inited in ::new")
+            .get_lines();
 
         let utf16_line_offsets = lines.iter().map(|l| {
             let line = Line::new(&l);
@@ -211,5 +252,31 @@ mod tests {
         assert_eq!(layout.line_text(1), Some("i'm\n"));
         assert_eq!(layout.line_text(2), Some("😀 four\n"));
         assert_eq!(layout.line_text(3), Some("lines"));
+    }
+
+    #[test]
+    fn metrics() {
+        let text = "🤡:\na string\nwith a number \n of lines";
+        let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
+        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let line1 = layout.line_metric(0).unwrap();
+        assert_eq!(line1.start_offset, 0);
+        assert_eq!(line1.end_offset, 6);
+        assert_eq!(line1.trailing_whitespace, 1);
+        layout.line_metric(1);
+
+        let line3 = layout.line_metric(2).unwrap();
+        assert_eq!(line3.start_offset, 15);
+        assert_eq!(line3.end_offset, 30);
+        assert_eq!(line3.trailing_whitespace, 2);
+
+        let line4 = layout.line_metric(3).unwrap();
+        assert_eq!(layout.line_text(3), Some(" of lines"));
+        assert_eq!(line4.trailing_whitespace, 0);
+
+        let total_height = layout.frame_size.height;
+        assert_eq!(line4.cumulative_height, total_height);
+
+        assert!(layout.line_metric(4).is_none());
     }
 }

@@ -12,6 +12,7 @@ use core_foundation::{
 };
 use core_foundation_sys::base::CFRange;
 use core_graphics::{
+    base::CGFloat,
     geometry::{CGPoint, CGSize},
     path::CGPathRef,
 };
@@ -31,6 +32,14 @@ pub(crate) struct Framesetter(CTFramesetter);
 pub(crate) struct Frame(pub(crate) CTFrame);
 #[derive(Debug, Clone)]
 pub(crate) struct Line<'a>(pub(crate) &'a CTLine);
+
+#[derive(Default, Debug, Copy, Clone)]
+pub(crate) struct TypographicBounds {
+    pub(crate) width: CGFloat,
+    pub(crate) ascent: CGFloat,
+    pub(crate) descent: CGFloat,
+    pub(crate) leading: CGFloat,
+}
 
 impl AttributedString {
     pub(crate) fn new(text: &str, font: &CTFont) -> Self {
@@ -114,6 +123,20 @@ impl<'a> Line<'a> {
     pub(crate) fn get_string_range(&self) -> CFRange {
         unsafe { CTLineGetStringRange(self.0.as_concrete_TypeRef()) }
     }
+
+    pub(crate) fn get_typographic_bounds(&self) -> TypographicBounds {
+        let mut out = TypographicBounds::default();
+        let width = unsafe {
+            CTLineGetTypographicBounds(
+                self.0.as_concrete_TypeRef(),
+                &mut out.ascent,
+                &mut out.descent,
+                &mut out.leading,
+            )
+        };
+        out.width = width;
+        out
+    }
 }
 
 #[link(name = "CoreText", kind = "framework")]
@@ -128,5 +151,12 @@ extern "C" {
 
     fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
     fn CTFrameGetLineOrigins(frame: CTFrameRef, range: CFRange, origins: *mut CGPoint);
+
     fn CTLineGetStringRange(line: CTLineRef) -> CFRange;
+    fn CTLineGetTypographicBounds(
+        line: CTLineRef,
+        ascent: *mut CGFloat,
+        descent: *mut CGFloat,
+        leading: *mut CGFloat,
+    ) -> CGFloat;
 }
