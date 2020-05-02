@@ -1,5 +1,7 @@
 //! Wrappers around CF/CT types, with nice interfaces.
 
+use std::ops::Deref;
+
 use core_foundation::{
     array::{CFArray, CFArrayRef},
     attributed_string::CFMutableAttributedString,
@@ -9,12 +11,15 @@ use core_foundation::{
     string::CFString,
 };
 use core_foundation_sys::base::CFRange;
-use core_graphics::{geometry::CGSize, path::CGPathRef};
+use core_graphics::{
+    geometry::{CGPoint, CGSize},
+    path::CGPathRef,
+};
 use core_text::{
     font::CTFont,
     frame::{CTFrame, CTFrameRef},
     framesetter::{CTFramesetter, CTFramesetterRef},
-    line::CTLine,
+    line::{CTLine, CTLineRef},
     string_attributes,
 };
 
@@ -24,6 +29,8 @@ pub(crate) struct AttributedString(pub(crate) CFMutableAttributedString);
 pub(crate) struct Framesetter(CTFramesetter);
 #[derive(Debug, Clone)]
 pub(crate) struct Frame(pub(crate) CTFrame);
+#[derive(Debug, Clone)]
+pub(crate) struct Line<'a>(pub(crate) &'a CTLine);
 
 impl AttributedString {
     pub(crate) fn new(text: &str, font: &CTFont) -> Self {
@@ -89,6 +96,24 @@ impl Frame {
     pub(crate) fn get_lines(&self) -> CFArray<CTLine> {
         unsafe { TCFType::wrap_under_get_rule(CTFrameGetLines(self.0.as_concrete_TypeRef())) }
     }
+
+    pub(crate) fn get_line_origins(&self, range: CFRange) -> Vec<CGPoint> {
+        let mut origins = vec![CGPoint::new(0.0, 0.0); range.length as usize];
+        unsafe {
+            CTFrameGetLineOrigins(self.0.as_concrete_TypeRef(), range, origins.as_mut_ptr());
+        }
+        origins
+    }
+}
+
+impl<'a> Line<'a> {
+    pub(crate) fn new(inner: &'a impl Deref<Target = CTLine>) -> Line<'a> {
+        Line(inner.deref())
+    }
+
+    pub(crate) fn get_string_range(&self) -> CFRange {
+        unsafe { CTLineGetStringRange(self.0.as_concrete_TypeRef()) }
+    }
 }
 
 #[link(name = "CoreText", kind = "framework")]
@@ -102,4 +127,6 @@ extern "C" {
     ) -> CGSize;
 
     fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
+    fn CTFrameGetLineOrigins(frame: CTFrameRef, range: CFRange, origins: *mut CGPoint);
+    fn CTLineGetStringRange(line: CTLineRef) -> CFRange;
 }
