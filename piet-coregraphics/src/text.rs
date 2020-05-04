@@ -212,8 +212,26 @@ impl TextLayout for CoreGraphicsTextLayout {
         }
     }
 
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
-        unimplemented!()
+    fn hit_test_text_position(&self, offset: usize) -> Option<HitTestTextPosition> {
+        let line_num = match self.line_offsets.binary_search(&offset) {
+            Ok(line) => line.saturating_sub(1),
+            Err(line) => line.saturating_sub(1),
+        };
+        let line: Line = self.unwrap_frame().get_line(line_num)?.into();
+        let text = self.line_text(line_num)?;
+
+        let offset_remainder = offset - self.line_offsets.get(line_num)?;
+        let off16: usize = text[..offset_remainder].chars().map(char::len_utf16).sum();
+        let line_range = line.get_string_range();
+        let char_idx = line_range.location + off16 as isize;
+        let (x_pos, _) = line.get_offset_for_string_index(char_idx);
+        let y_pos = self.line_y_positions[line_num];
+        Some(HitTestTextPosition {
+            point: Point::new(x_pos, y_pos),
+            metrics: HitTestMetrics {
+                text_position: offset,
+            },
+        })
     }
 }
 
@@ -361,5 +379,19 @@ mod tests {
         let p6 = layout.hit_test_point(Point::new(10.0, 83.0));
         assert_eq!(p6.metrics.text_position, 10);
         assert!(p6.is_inside);
+    }
+
+    #[test]
+    fn hit_test_text_position() {
+        let text = "aaaaa\nbbbbb";
+        let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
+        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let p1 = layout.hit_test_text_position(0).unwrap();
+        assert_eq!(p1.point, Point::new(0.0, 16.0));
+
+        let p1 = layout.hit_test_text_position(7).unwrap();
+        assert_eq!(p1.point.y, 36.0);
+        // just the general idea that this is the second character
+        assert!(p1.point.x > 5.0 && p1.point.x < 15.0);
     }
 }
