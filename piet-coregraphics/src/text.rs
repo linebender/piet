@@ -9,8 +9,8 @@ use core_text::font::{self, CTFont};
 
 use piet::kurbo::{Point, Size};
 use piet::{
-    Error, Font, FontBuilder, HitTestPoint, HitTestTextPosition, LineMetric, Text, TextLayout,
-    TextLayoutBuilder,
+    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
+    TextLayout, TextLayoutBuilder,
 };
 
 use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
@@ -113,11 +113,7 @@ impl TextLayout for CoreGraphicsTextLayout {
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        let lines = self
-            .frame
-            .as_ref()
-            .expect("always inited in ::new")
-            .get_lines();
+        let lines = self.unwrap_frame().get_lines();
         let line = lines.get(line_number.min(isize::max_value() as usize) as isize)?;
         let line = Line::new(&line);
         let typo_bounds = line.get_typographic_bounds();
@@ -152,8 +148,68 @@ impl TextLayout for CoreGraphicsTextLayout {
         self.line_y_positions.len()
     }
 
-    fn hit_test_point(&self, _point: Point) -> HitTestPoint {
-        unimplemented!()
+    // given a point on the screen, return an offset in the text, basically
+    fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        let mut line_num = self
+            .line_y_positions
+            .iter()
+            .position(|y| y >= &point.y)
+            // if we're past the last line, use the last line
+            .unwrap_or_else(|| self.line_y_positions.len().saturating_sub(1));
+        // because y_positions is the position of the baseline, check that we don't
+        // fall between the preceding baseline and that line's descent
+        if line_num > 0 {
+            let prev_line = self.unwrap_frame().get_line(line_num - 1).unwrap();
+            let typo_bounds = Line::new(&&prev_line).get_typographic_bounds();
+            if self.line_y_positions[line_num - 1] + typo_bounds.descent >= point.y {
+                line_num -= 1;
+            }
+        }
+        let line: Line = self
+            .unwrap_frame()
+            .get_line(line_num)
+            .map(Into::into)
+            .unwrap();
+        let fake_y = self.line_y_positions[line_num];
+        // map that back into our inverted coordinate space
+        let fake_y = -(self.frame_size.height - fake_y);
+        let point_in_string_space = CGPoint::new(point.x, fake_y);
+        let offset_utf16 = line.get_string_index_for_position(point_in_string_space);
+        let offset = match offset_utf16 {
+            // this is 'kCFNotFound'.
+            // if nothing is found just go end of string? should this be len - 1? do we have an
+            // implicit newline at end of file? so many mysteries
+            -1 => self.string.len(),
+            n if n >= 0 => {
+                let utf16_range = line.get_string_range();
+                let utf8_range = self.line_range(line_num).unwrap();
+                let line_txt = self.line_text(line_num).unwrap();
+                let rel_offset = (n - utf16_range.location) as usize;
+                let mut off16 = 0;
+                let mut off8 = 0;
+                for c in line_txt.chars() {
+                    if rel_offset == off16 {
+                        break;
+                    }
+                    off16 = c.len_utf16();
+                    off8 = c.len_utf8();
+                }
+                utf8_range.0 + off8
+            }
+            // some other value; should never happen
+            _ => panic!("gross violation of api contract"),
+        };
+
+        let typo_bounds = line.get_typographic_bounds();
+        let is_inside_y = point.y >= 0. && point.y <= self.frame_size.height;
+        let is_inside_x = point.x >= 0. && point.x <= typo_bounds.width;
+
+        HitTestPoint {
+            metrics: HitTestMetrics {
+                text_position: offset,
+            },
+            is_inside: is_inside_x && is_inside_y,
+        }
     }
 
     fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
@@ -183,20 +239,17 @@ impl CoreGraphicsTextLayout {
     }
 
     pub(crate) fn draw(&self, ctx: &mut CGContext) {
-        self.frame
-            .as_ref()
-            .expect("always inited in ::new")
-            .0
-            .draw(ctx)
+        self.unwrap_frame().0.draw(ctx)
+    }
+
+    #[inline]
+    fn unwrap_frame(&self) -> &Frame {
+        self.frame.as_ref().expect("always inited in ::new")
     }
 
     /// for each line in a layout, determine its offset in utf8.
     fn rebuild_line_offsets(&mut self) {
-        let lines = self
-            .frame
-            .as_ref()
-            .expect("always inited in ::new")
-            .get_lines();
+        let lines = self.unwrap_frame().get_lines();
 
         let utf16_line_offsets = lines.iter().map(|l| {
             let line = Line::new(&l);
@@ -278,5 +331,35 @@ mod tests {
         assert_eq!(line4.cumulative_height, total_height);
 
         assert!(layout.line_metric(4).is_none());
+    }
+
+    // test that at least we're landing on the correct line
+    #[test]
+    fn basic_hit_testing() {
+        let text = "1\n😀\n8\nA";
+        let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
+        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let p1 = layout.hit_test_point(Point::ZERO);
+        assert_eq!(p1.metrics.text_position, 0);
+        assert!(p1.is_inside);
+        let p2 = layout.hit_test_point(Point::new(2.0, 19.0));
+        assert_eq!(p2.metrics.text_position, 0);
+        assert!(p2.is_inside);
+
+        let p3 = layout.hit_test_point(Point::new(50.0, 10.0));
+        assert_eq!(p3.metrics.text_position, 1);
+        assert!(!p3.is_inside);
+
+        let p4 = layout.hit_test_point(Point::new(4.0, 25.0));
+        assert_eq!(p4.metrics.text_position, 2);
+        assert!(p4.is_inside);
+
+        let p5 = layout.hit_test_point(Point::new(2.0, 83.0));
+        assert_eq!(p5.metrics.text_position, 9);
+        assert!(p5.is_inside);
+
+        let p6 = layout.hit_test_point(Point::new(10.0, 83.0));
+        assert_eq!(p6.metrics.text_position, 10);
+        assert!(p6.is_inside);
     }
 }
