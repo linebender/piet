@@ -151,6 +151,19 @@ impl<'a> Line<'a> {
     pub(crate) fn get_string_index_for_position(&self, position: CGPoint) -> CFIndex {
         unsafe { CTLineGetStringIndexForPosition(self.0.as_concrete_TypeRef(), position) }
     }
+
+    /// return the 'primary' and 'secondary' offsets on the given line that the boundary of the
+    /// character at the provided index.
+    ///
+    /// I don't know what the secondary offset is for. There are docs at:
+    /// https://developer.apple.com/documentation/coretext/1509629-ctlinegetoffsetforstringindex
+    pub(crate) fn get_offset_for_string_index(&self, index: CFIndex) -> (CGFloat, CGFloat) {
+        let mut secondary: f64 = 0.0;
+        let primary = unsafe {
+            CTLineGetOffsetForStringIndex(self.0.as_concrete_TypeRef(), index, &mut secondary)
+        };
+        (primary, secondary)
+    }
 }
 
 impl<'a> From<CTLine> for Line<'a> {
@@ -181,4 +194,10 @@ extern "C" {
     ) -> CGFloat;
 
     fn CTLineGetStringIndexForPosition(line: CTLineRef, position: CGPoint) -> CFIndex;
+
+    fn CTLineGetOffsetForStringIndex(
+        line: CTLineRef,
+        charIndex: CFIndex,
+        secondaryOffset: *mut CGFloat,
+    ) -> CGFloat;
 }
