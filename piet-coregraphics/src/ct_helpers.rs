@@ -1,9 +1,11 @@
 //! Wrappers around CF/CT types, with nice interfaces.
 
+use std::borrow::Cow;
+use std::convert::TryInto;
 use std::ops::Deref;
 
 use core_foundation::{
-    array::{CFArray, CFArrayRef},
+    array::{CFArray, CFArrayRef, CFIndex},
     attributed_string::CFMutableAttributedString,
     base::TCFType,
     dictionary::CFDictionaryRef,
@@ -31,7 +33,7 @@ pub(crate) struct Framesetter(CTFramesetter);
 #[derive(Debug, Clone)]
 pub(crate) struct Frame(pub(crate) CTFrame);
 #[derive(Debug, Clone)]
-pub(crate) struct Line<'a>(pub(crate) &'a CTLine);
+pub(crate) struct Line<'a>(pub(crate) Cow<'a, CTLine>);
 
 #[derive(Default, Debug, Copy, Clone)]
 pub(crate) struct TypographicBounds {
@@ -106,6 +108,14 @@ impl Frame {
         unsafe { TCFType::wrap_under_get_rule(CTFrameGetLines(self.0.as_concrete_TypeRef())) }
     }
 
+    pub(crate) fn get_line(&self, line_number: usize) -> Option<CTLine> {
+        let idx: CFIndex = line_number.try_into().ok()?;
+        let lines = self.get_lines();
+        lines
+            .get(idx)
+            .map(|l| unsafe { TCFType::wrap_under_get_rule(l.as_concrete_TypeRef()) })
+    }
+
     pub(crate) fn get_line_origins(&self, range: CFRange) -> Vec<CGPoint> {
         let mut origins = vec![CGPoint::new(0.0, 0.0); range.length as usize];
         unsafe {
@@ -117,7 +127,7 @@ impl Frame {
 
 impl<'a> Line<'a> {
     pub(crate) fn new(inner: &'a impl Deref<Target = CTLine>) -> Line<'a> {
-        Line(inner.deref())
+        Line(Cow::Borrowed(inner.deref()))
     }
 
     pub(crate) fn get_string_range(&self) -> CFRange {
@@ -136,6 +146,16 @@ impl<'a> Line<'a> {
         };
         out.width = width;
         out
+    }
+
+    pub(crate) fn get_string_index_for_position(&self, position: CGPoint) -> CFIndex {
+        unsafe { CTLineGetStringIndexForPosition(self.0.as_concrete_TypeRef(), position) }
+    }
+}
+
+impl<'a> From<CTLine> for Line<'a> {
+    fn from(src: CTLine) -> Line<'a> {
+        Line(Cow::Owned(src))
     }
 }
 
@@ -159,4 +179,6 @@ extern "C" {
         descent: *mut CGFloat,
         leading: *mut CGFloat,
     ) -> CGFloat;
+
+    fn CTLineGetStringIndexForPosition(line: CTLineRef, position: CGPoint) -> CFIndex;
 }
