@@ -1,6 +1,7 @@
 //! The CoreGraphics backend for the Piet 2D graphics abstraction.
 
 mod ct_helpers;
+mod gradient;
 mod text;
 
 use std::borrow::Cow;
@@ -27,6 +28,8 @@ pub use crate::text::{
     CoreGraphicsTextLayoutBuilder,
 };
 
+use gradient::Gradient;
+
 pub struct CoreGraphicsContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
@@ -45,8 +48,8 @@ impl<'a> CoreGraphicsContext<'a> {
 
 #[derive(Clone)]
 pub enum Brush {
-    Solid(u32),
-    Gradient,
+    Solid(Color),
+    Gradient(Gradient),
 }
 
 impl<'a> RenderContext for CoreGraphicsContext<'a> {
@@ -68,26 +71,47 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
-        Brush::Solid(color.as_rgba_u32())
+        Brush::Solid(color)
     }
 
-    fn gradient(&mut self, _gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
-        unimplemented!()
+    fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
+        let gradient = Gradient::from_piet_gradient(gradient.into());
+        Ok(Brush::Gradient(gradient))
     }
 
     /// Fill a shape.
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_fill_brush(&brush);
-        self.ctx.fill_path();
+        match brush.as_ref() {
+            Brush::Solid(color) => {
+                self.set_fill_color(color);
+                self.ctx.fill_path();
+            }
+            Brush::Gradient(grad) => {
+                self.ctx.save();
+                self.ctx.clip();
+                grad.fill(self.ctx);
+                self.ctx.restore();
+            }
+        }
     }
 
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_fill_brush(&brush);
-        self.ctx.eo_fill_path();
+        match brush.as_ref() {
+            Brush::Solid(color) => {
+                self.set_fill_color(color);
+                self.ctx.fill_path();
+            }
+            Brush::Gradient(grad) => {
+                self.ctx.save();
+                self.ctx.eo_clip();
+                grad.fill(self.ctx);
+                self.ctx.restore();
+            }
+        }
     }
 
     fn clip(&mut self, shape: impl Shape) {
@@ -99,8 +123,19 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width.round_into(), None);
-        self.set_stroke_brush(&brush);
-        self.ctx.stroke_path();
+        match brush.as_ref() {
+            Brush::Solid(color) => {
+                self.set_stroke_color(color);
+                self.ctx.stroke_path();
+            }
+            Brush::Gradient(grad) => {
+                self.ctx.save();
+                self.ctx.replace_path_with_stroked_path();
+                self.ctx.clip();
+                grad.fill(self.ctx);
+                self.ctx.restore();
+            }
+        }
     }
 
     fn stroke_styled(
@@ -113,8 +148,19 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width.round_into(), Some(style));
-        self.set_stroke_brush(&brush);
-        self.ctx.stroke_path();
+        match brush.as_ref() {
+            Brush::Solid(color) => {
+                self.set_stroke_color(color);
+                self.ctx.stroke_path();
+            }
+            Brush::Gradient(grad) => {
+                self.ctx.save();
+                self.ctx.replace_path_with_stroked_path();
+                self.ctx.clip();
+                grad.fill(self.ctx);
+                self.ctx.restore();
+            }
+        }
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -134,8 +180,20 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         // and (0, 0) in context is also bottom left.
         let y_off = self.ctx.height() as f64 - layout.frame_size.height;
         self.ctx.translate(pos.x, y_off - pos.y);
-        self.set_fill_brush(&brush);
-        layout.draw(self.ctx);
+        match brush.as_ref() {
+            Brush::Solid(color) => {
+                self.set_fill_color(color);
+                layout.draw(self.ctx);
+            }
+            Brush::Gradient(grad) => {
+                //FIXME: there's no simple way to fill text with a gradient here.
+                //To do this correctly we need to work glyph by glyph, using
+                //CTFontCreatePathForGlyph, and I'm not doing that today.
+
+                self.set_fill_color(&grad.first_color());
+                layout.draw(self.ctx);
+            }
+        }
         self.ctx.restore();
     }
 
@@ -260,32 +318,14 @@ fn convert_line_cap(line_cap: LineCap) -> CGLineCap {
 }
 
 impl<'a> CoreGraphicsContext<'a> {
-    /// Set the source pattern to the brush.
-    ///
-    /// Cairo is super stateful, and we're trying to have more retained stuff.
-    /// This is part of the impedance matching.
-    fn set_fill_brush(&mut self, brush: &Brush) {
-        match *brush {
-            Brush::Solid(rgba) => self.ctx.set_rgb_fill_color(
-                byte_to_frac(rgba >> 24),
-                byte_to_frac(rgba >> 16),
-                byte_to_frac(rgba >> 8),
-                byte_to_frac(rgba),
-            ),
-            Brush::Gradient => unimplemented!(),
-        }
+    fn set_fill_color(&mut self, color: &Color) {
+        let (r, g, b, a) = Color::as_rgba(&color);
+        self.ctx.set_rgb_fill_color(r, g, b, a);
     }
 
-    fn set_stroke_brush(&mut self, brush: &Brush) {
-        match *brush {
-            Brush::Solid(rgba) => self.ctx.set_rgb_stroke_color(
-                byte_to_frac(rgba >> 24),
-                byte_to_frac(rgba >> 16),
-                byte_to_frac(rgba >> 8),
-                byte_to_frac(rgba),
-            ),
-            Brush::Gradient => unimplemented!(),
-        }
+    fn set_stroke_color(&mut self, color: &Color) {
+        let (r, g, b, a) = Color::as_rgba(&color);
+        self.ctx.set_rgb_stroke_color(r, g, b, a);
     }
 
     /// Set the stroke parameters.

@@ -6,7 +6,10 @@ use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::CGContext;
 
 use piet::kurbo::{Circle, Size};
-use piet::{Color, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
+use piet::{
+    Color, FontBuilder, LinearGradient, RadialGradient, RenderContext, Text, TextLayout,
+    TextLayoutBuilder, UnitPoint,
+};
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
@@ -23,15 +26,21 @@ fn main() {
     );
     let mut piet = piet_coregraphics::CoreGraphicsContext::new(&mut cg_ctx);
     let bounds = Size::new(WIDTH as f64, HEIGHT as f64).to_rect();
-    piet.stroke(bounds, &Color::rgba8(0, 255, 0, 128), 20.0);
-    piet.fill(
-        bounds.inset((0., 0., -bounds.width() * 0.5, 0.)),
-        &Color::rgba8(0, 0, 255, 128),
+
+    let linear = LinearGradient::new(
+        UnitPoint::TOP_LEFT,
+        UnitPoint::BOTTOM_RIGHT,
+        (
+            Color::rgba(1.0, 0.2, 0.5, 0.4),
+            Color::rgba(0.9, 0.0, 0.9, 0.8),
+        ),
     );
-    piet.fill(
-        Circle::new((100.0, 100.0), 50.0),
-        &Color::rgb8(255, 0, 0).with_alpha(0.5),
-    );
+    let radial = RadialGradient::new(0.8, (Color::WHITE, Color::BLACK))
+        .with_origin(UnitPoint::new(0.2, 0.7));
+
+    piet.fill(bounds.inset((0., 0., -bounds.width() * 0.5, 0.)), &radial);
+    piet.fill(Circle::new((100.0, 100.0), 50.0), &linear);
+    piet.stroke(bounds, &linear, 20.0);
 
     let font = piet
         .text()
