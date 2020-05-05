@@ -5,7 +5,7 @@ use std::path::Path;
 use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::CGContext;
 
-use piet::kurbo::{Circle, Size};
+use piet::kurbo::{Circle, Rect, Size};
 use piet::{
     Color, FontBuilder, LinearGradient, RadialGradient, RenderContext, Text, TextLayout,
     TextLayoutBuilder, UnitPoint,
@@ -54,6 +54,11 @@ fn main() {
         .build()
         .unwrap();
 
+    piet.blurred_rect(Rect::new(100.0, 100., 150., 150.), 5.0, &Color::BLACK);
+    piet.fill(
+        Rect::new(95.0, 105., 145., 155.),
+        &Color::rgb(0.0, 0.4, 0.2),
+    );
     piet.draw_text(&layout, (0., 00.0), &Color::WHITE);
     layout.update_width(400.).unwrap();
     piet.draw_text(&layout, (200.0, 200.0), &Color::BLACK);

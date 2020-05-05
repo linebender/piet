@@ -1,5 +1,6 @@
 //! The CoreGraphics backend for the Piet 2D graphics abstraction.
 
+mod blurred_rect;
 mod ct_helpers;
 mod gradient;
 mod text;
@@ -11,10 +12,10 @@ use core_graphics::base::{
     kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
 };
 use core_graphics::color_space::CGColorSpace;
-use core_graphics::context::{CGContext, CGLineCap, CGLineJoin};
+use core_graphics::context::{CGContext, CGContextRef, CGLineCap, CGLineJoin};
 use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
-use core_graphics::image::CGImage;
+use core_graphics::image::{CGImage, CGImageRef};
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
@@ -277,8 +278,17 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         }
     }
 
-    fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
-        unimplemented!()
+    fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
+        let (image, rect) = blurred_rect::compute_blurred_rect(rect, blur_radius);
+        let cg_rect = to_cgrect(rect);
+        self.ctx.save();
+        let context_ref: *mut u8 = &mut **self.ctx as *mut CGContextRef as *mut u8;
+        let image_ref: *const u8 = &*image as *const CGImageRef as *const u8;
+        unsafe {
+            CGContextClipToMask(context_ref, cg_rect, image_ref);
+        }
+        self.fill(rect, brush);
+        self.ctx.restore()
     }
 
     fn current_transform(&self) -> Affine {
@@ -287,7 +297,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     }
 
     fn status(&mut self) -> Result<(), Error> {
-        unimplemented!()
+        Ok(())
     }
 }
 
@@ -409,4 +419,9 @@ fn from_cgaffine(affine: CGAffineTransform) -> Affine {
 fn to_cgaffine(affine: Affine) -> CGAffineTransform {
     let [a, b, c, d, tx, ty] = affine.as_coeffs();
     CGAffineTransform::new(a, b, c, d, tx, ty)
+}
+
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGContextClipToMask(ctx: *mut u8, rect: CGRect, mask: *const u8);
 }
