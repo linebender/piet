@@ -9,7 +9,7 @@ use core_graphics::{
     base::CGFloat,
     color::{CGColor, SysCGColorRef},
     color_space::{kCGColorSpaceSRGB, CGColorSpace, CGColorSpaceRef},
-    context::{CGContext, CGContextRef},
+    context::CGContextRef,
     geometry::CGPoint,
 };
 
@@ -53,8 +53,8 @@ impl Gradient {
         .unwrap_or(Color::BLACK)
     }
 
-    pub(crate) fn fill(&self, ctx: &mut CGContext) {
-        let context_ref: *mut u8 = &mut **ctx as *mut CGContextRef as *mut u8;
+    pub(crate) fn fill(&self, ctx: &mut CGContextRef) {
+        let context_ref: *mut u8 = ctx as *mut CGContextRef as *mut u8;
         match self.piet_grad {
             FixedGradient::Radial(FixedRadialGradient {
                 center,

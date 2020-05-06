@@ -12,7 +12,7 @@ use core_graphics::base::{
     kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
 };
 use core_graphics::color_space::CGColorSpace;
-use core_graphics::context::{CGContext, CGContextRef, CGLineCap, CGLineJoin};
+use core_graphics::context::{CGContextRef, CGLineCap, CGLineJoin};
 use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::image::{CGImage, CGImageRef};
@@ -34,15 +34,15 @@ use gradient::Gradient;
 pub struct CoreGraphicsContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
-    ctx: &'a mut CGContext,
-    text: CoreGraphicsText,
+    ctx: &'a mut CGContextRef,
+    text: CoreGraphicsText<'a>,
 }
 
 impl<'a> CoreGraphicsContext<'a> {
-    pub fn new(ctx: &mut CGContext) -> CoreGraphicsContext {
+    pub fn new(ctx: &mut CGContextRef) -> CoreGraphicsContext {
         CoreGraphicsContext {
             ctx,
-            text: CoreGraphicsText,
+            text: CoreGraphicsText::new(),
         }
     }
 }
@@ -55,7 +55,7 @@ pub enum Brush {
 
 impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Brush = Brush;
-    type Text = CoreGraphicsText;
+    type Text = CoreGraphicsText<'a>;
     type TextLayout = CoreGraphicsTextLayout;
     type Image = CGImage;
     //type StrokeStyle = StrokeStyle;
@@ -282,7 +282,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         let (image, rect) = blurred_rect::compute_blurred_rect(rect, blur_radius);
         let cg_rect = to_cgrect(rect);
         self.ctx.save();
-        let context_ref: *mut u8 = &mut **self.ctx as *mut CGContextRef as *mut u8;
+        let context_ref: *mut u8 = self.ctx as *mut CGContextRef as *mut u8;
         let image_ref: *const u8 = &*image as *const CGImageRef as *const u8;
         unsafe {
             CGContextClipToMask(context_ref, cg_rect, image_ref);
