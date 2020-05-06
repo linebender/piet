@@ -17,3 +17,4 @@ core-foundation-sys = "0.7"
 
 [dev-dependencies]
 png = "0.16.2"
+piet = { version = "0.0.12", path = "../piet", features = ["samples"] }
