@@ -1,7 +1,7 @@
 [package]
 name = "piet-coregraphics"
-version = "0.1.0"
-authors = ["Jeff Muizelaar <jrmuizel@gmail.com>"]
+version = "0.0.12"
+authors = ["Jeff Muizelaar <jrmuizel@gmail.com>, Raph Levien <raph.levien@gmail.com>, Colin Rofls <colin.rofls@gmail.com>"]
 description = "CoreGraphics backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
 edition = "2018"
