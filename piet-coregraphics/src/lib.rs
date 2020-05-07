@@ -60,7 +60,7 @@ impl<'a> CoreGraphicsContext<'a> {
         ctx.save();
         if let Some(height) = height {
             let xform = Affine::FLIP_Y * Affine::translate((0.0, -height));
-            ctx.concat_ctm(to_cgaffine(xform.into()));
+            ctx.concat_ctm(to_cgaffine(xform));
         }
 
         CoreGraphicsContext {

@@ -1,3 +1,6 @@
+// allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
+#![allow(clippy::identity_op)]
+
 //! Support for piet CoreGraphics back-end.
 
 use std::marker::PhantomData;

@@ -94,9 +94,10 @@ impl TextLayout for CoreGraphicsTextLayout {
         self.frame_size.width
     }
 
+    #[allow(clippy::float_cmp)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let width = new_width.into().unwrap_or(f64::INFINITY);
-        if width != self.width_constraint {
+        if width.ceil() != self.width_constraint.ceil() {
             let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
             let char_range = self.attr_string.range();
             let (frame_size, _) = self.framesetter.suggest_frame_size(char_range, constraints);
@@ -276,6 +277,7 @@ impl CoreGraphicsTextLayout {
     }
 
     /// for each line in a layout, determine its offset in utf8.
+    #[allow(clippy::while_let_on_iterator)]
     fn rebuild_line_offsets(&mut self) {
         let lines = self.unwrap_frame().get_lines();
 
@@ -322,6 +324,7 @@ impl CoreGraphicsTextLayout {
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
     #[test]
