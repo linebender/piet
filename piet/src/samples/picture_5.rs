@@ -1,6 +1,6 @@
 //! Basic example of just text
 
-use crate::kurbo::Line;
+use crate::kurbo::{Line, Rect};
 use crate::{Color, Error, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
@@ -23,6 +23,9 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let width = layout.width();
 
     let brush = rc.solid_brush(Color::rgba8(0x00, 0x80, 0x80, 0xF0));
+
+    let multiline_bg = Rect::from_origin_size((20.0, 50.0), (50.0, 100.0));
+    rc.fill(multiline_bg, &Color::rgb(0.3, 0.0, 0.4));
 
     rc.draw_text(&layout, (100.0, 50.0), &brush);
     rc.draw_text(&layout_multiline, (20.0, 50.0), &brush);

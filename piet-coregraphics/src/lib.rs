@@ -35,15 +35,44 @@ pub struct CoreGraphicsContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
     ctx: &'a mut CGContextRef,
+    // the height of the context; we need this in order to correctly flip the coordinate space
     text: CoreGraphicsText<'a>,
 }
 
 impl<'a> CoreGraphicsContext<'a> {
-    pub fn new(ctx: &mut CGContextRef) -> CoreGraphicsContext {
+    /// Create a new context with the y-origin at the top-left corner.
+    ///
+    /// This is not the default for CoreGraphics; but it is the defualt for piet.
+    /// To map between the two coordinate spaces you must also pass an explicit
+    /// height argument.
+    pub fn new_y_up(ctx: &mut CGContextRef, height: f64) -> CoreGraphicsContext {
+        Self::new_impl(ctx, Some(height))
+    }
+
+    /// Create a new context with the y-origin at the bottom right corner.
+    ///
+    /// This is the default for core graphics, but not for piet.
+    pub fn new_y_down(ctx: &mut CGContextRef) -> CoreGraphicsContext {
+        Self::new_impl(ctx, None)
+    }
+
+    fn new_impl(ctx: &mut CGContextRef, height: Option<f64>) -> CoreGraphicsContext {
+        ctx.save();
+        if let Some(height) = height {
+            let xform = Affine::FLIP_Y * Affine::translate((0.0, -height));
+            ctx.concat_ctm(to_cgaffine(xform.into()));
+        }
+
         CoreGraphicsContext {
             ctx,
             text: CoreGraphicsText::new(),
         }
+    }
+}
+
+impl<'a> Drop for CoreGraphicsContext<'a> {
+    fn drop(&mut self) {
+        self.ctx.restore();
     }
 }
 
@@ -177,10 +206,12 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         let brush = brush.make_brush(self, || layout.frame_size.to_rect());
         let pos = pos.into();
         self.ctx.save();
+        // drawing is from the baseline of the first line, which is normally flipped
+        let y_off = layout.frame_size.height - layout.line_y_positions.first().unwrap_or(&0.);
         // inverted coordinate system; text is drawn from bottom left corner,
         // and (0, 0) in context is also bottom left.
-        let y_off = self.ctx.height() as f64 - layout.frame_size.height;
-        self.ctx.translate(pos.x, y_off - pos.y);
+        self.ctx.translate(pos.x, y_off + pos.y);
+        self.ctx.scale(1.0, -1.0);
         match brush.as_ref() {
             Brush::Solid(color) => {
                 self.set_fill_color(color);

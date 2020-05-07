@@ -11,6 +11,7 @@ use piet_coregraphics::CoreGraphicsContext;
 
 const WIDTH: i32 = 400;
 const HEIGHT: i32 = 200;
+const SCALE: f64 = 2.0;
 
 fn main() {
     let test_picture_number = std::env::args()
@@ -27,12 +28,13 @@ fn main() {
         &CGColorSpace::create_device_rgb(),
         core_graphics::base::kCGImageAlphaPremultipliedLast,
     );
-    cg_ctx.scale(2.0, 2.0);
-    let mut piet_context = CoreGraphicsContext::new(&mut cg_ctx);
+    cg_ctx.scale(SCALE, SCALE);
+    let mut piet_context =
+        CoreGraphicsContext::new_y_up(&mut cg_ctx, HEIGHT as f64 * SCALE.recip());
     piet::draw_test_picture(&mut piet_context, test_picture_number).unwrap();
     piet_context.finish().unwrap();
+    std::mem::drop(piet_context);
     let file = File::create(format!("coregraphics-test-{}.png", test_picture_number)).unwrap();
-
     let w = BufWriter::new(file);
 
     let mut encoder = png::Encoder::new(w, WIDTH as u32, HEIGHT as u32);

@@ -30,7 +30,7 @@ pub struct CoreGraphicsTextLayout {
     framesetter: Framesetter,
     pub(crate) frame: Option<Frame>,
     // distance from the top of the frame to the baseline of each line
-    line_y_positions: Vec<f64>,
+    pub(crate) line_y_positions: Vec<f64>,
     /// offsets in utf8 of lines
     line_offsets: Vec<usize>,
     pub(crate) frame_size: Size,
