@@ -11,6 +11,9 @@ mod render_context;
 mod shapes;
 mod text;
 
+#[cfg(feature = "samples")]
+pub mod samples;
+
 pub use crate::color::*;
 pub use crate::conv::*;
 pub use crate::error::*;
@@ -19,3 +22,6 @@ pub use crate::null_renderer::*;
 pub use crate::render_context::*;
 pub use crate::shapes::*;
 pub use crate::text::*;
+
+#[cfg(feature = "samples")]
+pub use samples::draw_test_picture;

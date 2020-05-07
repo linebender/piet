@@ -14,4 +14,4 @@ piet = { version = "0.0.12", path = "../piet" }
 svg = "0.7.1"
 
 [dev-dependencies]
-piet-test = { version = "0.0.12", path = "../piet-test" }
+piet = { version = "0.0.12", path = "../piet", features = ["samples"] }

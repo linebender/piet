@@ -11,3 +11,6 @@ categories = ["rendering::graphics-api"]
 
 [dependencies]
 kurbo = "0.5.11"
+
+[features]
+samples = []
