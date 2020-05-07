@@ -7,8 +7,6 @@ use web_sys::{window, HtmlCanvasElement};
 use piet::RenderContext;
 use piet_web::WebRenderContext;
 
-use piet_test::draw_test_picture;
-
 #[wasm_bindgen]
 pub fn run() {
     #[cfg(feature = "console_error_panic_hook")]
@@ -37,6 +35,6 @@ pub fn run() {
     let mut piet_context = WebRenderContext::new(context, window);
 
     // TODO: make the test picture selectable
-    draw_test_picture(&mut piet_context, 0).unwrap();
+    piet::draw_test_picture(&mut piet_context, 0).unwrap();
     piet_context.finish().unwrap();
 }

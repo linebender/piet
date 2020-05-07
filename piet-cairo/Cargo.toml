@@ -20,7 +20,7 @@ version = "0.8.1"
 default-features = false
 
 [dev-dependencies]
-piet-test = { version = "0.0.12", path = "../piet-test" }
+piet = { version = "0.0.12", path = "../piet", features = ["samples"] }
 
 [dev-dependencies.cairo-rs]
 version = "0.8.1"

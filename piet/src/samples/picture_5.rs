@@ -1,7 +1,7 @@
 //! Basic example of just text
 
-use piet::kurbo::Line;
-use piet::{Color, Error, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
+use crate::kurbo::Line;
+use crate::{Color, Error, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     // Black background

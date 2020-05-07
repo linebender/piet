@@ -1,8 +1,7 @@
-//! Test code for piet.
+//! Drawing examples for testing backends
 
-// Right now, this is just code to generate sample images.
+use crate::{Error, ErrorKind, RenderContext};
 
-use piet::{Error, RenderContext};
 mod picture_0;
 mod picture_1;
 mod picture_2;
@@ -10,12 +9,12 @@ mod picture_3;
 mod picture_4;
 mod picture_5;
 
-use crate::picture_0::draw as draw_picture_0;
-use crate::picture_1::draw as draw_picture_1;
-use crate::picture_2::draw as draw_picture_2;
-use crate::picture_3::draw as draw_picture_3;
-use crate::picture_4::draw as draw_picture_4;
-use crate::picture_5::draw as draw_picture_5;
+use picture_0::draw as draw_picture_0;
+use picture_1::draw as draw_picture_1;
+use picture_2::draw as draw_picture_2;
+use picture_3::draw as draw_picture_3;
+use picture_4::draw as draw_picture_4;
+use picture_5::draw as draw_picture_5;
 
 /// Draw a test picture, by number.
 ///
@@ -34,8 +33,7 @@ pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) -> Result<(
                 "Don't have test picture {} yet. Why don't you make it?",
                 number
             );
-            // TODO: error?
-            Ok(())
+            Err(crate::error::new_error(ErrorKind::InvalidInput))
         }
     }
 }

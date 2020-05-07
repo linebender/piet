@@ -5,8 +5,6 @@ use winapi::shared::dxgi::DXGI_MAP_READ;
 use piet::RenderContext;
 use piet_direct2d::D2DRenderContext;
 
-use piet_test::draw_test_picture;
-
 const TEXTURE_WIDTH: u32 = 400;
 const TEXTURE_HEIGHT: u32 = 200;
 
@@ -53,7 +51,7 @@ fn main() {
     context.begin_draw();
     let mut piet_context = D2DRenderContext::new(&d2d, &dwrite, &mut context);
     // TODO: report errors more nicely than these unwraps.
-    draw_test_picture(&mut piet_context, test_picture_number).unwrap();
+    piet::draw_test_picture(&mut piet_context, test_picture_number).unwrap();
     piet_context.finish().unwrap();
     std::mem::drop(piet_context);
     context.end_draw().unwrap();

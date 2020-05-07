@@ -4,10 +4,9 @@ use std::fs::File;
 
 use cairo::{Context, Format, ImageSurface};
 
+use piet::draw_test_picture;
 use piet::RenderContext;
 use piet_cairo::CairoRenderContext;
-
-use piet_test::draw_test_picture;
 
 const TEXTURE_WIDTH: i32 = 400;
 const TEXTURE_HEIGHT: i32 = 200;

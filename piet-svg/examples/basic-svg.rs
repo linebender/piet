@@ -2,8 +2,8 @@
 
 use std::io;
 
+use piet::draw_test_picture;
 use piet::RenderContext;
-use piet_test::draw_test_picture;
 
 fn main() {
     let test_picture_number = std::env::args()

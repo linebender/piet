@@ -1,8 +1,7 @@
 //! Gradients.
 
-use piet::kurbo::{Point, Rect, Vec2};
-
-use piet::{
+use crate::kurbo::{Point, Rect, Vec2};
+use crate::{
     Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, GradientStop,
     RenderContext,
 };

@@ -1,7 +1,7 @@
 //! A bunch of image test cases.
 
-use piet::kurbo::Rect;
-use piet::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
+use crate::kurbo::Rect;
+use crate::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
