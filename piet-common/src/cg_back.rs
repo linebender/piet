@@ -57,6 +57,7 @@ pub struct Device;
 /// A struct provides a `RenderContext` and then can have its bitmap extracted.
 pub struct BitmapTarget<'a> {
     ctx: CGContext,
+    height: f64,
     phantom: PhantomData<&'a ()>,
 }
 
@@ -83,8 +84,10 @@ impl Device {
             core_graphics::base::kCGImageAlphaPremultipliedLast,
         );
         ctx.scale(pix_scale, pix_scale);
+        let height = height as f64 * pix_scale;
         Ok(BitmapTarget {
             ctx,
+            height,
             phantom: PhantomData,
         })
     }
@@ -96,7 +99,7 @@ impl<'a> BitmapTarget<'a> {
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> CoreGraphicsContext {
-        CoreGraphicsContext::new(&mut self.ctx)
+        CoreGraphicsContext::new_y_up(&mut self.ctx, self.height)
     }
 
     /// Get raw RGBA pixels from the bitmap.

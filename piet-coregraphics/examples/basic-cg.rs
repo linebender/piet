@@ -24,7 +24,7 @@ fn main() {
         &CGColorSpace::create_device_rgb(),
         core_graphics::base::kCGImageAlphaPremultipliedLast,
     );
-    let mut piet = piet_coregraphics::CoreGraphicsContext::new(&mut cg_ctx);
+    let mut piet = piet_coregraphics::CoreGraphicsContext::new_y_up(&mut cg_ctx, HEIGHT as f64);
     let bounds = Size::new(WIDTH as f64, HEIGHT as f64).to_rect();
 
     let linear = LinearGradient::new(
@@ -66,6 +66,7 @@ fn main() {
     piet.draw_text(&layout, (400.0, 400.0), &Color::rgba8(255, 0, 0, 150));
 
     piet.finish().unwrap();
+    std::mem::drop(piet);
 
     unpremultiply(cg_ctx.data());
 
