@@ -37,6 +37,11 @@ pub struct CoreGraphicsContext<'a> {
     ctx: &'a mut CGContextRef,
     // the height of the context; we need this in order to correctly flip the coordinate space
     text: CoreGraphicsText<'a>,
+    // because of the relationship between cocoa and coregraphics (where cocoa
+    // may be asked to flip the y-axis) we cannot trust the transform returned
+    // by CTContextGetCTM. Instead we maintain our own stack, which will contain
+    // only those transforms applied by us.
+    transform_stack: Vec<Affine>,
 }
 
 impl<'a> CoreGraphicsContext<'a> {
@@ -66,6 +71,7 @@ impl<'a> CoreGraphicsContext<'a> {
         CoreGraphicsContext {
             ctx,
             text: CoreGraphicsText::new(),
+            transform_stack: vec![Affine::default()],
         }
     }
 }
@@ -231,11 +237,16 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
 
     fn save(&mut self) -> Result<(), Error> {
         self.ctx.save();
+        let state = self.transform_stack.last().copied().unwrap_or_default();
+        self.transform_stack.push(state);
         Ok(())
     }
 
+    //TODO: this panics in CoreGraphics if unbalanced. We could try and track stack depth
+    //and return an error, maybe?
     fn restore(&mut self) -> Result<(), Error> {
         self.ctx.restore();
+        self.transform_stack.pop();
         Ok(())
     }
 
@@ -244,8 +255,12 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     }
 
     fn transform(&mut self, transform: Affine) {
-        let transform = to_cgaffine(transform);
-        self.ctx.concat_ctm(transform);
+        if let Some(last) = self.transform_stack.last_mut() {
+            *last = *last * transform;
+        } else {
+            self.transform_stack.push(transform);
+        }
+        self.ctx.concat_ctm(to_cgaffine(transform));
     }
 
     fn make_image(
@@ -323,8 +338,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     }
 
     fn current_transform(&self) -> Affine {
-        let ctm = self.ctx.get_ctm();
-        from_cgaffine(ctm)
+        self.transform_stack.last().copied().unwrap_or_default()
     }
 
     fn status(&mut self) -> Result<(), Error> {
@@ -442,11 +456,6 @@ fn to_cgrect(rect: impl Into<Rect>) -> CGRect {
     CGRect::new(&to_cgpoint(rect.origin()), &to_cgsize(rect.size()))
 }
 
-fn from_cgaffine(affine: CGAffineTransform) -> Affine {
-    let CGAffineTransform { a, b, c, d, tx, ty } = affine;
-    Affine::new([a, b, c, d, tx, ty])
-}
-
 fn to_cgaffine(affine: Affine) -> CGAffineTransform {
     let [a, b, c, d, tx, ty] = affine.as_coeffs();
     CGAffineTransform::new(a, b, c, d, tx, ty)
@@ -455,4 +464,79 @@ fn to_cgaffine(affine: Affine) -> CGAffineTransform {
 #[link(name = "CoreGraphics", kind = "framework")]
 extern "C" {
     fn CGContextClipToMask(ctx: *mut u8, rect: CGRect, mask: *const u8);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core_graphics::color_space::CGColorSpace;
+    use core_graphics::context::CGContext;
+
+    fn make_context(size: impl Into<Size>) -> CGContext {
+        let size = size.into();
+        CGContext::create_bitmap_context(
+            None,
+            size.width as usize,
+            size.height as usize,
+            8,
+            0,
+            &CGColorSpace::create_device_rgb(),
+            core_graphics::base::kCGImageAlphaPremultipliedLast,
+        )
+    }
+
+    fn equalish_affine(one: Affine, two: Affine) -> bool {
+        one.as_coeffs()
+            .iter()
+            .zip(two.as_coeffs().iter())
+            .all(|(a, b)| (a - b).abs() < f64::EPSILON)
+    }
+
+    macro_rules! assert_affine_eq {
+        ($left:expr, $right:expr) => {{
+            if !equalish_affine($left, $right) {
+                panic!(
+                    "assertion failed: `(one == two)`\n\
+                one: {:?}\n\
+                two: {:?}",
+                    $left.as_coeffs(),
+                    $right.as_coeffs()
+                )
+            }
+        }};
+    }
+
+    #[test]
+    fn get_affine_y_up() {
+        let mut ctx = make_context((400.0, 400.0));
+        let mut piet = CoreGraphicsContext::new_y_up(&mut ctx, 400.0);
+        let affine = piet.current_transform();
+        assert_affine_eq!(affine, Affine::default());
+
+        let one = Affine::translate((50.0, 20.0));
+        let two = Affine::rotate(2.2);
+        let three = Affine::FLIP_Y;
+        let four = Affine::scale_non_uniform(2.0, -1.5);
+
+        piet.save().unwrap();
+        piet.transform(one);
+        piet.transform(one);
+        piet.save().unwrap();
+        piet.transform(two);
+        piet.save().unwrap();
+        piet.transform(three);
+        assert_affine_eq!(piet.current_transform(), one * one * two * three);
+        piet.transform(four);
+        piet.save().unwrap();
+
+        assert_affine_eq!(piet.current_transform(), one * one * two * three * four);
+        piet.restore().unwrap();
+        assert_affine_eq!(piet.current_transform(), one * one * two * three * four);
+        piet.restore().unwrap();
+        assert_affine_eq!(piet.current_transform(), one * one * two);
+        piet.restore().unwrap();
+        assert_affine_eq!(piet.current_transform(), one * one);
+        piet.restore().unwrap();
+        assert_affine_eq!(piet.current_transform(), Affine::default());
+    }
 }
