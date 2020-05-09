@@ -87,7 +87,7 @@ impl Device {
             core_graphics::base::kCGImageAlphaPremultipliedLast,
         );
         ctx.scale(pix_scale, pix_scale);
-        let height = height as f64 * pix_scale;
+        let height = height as f64 * pix_scale.recip();
         Ok(BitmapTarget {
             ctx,
             height,
@@ -112,27 +112,8 @@ impl<'a> BitmapTarget<'a> {
             return Err(Error::NotSupported);
         }
 
-        let width = self.ctx.width() as usize;
-        let height = self.ctx.height() as usize;
-        let stride = self.ctx.bytes_per_row() as usize;
-
         let data = self.ctx.data();
-        if stride != width {
-            let mut raw_data = vec![0; width * height * 4];
-            for y in 0..height {
-                let src_off = y * stride;
-                let dst_off = y * width * 4;
-                for x in 0..width {
-                    raw_data[dst_off + x * 4 + 0] = data[src_off + x * 4 + 2];
-                    raw_data[dst_off + x * 4 + 1] = data[src_off + x * 4 + 1];
-                    raw_data[dst_off + x * 4 + 2] = data[src_off + x * 4 + 0];
-                    raw_data[dst_off + x * 4 + 3] = data[src_off + x * 4 + 3];
-                }
-            }
-            Ok(raw_data)
-        } else {
-            Ok(data.to_owned())
-        }
+        Ok(data.to_owned())
     }
 
     /// Save bitmap to RGBA PNG file
@@ -141,7 +122,7 @@ impl<'a> BitmapTarget<'a> {
         let width = self.ctx.width() as usize;
         let height = self.ctx.height() as usize;
         let mut data = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
-        unpremultiply(&mut data);
+        piet_coregraphics::unpremultiply(&mut data);
         let file = BufWriter::new(File::create(path).map_err(|e| Into::<Box<_>>::into(e))?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
@@ -158,17 +139,5 @@ impl<'a> BitmapTarget<'a> {
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
         Err(Error::MissingFeature)
-    }
-}
-#[cfg(feature = "png")]
-fn unpremultiply(data: &mut [u8]) {
-    for i in (0..data.len()).step_by(4) {
-        let a = data[i + 3];
-        if a != 0 {
-            let scale = 255.0 / (a as f64);
-            data[i] = (scale * (data[i] as f64)).round() as u8;
-            data[i + 1] = (scale * (data[i + 1] as f64)).round() as u8;
-            data[i + 2] = (scale * (data[i + 2] as f64)).round() as u8;
-        }
     }
 }

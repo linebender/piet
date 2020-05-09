@@ -29,13 +29,18 @@ pub use crate::text::{
     CoreGraphicsTextLayoutBuilder,
 };
 
-use gradient::Gradient;
+use gradient::{
+    CGGradientDrawingOptions, CGGradientDrawsAfterEndLocation, CGGradientDrawsBeforeStartLocation,
+    Gradient,
+};
+
+const GRADIENT_DRAW_BEFORE_AND_AFTER: CGGradientDrawingOptions =
+    CGGradientDrawsAfterEndLocation | CGGradientDrawsBeforeStartLocation;
 
 pub struct CoreGraphicsContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
     ctx: &'a mut CGContextRef,
-    // the height of the context; we need this in order to correctly flip the coordinate space
     text: CoreGraphicsText<'a>,
     // because of the relationship between cocoa and coregraphics (where cocoa
     // may be asked to flip the y-axis) we cannot trust the transform returned
@@ -96,13 +101,8 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     //type StrokeStyle = StrokeStyle;
 
     fn clear(&mut self, color: Color) {
-        let rgba = color.as_rgba_u32();
-        self.ctx.set_rgb_fill_color(
-            byte_to_frac(rgba >> 24),
-            byte_to_frac(rgba >> 16),
-            byte_to_frac(rgba >> 8),
-            byte_to_frac(rgba),
-        );
+        let (r, g, b, a) = color.as_rgba();
+        self.ctx.set_rgb_fill_color(r, g, b, a);
         self.ctx.fill_rect(self.ctx.clip_bounding_box());
     }
 
@@ -127,7 +127,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             Brush::Gradient(grad) => {
                 self.ctx.save();
                 self.ctx.clip();
-                grad.fill(self.ctx);
+                grad.fill(self.ctx, GRADIENT_DRAW_BEFORE_AND_AFTER);
                 self.ctx.restore();
             }
         }
@@ -144,7 +144,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             Brush::Gradient(grad) => {
                 self.ctx.save();
                 self.ctx.eo_clip();
-                grad.fill(self.ctx);
+                grad.fill(self.ctx, GRADIENT_DRAW_BEFORE_AND_AFTER);
                 self.ctx.restore();
             }
         }
@@ -168,7 +168,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
                 self.ctx.save();
                 self.ctx.replace_path_with_stroked_path();
                 self.ctx.clip();
-                grad.fill(self.ctx);
+                grad.fill(self.ctx, GRADIENT_DRAW_BEFORE_AND_AFTER);
                 self.ctx.restore();
             }
         }
@@ -193,7 +193,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
                 self.ctx.save();
                 self.ctx.replace_path_with_stroked_path();
                 self.ctx.clip();
-                grad.fill(self.ctx);
+                grad.fill(self.ctx, GRADIENT_DRAW_BEFORE_AND_AFTER);
                 self.ctx.restore();
             }
         }
@@ -256,7 +256,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
 
     fn transform(&mut self, transform: Affine) {
         if let Some(last) = self.transform_stack.last_mut() {
-            *last = *last * transform;
+            *last *= transform;
         } else {
             self.transform_stack.push(transform);
         }
@@ -439,10 +439,6 @@ impl<'a> CoreGraphicsContext<'a> {
     }
 }
 
-fn byte_to_frac(byte: u32) -> f64 {
-    ((byte & 255) as f64) * (1.0 / 255.0)
-}
-
 fn to_cgpoint(point: Point) -> CGPoint {
     CGPoint::new(point.x as CGFloat, point.y as CGFloat)
 }
@@ -459,6 +455,19 @@ fn to_cgrect(rect: impl Into<Rect>) -> CGRect {
 fn to_cgaffine(affine: Affine) -> CGAffineTransform {
     let [a, b, c, d, tx, ty] = affine.as_coeffs();
     CGAffineTransform::new(a, b, c, d, tx, ty)
+}
+
+#[allow(dead_code)]
+pub fn unpremultiply_rgba(data: &mut [u8]) {
+    for i in (0..data.len()).step_by(4) {
+        let a = data[i + 3];
+        if a != 0 {
+            let scale = 255.0 / (a as f64);
+            data[i] = (scale * (data[i] as f64)).round() as u8;
+            data[i + 1] = (scale * (data[i + 1] as f64)).round() as u8;
+            data[i + 2] = (scale * (data[i + 2] as f64)).round() as u8;
+        }
+    }
 }
 
 #[link(name = "CoreGraphics", kind = "framework")]
