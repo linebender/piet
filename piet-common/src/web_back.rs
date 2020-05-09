@@ -19,6 +19,9 @@ pub use piet_web::*;
 
 pub type Piet<'a> = WebRenderContext<'a>;
 
+/// A short human-readable name for this backend, for things like logging.
+pub const BACKEND_NAME: &str = "wasm";
+
 /// The associated brush type for this backend.
 ///
 /// This type matches `RenderContext::Brush`

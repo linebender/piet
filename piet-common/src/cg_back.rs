@@ -16,6 +16,9 @@ use piet::{Error, ImageFormat};
 #[doc(hidden)]
 pub use piet_coregraphics::*;
 
+/// A short human-readable name for this backend, for things like logging.
+pub const BACKEND_NAME: &str = "coregraphics";
+
 /// The `RenderContext` for the CoreGraphics backend, which is selected.
 pub type Piet<'a> = CoreGraphicsContext<'a>;
 

@@ -22,6 +22,9 @@ piet-direct2d = { version = "0.0.13", path = "../piet-direct2d", optional = true
 piet-web = { version = "0.0.13", path = "../piet-web", optional = true }
 cairo-rs = { version = "0.8.1", default_features = false, optional = true}
 
+[dev-dependencies]
+piet = { version = "0.0.13", path = "../piet", features = ["samples"] }
+
 [target.'cfg(not(any(target_arch="wasm32", target_os="windows", target_os="macos")))'.dependencies]
 piet-cairo = { version = "0.0.13", path = "../piet-cairo" }
 cairo-rs = { version = "0.8.1", default_features = false}

@@ -17,6 +17,9 @@ use piet::ImageFormat;
 #[doc(hidden)]
 pub use piet_cairo::*;
 
+/// A short human-readable name for this backend, for things like logging.
+pub const BACKEND_NAME: &str = "cairo";
+
 /// The `RenderContext` for the Cairo backend, which is selected.
 pub type Piet<'a> = CairoRenderContext<'a>;
 

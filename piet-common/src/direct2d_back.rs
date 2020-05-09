@@ -18,6 +18,9 @@ use piet_direct2d::d3d::{
 #[doc(hidden)]
 pub use piet_direct2d::*;
 
+/// A short human-readable name for this backend, for things like logging.
+pub const BACKEND_NAME: &str = "direct2d";
+
 /// The `RenderContext` for the Direct2D backend, which is selected.
 pub type Piet<'a> = D2DRenderContext<'a>;
 
