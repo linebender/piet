@@ -2,6 +2,9 @@
 
 pub use kurbo;
 
+/// utilities shared by various backends
+pub mod util;
+
 mod color;
 mod conv;
 mod error;
