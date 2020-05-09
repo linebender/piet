@@ -1,6 +1,6 @@
 //! Drawing examples for testing backends
 
-use crate::{Error, ErrorKind, RenderContext};
+use crate::{Error, RenderContext};
 
 mod picture_0;
 mod picture_1;
@@ -33,7 +33,7 @@ pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) -> Result<(
                 "Don't have test picture {} yet. Why don't you make it?",
                 number
             );
-            Err(crate::error::new_error(ErrorKind::InvalidInput))
+            Err(Error::InvalidInput)
         }
     }
 }
