@@ -68,7 +68,7 @@ fn main() {
     piet.finish().unwrap();
     std::mem::drop(piet);
 
-    unpremultiply(cg_ctx.data());
+    piet_coregraphics::unpremultiply_rgba(cg_ctx.data());
 
     // Write image as PNG file.
     let path = Path::new("image.png");
@@ -81,16 +81,4 @@ fn main() {
     let mut writer = encoder.write_header().unwrap();
 
     writer.write_image_data(cg_ctx.data()).unwrap();
-}
-
-fn unpremultiply(data: &mut [u8]) {
-    for i in (0..data.len()).step_by(4) {
-        let a = data[i + 3];
-        if a != 0 {
-            let scale = 255.0 / (a as f64);
-            data[i] = (scale * (data[i] as f64)).round() as u8;
-            data[i + 1] = (scale * (data[i + 1] as f64)).round() as u8;
-            data[i + 2] = (scale * (data[i + 2] as f64)).round() as u8;
-        }
-    }
 }

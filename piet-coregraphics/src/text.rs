@@ -17,7 +17,6 @@ use piet::{
 
 use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
 
-// inner is an nsfont.
 #[derive(Debug, Clone)]
 pub struct CoreGraphicsFont(CTFont);
 
@@ -188,24 +187,13 @@ impl TextLayout for CoreGraphicsTextLayout {
         let offset_utf16 = line.get_string_index_for_position(point_in_string_space);
         let offset = match offset_utf16 {
             // this is 'kCFNotFound'.
-            // if nothing is found just go end of string? should this be len - 1? do we have an
-            // implicit newline at end of file? so many mysteries
             -1 => self.string.len(),
             n if n >= 0 => {
                 let utf16_range = line.get_string_range();
                 let utf8_range = self.line_range(line_num).unwrap();
                 let line_txt = self.line_text(line_num).unwrap();
                 let rel_offset = (n - utf16_range.location) as usize;
-                let mut off16 = 0;
-                let mut off8 = 0;
-                for c in line_txt.chars() {
-                    if rel_offset == off16 {
-                        break;
-                    }
-                    off16 += c.len_utf16();
-                    off8 += c.len_utf8();
-                }
-                utf8_range.0 + off8
+                utf8_range.0 + utf8_offset_for_utf16_offset(line_txt, rel_offset)
             }
             // some other value; should never happen
             _ => panic!("gross violation of api contract"),
@@ -321,6 +309,19 @@ impl CoreGraphicsTextLayout {
             None
         }
     }
+}
+
+fn utf8_offset_for_utf16_offset(text: &str, utf16_offset: usize) -> usize {
+    let mut off16 = 0;
+    let mut off8 = 0;
+    for c in text.chars() {
+        if utf16_offset == off16 {
+            break;
+        }
+        off16 += c.len_utf16();
+        off8 += c.len_utf8();
+    }
+    off8
 }
 
 #[cfg(test)]

@@ -42,5 +42,6 @@ fn main() {
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header().unwrap();
 
+    piet_coregraphics::unpremultiply_rgba(cg_ctx.data());
     writer.write_image_data(cg_ctx.data()).unwrap();
 }

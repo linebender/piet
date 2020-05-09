@@ -1,3 +1,5 @@
+#![allow(non_upper_case_globals)]
+
 //! core graphics gradient support
 
 use core_foundation::{
@@ -16,14 +18,15 @@ use core_graphics::{
 use piet::kurbo::Point;
 use piet::{Color, FixedGradient, FixedLinearGradient, FixedRadialGradient, GradientStop};
 
+//FIXME: remove all this when core-graphics 0.20.0 is released
 // core-graphics does not provide a CGGradient type
 pub enum CGGradientT {}
 pub type CGGradientRef = *mut CGGradientT;
+pub type CGGradientDrawingOptions = u32;
+pub const CGGradientDrawsBeforeStartLocation: CGGradientDrawingOptions = 1;
+pub const CGGradientDrawsAfterEndLocation: CGGradientDrawingOptions = 1 << 1;
 
-declare_TCFType! {
-    CGGradient, CGGradientRef
-}
-
+declare_TCFType!(CGGradient, CGGradientRef);
 impl_TCFType!(CGGradient, CGGradientRef, CGGradientGetTypeID);
 
 /// A wrapper around CGGradient
@@ -53,8 +56,7 @@ impl Gradient {
         .unwrap_or(Color::BLACK)
     }
 
-    pub(crate) fn fill(&self, ctx: &mut CGContextRef) {
-        let context_ref: *mut u8 = ctx as *mut CGContextRef as *mut u8;
+    pub(crate) fn fill(&self, ctx: &mut CGContextRef, options: CGGradientDrawingOptions) {
         match self.piet_grad {
             FixedGradient::Radial(FixedRadialGradient {
                 center,
@@ -63,16 +65,16 @@ impl Gradient {
                 ..
             }) => {
                 let start_center = to_cgpoint(center + origin_offset);
-                let center = to_cgpoint(center);
+                let end_center = to_cgpoint(center);
                 unsafe {
                     CGContextDrawRadialGradient(
-                        context_ref,
+                        ctx,
                         self.cg_grad.as_concrete_TypeRef(),
                         start_center,
-                        0.0,
-                        center,
+                        0.0, // start_radius
+                        end_center,
                         radius as CGFloat,
-                        0,
+                        options,
                     )
                 }
             }
@@ -81,7 +83,7 @@ impl Gradient {
                 let end = to_cgpoint(end);
                 unsafe {
                     CGContextDrawLinearGradient(
-                        context_ref,
+                        ctx,
                         self.cg_grad.as_concrete_TypeRef(),
                         start,
                         end,
@@ -97,23 +99,19 @@ fn new_cg_gradient(stops: &[GradientStop]) -> CGGradient {
     unsafe {
         //FIXME: is this expensive enough we should be reusing it?
         let space = CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap();
-        let space_ref: *const u8 = &*space as *const CGColorSpaceRef as *const u8;
         let mut colors = Vec::<CGColor>::new();
         let mut locations = Vec::<CGFloat>::new();
         for GradientStop { pos, color } in stops {
             let (r, g, b, a) = Color::as_rgba(&color);
-            let color = CGColorCreate(space_ref as *const u8, [r, g, b, a].as_ptr());
+            let color = CGColorCreate(&*space, [r, g, b, a].as_ptr());
             let color = CGColor::wrap_under_create_rule(color);
             colors.push(color);
             locations.push(*pos as CGFloat);
         }
 
         let colors = CFArray::from_CFTypes(&colors);
-        let gradient = CGGradientCreateWithColors(
-            space_ref as *const u8,
-            colors.as_concrete_TypeRef(),
-            locations.as_ptr(),
-        );
+        let gradient =
+            CGGradientCreateWithColors(&*space, colors.as_concrete_TypeRef(), locations.as_ptr());
 
         CGGradient::wrap_under_create_rule(gradient)
     }
@@ -126,21 +124,26 @@ fn to_cgpoint(point: Point) -> CGPoint {
 #[link(name = "CoreGraphics", kind = "framework")]
 extern "C" {
     fn CGGradientGetTypeID() -> CFTypeID;
+    //CGColorSpaceRef is missing repr(c).
+    #[allow(improper_ctypes)]
     fn CGGradientCreateWithColors(
-        space: *const u8,
+        space: *const CGColorSpaceRef,
         colors: CFArrayRef,
         locations: *const CGFloat,
     ) -> CGGradientRef;
-    fn CGColorCreate(space: *const u8, components: *const CGFloat) -> SysCGColorRef;
+    #[allow(improper_ctypes)]
+    fn CGColorCreate(space: *const CGColorSpaceRef, components: *const CGFloat) -> SysCGColorRef;
+    #[allow(improper_ctypes)]
     fn CGContextDrawLinearGradient(
-        ctx: *mut u8,
+        ctx: *mut CGContextRef,
         gradient: CGGradientRef,
         startPoint: CGPoint,
         endPoint: CGPoint,
         options: u32,
     );
+    #[allow(improper_ctypes)]
     fn CGContextDrawRadialGradient(
-        ctx: *mut u8,
+        ctx: *mut CGContextRef,
         gradient: CGGradientRef,
         startCenter: CGPoint,
         startRadius: CGFloat,
