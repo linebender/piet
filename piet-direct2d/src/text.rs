@@ -8,7 +8,7 @@ pub use dwrite::DwriteFactory;
 use std::convert::TryInto;
 
 use piet::kurbo::Point;
-
+use piet::util;
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
     TextLayout, TextLayoutBuilder,
@@ -169,8 +169,8 @@ impl TextLayout for D2DTextLayout {
         //
         // TODO ask about text_position, it looks like windows returns last index;
         // can't use the text_position of last index from directwrite, it has an extra code unit.
-        let text_position =
-            count_until_utf16(&self.text, text_position_16).unwrap_or_else(|| self.text.len());
+        let text_position = util::count_until_utf16(&self.text, text_position_16)
+            .unwrap_or_else(|| self.text.len());
 
         HitTestPoint {
             metrics: HitTestMetrics { text_position },
@@ -187,7 +187,7 @@ impl TextLayout for D2DTextLayout {
 
         // Now convert the utf8 index to utf16.
         // This can panic;
-        let idx_16 = count_utf16(&self.text[0..text_position]);
+        let idx_16 = util::count_utf16(&self.text[0..text_position]);
 
         // panic or Result are also fine options for dealing with overflow. Using Option here
         // because it's already present and convenient.
@@ -210,45 +210,6 @@ impl TextLayout for D2DTextLayout {
                 }
             })
     }
-}
-
-/// Counts the number of utf-16 code units in the given string.
-/// from xi-editor
-pub(crate) fn count_utf16(s: &str) -> usize {
-    let mut utf16_count = 0;
-    for &b in s.as_bytes() {
-        if (b as i8) >= -0x40 {
-            utf16_count += 1;
-        }
-        if b >= 0xf0 {
-            utf16_count += 1;
-        }
-    }
-    utf16_count
-}
-
-/// returns utf8 text position (code unit offset)
-/// at the given utf-16 text position
-pub(crate) fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<usize> {
-    let mut utf8_count = 0;
-    let mut utf16_count = 0;
-    #[allow(clippy::explicit_counter_loop)]
-    for &b in s.as_bytes() {
-        if (b as i8) >= -0x40 {
-            utf16_count += 1;
-        }
-        if b >= 0xf0 {
-            utf16_count += 1;
-        }
-
-        if utf16_count > utf16_text_position {
-            return Some(utf8_count);
-        }
-
-        utf8_count += 1;
-    }
-
-    None
 }
 
 #[cfg(test)]
@@ -864,22 +825,5 @@ mod test {
         let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
         assert_eq!(pt.metrics.text_position, 5);
         assert_eq!(pt.is_inside, false);
-    }
-
-    #[test]
-    fn test_count_until_utf16() {
-        // Notes on this input:
-        // 5 code points
-        // 5 utf-16 code units
-        // 10 utf-8 code units (2/1/3/3/1)
-        // 3 graphemes
-        let input = "é\u{0023}\u{FE0F}\u{20E3}1"; // #️⃣
-
-        assert_eq!(count_until_utf16(input, 0), Some(0));
-        assert_eq!(count_until_utf16(input, 1), Some(2));
-        assert_eq!(count_until_utf16(input, 2), Some(3));
-        assert_eq!(count_until_utf16(input, 3), Some(6));
-        assert_eq!(count_until_utf16(input, 4), Some(9));
-        assert_eq!(count_until_utf16(input, 5), None);
     }
 }
