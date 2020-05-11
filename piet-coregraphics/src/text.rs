@@ -10,6 +10,7 @@ use core_graphics::path::CGPath;
 use core_text::font::{self, CTFont};
 
 use piet::kurbo::{Point, Size};
+use piet::util;
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
     TextLayout, TextLayoutBuilder,
@@ -193,7 +194,9 @@ impl TextLayout for CoreGraphicsTextLayout {
                 let utf8_range = self.line_range(line_num).unwrap();
                 let line_txt = self.line_text(line_num).unwrap();
                 let rel_offset = (n - utf16_range.location) as usize;
-                utf8_range.0 + utf8_offset_for_utf16_offset(line_txt, rel_offset)
+                utf8_range.0
+                    + util::count_until_utf16(line_txt, rel_offset)
+                        .unwrap_or_else(|| line_txt.len())
             }
             // some other value; should never happen
             _ => panic!("gross violation of api contract"),
@@ -220,7 +223,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         let text = self.line_text(line_num)?;
 
         let offset_remainder = offset - self.line_offsets.get(line_num)?;
-        let off16: usize = text[..offset_remainder].chars().map(char::len_utf16).sum();
+        let off16: usize = util::count_utf16(&text[..offset_remainder]);
         let line_range = line.get_string_range();
         let char_idx = line_range.location + off16 as isize;
         let (x_pos, _) = line.get_offset_for_string_index(char_idx);
@@ -309,19 +312,6 @@ impl CoreGraphicsTextLayout {
             None
         }
     }
-}
-
-fn utf8_offset_for_utf16_offset(text: &str, utf16_offset: usize) -> usize {
-    let mut off16 = 0;
-    let mut off8 = 0;
-    for c in text.chars() {
-        if utf16_offset == off16 {
-            break;
-        }
-        off16 += c.len_utf16();
-        off8 += c.len_utf8();
-    }
-    off8
 }
 
 #[cfg(test)]
@@ -427,5 +417,19 @@ mod tests {
         assert_eq!(p1.point.y, 36.0);
         // just the general idea that this is the second character
         assert!(p1.point.x > 5.0 && p1.point.x < 15.0);
+    }
+
+    #[test]
+    fn hit_test_text_position_astral_plane() {
+        let text = "👾🤠\n🤖🎃👾";
+        let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
+        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let p0 = layout.hit_test_text_position(4).unwrap();
+        let p1 = layout.hit_test_text_position(8).unwrap();
+        let p2 = layout.hit_test_text_position(13).unwrap();
+
+        assert!(p1.point.x > p0.point.x);
+        assert!(p1.point.y == p0.point.y);
+        assert!(p2.point.y > p1.point.y);
     }
 }
