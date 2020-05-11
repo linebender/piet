@@ -122,7 +122,7 @@ impl<'a> BitmapTarget<'a> {
         let width = self.ctx.width() as usize;
         let height = self.ctx.height() as usize;
         let mut data = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
-        piet_coregraphics::unpremultiply(&mut data);
+        piet_coregraphics::unpremultiply_rgba(&mut data);
         let file = BufWriter::new(File::create(path).map_err(|e| Into::<Box<_>>::into(e))?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
