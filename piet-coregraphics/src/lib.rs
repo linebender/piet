@@ -242,12 +242,15 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         Ok(())
     }
 
-    //TODO: this panics in CoreGraphics if unbalanced. We could try and track stack depth
-    //and return an error, maybe?
     fn restore(&mut self) -> Result<(), Error> {
-        self.ctx.restore();
-        self.transform_stack.pop();
-        Ok(())
+        if self.transform_stack.pop().is_some() {
+            // we're defensive about calling restore on the inner context,
+            // because an unbalanced call will trigger an assert in C
+            self.ctx.restore();
+            Ok(())
+        } else {
+            Err(Error::StackUnbalance)
+        }
     }
 
     fn finish(&mut self) -> Result<(), Error> {
