@@ -312,11 +312,14 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     ) {
         // TODO: apply interpolation mode
         self.ctx.save();
-        let rect = to_cgrect(rect);
-        // CGImage is drawn flipped by default
-        self.ctx.translate(0., rect.size.height);
+        let rect = rect.into();
+        // CGImage is drawn flipped by default; it's easier for us to handle
+        // this transformation if we're drawing into a rect at the origin, so
+        // we convert our origin into a translation of the drawing context.
+        self.ctx.translate(rect.min_x(), rect.max_y());
         self.ctx.scale(1.0, -1.0);
-        self.ctx.draw_image(rect, image);
+        self.ctx
+            .draw_image(to_cgrect(rect.with_origin(Point::ZERO)), image);
         self.ctx.restore();
     }
 
