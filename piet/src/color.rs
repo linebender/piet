@@ -172,7 +172,7 @@ impl Color {
     }
 
     #[doc(hidden)]
-    #[deprecated(since = "0.0.13", note = "renamed to Color::as_rgb8")]
+    #[deprecated(since = "0.0.13", note = "renamed to Color::as_rgba8")]
     pub fn as_rgba_u8(&self) -> (u8, u8, u8, u8) {
         self.as_rgba8()
     }
