@@ -308,7 +308,13 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         _interp: InterpolationMode,
     ) {
         // TODO: apply interpolation mode
-        self.ctx.draw_image(to_cgrect(rect), image);
+        self.ctx.save();
+        let rect = to_cgrect(rect);
+        // CGImage is drawn flipped by default
+        self.ctx.translate(0., rect.size.height);
+        self.ctx.scale(1.0, -1.0);
+        self.ctx.draw_image(rect, image);
+        self.ctx.restore();
     }
 
     fn draw_image_area(
