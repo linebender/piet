@@ -1,6 +1,5 @@
 //! The CoreGraphics backend for the Piet 2D graphics abstraction.
 
-mod blurred_rect;
 mod ct_helpers;
 mod gradient;
 mod text;
@@ -337,7 +336,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
-        let (image, rect) = blurred_rect::compute_blurred_rect(rect, blur_radius);
+        let (image, rect) = compute_blurred_rect(rect, blur_radius);
         let cg_rect = to_cgrect(rect);
         self.ctx.save();
         let context_ref: *mut u8 = self.ctx as *mut CGContextRef as *mut u8;
@@ -449,6 +448,31 @@ impl<'a> CoreGraphicsContext<'a> {
             }
         }
     }
+}
+
+fn compute_blurred_rect(rect: Rect, radius: f64) -> (CGImage, Rect) {
+    let size = piet::util::size_for_blurred_rect(rect, radius);
+    let width = size.width as usize;
+    let height = size.height as usize;
+
+    let mut data = vec![0u8; width * height];
+    let rect_exp = piet::util::compute_blurred_rect(rect, radius, width, &mut data);
+
+    let data_provider = CGDataProvider::from_buffer(Arc::new(data));
+    let color_space = CGColorSpace::create_device_gray();
+    let image = CGImage::new(
+        width,
+        height,
+        8,
+        8,
+        width,
+        &color_space,
+        0,
+        &data_provider,
+        false,
+        0,
+    );
+    (image, rect_exp)
 }
 
 fn to_cgpoint(point: Point) -> CGPoint {

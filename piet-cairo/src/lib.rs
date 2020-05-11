@@ -1,9 +1,5 @@
-// allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
-#![allow(clippy::identity_op)]
-
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
-mod blurred_rect;
 mod text;
 
 use std::borrow::Cow;
@@ -244,6 +240,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         matrix_to_affine(self.ctx.get_matrix())
     }
 
+    // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
+    #[allow(clippy::identity_op)]
     fn make_image(
         &mut self,
         width: usize,
@@ -328,7 +326,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
-        let (image, origin) = crate::blurred_rect::compute_blurred_rect(rect, blur_radius);
+        let (image, origin) = compute_blurred_rect(rect, blur_radius);
         self.set_brush(&*brush);
         self.ctx.mask_surface(&image, origin.x, origin.y);
     }
@@ -486,4 +484,17 @@ fn matrix_to_affine(matrix: Matrix) -> Affine {
     Affine::new([
         matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0,
     ])
+}
+
+fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
+    let size = piet::util::size_for_blurred_rect(rect, radius);
+    // TODO: maybe not panic on error (but likely to happen only in extreme cases such as OOM)
+    let mut image =
+        ImageSurface::create(Format::A8, size.width as i32, size.height as i32).unwrap();
+    let stride = image.get_stride() as usize;
+    let mut data = image.get_data().unwrap();
+    let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut *data);
+    std::mem::drop(data);
+    let origin = rect_exp.origin();
+    (image, origin)
 }
