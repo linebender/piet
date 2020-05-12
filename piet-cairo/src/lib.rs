@@ -23,6 +23,11 @@ pub struct CairoRenderContext<'a> {
     // concurrency problems.
     ctx: &'a mut Context,
     text: CairoText<'a>,
+    // because of the relationship between GTK and cairo (where GTK applies a transform
+    // to adjust for menus and window borders) we cannot trust the transform returned
+    // by cairo. Instead we maintain our own stack, which will contain
+    // only those transforms applied by us.
+    transform_stack: Vec<Affine>,
 }
 
 impl<'a> CairoRenderContext<'a> {
@@ -35,6 +40,7 @@ impl<'a> CairoRenderContext<'a> {
         CairoRenderContext {
             ctx,
             text: CairoText::new(),
+            transform_stack: Vec::new(),
         }
     }
 }
@@ -220,12 +226,20 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn save(&mut self) -> Result<(), Error> {
         self.ctx.save();
+        let state = self.transform_stack.last().copied().unwrap_or_default();
+        self.transform_stack.push(state);
         self.status()
     }
 
     fn restore(&mut self) -> Result<(), Error> {
-        self.ctx.restore();
-        self.status()
+        if self.transform_stack.pop().is_some() {
+            // we're defensive about calling restore on the inner context,
+            // because an unbalanced call will trigger a panic in cairo-rs
+            self.ctx.restore();
+            self.status()
+        } else {
+            Err(Error::StackUnbalance)
+        }
     }
 
     fn finish(&mut self) -> Result<(), Error> {
@@ -233,11 +247,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn transform(&mut self, transform: Affine) {
+        if let Some(last) = self.transform_stack.last_mut() {
+            *last *= transform;
+        } else {
+            self.transform_stack.push(transform);
+        }
         self.ctx.transform(affine_to_matrix(transform));
     }
 
     fn current_transform(&self) -> Affine {
-        matrix_to_affine(self.ctx.get_matrix())
+        self.transform_stack.last().copied().unwrap_or_default()
     }
 
     // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
@@ -478,12 +497,6 @@ fn affine_to_matrix(affine: Affine) -> Matrix {
         x0: a[4],
         y0: a[5],
     }
-}
-
-fn matrix_to_affine(matrix: Matrix) -> Affine {
-    Affine::new([
-        matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0,
-    ])
 }
 
 fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
