@@ -234,7 +234,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     fn restore(&mut self) -> Result<(), Error> {
         if self.transform_stack.pop().is_some() {
             // we're defensive about calling restore on the inner context,
-            // because an unbalanced call will trigger an assert in C
+            // because an unbalanced call will trigger a panic in cairo-rs
             self.ctx.restore();
             self.status()
         } else {
