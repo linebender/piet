@@ -285,8 +285,8 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             _ => unimplemented!(),
         };
         let bits_per_component = 8;
-        // TODO: we don't know this until drawing time, so defer actual image creation til then.
-        let should_interpolate = true;
+        // this doesn't matter, we set interpolation mode manually in draw_image
+        let should_interpolate = false;
         let rendering_intent = kCGRenderingIntentDefault;
         let image = CGImage::new(
             width,
@@ -307,10 +307,18 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         &mut self,
         image: &Self::Image,
         rect: impl Into<Rect>,
-        _interp: InterpolationMode,
+        interp: InterpolationMode,
     ) {
         // TODO: apply interpolation mode
         self.ctx.save();
+        //https://developer.apple.com/documentation/coregraphics/cginterpolationquality?language=objc
+        let quality = match interp {
+            InterpolationMode::NearestNeighbor => 1,
+            InterpolationMode::Bilinear => 0,
+        };
+        unsafe {
+            CGContextSetInterpolationQuality(self.ctx as *mut CGContextRef, quality);
+        }
         let rect = rect.into();
         // CGImage is drawn flipped by default; it's easier for us to handle
         // this transformation if we're drawing into a rect at the origin, so
@@ -509,6 +517,8 @@ pub fn unpremultiply_rgba(data: &mut [u8]) {
 #[link(name = "CoreGraphics", kind = "framework")]
 extern "C" {
     fn CGContextClipToMask(ctx: *mut u8, rect: CGRect, mask: *const u8);
+    #[allow(improper_ctypes)]
+    fn CGContextSetInterpolationQuality(c: *mut CGContextRef, quality: i32);
 }
 
 #[cfg(test)]
