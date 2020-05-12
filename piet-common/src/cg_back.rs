@@ -112,8 +112,26 @@ impl<'a> BitmapTarget<'a> {
             return Err(Error::NotSupported);
         }
 
+        let width = self.ctx.width() as usize;
+        let height = self.ctx.height() as usize;
+        let stride = self.ctx.bytes_per_row();
         let data = self.ctx.data();
-        Ok(data.to_owned())
+        if stride != width * 4 {
+            let mut raw_data = vec![0; width * height * 4];
+            for y in 0..height {
+                let src_off = y * stride;
+                let dst_off = y * width * 4;
+                for x in 0..width {
+                    raw_data[dst_off + x * 4 + 0] = data[src_off + x * 4 + 2];
+                    raw_data[dst_off + x * 4 + 1] = data[src_off + x * 4 + 1];
+                    raw_data[dst_off + x * 4 + 2] = data[src_off + x * 4 + 0];
+                    raw_data[dst_off + x * 4 + 3] = data[src_off + x * 4 + 3];
+                }
+            }
+            Ok(raw_data)
+        } else {
+            Ok(data.to_owned())
+        }
     }
 
     /// Save bitmap to RGBA PNG file
