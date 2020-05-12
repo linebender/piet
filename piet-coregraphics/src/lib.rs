@@ -75,7 +75,7 @@ impl<'a> CoreGraphicsContext<'a> {
         CoreGraphicsContext {
             ctx,
             text: CoreGraphicsText::new(),
-            transform_stack: vec![Affine::default()],
+            transform_stack: Vec::new(),
         }
     }
 }
