@@ -5,26 +5,36 @@
 
 This repo holds an API for 2D graphics drawing.
 
-The motivation for this crate is set forth in this [blog post]. Ideally it will become a layer to help [druid] become cross-platform.
+The motivation for this crate is set forth in this [blog post].
+Ideally it will become a layer to help [druid] become cross-platform.
 
-This repo is structured as a core API crate, "piet" and a separate crate for each back-end. One motivation for this structure is that additional back-ends can be written without coupling to the main crate, and clients can opt in to the back-ends they need. In addition, it's possible use multiple back-ends, which will likely be useful for testing.
+This repo is structured as a core API crate, "piet" and a separate crate for each back-end.
+One motivation for this structure is that additional back-ends can be written without coupling
+to the main crate, and clients can opt in to the back-ends they need. In addition,
+it's possible use multiple back-ends, which will likely be useful for testing.
 
 A companion for Bézier path representation and geometry is [kurbo].
 
 ## Backends
 
 #### `piet-cairo` [![crates.io](https://img.shields.io/crates/v/piet-cairo)](https://crates.io/crates/piet-cairo)
-The piet-cairo crate depends on the cairo library, found at
-https://www.cairographics.org/download/.  A simple test of the cairo
+
+The `piet-cairo` crate depends on the cairo library, found at
+https://www.cairographics.org/download/. A simple test of the cairo
 backend is to run `cargo run --example basic-cairo`, which should
-produce an image file called "temp-cairo.png".
+produce an image file called `temp-cairo.png`.
+
+#### `piet-coregraphics` [![crates.io](https://img.shields.io/crates/v/piet-coregraphics)](https://crates.io/crates/piet-coregraphics)
+
+The `piet-coregraphics` crate works on macOS only. A simple test of the coregraphics
+backend is to run `cargo run --example test-picture`, which should
+produce an image file called `coregraphics-test-0.png`.
 
 #### `piet-direct2d` [![crates.io](https://img.shields.io/crates/v/piet-direct2d)](https://crates.io/crates/piet-direct2d)
 
-The piet-direct2d create works on Windows only.  Build with `cargo
-build --all` to include it.  A simple test of the direct2d backend is
-to run `cargo run --example basic`, which should produce an image
-called "temp-image.png".
+The `piet-direct2d` create works on Windows only. A simple test of the direct2d
+backend is to run `cargo run --example basic`, which should
+produce an image called `temp-image.png`.
 
 #### `piet-svg` [![crates.io](https://img.shields.io/crates/v/piet-svg)](https://crates.io/crates/piet-svg)
 #### `piet-web` [![crates.io](https://img.shields.io/crates/v/piet-web)](https://crates.io/crates/piet-web)

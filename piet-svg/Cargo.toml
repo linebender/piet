@@ -11,6 +11,7 @@ categories = ["rendering::graphics-api"]
 
 [dependencies]
 piet = { version = "0.1.0", path = "../piet" }
+
 svg = "0.8.0"
 
 [dev-dependencies]

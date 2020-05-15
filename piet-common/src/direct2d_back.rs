@@ -197,14 +197,14 @@ impl<'a> BitmapTarget<'a> {
         let height = self.height;
         let width = self.width;
         let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
-        let file = BufWriter::new(File::create(path).map_err(|e| Into::<Box<_>>::into(e))?);
+        let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
         encoder
             .write_header()
-            .map_err(|e| Into::<Box<_>>::into(e))?
+            .map_err(Into::<Box<_>>::into)?
             .write_image_data(&image)
-            .map_err(|e| Into::<Box<_>>::into(e))?;
+            .map_err(Into::<Box<_>>::into)?;
         Ok(())
     }
 
