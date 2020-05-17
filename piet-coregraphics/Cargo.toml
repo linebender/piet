@@ -10,11 +10,13 @@ categories = ["rendering::graphics-api"]
 
 [dependencies]
 piet = { version = "0.1.0", path = "../piet" }
+
 core-graphics = "0.19"
 core-text = "15.0"
 core-foundation = "0.7"
 core-foundation-sys = "0.7"
 
 [dev-dependencies]
-png = "0.16.2"
 piet = { version = "0.1.0", path = "../piet", features = ["samples"] }
+
+png = "0.16.2"
