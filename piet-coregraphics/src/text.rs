@@ -161,6 +161,13 @@ impl TextLayout for CoreGraphicsTextLayout {
 
     // given a point on the screen, return an offset in the text, basically
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        if self.line_y_positions.is_empty() {
+            return HitTestPoint {
+                metrics: HitTestMetrics { text_position: 0 },
+                is_inside: false,
+            };
+        }
+
         let mut line_num = self
             .line_y_positions
             .iter()
@@ -403,6 +410,15 @@ mod tests {
         let pt = layout.hit_test_point(Point::new(100.0, 5.0));
         assert_eq!(pt.metrics.text_position, 5);
         assert_eq!(pt.is_inside, false);
+    }
+
+    #[test]
+    fn hit_test_point_empty_string() {
+        let text = "";
+        let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
+        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let pt = layout.hit_test_point(Point::new(0.0, 0.0));
+        assert_eq!(pt.metrics.text_position, 0);
     }
 
     #[test]
