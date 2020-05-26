@@ -115,7 +115,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
 
     fn clear(&mut self, color: Color) {
         let (width, height) = match self.ctx.canvas() {
-            Some(canvas) => (canvas.offset_width(), canvas.offset_height()),
+            Some(canvas) => (canvas.width(), canvas.height()),
             None => return,
             /* Canvas might be null if the dom node is not in
              * the document; do nothing. */
