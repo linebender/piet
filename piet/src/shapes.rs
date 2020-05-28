@@ -51,6 +51,37 @@ impl StrokeStyle {
         }
     }
 
+    /// Builder-style method to set the [`LineJoin`].
+    ///
+    /// [`LineJoin`]: enum.LineJoin.html
+    pub fn line_join(mut self, line_join: LineJoin) -> Self {
+        self.line_join = Some(line_join);
+        self
+    }
+
+    /// Builder-style method to set the [`LineCap`].
+    ///
+    /// [`LineCap`]: enum.LineCap.html
+    pub fn line_cap(mut self, line_cap: LineCap) -> Self {
+        self.line_cap = Some(line_cap);
+        self
+    }
+
+    /// Builder-style method to set the line dash.
+    ///
+    /// Dash style is represented as a vector of alternating on-off lengths,
+    /// and an offset length.
+    pub fn dash(mut self, dashes: Vec<f64>, offest: f64) -> Self {
+        self.dash = Some((dashes, offest));
+        self
+    }
+
+    /// Builder-style method to set the miter limit.
+    pub fn miter_limit(mut self, miter_limit: f64) -> Self {
+        self.miter_limit = Some(miter_limit);
+        self
+    }
+
     pub fn set_line_join(&mut self, line_join: LineJoin) {
         self.line_join = Some(line_join);
     }
