@@ -22,6 +22,7 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 /// access to system font information as a global. This will change.
 // we use a phantom lifetime here to match the API of the d2d backend,
 // and the likely API of something with access to system font information.
+#[derive(Clone)]
 pub struct CairoText<'a>(PhantomData<&'a ()>);
 
 pub struct CairoFont(ScaledFont);

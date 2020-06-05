@@ -39,6 +39,7 @@ pub struct CoreGraphicsTextLayout {
 
 pub struct CoreGraphicsTextLayoutBuilder(CoreGraphicsTextLayout);
 
+#[derive(Clone)]
 pub struct CoreGraphicsText<'a>(PhantomData<&'a ()>);
 
 impl<'a> CoreGraphicsText<'a> {

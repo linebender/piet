@@ -29,6 +29,7 @@ pub struct WebRenderContext<'a> {
     ctx: CanvasRenderingContext2d,
     /// Used for creating image bitmaps and possibly other resources.
     window: Window,
+    text: WebText<'a>,
     err: Result<(), Error>,
     phantom: std::marker::PhantomData<&'a ()>,
 }
@@ -36,9 +37,25 @@ pub struct WebRenderContext<'a> {
 impl<'a> WebRenderContext<'a> {
     pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext<'a> {
         WebRenderContext {
-            ctx,
+            ctx: ctx.clone(),
             window,
+            text: WebText::new(ctx),
             err: Ok(()),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct WebText<'a> {
+    ctx: CanvasRenderingContext2d,
+    phantom: std::marker::PhantomData<&'a ()>,
+}
+
+impl<'a> WebText<'a> {
+    pub fn new(ctx: CanvasRenderingContext2d) -> WebText<'a> {
+        WebText {
+            ctx,
             phantom: std::marker::PhantomData,
         }
     }
@@ -104,7 +121,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     /// wasm-bindgen doesn't have a native Point type, so use kurbo's.
     type Brush = Brush;
 
-    type Text = Self;
+    type Text = WebText<'a>;
     type TextLayout = WebTextLayout;
 
     type Image = WebImage;
@@ -197,7 +214,7 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 
     fn text(&mut self) -> &mut Self::Text {
-        self
+        &mut self.text
     }
 
     fn draw_text(

@@ -18,6 +18,7 @@ use self::lines::fetch_line_metrics;
 use crate::d2d;
 use crate::dwrite::{self, TextFormat, TextFormatBuilder};
 
+#[derive(Clone)]
 pub struct D2DText<'a> {
     dwrite: &'a DwriteFactory,
 }

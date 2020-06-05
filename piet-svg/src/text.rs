@@ -6,6 +6,7 @@ use piet::{Error, HitTestPoint, HitTestTextPosition, LineMetric};
 type Result<T> = std::result::Result<T, Error>;
 
 /// SVG text (unimplemented)
+#[derive(Clone)]
 pub struct Text(());
 
 impl Text {
