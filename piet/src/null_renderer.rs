@@ -23,6 +23,7 @@ pub struct NullBrush;
 #[doc(hidden)]
 pub struct NullImage;
 
+#[derive(Clone)]
 #[doc(hidden)]
 pub struct NullText;
 

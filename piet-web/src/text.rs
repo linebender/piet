@@ -16,7 +16,7 @@ use piet::{
 use unicode_segmentation::UnicodeSegmentation;
 
 use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
-use crate::WebRenderContext;
+use crate::WebText;
 
 #[derive(Clone)]
 pub struct WebFont {
@@ -56,7 +56,7 @@ enum FontStyle {
     Oblique(Option<f64>),
 }
 
-impl<'a> Text for WebRenderContext<'a> {
+impl<'a> Text for WebText<'a> {
     type Font = WebFont;
     type FontBuilder = WebFontBuilder;
     type TextLayout = WebTextLayout;
@@ -449,9 +449,8 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_basic() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let input = "piet text!";
         let font = text_layout
@@ -542,9 +541,8 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_0() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let input = "é";
         assert_eq!(input.len(), 2);
@@ -624,9 +622,8 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_1() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // Notes on this input:
         // 6 code points
@@ -723,9 +720,8 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_0() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let font = text_layout
             .new_font_by_name("sans-serif", 16.0)
@@ -772,9 +768,8 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_1() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // base condition, one grapheme
         let font = text_layout
@@ -811,9 +806,8 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_0() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // Notes on this input:
         // 6 code points
@@ -866,9 +860,8 @@ pub(crate) mod test {
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_1() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // this input caused an infinite loop in the binary search when test position
         // > 21.0 && < 28.0
@@ -900,9 +893,8 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     fn test_multiline_hit_test_text_position_basic() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let input = "piet  text!";
         let font = text_layout
@@ -1059,9 +1051,8 @@ pub(crate) mod test {
     fn test_multiline_hit_test_point_basic() {
         let input = "piet text most best";
 
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text = WebText::new(context);
 
         let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();
         // this should break into four lines

@@ -27,7 +27,7 @@ pub type Brush = piet_web::Brush;
 /// The associated text factory for this backend.
 ///
 /// This type matches `RenderContext::Text`
-pub type PietText<'a> = WebRenderContext<'a>;
+pub type PietText<'a> = WebText<'a>;
 
 /// The associated font type for this backend.
 ///

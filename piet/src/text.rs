@@ -3,7 +3,7 @@
 use crate::kurbo::Point;
 use crate::Error;
 
-pub trait Text {
+pub trait Text: Clone {
     type FontBuilder: FontBuilder<Out = Self::Font>;
     type Font: Font;
 
