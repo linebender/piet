@@ -25,39 +25,33 @@ use piet::{
 
 pub use text::{WebFont, WebFontBuilder, WebTextLayout, WebTextLayoutBuilder};
 
-pub struct WebRenderContext<'a> {
+pub struct WebRenderContext {
     ctx: CanvasRenderingContext2d,
     /// Used for creating image bitmaps and possibly other resources.
     window: Window,
-    text: WebText<'a>,
+    text: WebText,
     err: Result<(), Error>,
-    phantom: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a> WebRenderContext<'a> {
-    pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext<'a> {
+impl WebRenderContext {
+    pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext {
         WebRenderContext {
             ctx: ctx.clone(),
             window,
             text: WebText::new(ctx),
             err: Ok(()),
-            phantom: std::marker::PhantomData,
         }
     }
 }
 
 #[derive(Clone)]
-pub struct WebText<'a> {
+pub struct WebText {
     ctx: CanvasRenderingContext2d,
-    phantom: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a> WebText<'a> {
-    pub fn new(ctx: CanvasRenderingContext2d) -> WebText<'a> {
-        WebText {
-            ctx,
-            phantom: std::marker::PhantomData,
-        }
+impl WebText {
+    pub fn new(ctx: CanvasRenderingContext2d) -> WebText {
+        WebText { ctx }
     }
 }
 
@@ -117,11 +111,11 @@ fn convert_line_join(line_join: LineJoin) -> &'static str {
     }
 }
 
-impl<'a> RenderContext for WebRenderContext<'a> {
+impl RenderContext for WebRenderContext {
     /// wasm-bindgen doesn't have a native Point type, so use kurbo's.
     type Brush = Brush;
 
-    type Text = WebText<'a>;
+    type Text = WebText;
     type TextLayout = WebTextLayout;
 
     type Image = WebImage;
@@ -400,7 +394,7 @@ fn draw_image(
     }
 }
 
-impl<'a> IntoBrush<WebRenderContext<'a>> for Brush {
+impl IntoBrush<WebRenderContext> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut WebRenderContext,
@@ -434,7 +428,7 @@ fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
     }
 }
 
-impl WebRenderContext<'_> {
+impl WebRenderContext {
     /// Set the source pattern to the brush.
     ///
     /// Web canvas is super stateful, and we're trying to have more retained stuff.

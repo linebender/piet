@@ -1,7 +1,5 @@
 //! Text related stuff for the coregraphics backend
 
-use std::marker::PhantomData;
-
 use core_foundation_sys::base::CFRange;
 use core_graphics::base::CGFloat;
 use core_graphics::context::CGContextRef;
@@ -40,17 +38,17 @@ pub struct CoreGraphicsTextLayout {
 pub struct CoreGraphicsTextLayoutBuilder(CoreGraphicsTextLayout);
 
 #[derive(Clone)]
-pub struct CoreGraphicsText<'a>(PhantomData<&'a ()>);
+pub struct CoreGraphicsText();
 
-impl<'a> CoreGraphicsText<'a> {
+impl CoreGraphicsText {
     /// Create a new factory that satisfies the piet `Text` trait.
     #[allow(clippy::new_without_default)]
-    pub fn new() -> CoreGraphicsText<'a> {
-        CoreGraphicsText(PhantomData)
+    pub fn new() -> CoreGraphicsText {
+        CoreGraphicsText()
     }
 }
 
-impl<'a> Text for CoreGraphicsText<'a> {
+impl Text for CoreGraphicsText {
     type Font = CoreGraphicsFont;
     type FontBuilder = CoreGraphicsFontBuilder;
     type TextLayout = CoreGraphicsTextLayout;
