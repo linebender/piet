@@ -29,7 +29,7 @@ pub type Brush = D2DBrush;
 /// The associated text factory for this backend.
 ///
 /// This type matches `RenderContext::Text`
-pub type PietText<'a> = D2DText<'a>;
+pub type PietText = D2DText;
 
 /// The associated font type for this backend.
 ///

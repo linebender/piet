@@ -19,14 +19,14 @@ use crate::d2d;
 use crate::dwrite::{self, TextFormat, TextFormatBuilder};
 
 #[derive(Clone)]
-pub struct D2DText<'a> {
-    dwrite: &'a DwriteFactory,
+pub struct D2DText {
+    dwrite: DwriteFactory,
 }
 
 pub struct D2DFont(TextFormat);
 
-pub struct D2DFontBuilder<'a> {
-    builder: TextFormatBuilder<'a>,
+pub struct D2DFontBuilder {
+    builder: TextFormatBuilder,
     name: String,
 }
 
@@ -38,29 +38,29 @@ pub struct D2DTextLayout {
     pub layout: dwrite::TextLayout,
 }
 
-pub struct D2DTextLayoutBuilder<'a> {
+pub struct D2DTextLayoutBuilder {
     text: String,
-    builder: dwrite::TextLayoutBuilder<'a>,
+    builder: dwrite::TextLayoutBuilder,
 }
 
-impl<'a> D2DText<'a> {
+impl D2DText {
     /// Create a new factory that satisfies the piet `Text` trait given
     /// the (platform-specific) dwrite factory.
-    pub fn new(dwrite: &'a DwriteFactory) -> D2DText<'a> {
+    pub fn new(dwrite: DwriteFactory) -> D2DText {
         D2DText { dwrite }
     }
 }
 
-impl<'a> Text for D2DText<'a> {
-    type FontBuilder = D2DFontBuilder<'a>;
+impl Text for D2DText {
+    type FontBuilder = D2DFontBuilder;
     type Font = D2DFont;
-    type TextLayoutBuilder = D2DTextLayoutBuilder<'a>;
+    type TextLayoutBuilder = D2DTextLayoutBuilder;
     type TextLayout = D2DTextLayout;
 
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
         // Note: the name is cloned here, rather than applied using `with_family` for
         // lifetime reasons. Maybe there's a better approach.
-        let builder = TextFormatBuilder::new(self.dwrite).size(size as f32);
+        let builder = TextFormatBuilder::new(self.dwrite.clone()).size(size as f32);
         D2DFontBuilder {
             builder,
             name: name.to_owned(),
@@ -77,7 +77,7 @@ impl<'a> Text for D2DText<'a> {
 
         D2DTextLayoutBuilder {
             text: text.to_owned(),
-            builder: dwrite::TextLayoutBuilder::new(self.dwrite)
+            builder: dwrite::TextLayoutBuilder::new(self.dwrite.clone())
                 .format(&font.0)
                 .width(width as f32)
                 .height(1e6)
@@ -86,17 +86,17 @@ impl<'a> Text for D2DText<'a> {
     }
 }
 
-impl<'a> FontBuilder for D2DFontBuilder<'a> {
+impl FontBuilder for D2DFontBuilder {
     type Out = D2DFont;
 
     fn build(self) -> Result<Self::Out, Error> {
-        Ok(D2DFont(self.builder.family(&self.name).build()?))
+        Ok(D2DFont(self.builder.family(self.name).build()?))
     }
 }
 
 impl Font for D2DFont {}
 
-impl<'a> TextLayoutBuilder for D2DTextLayoutBuilder<'a> {
+impl TextLayoutBuilder for D2DTextLayoutBuilder {
     type Out = D2DTextLayout;
 
     fn build(self) -> Result<Self::Out, Error> {
@@ -230,7 +230,7 @@ mod test {
     #[test]
     fn test_hit_test_text_position_basic() {
         let dwrite = DwriteFactory::new().unwrap();
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
 
         let input = "piet text!";
         let font = text_layout
@@ -313,7 +313,7 @@ mod test {
         let input = "é";
         assert_eq!(input.len(), 2);
 
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite.clone());
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
@@ -345,7 +345,7 @@ mod test {
         assert_eq!(input.len(), 7);
         assert_eq!(input.chars().count(), 3);
 
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
@@ -386,7 +386,7 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
         assert_eq!(input.len(), 14);
 
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
@@ -466,7 +466,7 @@ mod test {
     fn test_hit_test_point_basic() {
         let dwrite = DwriteFactory::new().unwrap();
 
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
 
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
@@ -515,7 +515,7 @@ mod test {
         // 4 graphemes
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
@@ -559,7 +559,7 @@ mod test {
         let width_small = 30.0;
 
         let dwrite = dwrite::DwriteFactory::new().unwrap();
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
@@ -585,7 +585,7 @@ mod test {
         let width_large = 1000.0;
 
         let dwrite = dwrite::DwriteFactory::new().unwrap();
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
             .new_font_by_name("sans-serif", 12.0)
             .build()
@@ -611,7 +611,7 @@ mod test {
     #[test]
     fn test_multiline_hit_test_text_position_basic() {
         let dwrite = dwrite::DwriteFactory::new().unwrap();
-        let mut text_layout = D2DText::new(&dwrite);
+        let mut text_layout = D2DText::new(dwrite);
 
         let input = "piet  text!";
         let font = text_layout
@@ -768,7 +768,7 @@ mod test {
         let input = "piet text most best";
 
         let dwrite = dwrite::DwriteFactory::new().unwrap();
-        let mut text = D2DText::new(&dwrite);
+        let mut text = D2DText::new(dwrite);
 
         let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
         // this should break into four lines
