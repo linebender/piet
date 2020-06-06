@@ -41,7 +41,7 @@ use crate::d2d::{Bitmap, Brush, DeviceContext, FillRule, PathGeometry};
 
 pub struct D2DRenderContext<'a> {
     factory: &'a D2DFactory,
-    inner_text: D2DText<'a>,
+    inner_text: D2DText,
     rt: &'a mut D2DDeviceContext,
 
     /// The context state stack. There is always at least one, until finishing.
@@ -65,7 +65,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
     /// TODO: check signature.
     pub fn new(
         factory: &'a D2DFactory,
-        dwrite: &'a DwriteFactory,
+        dwrite: DwriteFactory,
         rt: &'b mut DeviceContext,
     ) -> D2DRenderContext<'b> {
         let inner_text = D2DText::new(dwrite);
@@ -148,7 +148,7 @@ fn path_from_shape(
 impl<'a> RenderContext for D2DRenderContext<'a> {
     type Brush = Brush;
 
-    type Text = D2DText<'a>;
+    type Text = D2DText;
 
     type TextLayout = D2DTextLayout;
 

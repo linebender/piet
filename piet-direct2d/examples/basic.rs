@@ -49,7 +49,7 @@ fn main() {
     context.set_target(&target);
     context.set_dpi_scale(HIDPI);
     context.begin_draw();
-    let mut piet_context = D2DRenderContext::new(&d2d, &dwrite, &mut context);
+    let mut piet_context = D2DRenderContext::new(&d2d, dwrite, &mut context);
     // TODO: report errors more nicely than these unwraps.
     piet::draw_test_picture(&mut piet_context, test_picture_number).unwrap();
     piet_context.finish().unwrap();

@@ -35,14 +35,14 @@ pub struct TextFormat(ComPtr<IDWriteTextFormat>);
 /// A builder for creating new `TextFormat` objects.
 ///
 /// TODO: provide lots more capability.
-pub struct TextFormatBuilder<'a> {
-    factory: &'a DwriteFactory,
+pub struct TextFormatBuilder {
+    factory: DwriteFactory,
     size: Option<f32>,
-    family: Option<&'a str>,
+    family: Option<String>,
 }
 
-pub struct TextLayoutBuilder<'a> {
-    factory: &'a DwriteFactory,
+pub struct TextLayoutBuilder {
+    factory: DwriteFactory,
     format: Option<TextFormat>,
     text: Option<Vec<u16>>,
     width: Option<f32>,
@@ -124,8 +124,8 @@ impl DwriteFactory {
     }
 }
 
-impl<'a> TextFormatBuilder<'a> {
-    pub fn new(factory: &'a DwriteFactory) -> TextFormatBuilder<'a> {
+impl TextFormatBuilder {
+    pub fn new(factory: DwriteFactory) -> TextFormatBuilder {
         TextFormatBuilder {
             factory,
             size: None,
@@ -133,12 +133,12 @@ impl<'a> TextFormatBuilder<'a> {
         }
     }
 
-    pub fn size(mut self, size: f32) -> TextFormatBuilder<'a> {
+    pub fn size(mut self, size: f32) -> TextFormatBuilder {
         self.size = Some(size);
         self
     }
 
-    pub fn family(mut self, family: &'a str) -> TextFormatBuilder<'a> {
+    pub fn family(mut self, family: String) -> TextFormatBuilder {
         self.family = Some(family);
         self
     }
@@ -167,8 +167,8 @@ impl<'a> TextFormatBuilder<'a> {
     }
 }
 
-impl<'a> TextLayoutBuilder<'a> {
-    pub fn new(factory: &'a DwriteFactory) -> TextLayoutBuilder<'a> {
+impl TextLayoutBuilder {
+    pub fn new(factory: DwriteFactory) -> TextLayoutBuilder {
         TextLayoutBuilder {
             factory,
             format: None,
@@ -178,24 +178,24 @@ impl<'a> TextLayoutBuilder<'a> {
         }
     }
 
-    pub fn format(mut self, format: &TextFormat) -> TextLayoutBuilder<'a> {
+    pub fn format(mut self, format: &TextFormat) -> TextLayoutBuilder {
         // The fact we clone here is annoying, but it gets us out of
         // otherwise annoying lifetime issues.
         self.format = Some(format.clone());
         self
     }
 
-    pub fn text(mut self, text: &str) -> TextLayoutBuilder<'a> {
+    pub fn text(mut self, text: &str) -> TextLayoutBuilder {
         self.text = Some(text.to_wide());
         self
     }
 
-    pub fn width(mut self, width: f32) -> TextLayoutBuilder<'a> {
+    pub fn width(mut self, width: f32) -> TextLayoutBuilder {
         self.width = Some(width);
         self
     }
 
-    pub fn height(mut self, height: f32) -> TextLayoutBuilder<'a> {
+    pub fn height(mut self, height: f32) -> TextLayoutBuilder {
         self.height = Some(height);
         self
     }
