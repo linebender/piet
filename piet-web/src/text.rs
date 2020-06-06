@@ -56,7 +56,7 @@ enum FontStyle {
     Oblique(Option<f64>),
 }
 
-impl<'a> Text for WebText<'a> {
+impl Text for WebText {
     type Font = WebFont;
     type FontBuilder = WebFontBuilder;
     type TextLayout = WebTextLayout;

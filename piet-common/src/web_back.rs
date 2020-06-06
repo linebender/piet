@@ -17,7 +17,7 @@ use piet::ImageFormat;
 #[doc(hidden)]
 pub use piet_web::*;
 
-pub type Piet<'a> = WebRenderContext<'a>;
+pub type Piet<'a> = WebRenderContext;
 
 /// The associated brush type for this backend.
 ///
@@ -27,7 +27,7 @@ pub type Brush = piet_web::Brush;
 /// The associated text factory for this backend.
 ///
 /// This type matches `RenderContext::Text`
-pub type PietText<'a> = WebText<'a>;
+pub type PietText = WebText;
 
 /// The associated font type for this backend.
 ///
@@ -37,7 +37,7 @@ pub type PietFont = WebFont;
 /// The associated font builder for this backend.
 ///
 /// This type matches `RenderContext::Text::FontBuilder`
-pub type PietFontBuilder<'a> = WebFontBuilder;
+pub type PietFontBuilder = WebFontBuilder;
 
 /// The associated text layout type for this backend.
 ///
@@ -47,7 +47,7 @@ pub type PietTextLayout = WebTextLayout;
 /// The associated text layout builder for this backend.
 ///
 /// This type matches `RenderContext::Text::TextLayoutBuilder`
-pub type PietTextLayoutBuilder<'a> = WebTextLayoutBuilder;
+pub type PietTextLayoutBuilder = WebTextLayoutBuilder;
 
 /// The associated image type for this backend.
 ///

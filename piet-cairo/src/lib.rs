@@ -22,7 +22,7 @@ pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
     ctx: &'a mut Context,
-    text: CairoText<'a>,
+    text: CairoText,
     // because of the relationship between GTK and cairo (where GTK applies a transform
     // to adjust for menus and window borders) we cannot trust the transform returned
     // by cairo. Instead we maintain our own stack, which will contain
@@ -107,7 +107,7 @@ macro_rules! set_gradient_stops {
 impl<'a> RenderContext for CairoRenderContext<'a> {
     type Brush = Brush;
 
-    type Text = CairoText<'a>;
+    type Text = CairoText;
     type TextLayout = CairoTextLayout;
 
     type Image = ImageSurface;

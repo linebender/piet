@@ -3,8 +3,6 @@
 mod grapheme;
 mod lines;
 
-use std::marker::PhantomData;
-
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use piet::kurbo::Point;
@@ -23,7 +21,7 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 // we use a phantom lifetime here to match the API of the d2d backend,
 // and the likely API of something with access to system font information.
 #[derive(Clone)]
-pub struct CairoText<'a>(PhantomData<&'a ()>);
+pub struct CairoText();
 
 pub struct CairoFont(ScaledFont);
 
@@ -47,18 +45,18 @@ pub struct CairoTextLayout {
 
 pub struct CairoTextLayoutBuilder(CairoTextLayout);
 
-impl<'a> CairoText<'a> {
+impl CairoText {
     /// Create a new factory that satisfies the piet `Text` trait.
     ///
     /// No state is needed for now because the current implementation is just
     /// toy text, but that will change when proper text is implemented.
     #[allow(clippy::new_without_default)]
-    pub fn new() -> CairoText<'a> {
-        CairoText(PhantomData)
+    pub fn new() -> CairoText {
+        CairoText()
     }
 }
 
-impl<'a> Text for CairoText<'a> {
+impl Text for CairoText {
     type Font = CairoFont;
     type FontBuilder = CairoFontBuilder;
     type TextLayout = CairoTextLayout;

@@ -39,7 +39,7 @@ pub type PietFont = D2DFont;
 /// The associated font builder for this backend.
 ///
 /// This type matches `RenderContext::Text::FontBuilder`
-pub type PietFontBuilder<'a> = D2DFontBuilder<'a>;
+pub type PietFontBuilder = D2DFontBuilder;
 
 /// The associated text layout type for this backend.
 ///
@@ -49,7 +49,7 @@ pub type PietTextLayout = D2DTextLayout;
 /// The associated text layout builder for this backend.
 ///
 /// This type matches `RenderContext::Text::TextLayoutBuilder`
-pub type PietTextLayoutBuilder<'a> = D2DTextLayoutBuilder<'a>;
+pub type PietTextLayoutBuilder = D2DTextLayoutBuilder;
 
 /// The associated image type for this backend.
 ///
@@ -151,7 +151,7 @@ impl<'a> BitmapTarget<'a> {
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> D2DRenderContext {
-        D2DRenderContext::new(self.d2d, self.dwrite, &mut self.context)
+        D2DRenderContext::new(self.d2d, self.dwrite.clone(), &mut self.context)
     }
 
     /// Get raw RGBA pixels from the bitmap.

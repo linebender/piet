@@ -40,7 +40,7 @@ pub struct CoreGraphicsContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
     ctx: &'a mut CGContextRef,
-    text: CoreGraphicsText<'a>,
+    text: CoreGraphicsText,
     // because of the relationship between cocoa and coregraphics (where cocoa
     // may be asked to flip the y-axis) we cannot trust the transform returned
     // by CTContextGetCTM. Instead we maintain our own stack, which will contain
@@ -94,7 +94,7 @@ pub enum Brush {
 
 impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Brush = Brush;
-    type Text = CoreGraphicsText<'a>;
+    type Text = CoreGraphicsText;
     type TextLayout = CoreGraphicsTextLayout;
     type Image = CGImage;
     //type StrokeStyle = StrokeStyle;

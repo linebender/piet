@@ -53,17 +53,19 @@ pub use backend::*;
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::marker::PhantomData;
 
     // Make sure all the common types exist and don't get accidentally removed
     #[allow(dead_code)]
     struct Types<'a> {
         piet: Piet<'a>,
         brush: Brush,
-        piet_text: PietText<'a>,
+        piet_text: PietText,
         piet_font: PietFont,
-        piet_font_builder: PietFontBuilder<'a>,
+        piet_font_builder: PietFontBuilder,
         piet_text_layout: PietTextLayout,
-        piet_text_layout_builder: PietTextLayoutBuilder<'a>,
+        piet_text_layout_builder: PietTextLayoutBuilder,
         image: Image,
+        _phantom: PhantomData<&'a ()>,
     }
 }
