@@ -8,8 +8,8 @@ use core_foundation::{
     array::{CFArray, CFArrayRef, CFIndex},
     attributed_string::CFMutableAttributedString,
     base::TCFType,
+    boolean::CFBoolean,
     dictionary::CFDictionaryRef,
-    number::CFNumber,
     string::CFString,
 };
 use core_foundation_sys::base::CFRange;
@@ -58,10 +58,10 @@ impl AttributedString {
                 string_attributes::kCTFontAttributeName,
                 font.clone(),
             );
-            string.set_attribute::<CFNumber>(
+            string.set_attribute::<CFBoolean>(
                 char_range,
                 string_attributes::kCTForegroundColorFromContextAttributeName,
-                1i32.into(),
+                CFBoolean::true_value(),
             );
         }
         AttributedString(string)
