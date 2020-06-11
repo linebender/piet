@@ -7,12 +7,12 @@ type Result<T> = std::result::Result<T, Error>;
 
 /// SVG text (unimplemented)
 #[derive(Clone)]
-pub struct Text(());
+pub struct Text;
 
 impl Text {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Text(())
+        Text
     }
 }
 
@@ -23,7 +23,7 @@ impl piet::Text for Text {
     type TextLayoutBuilder = TextLayoutBuilder;
 
     fn new_font_by_name(&mut self, _name: &str, _size: f64) -> FontBuilder {
-        FontBuilder(())
+        FontBuilder
     }
 
     fn new_text_layout(
@@ -32,12 +32,12 @@ impl piet::Text for Text {
         _text: &str,
         _width: impl Into<Option<f64>>,
     ) -> TextLayoutBuilder {
-        TextLayoutBuilder(())
+        TextLayoutBuilder
     }
 }
 
 /// SVG font builder (unimplemented)
-pub struct FontBuilder(());
+pub struct FontBuilder;
 
 impl piet::FontBuilder for FontBuilder {
     type Out = Font;
@@ -48,11 +48,11 @@ impl piet::FontBuilder for FontBuilder {
 }
 
 /// SVG font (unimplemented)
-pub struct Font(());
+pub struct Font;
 
 impl piet::Font for Font {}
 
-pub struct TextLayoutBuilder(());
+pub struct TextLayoutBuilder;
 
 impl piet::TextLayoutBuilder for TextLayoutBuilder {
     type Out = TextLayout;
@@ -64,7 +64,7 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
 
 /// SVG text layout (unimplemented)
 #[derive(Clone)]
-pub struct TextLayout(());
+pub struct TextLayout;
 
 impl piet::TextLayout for TextLayout {
     fn width(&self) -> f64 {
