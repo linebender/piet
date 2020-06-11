@@ -21,7 +21,7 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 // we use a phantom lifetime here to match the API of the d2d backend,
 // and the likely API of something with access to system font information.
 #[derive(Clone)]
-pub struct CairoText();
+pub struct CairoText;
 
 pub struct CairoFont(ScaledFont);
 
@@ -52,7 +52,7 @@ impl CairoText {
     /// toy text, but that will change when proper text is implemented.
     #[allow(clippy::new_without_default)]
     pub fn new() -> CairoText {
-        CairoText()
+        CairoText
     }
 }
 

@@ -38,13 +38,13 @@ pub struct CoreGraphicsTextLayout {
 pub struct CoreGraphicsTextLayoutBuilder(CoreGraphicsTextLayout);
 
 #[derive(Clone)]
-pub struct CoreGraphicsText();
+pub struct CoreGraphicsText;
 
 impl CoreGraphicsText {
     /// Create a new factory that satisfies the piet `Text` trait.
     #[allow(clippy::new_without_default)]
     pub fn new() -> CoreGraphicsText {
-        CoreGraphicsText()
+        CoreGraphicsText
     }
 }
 
