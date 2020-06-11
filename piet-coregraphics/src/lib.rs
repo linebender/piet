@@ -11,7 +11,7 @@ use core_graphics::base::{
     kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
 };
 use core_graphics::color_space::CGColorSpace;
-use core_graphics::context::{CGContextRef, CGLineCap, CGLineJoin};
+use core_graphics::context::{CGContextRef, CGLineCap, CGLineJoin, CGTextDrawingMode};
 use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::image::{CGImage, CGImageRef};
@@ -223,12 +223,20 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
                 layout.draw(self.ctx);
             }
             Brush::Gradient(grad) => {
-                //FIXME: there's no simple way to fill text with a gradient here.
-                //To do this correctly we need to work glyph by glyph, using
-                //CTFontCreatePathForGlyph, and I'm not doing that today.
-
-                self.set_fill_color(&grad.first_color());
+                // Note: crate 'core-graphics' version <= 0.19 didn't define the enum `CGTextFillStrokeClip`,
+                // so we can't really use `CGTextClip` here (it has the wrong value).
+                // This was fixed on core-foundation-rs commit 1f4c983cee6f441c97aa0e61b29ebc850f91127b
+                // and should be available once a new version is released.
+                // TODO: change this to `CGTextClip` once core-graphics dependency version is upgraded.
+                self.ctx
+                    .set_text_drawing_mode(CGTextDrawingMode::CGTextFillClip);
                 layout.draw(self.ctx);
+
+                // Need to revert the text transformations in order to render the gradient.
+                self.ctx.scale(1.0, -1.0);
+                self.ctx.translate(-pos.x, -(y_off + pos.y));
+
+                grad.fill(self.ctx, GRADIENT_DRAW_BEFORE_AND_AFTER);
             }
         }
         self.ctx.restore();

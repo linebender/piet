@@ -48,14 +48,6 @@ impl Gradient {
         }
     }
 
-    pub(crate) fn first_color(&self) -> Color {
-        match &self.piet_grad {
-            FixedGradient::Linear(grad) => grad.stops.first().map(|g| g.color.clone()),
-            FixedGradient::Radial(grad) => grad.stops.first().map(|g| g.color.clone()),
-        }
-        .unwrap_or(Color::BLACK)
-    }
-
     pub(crate) fn fill(&self, ctx: &mut CGContextRef, options: CGGradientDrawingOptions) {
         match self.piet_grad {
             FixedGradient::Radial(FixedRadialGradient {
@@ -87,7 +79,7 @@ impl Gradient {
                         self.cg_grad.as_concrete_TypeRef(),
                         start,
                         end,
-                        0,
+                        options,
                     )
                 }
             }

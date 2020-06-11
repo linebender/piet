@@ -3,4 +3,9 @@ target/
 Cargo.lock
 .DS_Store
 .cargo
+*.png
 
+## Intellij Idea project configuration files
+.idea/
+## VScode project configuration files
+.vscode/
