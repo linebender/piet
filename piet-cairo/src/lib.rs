@@ -23,7 +23,7 @@ pub use crate::text::{
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
-    ctx: &'a mut Context,
+    ctx: &'a Context,
     text: CairoText,
     // because of the relationship between GTK and cairo (where GTK applies a transform
     // to adjust for menus and window borders) we cannot trust the transform returned
@@ -38,7 +38,7 @@ impl<'a> CairoRenderContext<'a> {
     /// At the moment, it uses the "toy text API" for text layout, but when
     /// we change to a more sophisticated text layout approach, we'll probably
     /// need a factory for that as an additional argument.
-    pub fn new(ctx: &mut Context) -> CairoRenderContext {
+    pub fn new(ctx: &Context) -> CairoRenderContext {
         CairoRenderContext {
             ctx,
             text: CairoText::new(),
