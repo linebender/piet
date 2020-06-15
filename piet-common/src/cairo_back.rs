@@ -106,7 +106,7 @@ impl<'a> BitmapTarget<'a> {
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> CairoRenderContext {
-        CairoRenderContext::new(&mut self.cr)
+        CairoRenderContext::new(&self.cr)
     }
 
     /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
