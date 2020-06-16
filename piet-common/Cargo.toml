@@ -10,7 +10,7 @@ keywords = ["graphics", "2d"]
 
 [features]
 d2d = ["piet-direct2d"]
-cairo = ["piet-cairo", "cairo-rs"]
+cairo = ["piet-cairo", "cairo-rs", "cairo-sys-rs"]
 web = ["piet-web"]
 
 [dependencies]
@@ -22,11 +22,13 @@ piet-web = { version = "0.1.0", path = "../piet-web", optional = true }
 
 cfg-if = "0.1.10"
 cairo-rs = { version = "0.8.1", default_features = false, optional = true }
+cairo-sys-rs = { version = "0.9.2", optional = true }
 png = { version = "0.16.1", optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
 piet-cairo = { version = "0.1.0", path = "../piet-cairo" }
 cairo-rs = { version = "0.8.1", default_features = false}
+cairo-sys-rs = { version = "0.9.2" }
 
 [target.'cfg(target_os="macos")'.dependencies]
 piet-coregraphics = { version = "0.1.1", path = "../piet-coregraphics" }

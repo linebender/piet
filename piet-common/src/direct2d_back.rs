@@ -156,6 +156,19 @@ impl<'a> BitmapTarget<'a> {
 
     /// Get raw RGBA pixels from the bitmap.
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        let mut buf = vec![0; self.width * self.height * 4];
+        self.copy_raw_pixels(fmt, &mut buf)?;
+        Ok(buf)
+    }
+
+    /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
+    /// copied, returns the number of bytes written. If `buf` wasn't big enough, returns an error
+    /// and doesn't write anything.
+    pub fn copy_raw_pixels(
+        &mut self,
+        fmt: ImageFormat,
+        buf: &mut [u8],
+    ) -> Result<usize, piet::Error> {
         self.context.end_draw()?;
         // TODO: convert other formats.
         if fmt != ImageFormat::RgbaPremul {
@@ -166,8 +179,12 @@ impl<'a> BitmapTarget<'a> {
             .create_texture(self.width as u32, self.height as u32, TextureMode::Read)
             .unwrap();
 
+        let size = self.width * self.height * 4;
+        if size > buf.len() {
+            return Err(piet::Error::InvalidInput);
+        }
+
         // TODO: Have a safe way to accomplish this :D
-        let mut raw_pixels: Vec<u8> = Vec::with_capacity(self.width * self.height * 4);
         unsafe {
             self.d3d_ctx
                 .inner()
@@ -181,14 +198,13 @@ impl<'a> BitmapTarget<'a> {
                 let src = mapped_rect
                     .pBits
                     .offset(mapped_rect.Pitch as isize * y as isize);
-                let dst = raw_pixels
+                let dst = buf
                     .as_mut_ptr()
                     .offset(self.width as isize * 4 * y as isize);
                 std::ptr::copy_nonoverlapping(src, dst, self.width * 4);
             }
-            raw_pixels.set_len(self.width * self.height * 4);
         }
-        Ok(raw_pixels)
+        Ok(size)
     }
 
     /// Save bitmap to RGBA PNG file
