@@ -155,13 +155,13 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_raw_pixels")]
+    #[deprecated(since = "0.2.0", note = "use to__pixels")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.to_raw_pixels(fmt)
+        self.raw_pixels(fmt)
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    pub fn to_raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    pub fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         let mut buf = vec![0; self.width * self.height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(buf)
@@ -215,10 +215,10 @@ impl<'a> BitmapTarget<'a> {
 
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
-    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+    pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let height = self.height;
         let width = self.width;
-        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let image = self.raw_pixels(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
@@ -257,13 +257,13 @@ mod tests {
     }
 
     #[test]
-    fn into_raw_pixels() {
+    fn raw_pixels() {
         let mut device = Device::new().unwrap();
         let mut target = device.bitmap_target(640, 480, 1.0).unwrap();
         let mut piet = target.render_context();
         piet.clip(Rect::ZERO);
         piet.finish().unwrap();
         std::mem::drop(piet);
-        target.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
+        target.raw_pixels(ImageFormat::RgbaPremul).unwrap();
     }
 }

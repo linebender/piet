@@ -106,13 +106,13 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_raw_pixels")]
+    #[deprecated(since = "0.2.0", note = "use raw_pixels")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.to_raw_pixels(fmt)
+        self.raw_pixels(fmt)
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    pub fn to_raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    pub fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         let width = self.ctx.width() as usize;
         let height = self.ctx.height() as usize;
         let mut buf = vec![0; width * height * 4];
@@ -160,10 +160,10 @@ impl<'a> BitmapTarget<'a> {
 
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
-    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+    pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let width = self.ctx.width() as usize;
         let height = self.ctx.height() as usize;
-        let mut data = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let mut data = self.raw_pixels(ImageFormat::RgbaPremul)?;
         piet_coregraphics::unpremultiply_rgba(&mut data);
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
