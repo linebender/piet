@@ -108,7 +108,8 @@ impl<'a> BitmapTarget<'a> {
         WebRenderContext::new(self.context.clone(), web_sys::window().unwrap())
     }
 
-    fn raw_pixels(&self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    /// Get raw RGBA pixels from the bitmap.
+    fn to_raw_pixels(&self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         // TODO: This code is just a snippet. A thorough review and testing should be done before
         // this is used. It is here for compatibility with druid.
 
@@ -129,8 +130,9 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
+    #[deprecated(since = "0.2.0", note = "use to_raw_pixels")]
     pub fn into_raw_pixels(self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.raw_pixels(fmt)
+        self.to_raw_pixels(fmt)
     }
 
     /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
@@ -141,7 +143,7 @@ impl<'a> BitmapTarget<'a> {
         fmt: ImageFormat,
         buf: &mut [u8],
     ) -> Result<usize, piet::Error> {
-        let data = self.raw_pixels(fmt)?;
+        let data = self.to_raw_pixels(fmt)?;
         if data.len() > buf.len() {
             return Err(piet::Error::InvalidInput);
         }

@@ -155,7 +155,13 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
+    #[deprecated(since = "0.2.0", note = "use to_raw_pixels")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        self.to_raw_pixels(fmt)
+    }
+
+    /// Get raw RGBA pixels from the bitmap.
+    pub fn to_raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         let mut buf = vec![0; self.width * self.height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(buf)
