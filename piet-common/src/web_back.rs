@@ -109,7 +109,7 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    fn raw_pixels(&self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         // TODO: This code is just a snippet. A thorough review and testing should be done before
         // this is used. It is here for compatibility with druid.
 
@@ -131,7 +131,7 @@ impl<'a> BitmapTarget<'a> {
 
     /// Get raw RGBA pixels from the bitmap.
     #[deprecated(since = "0.2.0", note = "use raw_pixels")]
-    pub fn into_raw_pixels(self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         self.raw_pixels(fmt)
     }
 
