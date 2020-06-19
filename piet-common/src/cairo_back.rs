@@ -127,6 +127,9 @@ impl<'a> BitmapTarget<'a> {
             // don't seem to think that's a problem, as long as we call flush (which we already
             // did), and promise not to mutate anything.
             // https://www.cairographics.org/manual/cairo-Image-Surfaces.html#cairo-image-surface-get-data
+            //
+            // TODO: we can simplify this once cairo makes a release containing
+            // https://github.com/gtk-rs/cairo/pull/330
             let data_len = height.saturating_sub(1) * stride + width * 4;
             let data = {
                 let data_ptr = cairo_sys::cairo_image_surface_get_data(self.surface.to_raw_none());
