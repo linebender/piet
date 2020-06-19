@@ -453,6 +453,7 @@ impl DeviceContext {
         }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub(crate) fn create_linear_gradient(
         &mut self,
         props: &D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
@@ -541,6 +542,7 @@ impl DeviceContext {
         }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub(crate) fn draw_bitmap(
         &mut self,
         bitmap: &Bitmap,
