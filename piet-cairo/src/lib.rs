@@ -243,6 +243,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn finish(&mut self) -> Result<(), Error> {
+        self.ctx.get_target().flush();
         self.status()
     }
 
