@@ -203,7 +203,7 @@ impl TextLayout for CairoTextLayout {
         // Trailing whitespace is remove for the line
         let line = &self.text[lm.start_offset..lm.end_offset];
 
-        let mut htp = hit_test_line_point(&self.font, line, &point);
+        let mut htp = hit_test_line_point(&self.font, line, point);
         htp.metrics.text_position += lm.start_offset;
 
         if !is_y_inside {
@@ -253,7 +253,7 @@ impl TextLayout for CairoTextLayout {
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_point
 // Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_point(font: &ScaledFont, text: &str, point: &Point) -> HitTestPoint {
+fn hit_test_line_point(font: &ScaledFont, text: &str, point: Point) -> HitTestPoint {
     // null case
     if text.is_empty() {
         return HitTestPoint::default();
