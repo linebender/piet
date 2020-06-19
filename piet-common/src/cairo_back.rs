@@ -127,21 +127,19 @@ impl<'a> BitmapTarget<'a> {
             // don't seem to think that's a problem, as long as we call flush (which we already
             // did), and promise not to mutate anything.
             // https://www.cairographics.org/manual/cairo-Image-Surfaces.html#cairo-image-surface-get-data
+            let data_len = height.saturating_sub(1) * stride + width * 4;
             let data = {
                 let data_ptr = cairo_sys::cairo_image_surface_get_data(self.surface.to_raw_none());
                 if data_ptr.is_null() {
                     let err = cairo::BorrowError::from(cairo::Status::SurfaceFinished);
                     return Err((Box::new(err) as Box<dyn std::error::Error>).into());
                 }
-                std::slice::from_raw_parts(data_ptr, height.saturating_sub(1) * stride + width * 4)
+                std::slice::from_raw_parts(data_ptr, data_len);
             };
 
             // A sanity check for all the unsafe indexing that follows.
-            let src_off_max = (height - 1) * stride;
-            let dst_off_max = (height - 1) * width * 4;
-            let x_max = width - 1;
-            buf.get(dst_off_max + x_max * 4 + 3).unwrap();
-            data.get(src_off_max + x_max * 4 + 3).unwrap();
+            assert!(data.get(data_len - 1).is_some());
+            assert!(buf.get(size - 1).is_some());
 
             for y in 0..height {
                 let src_off = y * stride;
@@ -151,7 +149,8 @@ impl<'a> BitmapTarget<'a> {
                     // Note that dst_off maxes out at (height - 1) * width * 4, and so
                     // dst_off + x * 4 + 3 maxes out at height * width * 4 - 1, which is size - 1.
                     // Also, src_off maxes out at (height - 1) * stride, and so
-                    // src_off + x * 4 + 3 maxes out at (height - 1) * stride + width * 4 - 1.
+                    // src_off + x * 4 + 3 maxes out at (height - 1) * stride + width * 4 - 1,
+                    // which is data_len - 1.
                     *buf.get_unchecked_mut(dst_off + x * 4 + 0) =
                         *data.get_unchecked(src_off + x * 4 + 2);
                     *buf.get_unchecked_mut(dst_off + x * 4 + 1) =
