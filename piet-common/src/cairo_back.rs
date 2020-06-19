@@ -135,6 +135,14 @@ impl<'a> BitmapTarget<'a> {
                 }
                 std::slice::from_raw_parts(data_ptr, height.saturating_sub(1) * stride + width * 4)
             };
+
+            // A sanity check for all the unsafe indexing that follows.
+            let src_off_max = (height - 1) * stride;
+            let dst_off_max = (height - 1) * width * 4;
+            let x_max = width - 1;
+            buf.get(dst_off_max + x_max * 4 + 3).unwrap();
+            data.get(src_off_max + x_max * 4 + 3).unwrap();
+
             for y in 0..height {
                 let src_off = y * stride;
                 let dst_off = y * width * 4;
