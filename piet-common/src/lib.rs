@@ -24,6 +24,8 @@
 //! [kurbo]: https://crates.io/crates/kurbo
 //! [piet-cairo]: https://crates.io/crates/piet-cairo
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 pub use piet::*;
 
 #[doc(hidden)]

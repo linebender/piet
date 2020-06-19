@@ -2,6 +2,8 @@
 //!
 //! Text and images are unimplemented and will always return errors.
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 mod text;
 
 use std::borrow::Cow;

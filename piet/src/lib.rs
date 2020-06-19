@@ -1,5 +1,7 @@
 //! A 2D graphics abstraction.
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 pub use kurbo;
 
 /// utilities shared by various backends

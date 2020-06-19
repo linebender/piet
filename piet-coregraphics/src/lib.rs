@@ -1,5 +1,7 @@
 //! The CoreGraphics backend for the Piet 2D graphics abstraction.
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 mod ct_helpers;
 mod gradient;
 mod text;
