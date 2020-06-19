@@ -137,7 +137,7 @@ impl<'a> BitmapTarget<'a> {
                     let err = cairo::BorrowError::from(cairo::Status::SurfaceFinished);
                     return Err((Box::new(err) as Box<dyn std::error::Error>).into());
                 }
-                std::slice::from_raw_parts(data_ptr, data_len);
+                std::slice::from_raw_parts(data_ptr, data_len)
             };
 
             // A sanity check for all the unsafe indexing that follows.
