@@ -155,7 +155,26 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
+    #[deprecated(since = "0.2.0", note = "use to__pixels")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        self.raw_pixels(fmt)
+    }
+
+    /// Get raw RGBA pixels from the bitmap.
+    pub fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        let mut buf = vec![0; self.width * self.height * 4];
+        self.copy_raw_pixels(fmt, &mut buf)?;
+        Ok(buf)
+    }
+
+    /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
+    /// copied, returns the number of bytes written. If `buf` wasn't big enough, returns an error
+    /// and doesn't write anything.
+    pub fn copy_raw_pixels(
+        &mut self,
+        fmt: ImageFormat,
+        buf: &mut [u8],
+    ) -> Result<usize, piet::Error> {
         self.context.end_draw()?;
         // TODO: convert other formats.
         if fmt != ImageFormat::RgbaPremul {
@@ -166,8 +185,12 @@ impl<'a> BitmapTarget<'a> {
             .create_texture(self.width as u32, self.height as u32, TextureMode::Read)
             .unwrap();
 
+        let size = self.width * self.height * 4;
+        if size > buf.len() {
+            return Err(piet::Error::InvalidInput);
+        }
+
         // TODO: Have a safe way to accomplish this :D
-        let mut raw_pixels: Vec<u8> = Vec::with_capacity(self.width * self.height * 4);
         unsafe {
             self.d3d_ctx
                 .inner()
@@ -181,22 +204,21 @@ impl<'a> BitmapTarget<'a> {
                 let src = mapped_rect
                     .pBits
                     .offset(mapped_rect.Pitch as isize * y as isize);
-                let dst = raw_pixels
+                let dst = buf
                     .as_mut_ptr()
                     .offset(self.width as isize * 4 * y as isize);
                 std::ptr::copy_nonoverlapping(src, dst, self.width * 4);
             }
-            raw_pixels.set_len(self.width * self.height * 4);
         }
-        Ok(raw_pixels)
+        Ok(size)
     }
 
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
-    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+    pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let height = self.height;
         let width = self.width;
-        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let image = self.raw_pixels(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
@@ -235,13 +257,13 @@ mod tests {
     }
 
     #[test]
-    fn into_raw_pixels() {
+    fn raw_pixels() {
         let mut device = Device::new().unwrap();
         let mut target = device.bitmap_target(640, 480, 1.0).unwrap();
         let mut piet = target.render_context();
         piet.clip(Rect::ZERO);
         piet.finish().unwrap();
         std::mem::drop(piet);
-        target.into_raw_pixels(ImageFormat::RgbaPremul).unwrap();
+        target.raw_pixels(ImageFormat::RgbaPremul).unwrap();
     }
 }

@@ -106,7 +106,28 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
+    #[deprecated(since = "0.2.0", note = "use raw_pixels")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        self.raw_pixels(fmt)
+    }
+
+    /// Get raw RGBA pixels from the bitmap.
+    pub fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        let width = self.ctx.width() as usize;
+        let height = self.ctx.height() as usize;
+        let mut buf = vec![0; width * height * 4];
+        self.copy_raw_pixels(fmt, &mut buf)?;
+        Ok(buf)
+    }
+
+    /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
+    /// copied, returns the number of bytes written. If `buf` wasn't big enough, returns an error
+    /// and doesn't write anything.
+    pub fn copy_raw_pixels(
+        &mut self,
+        fmt: ImageFormat,
+        buf: &mut [u8],
+    ) -> Result<usize, piet::Error> {
         // TODO: convert other formats.
         if fmt != ImageFormat::RgbaPremul {
             return Err(Error::NotSupported);
@@ -116,30 +137,33 @@ impl<'a> BitmapTarget<'a> {
         let height = self.ctx.height() as usize;
         let stride = self.ctx.bytes_per_row();
         let data = self.ctx.data();
+        let size = width * height * 4;
+        if buf.len() < size {
+            return Err(piet::Error::InvalidInput);
+        }
         if stride != width * 4 {
-            let mut raw_data = vec![0; width * height * 4];
             for y in 0..height {
                 let src_off = y * stride;
                 let dst_off = y * width * 4;
                 for x in 0..width {
-                    raw_data[dst_off + x * 4 + 0] = data[src_off + x * 4 + 2];
-                    raw_data[dst_off + x * 4 + 1] = data[src_off + x * 4 + 1];
-                    raw_data[dst_off + x * 4 + 2] = data[src_off + x * 4 + 0];
-                    raw_data[dst_off + x * 4 + 3] = data[src_off + x * 4 + 3];
+                    buf[dst_off + x * 4 + 0] = data[src_off + x * 4 + 2];
+                    buf[dst_off + x * 4 + 1] = data[src_off + x * 4 + 1];
+                    buf[dst_off + x * 4 + 2] = data[src_off + x * 4 + 0];
+                    buf[dst_off + x * 4 + 3] = data[src_off + x * 4 + 3];
                 }
             }
-            Ok(raw_data)
         } else {
-            Ok(data.to_owned())
+            buf.copy_from_slice(data);
         }
+        Ok(size)
     }
 
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
-    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+    pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let width = self.ctx.width() as usize;
         let height = self.ctx.height() as usize;
-        let mut data = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let mut data = self.raw_pixels(ImageFormat::RgbaPremul)?;
         piet_coregraphics::unpremultiply_rgba(&mut data);
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);

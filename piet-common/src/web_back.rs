@@ -109,7 +109,7 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    pub fn into_raw_pixels(self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         // TODO: This code is just a snippet. A thorough review and testing should be done before
         // this is used. It is here for compatibility with druid.
 
@@ -129,12 +129,34 @@ impl<'a> BitmapTarget<'a> {
         Ok(img_data.data().0)
     }
 
+    /// Get raw RGBA pixels from the bitmap.
+    #[deprecated(since = "0.2.0", note = "use raw_pixels")]
+    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+        self.raw_pixels(fmt)
+    }
+
+    /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
+    /// copied, returns the number of bytes written. If `buf` wasn't big enough, returns an error
+    /// and doesn't write anything.
+    pub fn copy_raw_pixels(
+        &mut self,
+        fmt: ImageFormat,
+        buf: &mut [u8],
+    ) -> Result<usize, piet::Error> {
+        let data = self.raw_pixels(fmt)?;
+        if data.len() > buf.len() {
+            return Err(piet::Error::InvalidInput);
+        }
+        buf.copy_from_slice(&data[..]);
+        Ok(data.len())
+    }
+
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
-    pub fn save_to_file<P: AsRef<Path>>(self, path: P) -> Result<(), piet::Error> {
+    pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let height = self.canvas.height();
         let width = self.canvas.width();
-        let image = self.into_raw_pixels(ImageFormat::RgbaPremul)?;
+        let image = self.raw_pixels(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
