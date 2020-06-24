@@ -221,7 +221,7 @@ impl TextLayout for WebTextLayout {
         // Trailing whitespace is remove for the line
         let line = &self.text[lm.start_offset..lm.end_offset];
 
-        let mut htp = hit_test_line_point(&self.ctx, line, &point);
+        let mut htp = hit_test_line_point(&self.ctx, line, point);
         htp.metrics.text_position += lm.start_offset;
 
         if !is_y_inside {
@@ -271,7 +271,7 @@ impl TextLayout for WebTextLayout {
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_point
 // Future: instead of passing ctx, should there be some other line-level text layout?
-fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: &Point) -> HitTestPoint {
+fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: Point) -> HitTestPoint {
     // null case
     if text.is_empty() {
         return HitTestPoint::default();

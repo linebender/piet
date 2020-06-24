@@ -1,5 +1,7 @@
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 mod text;
 
 use std::borrow::Cow;

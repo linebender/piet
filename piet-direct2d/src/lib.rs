@@ -1,6 +1,7 @@
 #![cfg(windows)]
 // allows for nice formatting for e.g. new_buf[i * 4 + 0] = premul(buf[i * 4 + 0, a)
 #![allow(clippy::identity_op)]
+#![deny(clippy::trivially_copy_pass_by_ref)]
 
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
