@@ -57,6 +57,8 @@ mod test {
     use super::*;
     use std::marker::PhantomData;
 
+    use static_assertions as sa;
+
     // Make sure all the common types exist and don't get accidentally removed
     #[allow(dead_code)]
     struct Types<'a> {
@@ -70,4 +72,7 @@ mod test {
         image: Image,
         _phantom: PhantomData<&'a ()>,
     }
+
+    sa::assert_impl_all!(Device: Send);
+    sa::assert_not_impl_any!(Device: Sync);
 }
