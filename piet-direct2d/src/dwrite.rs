@@ -29,6 +29,10 @@ pub enum Error {
 #[derive(Clone)]
 pub struct DwriteFactory(ComPtr<IDWriteFactory>);
 
+// I couldn't find any documentation about using IDWriteFactory in a multi-threaded context.
+// Hopefully, `Send` is a conservative enough assumption.
+unsafe impl Send for DwriteFactory {}
+
 #[derive(Clone)]
 pub struct TextFormat(ComPtr<IDWriteTextFormat>);
 

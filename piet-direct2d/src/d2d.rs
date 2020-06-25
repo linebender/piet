@@ -62,6 +62,12 @@ pub struct D2DFactory(ComPtr<ID2D1Factory1>);
 /// A Direct2D device.
 pub struct D2DDevice(ComPtr<ID2D1Device>);
 
+// Microsoft's API docs suggest that it's safe to access D2D factories, and anything coming out of
+// them, from multiple threads. (In fact, if there's no underlying D3D resources, they're even
+// `Sync`.) https://docs.microsoft.com/en-us/windows/win32/direct2d/multi-threaded-direct2d-apps
+unsafe impl Send for D2DFactory {}
+unsafe impl Send for D2DDevice {}
+
 /// The main context that takes drawing operations.
 ///
 /// This type is a thin wrapper for
