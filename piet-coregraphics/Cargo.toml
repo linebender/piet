@@ -1,6 +1,6 @@
 [package]
 name = "piet-coregraphics"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Jeff Muizelaar <jrmuizel@gmail.com>, Raph Levien <raph.levien@gmail.com>, Colin Rofls <colin.rofls@gmail.com>"]
 description = "CoreGraphics backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -9,14 +9,14 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-piet = { version = "0.1.0", path = "../piet" }
+piet = { version = "0.2.0", path = "../piet" }
 
-core-graphics = "0.19"
-core-text = "15.0"
+core-graphics = "0.19.1"
+core-text = "16.0"
 core-foundation = "0.7"
 core-foundation-sys = "0.7"
 
 [dev-dependencies]
-piet = { version = "0.1.0", path = "../piet", features = ["samples"] }
+piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
 
 png = "0.16.2"
