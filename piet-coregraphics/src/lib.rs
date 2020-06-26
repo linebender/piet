@@ -13,10 +13,13 @@ use core_graphics::base::{
     kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
 };
 use core_graphics::color_space::CGColorSpace;
-use core_graphics::context::{CGContextRef, CGLineCap, CGLineJoin, CGTextDrawingMode};
+use core_graphics::context::{
+    CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin, CGTextDrawingMode,
+};
 use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
-use core_graphics::image::{CGImage, CGImageRef};
+use core_graphics::gradient::CGGradientDrawingOptions;
+use core_graphics::image::CGImage;
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
@@ -30,13 +33,14 @@ pub use crate::text::{
     CoreGraphicsTextLayoutBuilder,
 };
 
-use gradient::{
-    CGGradientDrawingOptions, CGGradientDrawsAfterEndLocation, CGGradientDrawsBeforeStartLocation,
-    Gradient,
-};
+use gradient::Gradient;
 
+// getting this to be a const takes some gymnastics
 const GRADIENT_DRAW_BEFORE_AND_AFTER: CGGradientDrawingOptions =
-    CGGradientDrawsAfterEndLocation | CGGradientDrawsBeforeStartLocation;
+    CGGradientDrawingOptions::from_bits_truncate(
+        CGGradientDrawingOptions::CGGradientDrawsAfterEndLocation.bits()
+            | CGGradientDrawingOptions::CGGradientDrawsBeforeStartLocation.bits(),
+    );
 
 pub struct CoreGraphicsContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
@@ -225,13 +229,8 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
                 layout.draw(self.ctx);
             }
             Brush::Gradient(grad) => {
-                // Note: crate 'core-graphics' version <= 0.19 didn't define the enum `CGTextFillStrokeClip`,
-                // so we can't really use `CGTextClip` here (it has the wrong value).
-                // This was fixed on core-foundation-rs commit 1f4c983cee6f441c97aa0e61b29ebc850f91127b
-                // and should be available once a new version is released.
-                // TODO: change this to `CGTextClip` once core-graphics dependency version is upgraded.
                 self.ctx
-                    .set_text_drawing_mode(CGTextDrawingMode::CGTextFillClip);
+                    .set_text_drawing_mode(CGTextDrawingMode::CGTextClip);
                 layout.draw(self.ctx);
 
                 // Need to revert the text transformations in order to render the gradient.
@@ -319,16 +318,15 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        // TODO: apply interpolation mode
         self.ctx.save();
         //https://developer.apple.com/documentation/coregraphics/cginterpolationquality?language=objc
         let quality = match interp {
-            InterpolationMode::NearestNeighbor => 1,
-            InterpolationMode::Bilinear => 0,
+            InterpolationMode::NearestNeighbor => {
+                CGInterpolationQuality::CGInterpolationQualityNone
+            }
+            InterpolationMode::Bilinear => CGInterpolationQuality::CGInterpolationQualityDefault,
         };
-        unsafe {
-            CGContextSetInterpolationQuality(self.ctx as *mut CGContextRef, quality);
-        }
+        self.ctx.set_interpolation_quality(quality);
         let rect = rect.into();
         // CGImage is drawn flipped by default; it's easier for us to handle
         // this transformation if we're drawing into a rect at the origin, so
@@ -357,11 +355,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         let (image, rect) = compute_blurred_rect(rect, blur_radius);
         let cg_rect = to_cgrect(rect);
         self.ctx.save();
-        let context_ref: *mut u8 = self.ctx as *mut CGContextRef as *mut u8;
-        let image_ref: *const u8 = &*image as *const CGImageRef as *const u8;
-        unsafe {
-            CGContextClipToMask(context_ref, cg_rect, image_ref);
-        }
+        self.ctx.clip_to_mask(cg_rect, &image);
         self.fill(rect, brush);
         self.ctx.restore()
     }
@@ -522,13 +516,6 @@ pub fn unpremultiply_rgba(data: &mut [u8]) {
             data[i + 2] = (scale * (data[i + 2] as f64)).round() as u8;
         }
     }
-}
-
-#[link(name = "CoreGraphics", kind = "framework")]
-extern "C" {
-    fn CGContextClipToMask(ctx: *mut u8, rect: CGRect, mask: *const u8);
-    #[allow(improper_ctypes)]
-    fn CGContextSetInterpolationQuality(c: *mut CGContextRef, quality: i32);
 }
 
 #[cfg(test)]
