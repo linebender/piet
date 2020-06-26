@@ -9,7 +9,6 @@ use core_foundation::{
     attributed_string::CFMutableAttributedString,
     base::TCFType,
     boolean::CFBoolean,
-    dictionary::CFDictionaryRef,
     string::{CFString, CFStringRef},
 };
 use core_foundation_sys::base::CFRange;
@@ -21,8 +20,8 @@ use core_graphics::{
 use core_text::{
     font::{kCTFontSystemFontType, CTFont, CTFontRef, CTFontUIFontType},
     frame::{CTFrame, CTFrameRef},
-    framesetter::{CTFramesetter, CTFramesetterRef},
-    line::{CTLine, CTLineRef},
+    framesetter::CTFramesetter,
+    line::{CTLine, TypographicBounds},
     string_attributes,
 };
 
@@ -35,14 +34,6 @@ pub(crate) struct Frame(pub(crate) CTFrame);
 #[derive(Debug, Clone)]
 pub(crate) struct Line<'a>(pub(crate) Cow<'a, CTLine>);
 
-#[derive(Default, Debug, Copy, Clone)]
-pub(crate) struct TypographicBounds {
-    pub(crate) width: CGFloat,
-    pub(crate) ascent: CGFloat,
-    pub(crate) descent: CGFloat,
-    pub(crate) leading: CGFloat,
-}
-
 impl AttributedString {
     pub(crate) fn new(text: &str, font: &CTFont) -> Self {
         let mut string = CFMutableAttributedString::new();
@@ -53,15 +44,11 @@ impl AttributedString {
         let char_range = CFRange::init(0, str_len);
 
         unsafe {
-            string.set_attribute(
-                char_range,
-                string_attributes::kCTFontAttributeName,
-                font.clone(),
-            );
+            string.set_attribute(char_range, string_attributes::kCTFontAttributeName, font);
             string.set_attribute::<CFBoolean>(
                 char_range,
                 string_attributes::kCTForegroundColorFromContextAttributeName,
-                CFBoolean::true_value(),
+                &CFBoolean::true_value(),
             );
         }
         AttributedString(string)
@@ -85,17 +72,8 @@ impl Framesetter {
         range: CFRange,
         constraints: CGSize,
     ) -> (CGSize, CFRange) {
-        unsafe {
-            let mut fit_range = CFRange::init(0, 0);
-            let size = CTFramesetterSuggestFrameSizeWithConstraints(
-                self.0.as_concrete_TypeRef(),
-                range,
-                std::ptr::null(),
-                constraints,
-                &mut fit_range,
-            );
-            (size, fit_range)
-        }
+        self.0
+            .suggest_frame_size_with_constraints(range, std::ptr::null(), constraints)
     }
 
     pub(crate) fn create_frame(&self, range: CFRange, path: &CGPathRef) -> Frame {
@@ -105,6 +83,10 @@ impl Framesetter {
 
 impl Frame {
     pub(crate) fn get_lines(&self) -> CFArray<CTLine> {
+        // we could just hold on to a Vec<CTLine> if we wanted?
+        // this was written like this before we upstreamed changes to the core-text crate,
+        // but those changes are more defensive, and do an extra allocation.
+        // It might be simpler that way, though.
         unsafe { TCFType::wrap_under_get_rule(CTFrameGetLines(self.0.as_concrete_TypeRef())) }
     }
 
@@ -117,11 +99,7 @@ impl Frame {
     }
 
     pub(crate) fn get_line_origins(&self, range: CFRange) -> Vec<CGPoint> {
-        let mut origins = vec![CGPoint::new(0.0, 0.0); range.length as usize];
-        unsafe {
-            CTFrameGetLineOrigins(self.0.as_concrete_TypeRef(), range, origins.as_mut_ptr());
-        }
-        origins
+        self.0.get_line_origins(range)
     }
 }
 
@@ -131,38 +109,26 @@ impl<'a> Line<'a> {
     }
 
     pub(crate) fn get_string_range(&self) -> CFRange {
-        unsafe { CTLineGetStringRange(self.0.as_concrete_TypeRef()) }
+        self.0.get_string_range()
     }
 
     pub(crate) fn get_typographic_bounds(&self) -> TypographicBounds {
-        let mut out = TypographicBounds::default();
-        let width = unsafe {
-            CTLineGetTypographicBounds(
-                self.0.as_concrete_TypeRef(),
-                &mut out.ascent,
-                &mut out.descent,
-                &mut out.leading,
-            )
-        };
-        out.width = width;
-        out
+        self.0.get_typographic_bounds()
     }
 
     pub(crate) fn get_string_index_for_position(&self, position: CGPoint) -> CFIndex {
-        unsafe { CTLineGetStringIndexForPosition(self.0.as_concrete_TypeRef(), position) }
+        self.0.get_string_index_for_position(position)
     }
 
-    /// return the 'primary' and 'secondary' offsets on the given line that the boundary of the
+    /// Return the 'primary' offset on the given line that the boundary of the
     /// character at the provided index.
     ///
-    /// I don't know what the secondary offset is for. There are docs at:
+    /// There is a 'secondary' offset that is not returned by the core-text crate,
+    /// that is used for BiDi. We can worry about that when we worry about *that*.
+    /// There are docs at:
     /// https://developer.apple.com/documentation/coretext/1509629-ctlinegetoffsetforstringindex
-    pub(crate) fn get_offset_for_string_index(&self, index: CFIndex) -> (CGFloat, CGFloat) {
-        let mut secondary: f64 = 0.0;
-        let primary = unsafe {
-            CTLineGetOffsetForStringIndex(self.0.as_concrete_TypeRef(), index, &mut secondary)
-        };
-        (primary, secondary)
+    pub(crate) fn get_offset_for_string_index(&self, index: CFIndex) -> CGFloat {
+        self.0.get_string_offset_for_string_index(index)
     }
 }
 
@@ -181,32 +147,7 @@ pub(crate) fn system_font(size: CGFloat) -> CTFont {
 
 #[link(name = "CoreText", kind = "framework")]
 extern "C" {
-    fn CTFramesetterSuggestFrameSizeWithConstraints(
-        framesetter: CTFramesetterRef,
-        string_range: CFRange,
-        frame_attributes: CFDictionaryRef,
-        constraints: CGSize,
-        fitRange: *mut CFRange,
-    ) -> CGSize;
-
     fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
-    fn CTFrameGetLineOrigins(frame: CTFrameRef, range: CFRange, origins: *mut CGPoint);
-
-    fn CTLineGetStringRange(line: CTLineRef) -> CFRange;
-    fn CTLineGetTypographicBounds(
-        line: CTLineRef,
-        ascent: *mut CGFloat,
-        descent: *mut CGFloat,
-        leading: *mut CGFloat,
-    ) -> CGFloat;
-
-    fn CTLineGetStringIndexForPosition(line: CTLineRef, position: CGPoint) -> CFIndex;
-
-    fn CTLineGetOffsetForStringIndex(
-        line: CTLineRef,
-        charIndex: CFIndex,
-        secondaryOffset: *mut CGFloat,
-    ) -> CGFloat;
     fn CTFontCreateUIFontForLanguage(
         font_type: CTFontUIFontType,
         size: CGFloat,

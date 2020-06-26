@@ -32,7 +32,7 @@ cairo-sys-rs = { version = "0.9.2" }
 
 [target.'cfg(target_os="macos")'.dependencies]
 piet-coregraphics = { version = "0.2.0", path = "../piet-coregraphics" }
-core-graphics = { version = "0.19" }
+core-graphics = { version = "0.21.0" }
 
 [target.'cfg(target_os="windows")'.dependencies]
 piet-direct2d = { version = "0.2.0", path = "../piet-direct2d" }

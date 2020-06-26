@@ -236,7 +236,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         let off16: usize = util::count_utf16(&text[..offset_remainder]);
         let line_range = line.get_string_range();
         let char_idx = line_range.location + off16 as isize;
-        let (x_pos, _) = line.get_offset_for_string_index(char_idx);
+        let x_pos = line.get_offset_for_string_index(char_idx);
         let y_pos = self.line_y_positions[line_num];
         Some(HitTestTextPosition {
             point: Point::new(x_pos, y_pos),
