@@ -56,12 +56,12 @@ impl AttributedString {
             string.set_attribute(
                 char_range,
                 string_attributes::kCTFontAttributeName,
-                font.clone(),
+                &font.clone(),
             );
             string.set_attribute::<CFBoolean>(
                 char_range,
                 string_attributes::kCTForegroundColorFromContextAttributeName,
-                CFBoolean::true_value(),
+                &CFBoolean::true_value(),
             );
         }
         AttributedString(string)
