@@ -13,7 +13,7 @@ piet = { version = "0.2.0", path = "../piet" }
 
 core-graphics = "0.19.1"
 core-text = "16.0"
-core-foundation = "0.7.1"
+core-foundation = "=0.7.1"
 core-foundation-sys = "0.7"
 
 [dev-dependencies]
