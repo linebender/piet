@@ -26,6 +26,10 @@ impl piet::Text for Text {
         FontBuilder
     }
 
+    fn system_font(&mut self, _size: f64, _bold: bool) -> Self::Font {
+        Font
+    }
+
     fn new_text_layout(
         &mut self,
         _font: &Self::Font,

@@ -58,6 +58,10 @@ impl Text for CoreGraphicsText {
         CoreGraphicsFontBuilder(font::new_from_name(name, size).ok())
     }
 
+    fn system_font(&mut self, size: f64, bold: bool) -> Self::Font {
+        CoreGraphicsFont(crate::ct_helpers::system_font(size, bold))
+    }
+
     fn new_text_layout(
         &mut self,
         font: &Self::Font,

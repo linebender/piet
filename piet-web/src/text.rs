@@ -72,6 +72,16 @@ impl Text for WebText {
         WebFontBuilder(font)
     }
 
+    fn system_font(&mut self, size: f64, bold: bool) -> Self::Font {
+        let font = WebFont {
+            family: "san-serif".to_owned(),
+            size,
+            weight: if bold { 700 } else { 500 },
+            style: FontStyle::Normal,
+        };
+        WebFontBuilder(font).build().unwrap()
+    }
+
     fn new_text_layout(
         &mut self,
         font: &Self::Font,

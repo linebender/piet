@@ -71,6 +71,22 @@ impl Text for CairoText {
         }
     }
 
+    fn system_font(&mut self, size: f64, bold: bool) -> Self::Font {
+        let weight = if bold {
+            FontWeight::Bold
+        } else {
+            FontWeight::Normal
+        };
+        CairoFontBuilder {
+            family: "sans-serif".into(),
+            size: size.round_into(),
+            weight,
+            slant: FontSlant::Normal,
+        }
+        .build()
+        .unwrap()
+    }
+
     fn new_text_layout(
         &mut self,
         font: &Self::Font,

@@ -10,7 +10,7 @@ use core_foundation::{
     base::TCFType,
     boolean::CFBoolean,
     dictionary::CFDictionaryRef,
-    string::CFString,
+    string::{CFString, CFStringRef},
 };
 use core_foundation_sys::base::CFRange;
 use core_graphics::{
@@ -19,7 +19,9 @@ use core_graphics::{
     path::CGPathRef,
 };
 use core_text::{
-    font::CTFont,
+    font::{
+        kCTFontEmphasizedSystemFontType, kCTFontSystemFontType, CTFont, CTFontRef, CTFontUIFontType,
+    },
     frame::{CTFrame, CTFrameRef},
     framesetter::{CTFramesetter, CTFramesetterRef},
     line::{CTLine, CTLineRef},
@@ -172,6 +174,19 @@ impl<'a> From<CTLine> for Line<'a> {
     }
 }
 
+pub fn system_font(size: CGFloat, bold: bool) -> CTFont {
+    let font_type = if bold {
+        kCTFontEmphasizedSystemFontType
+    } else {
+        kCTFontSystemFontType
+    };
+
+    unsafe {
+        let font = CTFontCreateUIFontForLanguage(font_type, size, std::ptr::null());
+        CTFont::wrap_under_create_rule(font)
+    }
+}
+
 #[link(name = "CoreText", kind = "framework")]
 extern "C" {
     fn CTFramesetterSuggestFrameSizeWithConstraints(
@@ -200,4 +215,9 @@ extern "C" {
         charIndex: CFIndex,
         secondaryOffset: *mut CGFloat,
     ) -> CGFloat;
+    fn CTFontCreateUIFontForLanguage(
+        font_type: CTFontUIFontType,
+        size: CGFloat,
+        language: CFStringRef,
+    ) -> CTFontRef;
 }

@@ -12,6 +12,9 @@ pub trait Text: Clone {
 
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
+    /// Returns a font suitable for use in UI on this platform.
+    fn system_font(&mut self, size: f64, bold: bool) -> Self::Font;
+
     fn new_text_layout(
         &mut self,
         font: &Self::Font,
@@ -32,6 +35,21 @@ pub trait TextLayoutBuilder {
     type Out: TextLayout;
 
     fn build(self) -> Result<Self::Out, Error>;
+}
+
+//TODO: this isn't currently part of public API, but we expect it to be at
+//some point; it's here now because it is used by certain backends.
+/// Standard font weights.
+pub enum FontWeight {
+    Thin,
+    ExtraLight,
+    Light,
+    Normal,
+    Medium,
+    SemiBold,
+    Bold,
+    ExtraBold,
+    Black,
 }
 
 /// # Text Layout
@@ -193,4 +211,32 @@ pub struct HitTestMetrics {
     // TODO:
     // consider adding other metrics as needed, such as those provided in
     // [DWRITE_HIT_TEST_METRICS](https://docs.microsoft.com/en-us/windows/win32/api/dwrite/ns-dwrite-dwrite_hit_test_metrics).
+}
+
+impl FontWeight {
+    /// The numerical value for this weight.
+    ///
+    /// This follows the convention from [OpenType], which is also used in CSS
+    /// and elsewhere.
+    ///
+    /// [OpenType]: https://docs.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass
+    pub fn to_raw(self) -> u32 {
+        match self {
+            FontWeight::Thin => 100,
+            FontWeight::ExtraLight => 200,
+            FontWeight::Light => 300,
+            FontWeight::Normal => 400,
+            FontWeight::Medium => 500,
+            FontWeight::SemiBold => 600,
+            FontWeight::Bold => 700,
+            FontWeight::ExtraBold => 800,
+            FontWeight::Black => 900,
+        }
+    }
+}
+
+impl Default for FontWeight {
+    fn default() -> Self {
+        FontWeight::Normal
+    }
 }
