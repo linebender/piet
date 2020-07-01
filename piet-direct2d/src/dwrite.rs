@@ -18,8 +18,6 @@ use winapi::Interface;
 use wio::com::ComPtr;
 use wio::wide::ToWide;
 
-use piet::FontWeight;
-
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
 pub enum Error {
@@ -45,7 +43,6 @@ pub struct TextFormatBuilder {
     factory: DwriteFactory,
     size: Option<f32>,
     family: Option<String>,
-    weight: FontWeight,
 }
 
 pub struct TextLayoutBuilder {
@@ -137,7 +134,6 @@ impl TextFormatBuilder {
             factory,
             size: None,
             family: None,
-            weight: FontWeight::default(),
         }
     }
 
@@ -151,11 +147,6 @@ impl TextFormatBuilder {
         self
     }
 
-    pub fn weight(mut self, weight: FontWeight) -> TextFormatBuilder {
-        self.weight = weight;
-        self
-    }
-
     pub fn build(self) -> Result<TextFormat, Error> {
         let family = self
             .family
@@ -163,13 +154,12 @@ impl TextFormatBuilder {
             .to_wide_null();
         let size = self.size.expect("`size` must be specified");
         let locale = "en-US".to_wide_null();
-        let weight = self.weight.to_raw();
         unsafe {
             let mut ptr = null_mut();
             let hr = self.factory.0.CreateTextFormat(
                 family.as_ptr(),
                 null_mut(), // collection
-                weight,
+                DWRITE_FONT_WEIGHT_NORMAL,
                 DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
                 size,

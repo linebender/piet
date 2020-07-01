@@ -67,28 +67,23 @@ impl Text for D2DText {
         }
     }
 
-    fn system_font(&mut self, size: f64, bold: bool) -> Self::Font {
-        let weight = if bold {
-            FontWeight::Bold
-        } else {
-            FontWeight::Normal
-        };
+    fn system_font(&mut self, size: f64) -> Self::Font {
         // this is... lazy. We try Segoe UI, and if it's missing we try Arial,
         // and if that's missing we crash. :shrug_emoji:
         // FIXME: something like this might be better? https://stackoverflow.com/questions/41505151/how-to-draw-text-with-the-default-ui-font-in-directwrite
-        TextFormatBuilder::new(self.dwrite.clone())
-            .size(size as f32)
-            .family("Segoe UI".into())
-            .weight(weight)
-            .build()
-            .unwrap_or_else(|| {
-                TextFormatBuilder::new(self.dwrite.clone())
-                    .size(size as f32)
-                    .family("Arial".into())
-                    .weight(weight)
-                    .build()
-            })
-            .unwrap()
+        D2DFont(
+            TextFormatBuilder::new(self.dwrite.clone())
+                .size(size as f32)
+                .family("Segoe UI".into())
+                .build()
+                .or_else(|_| {
+                    TextFormatBuilder::new(self.dwrite.clone())
+                        .size(size as f32)
+                        .family("Arial".into())
+                        .build()
+                })
+                .unwrap(),
+        )
     }
 
     fn new_text_layout(

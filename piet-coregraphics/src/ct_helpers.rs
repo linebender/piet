@@ -19,9 +19,7 @@ use core_graphics::{
     path::CGPathRef,
 };
 use core_text::{
-    font::{
-        kCTFontEmphasizedSystemFontType, kCTFontSystemFontType, CTFont, CTFontRef, CTFontUIFontType,
-    },
+    font::{kCTFontSystemFontType, CTFont, CTFontRef, CTFontUIFontType},
     frame::{CTFrame, CTFrameRef},
     framesetter::{CTFramesetter, CTFramesetterRef},
     line::{CTLine, CTLineRef},
@@ -174,15 +172,9 @@ impl<'a> From<CTLine> for Line<'a> {
     }
 }
 
-pub fn system_font(size: CGFloat, bold: bool) -> CTFont {
-    let font_type = if bold {
-        kCTFontEmphasizedSystemFontType
-    } else {
-        kCTFontSystemFontType
-    };
-
+pub(crate) fn system_font(size: CGFloat) -> CTFont {
     unsafe {
-        let font = CTFontCreateUIFontForLanguage(font_type, size, std::ptr::null());
+        let font = CTFontCreateUIFontForLanguage(kCTFontSystemFontType, size, std::ptr::null());
         CTFont::wrap_under_create_rule(font)
     }
 }
