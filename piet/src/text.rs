@@ -12,6 +12,9 @@ pub trait Text: Clone {
 
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
+    /// Returns a font suitable for use in UI on this platform.
+    fn system_font(&mut self, size: f64) -> Self::Font;
+
     fn new_text_layout(
         &mut self,
         font: &Self::Font,

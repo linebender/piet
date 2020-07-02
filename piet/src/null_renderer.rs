@@ -147,6 +147,10 @@ impl Text for NullText {
         NullFontBuilder
     }
 
+    fn system_font(&mut self, _size: f64) -> Self::Font {
+        NullFont
+    }
+
     fn new_text_layout(
         &mut self,
         _font: &Self::Font,
