@@ -15,6 +15,7 @@ core-graphics = "0.21.0"
 core-text = "18.0.1"
 core-foundation = "0.9"
 core-foundation-sys = "0.8"
+unic-bidi = "0.9"
 
 [dev-dependencies]
 piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
