@@ -87,8 +87,9 @@ fn main() {
         raw_pixels.set_len(pixel_count);
     }
 
+    let path = format!("d2d-test-{}.png", test_picture_number);
     image::save_buffer(
-        "temp-image.png",
+        &path,
         &raw_pixels,
         size.width as u32,
         size.height as u32,
