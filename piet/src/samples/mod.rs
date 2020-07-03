@@ -10,6 +10,7 @@ mod picture_3;
 mod picture_4;
 mod picture_5;
 mod picture_6;
+mod picture_7;
 
 use picture_0::draw as draw_picture_0;
 use picture_1::draw as draw_picture_1;
@@ -18,6 +19,7 @@ use picture_3::draw as draw_picture_3;
 use picture_4::draw as draw_picture_4;
 use picture_5::draw as draw_picture_5;
 use picture_6::draw as draw_picture_6;
+use picture_7::draw as draw_picture_7;
 
 /// Draw a test picture, by number.
 ///
@@ -32,6 +34,7 @@ pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) -> Result<(
         4 => draw_picture_4(rc),
         5 => draw_picture_5(rc),
         6 => draw_picture_6(rc),
+        7 => draw_picture_7(rc),
         _ => {
             eprintln!(
                 "Don't have test picture {} yet. Why don't you make it?",
@@ -51,6 +54,7 @@ pub fn size_for_test_picture(number: usize) -> Result<Size, Error> {
         4 => Ok(picture_4::SIZE),
         5 => Ok(picture_5::SIZE),
         6 => Ok(picture_6::SIZE),
+        7 => Ok(picture_7::SIZE),
         other => {
             eprintln!("test picture {} does not exist.", other);
             Err(Error::InvalidInput)
