@@ -11,7 +11,7 @@ use piet::kurbo::{Point, Size};
 use piet::util;
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
-    TextLayout, TextLayoutBuilder,
+    TextAlignment, TextLayout, TextLayoutBuilder,
 };
 
 use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
@@ -35,7 +35,12 @@ pub struct CoreGraphicsTextLayout {
     width_constraint: f64,
 }
 
-pub struct CoreGraphicsTextLayoutBuilder(CoreGraphicsTextLayout);
+pub struct CoreGraphicsTextLayoutBuilder {
+    width: f64,
+    text: String,
+    font: CoreGraphicsFont,
+    alignment: TextAlignment,
+}
 
 #[derive(Clone)]
 pub struct CoreGraphicsText;
@@ -68,9 +73,14 @@ impl Text for CoreGraphicsText {
         text: &str,
         width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
-        let width_constraint = width.into().unwrap_or(f64::INFINITY);
-        let layout = CoreGraphicsTextLayout::new(font, text, width_constraint);
-        CoreGraphicsTextLayoutBuilder(layout)
+        let width = width.into().unwrap_or(f64::INFINITY);
+
+        CoreGraphicsTextLayoutBuilder {
+            width,
+            text: text.to_string(),
+            alignment: TextAlignment::default(),
+            font: font.clone(),
+        }
     }
 }
 
@@ -87,8 +97,15 @@ impl FontBuilder for CoreGraphicsFontBuilder {
 impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
     type Out = CoreGraphicsTextLayout;
 
+    fn alignment(mut self, alignment: piet::TextAlignment) -> Self {
+        self.alignment = alignment;
+        self
+    }
+
     fn build(self) -> Result<Self::Out, Error> {
-        Ok(self.0)
+        let layout =
+            CoreGraphicsTextLayout::new(&self.font, &self.text, self.width, self.alignment);
+        Ok(layout)
     }
 }
 
@@ -248,8 +265,13 @@ impl TextLayout for CoreGraphicsTextLayout {
 }
 
 impl CoreGraphicsTextLayout {
-    fn new(font: &CoreGraphicsFont, text: &str, width_constraint: f64) -> Self {
-        let string = AttributedString::new(text, &font.0);
+    fn new(
+        font: &CoreGraphicsFont,
+        text: &str,
+        width_constraint: f64,
+        alignment: TextAlignment,
+    ) -> Self {
+        let string = AttributedString::new(text, &font.0, alignment);
         let framesetter = Framesetter::new(&string);
 
         let mut layout = CoreGraphicsTextLayout {
@@ -332,7 +354,12 @@ mod tests {
     fn line_offsets() {
         let text = "hi\ni'm\n😀 four\nlines";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let layout = CoreGraphicsTextLayout::new(
+            &CoreGraphicsFont(a_font),
+            text,
+            f64::INFINITY,
+            TextAlignment::default(),
+        );
         assert_eq!(layout.line_text(0), Some("hi\n"));
         assert_eq!(layout.line_text(1), Some("i'm\n"));
         assert_eq!(layout.line_text(2), Some("😀 four\n"));
@@ -343,7 +370,12 @@ mod tests {
     fn metrics() {
         let text = "🤡:\na string\nwith a number \n of lines";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let layout = CoreGraphicsTextLayout::new(
+            &CoreGraphicsFont(a_font),
+            text,
+            f64::INFINITY,
+            TextAlignment::default(),
+        );
         let line1 = layout.line_metric(0).unwrap();
         assert_eq!(line1.start_offset, 0);
         assert_eq!(line1.end_offset, 6);
@@ -370,7 +402,12 @@ mod tests {
     fn basic_hit_testing() {
         let text = "1\n😀\n8\nA";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let layout = CoreGraphicsTextLayout::new(
+            &CoreGraphicsFont(a_font),
+            text,
+            f64::INFINITY,
+            TextAlignment::default(),
+        );
         let p1 = layout.hit_test_point(Point::ZERO);
         assert_eq!(p1.metrics.text_position, 0);
         assert!(p1.is_inside);
@@ -402,7 +439,12 @@ mod tests {
     fn hit_test_end_of_single_line() {
         let text = "hello";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let layout = CoreGraphicsTextLayout::new(
+            &CoreGraphicsFont(a_font),
+            text,
+            f64::INFINITY,
+            TextAlignment::default(),
+        );
         let pt = layout.hit_test_point(Point::new(0.0, 5.0));
         assert_eq!(pt.metrics.text_position, 0);
         assert_eq!(pt.is_inside, true);
@@ -419,7 +461,12 @@ mod tests {
     fn hit_test_point_empty_string() {
         let text = "";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let layout = CoreGraphicsTextLayout::new(
+            &CoreGraphicsFont(a_font),
+            text,
+            f64::INFINITY,
+            TextAlignment::default(),
+        );
         let pt = layout.hit_test_point(Point::new(0.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
     }
@@ -428,7 +475,12 @@ mod tests {
     fn hit_test_text_position() {
         let text = "aaaaa\nbbbbb";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let layout = CoreGraphicsTextLayout::new(
+            &CoreGraphicsFont(a_font),
+            text,
+            f64::INFINITY,
+            TextAlignment::default(),
+        );
         let p1 = layout.hit_test_text_position(0).unwrap();
         assert_eq!(p1.point, Point::new(0.0, 16.0));
 
@@ -442,7 +494,12 @@ mod tests {
     fn hit_test_text_position_astral_plane() {
         let text = "👾🤠\n🤖🎃👾";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(&CoreGraphicsFont(a_font), text, f64::INFINITY);
+        let layout = CoreGraphicsTextLayout::new(
+            &CoreGraphicsFont(a_font),
+            text,
+            f64::INFINITY,
+            TextAlignment::default(),
+        );
         let p0 = layout.hit_test_text_position(4).unwrap();
         let p1 = layout.hit_test_text_position(8).unwrap();
         let p2 = layout.hit_test_text_position(13).unwrap();

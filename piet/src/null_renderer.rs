@@ -174,6 +174,10 @@ impl FontBuilder for NullFontBuilder {
 impl TextLayoutBuilder for NullTextLayoutBuilder {
     type Out = NullTextLayout;
 
+    fn alignment(self, _alignment: crate::TextAlignment) -> Self {
+        self
+    }
+
     fn build(self) -> Result<Self::Out, Error> {
         Ok(NullTextLayout)
     }

@@ -61,6 +61,10 @@ pub struct TextLayoutBuilder;
 impl piet::TextLayoutBuilder for TextLayoutBuilder {
     type Out = TextLayout;
 
+    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
+        self
+    }
+
     fn build(self) -> Result<TextLayout> {
         Err(Error::NotSupported)
     }

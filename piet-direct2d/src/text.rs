@@ -11,7 +11,7 @@ use piet::kurbo::Point;
 use piet::util;
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
-    TextLayout, TextLayoutBuilder,
+    TextAlignment, TextLayout, TextLayoutBuilder,
 };
 
 use self::lines::fetch_line_metrics;
@@ -117,6 +117,11 @@ impl Font for D2DFont {}
 
 impl TextLayoutBuilder for D2DTextLayoutBuilder {
     type Out = D2DTextLayout;
+
+    fn alignment(mut self, alignment: TextAlignment) -> Self {
+        self.builder = self.builder.alignment(alignment);
+        self
+    }
 
     fn build(self) -> Result<Self::Out, Error> {
         let layout = self.builder.build()?;

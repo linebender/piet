@@ -130,6 +130,11 @@ impl WebFont {
 impl TextLayoutBuilder for WebTextLayoutBuilder {
     type Out = WebTextLayout;
 
+    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
+        web_sys::console::log_1(&"TextLayout alignment unsupported on web".into());
+        self
+    }
+
     fn build(self) -> Result<Self::Out, Error> {
         self.ctx.set_font(&self.font.get_font_string());
 

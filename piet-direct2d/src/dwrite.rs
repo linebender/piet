@@ -11,12 +11,16 @@ use winapi::shared::winerror::{HRESULT, SUCCEEDED, S_OK};
 use winapi::um::dwrite::{
     DWriteCreateFactory, IDWriteFactory, IDWriteTextFormat, IDWriteTextLayout,
     DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS, DWRITE_TEXT_METRICS,
+    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS,
+    DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING,
+    DWRITE_TEXT_ALIGNMENT_TRAILING, DWRITE_TEXT_METRICS,
 };
 use winapi::Interface;
 
 use wio::com::ComPtr;
 use wio::wide::ToWide;
+
+use piet::TextAlignment;
 
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
@@ -51,6 +55,7 @@ pub struct TextLayoutBuilder {
     text: Option<Vec<u16>>,
     width: Option<f32>,
     height: Option<f32>,
+    alignment: TextAlignment,
 }
 
 #[derive(Clone)]
@@ -166,7 +171,9 @@ impl TextFormatBuilder {
                 locale.as_ptr(),
                 &mut ptr,
             );
-            wrap(hr, ptr, TextFormat)
+
+            let r = wrap(hr, ptr, TextFormat)?;
+            Ok(r)
         }
     }
 }
@@ -179,6 +186,7 @@ impl TextLayoutBuilder {
             text: None,
             width: None,
             height: None,
+            alignment: TextAlignment::default(),
         }
     }
 
@@ -204,6 +212,11 @@ impl TextLayoutBuilder {
         self
     }
 
+    pub fn alignment(mut self, alignment: TextAlignment) -> TextLayoutBuilder {
+        self.alignment = alignment;
+        self
+    }
+
     pub fn build(self) -> Result<TextLayout, Error> {
         let format = self.format.expect("`format` must be specified");
         let text = self.text.expect("`text` must be specified");
@@ -211,7 +224,16 @@ impl TextLayoutBuilder {
         assert!(len <= 0xffff_ffff);
         let width = self.width.expect("`width` must be specified");
         let height = self.height.expect("`height` must be specified");
+
+        let alignment = match self.alignment {
+            TextAlignment::Start => DWRITE_TEXT_ALIGNMENT_LEADING,
+            TextAlignment::End => DWRITE_TEXT_ALIGNMENT_TRAILING,
+            TextAlignment::Center => DWRITE_TEXT_ALIGNMENT_CENTER,
+            TextAlignment::Justified => DWRITE_TEXT_ALIGNMENT_JUSTIFIED,
+        };
+
         unsafe {
+            format.0.SetTextAlignment(alignment);
             let mut ptr = null_mut();
             let hr = self.factory.0.CreateTextLayout(
                 text.as_ptr(),
