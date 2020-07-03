@@ -8,9 +8,6 @@ use piet::draw_test_picture;
 use piet::RenderContext;
 use piet_cairo::CairoRenderContext;
 
-const TEXTURE_WIDTH: i32 = 400;
-const TEXTURE_HEIGHT: i32 = 200;
-
 const HIDPI: f64 = 2.0;
 
 fn main() {
@@ -18,8 +15,9 @@ fn main() {
         .nth(1)
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(0);
+    let size = piet::size_for_test_picture(test_picture_number).unwrap();
 
-    let surface = ImageSurface::create(Format::ARgb32, TEXTURE_WIDTH, TEXTURE_HEIGHT)
+    let surface = ImageSurface::create(Format::ARgb32, size.width as i32, size.height as i32)
         .expect("Can't create surface");
     let mut cr = Context::new(&surface);
     cr.scale(HIDPI, HIDPI);

@@ -1,6 +1,6 @@
 //! A wide assortment of graphics meant to show off many different uses of piet
 
-use crate::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Vec2};
+use crate::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Size, Vec2};
 use crate::{
     Color, Error, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,
     TextLayoutBuilder,
@@ -11,6 +11,8 @@ const GREEN: Color = Color::rgb8(0x00, 0x80, 0x00);
 const BLUE_ALPHA: Color = Color::rgba8(0x00, 0x00, 0x80, 0xC0);
 const RED_ALPHA: Color = Color::rgba8(0x80, 0x00, 0x00, 0xC0);
 const YELLOW_ALPHA: Color = Color::rgba8(0xCF, 0xCF, 0x00, 0x60);
+
+pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);

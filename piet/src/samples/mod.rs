@@ -1,5 +1,6 @@
 //! Drawing examples for testing backends
 
+use crate::kurbo::Size;
 use crate::{Error, RenderContext};
 
 mod picture_0;
@@ -36,6 +37,22 @@ pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) -> Result<(
                 "Don't have test picture {} yet. Why don't you make it?",
                 number
             );
+            Err(Error::InvalidInput)
+        }
+    }
+}
+
+pub fn size_for_test_picture(number: usize) -> Result<Size, Error> {
+    match number {
+        0 => Ok(picture_0::SIZE),
+        1 => Ok(picture_1::SIZE),
+        2 => Ok(picture_2::SIZE),
+        3 => Ok(picture_3::SIZE),
+        4 => Ok(picture_4::SIZE),
+        5 => Ok(picture_5::SIZE),
+        6 => Ok(picture_6::SIZE),
+        other => {
+            eprintln!("test picture {} does not exist.", other);
             Err(Error::InvalidInput)
         }
     }

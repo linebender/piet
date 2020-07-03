@@ -29,4 +29,4 @@ pub use crate::shapes::*;
 pub use crate::text::*;
 
 #[cfg(feature = "samples")]
-pub use samples::draw_test_picture;
+pub use samples::{draw_test_picture, size_for_test_picture};
