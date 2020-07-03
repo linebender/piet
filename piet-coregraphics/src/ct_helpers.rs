@@ -27,6 +27,8 @@ use core_text::{
     string_attributes,
 };
 
+use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
+
 use piet::TextAlignment;
 
 #[derive(Clone)]
@@ -107,21 +109,12 @@ impl AttributedString {
         let cf_string = CFString::new(text);
 
         string.replace_str(&cf_string, range);
+        let is_rtl = first_strong_rtl(text);
 
         let str_len = string.char_len();
         let char_range = CFRange::init(0, str_len);
 
         unsafe {
-            let lang = CFStringTokenizerCopyBestStringLanguage(
-                cf_string.as_concrete_TypeRef(),
-                char_range,
-            );
-            let is_rtl = if lang.is_null() {
-                false
-            } else {
-                let lang = CFString::wrap_under_create_rule(lang);
-                lang == "he" || lang == "ar"
-            };
             let alignment = CTParagraphStyleSetting::alignment(alignment, is_rtl);
 
             let settings = [alignment];
@@ -234,10 +227,22 @@ pub(crate) fn system_font(size: CGFloat) -> CTFont {
     }
 }
 
-#[link(name = "CoreFoundation", kind = "framework")]
-extern "C" {
-    fn CFStringTokenizerCopyBestStringLanguage(string: CFStringRef, range: CFRange) -> CFStringRef;
+//TODO: this will probably be shared at some point?
+/// A heurstic for text direction; returns `true` if, while enumerating characters
+/// in this string, a character in the 'R' (strong right-to-left) category is
+/// encountered before any character in the 'L' (strong left-to-right) category is.
+///
+/// See [Unicode technical report 9](https://unicode.org/reports/tr9/#Table_Bidirectional_Character_Types).
+fn first_strong_rtl(text: &str) -> bool {
+    text.chars()
+        // an upper bound on how many chars we'll check
+        .take(200)
+        .map(BidiClass::of)
+        .find(|c| c.category() == BidiClassCategory::Strong)
+        .map(|c| c.is_rtl())
+        .unwrap_or(false)
 }
+
 #[link(name = "CoreText", kind = "framework")]
 extern "C" {
     fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
