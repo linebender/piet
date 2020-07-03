@@ -129,6 +129,11 @@ impl Font for CairoFont {}
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
 
+    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
+        eprintln!("TextAlignment not supported by cairo toy text");
+        self
+    }
+
     fn build(self) -> Result<Self::Out, Error> {
         Ok(self.0)
     }

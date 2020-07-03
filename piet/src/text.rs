@@ -34,7 +34,32 @@ pub trait Font {}
 pub trait TextLayoutBuilder {
     type Out: TextLayout;
 
+    /// Set the [`TextAlignment`] to be used for this layout.
+    ///
+    /// [`TextAlignment`]: enum.TextAlignment.html
+    fn alignment(self, alignment: TextAlignment) -> Self;
     fn build(self) -> Result<Self::Out, Error>;
+}
+
+/// The alignment of text in a [`TextLayout`].
+///
+/// [`TextLayout`]: trait.TextLayout.html
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextAlignment {
+    /// Text is aligned to the left edge in left-to-right scripts, and the
+    /// right edge in right-to-left scripts.
+    Start,
+    /// Text is aligned to the right edge in left-to-right scripts, and the
+    /// left edge in right-to-left scripts.
+    End,
+    Center,
+    Justified,
+}
+
+impl Default for TextAlignment {
+    fn default() -> Self {
+        TextAlignment::Start
+    }
 }
 
 /// # Text Layout
