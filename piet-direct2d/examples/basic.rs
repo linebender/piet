@@ -5,12 +5,6 @@ use winapi::shared::dxgi::DXGI_MAP_READ;
 use piet::RenderContext;
 use piet_direct2d::D2DRenderContext;
 
-const TEXTURE_WIDTH: u32 = 400;
-const TEXTURE_HEIGHT: u32 = 200;
-
-const TEXTURE_WIDTH_S: usize = TEXTURE_WIDTH as usize;
-const TEXTURE_HEIGHT_S: usize = TEXTURE_HEIGHT as usize;
-
 const HIDPI: f32 = 2.0;
 
 fn main() {
@@ -19,6 +13,7 @@ fn main() {
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(0);
 
+    let size = piet::size_for_test_picture(test_picture_number).unwrap();
     // Create the D2D factory
     let d2d = piet_direct2d::D2DFactory::new().unwrap();
     let dwrite = piet_direct2d::DwriteFactory::new().unwrap();
@@ -33,8 +28,8 @@ fn main() {
     // Create a texture to render to
     let tex = d3d
         .create_texture(
-            TEXTURE_WIDTH,
-            TEXTURE_HEIGHT,
+            size.width as u32,
+            size.height as u32,
             piet_direct2d::d3d::TextureMode::Target,
         )
         .unwrap();
@@ -58,15 +53,19 @@ fn main() {
 
     let temp_texture = d3d
         .create_texture(
-            TEXTURE_WIDTH,
-            TEXTURE_HEIGHT,
+            size.width as u32,
+            size.height as u32,
             piet_direct2d::d3d::TextureMode::Read,
         )
         .unwrap();
 
     // Get the data so we can write it to a file
     // TODO: Have a safe way to accomplish this :D
-    let mut raw_pixels: Vec<u8> = Vec::with_capacity(TEXTURE_WIDTH_S * TEXTURE_HEIGHT_S * 4);
+    let pixel_count = (size.width * size.height) as usize * 4;
+    let mut raw_pixels: Vec<u8> = Vec::with_capacity(pixel_count);
+    for _ in 0..pixel_count {
+        raw_pixels.push(0);
+    }
     unsafe {
         d3d_ctx
             .inner()
@@ -76,23 +75,23 @@ fn main() {
         let surface = temp_texture.as_dxgi();
         let mut mapped_rect = std::mem::zeroed();
         let _hr = surface.Map(&mut mapped_rect, DXGI_MAP_READ);
-        for y in 0..TEXTURE_HEIGHT {
+        for y in 0..size.height as usize {
             let src = mapped_rect
                 .pBits
                 .offset(mapped_rect.Pitch as isize * y as isize);
             let dst = raw_pixels
                 .as_mut_ptr()
-                .offset(TEXTURE_WIDTH_S as isize * 4 * y as isize);
-            std::ptr::copy_nonoverlapping(src, dst, TEXTURE_WIDTH_S * 4);
+                .offset(size.width as isize * 4 * y as isize);
+            std::ptr::copy_nonoverlapping(src, dst, size.width as usize * 4);
         }
-        raw_pixels.set_len(TEXTURE_WIDTH_S * TEXTURE_HEIGHT_S * 4);
+        raw_pixels.set_len(pixel_count);
     }
 
     image::save_buffer(
         "temp-image.png",
         &raw_pixels,
-        TEXTURE_WIDTH,
-        TEXTURE_HEIGHT,
+        size.width as u32,
+        size.height as u32,
         image::ColorType::Rgba8,
     )
     .unwrap();

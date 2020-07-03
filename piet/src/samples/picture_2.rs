@@ -1,7 +1,9 @@
 //! A bunch of image test cases.
 
-use crate::kurbo::Rect;
+use crate::kurbo::{Rect, Size};
 use crate::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
+
+pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);

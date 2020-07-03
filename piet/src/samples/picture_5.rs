@@ -1,7 +1,9 @@
 //! Basic example of just text
 
-use crate::kurbo::{Line, Rect};
+use crate::kurbo::{Line, Rect, Size};
 use crate::{Color, Error, FontBuilder, RenderContext, Text, TextLayout, TextLayoutBuilder};
+
+pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     // Black background

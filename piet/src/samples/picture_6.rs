@@ -1,10 +1,12 @@
 //! Gradients.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Vec2};
+use crate::kurbo::{Circle, Point, Rect, RoundedRect, Size, Vec2};
 use crate::{
     Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, FontBuilder,
     GradientStop, LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayoutBuilder,
 };
+
+pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::BLACK);
