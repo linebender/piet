@@ -3,13 +3,15 @@
 mod grapheme;
 mod lines;
 
+use std::ops::RangeBounds;
+
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use piet::kurbo::Point;
 
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric,
-    RoundInto, Text, TextLayout, TextLayoutBuilder,
+    RoundInto, Text, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -23,6 +25,7 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 #[derive(Clone)]
 pub struct CairoText;
 
+#[derive(Clone)]
 pub struct CairoFont(ScaledFont);
 
 pub struct CairoFontBuilder {
@@ -128,9 +131,18 @@ impl Font for CairoFont {}
 
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
+    type Font = CairoFont;
 
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
         eprintln!("TextAlignment not supported by cairo toy text");
+        self
+    }
+
+    fn add_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
         self
     }
 

@@ -1,5 +1,7 @@
 //! Traits for fonts and text handling.
 
+use std::ops::RangeBounds;
+
 use crate::kurbo::Point;
 use crate::Error;
 
@@ -7,8 +9,22 @@ pub trait Text: Clone {
     type FontBuilder: FontBuilder<Out = Self::Font>;
     type Font: Font;
 
-    type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
+    type TextLayoutBuilder: TextLayoutBuilder<Font = Self::Font, Out = Self::TextLayout>;
     type TextLayout: TextLayout;
+
+    //TODO: consider supporting "generic" family names? this would make us more CSS
+    //like, and could also let us remove the `system_font()` method.
+    //What I'm imagining here is a small list of generic family names, like
+    //["serif", "sans-serif", "monospace", "system-ui"].
+
+    ///// Attempt to locate a font with a given family name.
+    /////
+    ///// This should return `Some(Font)` if a font with a matching family name
+    ///// is found, and `None` if not.
+    /////
+    ///// This may be fuzzy; for instance on macOS the "Courier New" family might
+    ///// be returned when asking for "courier", for instance.
+    //fn font_with_family(&mut self, family_name: &str) -> Option<Self::Font>;
 
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
@@ -23,13 +39,15 @@ pub trait Text: Clone {
     ) -> Self::TextLayoutBuilder;
 }
 
-pub trait FontBuilder {
-    type Out: Font;
-
-    fn build(self) -> Result<Self::Out, Error>;
-}
-
-pub trait Font {}
+/// A representation of a font.
+///
+/// This type may not be an actual font object, but is some type that can
+/// be resolved to a concrete font.
+///
+/// When loading a system font, this type can be thought of as a font *family*;
+/// if you change the weight or the style in a layout span, that may cause a
+/// different font in that family to be used for the actual drawing.
+pub trait Font: Clone {}
 
 /// A font weight, represented as a value in the range 1..=1000.
 ///
@@ -85,14 +103,57 @@ impl Default for FontWeight {
     }
 }
 
+pub trait FontBuilder {
+    type Out: Font;
+
+    fn build(self) -> Result<Self::Out, Error>;
+}
+
 pub trait TextLayoutBuilder {
     type Out: TextLayout;
+    type Font: Font;
 
     /// Set the [`TextAlignment`] to be used for this layout.
     ///
     /// [`TextAlignment`]: enum.TextAlignment.html
     fn alignment(self, alignment: TextAlignment) -> Self;
+
+    fn add_attribute(
+        self,
+        range: impl RangeBounds<usize>,
+        attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self;
+
     fn build(self) -> Result<Self::Out, Error>;
+}
+
+/// Attributes that can be applied to text.
+pub enum TextAttribute<T> {
+    Font(T),
+    Size(f64),
+    Weight(FontWeight),
+    ForegroundColor(crate::Color),
+    //BackgroundColor(crate::Color),
+    Italic,
+    Underline,
+}
+
+impl<T: Font> From<T> for TextAttribute<T> {
+    fn from(t: T) -> TextAttribute<T> {
+        TextAttribute::Font(t)
+    }
+}
+
+impl<T> From<FontWeight> for TextAttribute<T> {
+    fn from(src: FontWeight) -> TextAttribute<T> {
+        TextAttribute::Weight(src)
+    }
+}
+
+impl<T> From<f64> for TextAttribute<T> {
+    fn from(src: f64) -> TextAttribute<T> {
+        TextAttribute::Size(src)
+    }
 }
 
 /// The alignment of text in a [`TextLayout`].

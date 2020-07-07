@@ -1,13 +1,14 @@
 //! A render context that does nothing.
 
 use std::borrow::Cow;
+use std::ops::RangeBounds;
 
 use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
     Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
-    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextLayout,
-    TextLayoutBuilder,
+    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 
 /// A render context that doesn't render.
@@ -28,6 +29,7 @@ pub struct NullImage;
 pub struct NullText;
 
 #[doc(hidden)]
+#[derive(Clone)]
 pub struct NullFont;
 #[doc(hidden)]
 pub struct NullFontBuilder;
@@ -173,8 +175,17 @@ impl FontBuilder for NullFontBuilder {
 
 impl TextLayoutBuilder for NullTextLayoutBuilder {
     type Out = NullTextLayout;
+    type Font = NullFont;
 
     fn alignment(self, _alignment: crate::TextAlignment) -> Self {
+        self
+    }
+
+    fn add_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
         self
     }
 

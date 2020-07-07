@@ -1,6 +1,7 @@
 //! Code useful for multiple backends
 
 use crate::kurbo::{Rect, Size};
+use std::ops::{Bound, Range, RangeBounds};
 
 /// Counts the number of utf-16 code units in the given string.
 /// from xi-editor
@@ -38,6 +39,23 @@ pub fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<usize> {
     }
 
     None
+}
+
+/// Resolves a `RangeBounds` into a range in the range 0..len.
+pub fn resolve_range(range: impl RangeBounds<usize>, len: usize) -> Range<usize> {
+    let start = match range.start_bound() {
+        Bound::Unbounded => 0,
+        Bound::Included(n) => *n,
+        Bound::Excluded(n) => *n + 1,
+    };
+
+    let end = match range.end_bound() {
+        Bound::Unbounded => len,
+        Bound::Included(n) => *n + 1,
+        Bound::Excluded(n) => *n,
+    };
+
+    start.min(len)..end.min(len)
 }
 
 /// Extent to which to expand the blur.
