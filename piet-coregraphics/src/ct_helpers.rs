@@ -9,7 +9,6 @@ use core_foundation::{
     array::{CFArray, CFArrayRef, CFIndex},
     attributed_string::CFMutableAttributedString,
     base::{CFTypeID, TCFType},
-    boolean::CFBoolean,
     declare_TCFType, impl_TCFType,
     string::{CFString, CFStringRef},
 };
@@ -32,7 +31,12 @@ use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 use piet::TextAlignment;
 
 #[derive(Clone)]
-pub(crate) struct AttributedString(pub(crate) CFMutableAttributedString);
+pub(crate) struct AttributedString {
+    pub(crate) inner: CFMutableAttributedString,
+    /// a guess as to text direction
+    rtl: bool,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct Framesetter(CTFramesetter);
 #[derive(Debug, Clone)]
@@ -103,48 +107,44 @@ impl CTParagraphStyleSetting {
 }
 
 impl AttributedString {
-    pub(crate) fn new(text: &str, font: &CTFont, alignment: TextAlignment) -> Self {
-        let mut string = CFMutableAttributedString::new();
+    pub(crate) fn new(text: &str) -> Self {
+        let mut inner = CFMutableAttributedString::new();
         let range = CFRange::init(0, 0);
         let cf_string = CFString::new(text);
+        inner.replace_str(&cf_string, range);
+        let rtl = first_strong_rtl(text);
+        AttributedString { inner, rtl }
+    }
 
-        string.replace_str(&cf_string, range);
-        let is_rtl = first_strong_rtl(text);
+    //string.set_attribute::<CFBoolean>(
+    //char_range,
+    //string_attributes::kCTForegroundColorFromContextAttributeName,
+    //&CFBoolean::true_value(),
+    //);
 
-        let str_len = string.char_len();
-        let char_range = CFRange::init(0, str_len);
-
+    pub(crate) fn set_alignment(&mut self, alignment: TextAlignment) {
+        let alignment = CTParagraphStyleSetting::alignment(alignment, self.rtl);
+        let settings = [alignment];
         unsafe {
-            let alignment = CTParagraphStyleSetting::alignment(alignment, is_rtl);
-
-            let settings = [alignment];
             let style = CTParagraphStyleCreate(settings.as_ptr(), 1);
             let style = CTParagraphStyle::wrap_under_create_rule(style);
-
-            string.set_attribute(char_range, string_attributes::kCTFontAttributeName, font);
-            string.set_attribute::<CFBoolean>(
-                char_range,
-                string_attributes::kCTForegroundColorFromContextAttributeName,
-                &CFBoolean::true_value(),
-            );
-            string.set_attribute(
-                char_range,
+            self.inner.set_attribute(
+                self.range(),
                 string_attributes::kCTParagraphStyleAttributeName,
                 &style,
             );
         }
-        AttributedString(string)
     }
 
     pub(crate) fn range(&self) -> CFRange {
-        CFRange::init(0, self.0.char_len())
+        CFRange::init(0, self.inner.char_len())
     }
 }
 
 impl Framesetter {
     pub(crate) fn new(attributed_string: &AttributedString) -> Self {
         Framesetter(CTFramesetter::new_with_attributed_string(
-            attributed_string.0.as_concrete_TypeRef(),
+            attributed_string.inner.as_concrete_TypeRef(),
         ))
     }
 

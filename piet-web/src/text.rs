@@ -4,6 +4,7 @@ mod grapheme;
 mod lines;
 
 use std::borrow::Cow;
+use std::ops::RangeBounds;
 
 use web_sys::CanvasRenderingContext2d;
 
@@ -11,7 +12,7 @@ use piet::kurbo::Point;
 
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
-    TextLayout, TextLayoutBuilder,
+    TextAttribute, TextLayout, TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -129,9 +130,19 @@ impl WebFont {
 
 impl TextLayoutBuilder for WebTextLayoutBuilder {
     type Out = WebTextLayout;
+    type Font = WebFont;
 
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
         web_sys::console::log_1(&"TextLayout alignment unsupported on web".into());
+        self
+    }
+
+    fn add_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
+        web_sys::console::log_1(&"Text attributes not yet implemented for web".into());
         self
     }
 

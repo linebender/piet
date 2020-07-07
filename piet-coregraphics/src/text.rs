@@ -1,17 +1,24 @@
 //! Text related stuff for the coregraphics backend
 
+use std::ops::{Range, RangeBounds};
+
+use core_foundation::base::TCFType;
+use core_foundation::dictionary::CFMutableDictionary;
+use core_foundation::number::CFNumber;
+use core_foundation::string::CFString;
 use core_foundation_sys::base::CFRange;
 use core_graphics::base::CGFloat;
+use core_graphics::color::CGColor;
 use core_graphics::context::CGContextRef;
 use core_graphics::geometry::{CGPoint, CGRect, CGSize};
 use core_graphics::path::CGPath;
-use core_text::font::{self, CTFont};
+use core_text::{font, font::CTFont, font_descriptor, string_attributes};
 
 use piet::kurbo::{Point, Size};
 use piet::util;
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
-    TextAlignment, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, FontWeight, HitTestMetrics, HitTestPoint, HitTestTextPosition,
+    LineMetric, Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
@@ -37,9 +44,212 @@ pub struct CoreGraphicsTextLayout {
 
 pub struct CoreGraphicsTextLayoutBuilder {
     width: f64,
-    text: String,
-    font: CoreGraphicsFont,
     alignment: TextAlignment,
+    default_font: CoreGraphicsFont,
+    text: String,
+    /// the end bound up to which we have already added attrs to our AttributedString
+    last_resolved_pos: usize,
+    last_resolved_utf16: usize,
+    attr_string: AttributedString,
+    font: Span<CoreGraphicsFont>,
+    size: Span<f64>,
+    weight: Span<FontWeight>,
+    italic: Span<bool>,
+}
+
+/// during construction, `Span`s represent font attributes that have been applied
+/// to ranges of the text; these are combined into coretext font objects as the
+/// layout is built.
+struct Span<T> {
+    payload: T,
+    range: Range<usize>,
+}
+
+impl<T> Span<T> {
+    fn new(payload: T, range: Range<usize>) -> Self {
+        Span { payload, range }
+    }
+}
+
+impl CoreGraphicsTextLayoutBuilder {
+    fn add(&mut self, attr: TextAttribute<CoreGraphicsFont>, range: Range<usize>) {
+        // Some attributes are 'standalone' and can just be added to the attributed string
+        // immediately.
+        if matches!(&attr, TextAttribute::ForegroundColor(_) | TextAttribute::Underline) {
+            return self.add_immediately(attr, range);
+        }
+
+        debug_assert!(
+            range.start >= self.last_resolved_pos,
+            "attributes must be added with non-decreasing start positions"
+        );
+
+        self.resolve_up_to(range.start);
+        // Other attributes need to be handled incrementally, since they all participate
+        // in creating the CTFont objects
+        match attr {
+            TextAttribute::Font(font) => self.font = Span::new(font, range),
+            TextAttribute::Weight(weight) => self.weight = Span::new(weight, range),
+            TextAttribute::Size(size) => self.size = Span::new(size, range),
+            TextAttribute::Italic => self.italic = Span::new(true, range),
+            _ => unreachable!(),
+        }
+    }
+
+    fn add_immediately(&mut self, attr: TextAttribute<CoreGraphicsFont>, range: Range<usize>) {
+        let utf16_start = util::count_utf16(&self.text[..range.start]);
+        let utf16_len = util::count_utf16(&self.text[range]);
+        let range = CFRange::init(utf16_start as isize, utf16_len as isize);
+
+        let (key, value) = unsafe {
+            match attr {
+                TextAttribute::ForegroundColor(color) => {
+                    let (r, g, b, a) = color.as_rgba();
+                    let color = CGColor::rgb(r, g, b, a);
+                    (
+                        string_attributes::kCTForegroundColorAttributeName,
+                        color.as_CFType(),
+                    )
+                }
+                TextAttribute::Underline => {
+                    #[allow(non_upper_case_globals)]
+                    const kCTUnderlineStyleSingle: i32 = 0x01;
+                    (
+                        string_attributes::kCTUnderlineStyleAttributeName,
+                        CFNumber::from(kCTUnderlineStyleSingle).as_CFType(),
+                    )
+                }
+                _ => unreachable!(),
+            }
+        };
+        self.attr_string.inner.set_attribute(range, key, &value);
+        return;
+    }
+
+    fn finalize(&mut self) {
+        self.resolve_up_to(self.text.len());
+    }
+
+    /// Add all font attributes up to a boundary.
+    fn resolve_up_to(&mut self, resolve_end: usize) {
+        let mut next_span_end = self.last_resolved_pos;
+        while next_span_end < resolve_end {
+            next_span_end = self.next_span_end(resolve_end);
+            if next_span_end > self.last_resolved_pos {
+                let range_end_utf16 =
+                    util::count_utf16(&self.text[self.last_resolved_pos..next_span_end]);
+                let range =
+                    CFRange::init(self.last_resolved_utf16 as isize, range_end_utf16 as isize);
+                let font = self.current_font();
+                unsafe {
+                    self.attr_string.inner.set_attribute(
+                        range,
+                        string_attributes::kCTFontAttributeName,
+                        &font,
+                    );
+                }
+                self.last_resolved_pos = next_span_end;
+                self.last_resolved_utf16 += range_end_utf16;
+                self.update_after_adding_span();
+            }
+        }
+    }
+
+    /// Given the end of a range, return the min of that value and the ends of
+    /// any existing spans.
+    ///
+    /// ## Invariant
+    ///
+    /// It is an invariant that the end range of any `FontAttr` is greater than
+    /// `self.last_resolved_pos`
+    fn next_span_end(&self, max: usize) -> usize {
+        self.font
+            .range
+            .end
+            .min(self.size.range.end)
+            .min(self.weight.range.end)
+            .min(max)
+    }
+
+    /// returns the fully constructed font object, including weight and size.
+    ///
+    /// This is stateful; it depends on the current attributes being correct
+    /// for the range that begins at `self.last_resolved_pos`.
+    fn current_font(&self) -> CTFont {
+        //TODO: this is where caching would happen, if we were implementing caching;
+        //store a tuple of attributes resolves to a generated CTFont.
+        unsafe {
+            //let size_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontSizeAttribute);
+            //let size = CFNumber::from(self.size.unwrap_size());
+            //
+            let weight_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontWeightTrait);
+            let weight = convert_to_coretext(self.weight.payload);
+            let family_key =
+                CFString::wrap_under_create_rule(font_descriptor::kCTFontFamilyNameAttribute);
+            let family = self.font.payload.0.family_name();
+
+            let traits_key =
+                CFString::wrap_under_create_rule(font_descriptor::kCTFontTraitsAttribute);
+            let mut traits = CFMutableDictionary::new();
+            traits.set(weight_key, weight.as_CFType());
+            if self.italic.payload {
+                let symbolic_traits_key =
+                    CFString::wrap_under_create_rule(font_descriptor::kCTFontSymbolicTrait);
+                let symbolic_traits = CFNumber::from(font_descriptor::kCTFontItalicTrait as i32);
+                traits.set(symbolic_traits_key, symbolic_traits.as_CFType());
+            }
+
+            let mut attributes = CFMutableDictionary::new();
+            attributes.set(traits_key, traits.as_CFType());
+            attributes.set(family_key, CFString::new(&family).as_CFType());
+
+            let descriptor = font_descriptor::new_from_attributes(&attributes.to_immutable());
+            font::new_from_descriptor(&descriptor, self.size.payload)
+        }
+    }
+
+    /// After we have added a span, check to see if any of our attributes are no
+    /// longer active.
+    ///
+    /// This is stateful; it requires that `self.last_resolved_pos` has been just updated
+    /// to reflect the end of the span just added.
+    fn update_after_adding_span(&mut self) {
+        let remaining_range = self.last_resolved_pos..self.text.len();
+        if self.font.range.end == self.last_resolved_pos {
+            self.font = Span::new(self.default_font.clone(), remaining_range.clone());
+        }
+
+        if self.weight.range.end == self.last_resolved_pos {
+            self.weight = Span::new(FontWeight::REGULAR, remaining_range.clone());
+        }
+
+        if self.size.range.end == self.last_resolved_pos {
+            self.size = Span::new(self.default_font.0.pt_size(), remaining_range.clone());
+        }
+
+        if self.italic.range.end == self.last_resolved_pos {
+            self.italic = Span::new(false, remaining_range.clone());
+        }
+    }
+}
+
+/// coretext uses a float in the range -1.0..=1.0, which has a non-linear mapping
+/// to css-style weights. This is a fudge, adapted from QT:
+///
+/// https://git.sailfishos.org/mer-core/qtbase/commit/9ba296cc4cefaeb9d6c5abc2e0c0b272f2288733#1b84d1913347bd20dd0a134247f8cd012a646261_44_55
+fn convert_to_coretext(weight: FontWeight) -> CFNumber {
+    match weight.to_raw() {
+        0..=199 => -0.8,
+        200..=299 => -0.6,
+        300..=399 => -0.4,
+        400..=499 => 0.0,
+        500..=599 => 0.23,
+        600..=699 => 0.3,
+        700..=799 => 0.4,
+        800..=899 => 0.56,
+        _ => 0.62,
+    }
+    .into()
 }
 
 #[derive(Clone)]
@@ -74,13 +284,7 @@ impl Text for CoreGraphicsText {
         width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
         let width = width.into().unwrap_or(f64::INFINITY);
-
-        CoreGraphicsTextLayoutBuilder {
-            width,
-            text: text.to_string(),
-            alignment: TextAlignment::default(),
-            font: font.clone(),
-        }
+        CoreGraphicsTextLayoutBuilder::new(font, text, width)
     }
 }
 
@@ -94,18 +298,54 @@ impl FontBuilder for CoreGraphicsFontBuilder {
     }
 }
 
+impl CoreGraphicsTextLayoutBuilder {
+    fn new(font: &CoreGraphicsFont, text: &str, width: f64) -> Self {
+        let attr_string = AttributedString::new(text);
+        let range_all = 0..text.len();
+        CoreGraphicsTextLayoutBuilder {
+            width,
+            alignment: TextAlignment::default(),
+            default_font: font.clone(),
+            text: text.to_string(),
+            last_resolved_pos: 0,
+            last_resolved_utf16: 0,
+            attr_string,
+            font: Span::new(font.clone(), range_all.clone()),
+            size: Span::new(font.0.pt_size(), range_all.clone()),
+            italic: Span::new(false, range_all.clone()),
+            weight: Span::new(FontWeight::REGULAR, range_all),
+        }
+    }
+}
+
 impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
     type Out = CoreGraphicsTextLayout;
+    type Font = CoreGraphicsFont;
 
     fn alignment(mut self, alignment: piet::TextAlignment) -> Self {
         self.alignment = alignment;
         self
     }
 
-    fn build(self) -> Result<Self::Out, Error> {
-        let layout =
-            CoreGraphicsTextLayout::new(&self.font, &self.text, self.width, self.alignment);
-        Ok(layout)
+    fn add_attribute(
+        mut self,
+        range: impl RangeBounds<usize>,
+        attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
+        let range = util::resolve_range(range, self.text.len());
+        let attribute = attribute.into();
+        self.add(attribute, range);
+        self
+    }
+
+    fn build(mut self) -> Result<Self::Out, Error> {
+        self.finalize();
+        self.attr_string.set_alignment(self.alignment);
+        Ok(CoreGraphicsTextLayout::new(
+            self.text,
+            self.attr_string,
+            self.width,
+        ))
     }
 }
 
@@ -262,18 +502,12 @@ impl TextLayout for CoreGraphicsTextLayout {
 }
 
 impl CoreGraphicsTextLayout {
-    fn new(
-        font: &CoreGraphicsFont,
-        text: &str,
-        width_constraint: f64,
-        alignment: TextAlignment,
-    ) -> Self {
-        let string = AttributedString::new(text, &font.0, alignment);
-        let framesetter = Framesetter::new(&string);
+    fn new(text: String, attr_string: AttributedString, width_constraint: f64) -> Self {
+        let framesetter = Framesetter::new(&attr_string);
 
         let mut layout = CoreGraphicsTextLayout {
-            string: text.into(),
-            attr_string: string,
+            string: text,
+            attr_string,
             framesetter,
             // all of this is correctly set in `update_width` below
             frame: None,
@@ -354,16 +588,15 @@ impl CoreGraphicsTextLayout {
 #[allow(clippy::float_cmp)]
 mod tests {
     use super::*;
+
     #[test]
     fn line_offsets() {
         let text = "hi\ni'm\n😀 four\nlines";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(
-            &CoreGraphicsFont(a_font),
-            text,
-            f64::INFINITY,
-            TextAlignment::default(),
-        );
+        let layout =
+            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+                .build()
+                .unwrap();
         assert_eq!(layout.line_text(0), Some("hi\n"));
         assert_eq!(layout.line_text(1), Some("i'm\n"));
         assert_eq!(layout.line_text(2), Some("😀 four\n"));
@@ -374,12 +607,11 @@ mod tests {
     fn metrics() {
         let text = "🤡:\na string\nwith a number \n of lines";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(
-            &CoreGraphicsFont(a_font),
-            text,
-            f64::INFINITY,
-            TextAlignment::default(),
-        );
+        let layout =
+            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+                .build()
+                .unwrap();
+
         let line1 = layout.line_metric(0).unwrap();
         assert_eq!(line1.start_offset, 0);
         assert_eq!(line1.end_offset, 6);
@@ -406,12 +638,11 @@ mod tests {
     fn basic_hit_testing() {
         let text = "1\n😀\n8\nA";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(
-            &CoreGraphicsFont(a_font),
-            text,
-            f64::INFINITY,
-            TextAlignment::default(),
-        );
+        let layout =
+            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+                .build()
+                .unwrap();
+
         let p1 = layout.hit_test_point(Point::ZERO);
         assert_eq!(p1.metrics.text_position, 0);
         assert!(p1.is_inside);
@@ -443,12 +674,10 @@ mod tests {
     fn hit_test_end_of_single_line() {
         let text = "hello";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(
-            &CoreGraphicsFont(a_font),
-            text,
-            f64::INFINITY,
-            TextAlignment::default(),
-        );
+        let layout =
+            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+                .build()
+                .unwrap();
         let pt = layout.hit_test_point(Point::new(0.0, 5.0));
         assert_eq!(pt.metrics.text_position, 0);
         assert_eq!(pt.is_inside, true);
@@ -465,12 +694,10 @@ mod tests {
     fn hit_test_point_empty_string() {
         let text = "";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(
-            &CoreGraphicsFont(a_font),
-            text,
-            f64::INFINITY,
-            TextAlignment::default(),
-        );
+        let layout =
+            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+                .build()
+                .unwrap();
         let pt = layout.hit_test_point(Point::new(0.0, 0.0));
         assert_eq!(pt.metrics.text_position, 0);
     }
@@ -479,12 +706,10 @@ mod tests {
     fn hit_test_text_position() {
         let text = "aaaaa\nbbbbb";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(
-            &CoreGraphicsFont(a_font),
-            text,
-            f64::INFINITY,
-            TextAlignment::default(),
-        );
+        let layout =
+            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+                .build()
+                .unwrap();
         let p1 = layout.hit_test_text_position(0).unwrap();
         assert_eq!(p1.point, Point::new(0.0, 16.0));
 
@@ -498,12 +723,10 @@ mod tests {
     fn hit_test_text_position_astral_plane() {
         let text = "👾🤠\n🤖🎃👾";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
-        let layout = CoreGraphicsTextLayout::new(
-            &CoreGraphicsFont(a_font),
-            text,
-            f64::INFINITY,
-            TextAlignment::default(),
-        );
+        let layout =
+            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+                .build()
+                .unwrap();
         let p0 = layout.hit_test_text_position(4).unwrap();
         let p1 = layout.hit_test_text_position(8).unwrap();
         let p2 = layout.hit_test_text_position(13).unwrap();

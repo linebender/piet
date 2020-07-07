@@ -1,7 +1,9 @@
 //! Text functionality for Piet svg backend
 
+use std::ops::RangeBounds;
+
 use piet::kurbo::Point;
-use piet::{Error, HitTestPoint, HitTestTextPosition, LineMetric};
+use piet::{Error, HitTestPoint, HitTestTextPosition, LineMetric, TextAttribute};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -52,6 +54,7 @@ impl piet::FontBuilder for FontBuilder {
 }
 
 /// SVG font (unimplemented)
+#[derive(Clone)]
 pub struct Font;
 
 impl piet::Font for Font {}
@@ -60,8 +63,17 @@ pub struct TextLayoutBuilder;
 
 impl piet::TextLayoutBuilder for TextLayoutBuilder {
     type Out = TextLayout;
+    type Font = Font;
 
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
+        self
+    }
+
+    fn add_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
         self
     }
 

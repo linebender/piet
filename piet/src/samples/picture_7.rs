@@ -18,6 +18,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let en_leading = text
         .new_text_layout(&font, SAMPLE_EN, 100.0)
         .alignment(TextAlignment::Start)
+        .add_attribute(.., 8.0)
         .build()?;
 
     let en_trailing = text
