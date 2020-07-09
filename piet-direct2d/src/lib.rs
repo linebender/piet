@@ -69,7 +69,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         dwrite: DwriteFactory,
         rt: &'b mut DeviceContext,
     ) -> D2DRenderContext<'b> {
-        let inner_text = D2DText::new(dwrite);
+        let inner_text = D2DText::new(dwrite, rt.clone());
         D2DRenderContext {
             factory,
             inner_text,

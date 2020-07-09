@@ -75,6 +75,7 @@ unsafe impl Send for D2DDevice {}
 ///
 /// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
 /// that end-users directly use this struct.
+#[derive(Clone)]
 pub struct DeviceContext(ComPtr<ID2D1DeviceContext>);
 
 pub struct PathGeometry(ComPtr<ID2D1PathGeometry>);

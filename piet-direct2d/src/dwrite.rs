@@ -3,24 +3,33 @@
 // TODO: get rid of this when we actually do use everything
 #![allow(unused)]
 
+use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
+use std::sync::Arc;
 
+use winapi::shared::ntdef::LOCALE_NAME_MAX_LENGTH;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED, S_OK};
 use winapi::um::dwrite::{
-    DWriteCreateFactory, IDWriteFactory, IDWriteTextFormat, IDWriteTextLayout,
-    DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
-    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS,
-    DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING,
-    DWRITE_TEXT_ALIGNMENT_TRAILING, DWRITE_TEXT_METRICS,
+    DWriteCreateFactory, IDWriteFactory, IDWriteFontCollection, IDWriteFontFamily,
+    IDWriteLocalizedStrings, IDWriteTextFormat, IDWriteTextLayout, DWRITE_FACTORY_TYPE_SHARED,
+    DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE, DWRITE_FONT_STYLE_ITALIC,
+    DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_FONT_WEIGHT_NORMAL,
+    DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS, DWRITE_TEXT_ALIGNMENT_CENTER,
+    DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_TEXT_ALIGNMENT_TRAILING,
+    DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
 };
+use winapi::um::unknwnbase::IUnknown;
+use winapi::um::winnls::GetUserDefaultLocaleName;
 use winapi::Interface;
 
 use wio::com::ComPtr;
-use wio::wide::ToWide;
+use wio::wide::{FromWide, ToWide};
 
-use piet::TextAlignment;
+use piet::{FontWeight, TextAlignment};
+
+use crate::Brush;
 
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
@@ -38,25 +47,18 @@ pub struct DwriteFactory(ComPtr<IDWriteFactory>);
 unsafe impl Send for DwriteFactory {}
 
 #[derive(Clone)]
-pub struct TextFormat(ComPtr<IDWriteTextFormat>);
+pub struct TextFormat(pub(crate) ComPtr<IDWriteTextFormat>);
 
-/// A builder for creating new `TextFormat` objects.
-///
-/// TODO: provide lots more capability.
-pub struct TextFormatBuilder {
-    factory: DwriteFactory,
-    size: Option<f32>,
-    family: Option<String>,
+#[derive(Clone)]
+struct FontFamily(ComPtr<IDWriteFontFamily>);
+
+#[derive(Clone, Debug)]
+pub(crate) struct FamilyName {
+    wide_name: Arc<[u16]>,
+    name: Arc<str>,
 }
 
-pub struct TextLayoutBuilder {
-    factory: DwriteFactory,
-    format: Option<TextFormat>,
-    text: Option<Vec<u16>>,
-    width: Option<f32>,
-    height: Option<f32>,
-    alignment: TextAlignment,
-}
+pub struct FontCollection(ComPtr<IDWriteFontCollection>);
 
 #[derive(Clone)]
 pub struct TextLayout(ComPtr<IDWriteTextLayout>);
@@ -124,6 +126,14 @@ impl DwriteFactory {
         self.0.as_raw()
     }
 
+    pub(crate) fn system_font_collection(&self) -> Result<FontCollection, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self.0.GetSystemFontCollection(&mut ptr, 0);
+            wrap(hr, ptr, FontCollection)
+        }
+    }
+
     /// Create from raw pointer
     ///
     /// # Safety
@@ -133,35 +143,109 @@ impl DwriteFactory {
     }
 }
 
-impl TextFormatBuilder {
-    pub fn new(factory: DwriteFactory) -> TextFormatBuilder {
-        TextFormatBuilder {
-            factory,
-            size: None,
-            family: None,
+impl FontCollection {
+    pub(crate) fn font_family(&self, name: &str) -> Option<FamilyName> {
+        let wname = name.to_wide_null();
+        let mut idx = u32::max_value();
+        let mut exists = 0_i32;
+
+        let family = unsafe {
+            let hr = self.0.FindFamilyName(wname.as_ptr(), &mut idx, &mut exists);
+            if SUCCEEDED(hr) && exists != 0 {
+                let mut family = null_mut();
+                let hr = self.0.GetFontFamily(idx, &mut family);
+                wrap(hr, family, FontFamily).ok()
+            } else {
+                eprintln!(
+                    "failed to find family name {}: err {} not_found: {}",
+                    name, hr, !exists
+                );
+                None
+            }
+        }?;
+
+        family.family_name().ok()
+    }
+}
+
+impl FontFamily {
+    // this monster is taken right out of the docs :/
+    /// Returns the localized name of this family.
+    fn family_name(&self) -> Result<FamilyName, Error> {
+        unsafe {
+            let mut names = null_mut();
+            let hr = self.0.GetFamilyNames(&mut names);
+            if !SUCCEEDED(hr) {
+                return Err(hr.into());
+            }
+
+            let names: ComPtr<IDWriteLocalizedStrings> = ComPtr::from_raw(names);
+
+            let mut index = 0_u32;
+            let mut exists = 0_i32;
+            let mut locale_name = [0_u16; LOCALE_NAME_MAX_LENGTH];
+
+            let success =
+                GetUserDefaultLocaleName(locale_name.as_mut_ptr(), LOCALE_NAME_MAX_LENGTH as i32);
+            let mut hr = if SUCCEEDED(success) {
+                names.FindLocaleName(locale_name.as_ptr(), &mut index, &mut exists)
+            } else {
+                // we reuse the previous success; we want  to run the next block
+                // both if the previous failed, or if it just doesn't find anything
+                hr
+            };
+            if !SUCCEEDED(hr) || exists == 0 {
+                let us_en = "en-us".to_wide_null();
+                hr = names.FindLocaleName(us_en.as_ptr(), &mut index, &mut exists);
+            }
+
+            if !SUCCEEDED(hr) {
+                return Err(hr.into());
+            }
+
+            // if locale doesn't exist, just choose the first
+            if exists == 0 {
+                index = 0;
+            }
+
+            let mut length = 0_u32;
+            let hr = names.GetStringLength(index, &mut length);
+
+            if !SUCCEEDED(hr) {
+                return Err(hr.into());
+            }
+
+            let mut wide_name: Vec<u16> = Vec::with_capacity(length as usize + 1);
+            let hr = names.GetString(index, wide_name.as_mut_ptr(), length + 1);
+            if SUCCEEDED(hr) {
+                wide_name.set_len(length as usize + 1);
+                let name = OsString::from_wide(&wide_name)
+                    .into_string()
+                    .unwrap_or_else(|err| err.to_string_lossy().into_owned())
+                    .into();
+                let wide_name = Arc::from(wide_name);
+
+                Ok(FamilyName { name, wide_name })
+            } else {
+                Err(hr.into())
+            }
         }
     }
+}
 
-    pub fn size(mut self, size: f32) -> TextFormatBuilder {
-        self.size = Some(size);
-        self
-    }
-
-    pub fn family(mut self, family: String) -> TextFormatBuilder {
-        self.family = Some(family);
-        self
-    }
-
-    pub fn build(self) -> Result<TextFormat, Error> {
-        let family = self
-            .family
-            .expect("`family` must be specified")
-            .to_wide_null();
-        let size = self.size.expect("`size` must be specified");
+impl TextFormat {
+    pub(crate) fn new(
+        factory: &DwriteFactory,
+        family: impl AsRef<[u16]>,
+        size: f32,
+    ) -> Result<TextFormat, Error> {
+        let family = family.as_ref();
+        //TODO: this should be the user's locale? It will influence font fallback behaviour?
         let locale = "en-US".to_wide_null();
+
         unsafe {
             let mut ptr = null_mut();
-            let hr = self.factory.0.CreateTextFormat(
+            let hr = factory.0.CreateTextFormat(
                 family.as_ptr(),
                 null_mut(), // collection
                 DWRITE_FONT_WEIGHT_NORMAL,
@@ -178,73 +262,15 @@ impl TextFormatBuilder {
     }
 }
 
-impl TextLayoutBuilder {
-    pub fn new(factory: DwriteFactory) -> TextLayoutBuilder {
-        TextLayoutBuilder {
-            factory,
-            format: None,
-            text: None,
-            width: None,
-            height: None,
-            alignment: TextAlignment::default(),
-        }
+impl AsRef<str> for FamilyName {
+    fn as_ref(&self) -> &str {
+        &self.name
     }
+}
 
-    pub fn format(mut self, format: &TextFormat) -> TextLayoutBuilder {
-        // The fact we clone here is annoying, but it gets us out of
-        // otherwise annoying lifetime issues.
-        self.format = Some(format.clone());
-        self
-    }
-
-    pub fn text(mut self, text: &str) -> TextLayoutBuilder {
-        self.text = Some(text.to_wide());
-        self
-    }
-
-    pub fn width(mut self, width: f32) -> TextLayoutBuilder {
-        self.width = Some(width);
-        self
-    }
-
-    pub fn height(mut self, height: f32) -> TextLayoutBuilder {
-        self.height = Some(height);
-        self
-    }
-
-    pub fn alignment(mut self, alignment: TextAlignment) -> TextLayoutBuilder {
-        self.alignment = alignment;
-        self
-    }
-
-    pub fn build(self) -> Result<TextLayout, Error> {
-        let format = self.format.expect("`format` must be specified");
-        let text = self.text.expect("`text` must be specified");
-        let len = text.len();
-        assert!(len <= 0xffff_ffff);
-        let width = self.width.expect("`width` must be specified");
-        let height = self.height.expect("`height` must be specified");
-
-        let alignment = match self.alignment {
-            TextAlignment::Start => DWRITE_TEXT_ALIGNMENT_LEADING,
-            TextAlignment::End => DWRITE_TEXT_ALIGNMENT_TRAILING,
-            TextAlignment::Center => DWRITE_TEXT_ALIGNMENT_CENTER,
-            TextAlignment::Justified => DWRITE_TEXT_ALIGNMENT_JUSTIFIED,
-        };
-
-        unsafe {
-            format.0.SetTextAlignment(alignment);
-            let mut ptr = null_mut();
-            let hr = self.factory.0.CreateTextLayout(
-                text.as_ptr(),
-                len as u32,
-                format.0.as_raw(),
-                width,
-                height,
-                &mut ptr,
-            );
-            wrap(hr, ptr, TextLayout)
-        }
+impl AsRef<[u16]> for FamilyName {
+    fn as_ref(&self) -> &[u16] {
+        &self.wide_name
     }
 }
 
@@ -252,7 +278,95 @@ impl TextLayoutBuilder {
 #[allow(clippy::unreadable_literal)]
 const E_NOT_SUFFICIENT_BUFFER: HRESULT = 0x8007007A;
 
+fn make_text_range(start: usize, len: usize) -> DWRITE_TEXT_RANGE {
+    DWRITE_TEXT_RANGE {
+        startPosition: start as u32,
+        length: len as u32,
+    }
+}
+
 impl TextLayout {
+    pub(crate) fn new(
+        dwrite: &DwriteFactory,
+        format: TextFormat,
+        width: f32,
+        text: &[u16],
+    ) -> Result<Self, Error> {
+        const QUITE_TALL_HEIGHT: f32 = 1e6;
+        let len = text.len();
+        assert!(len <= 0xffff_ffff);
+
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = dwrite.0.CreateTextLayout(
+                text.as_ptr(),
+                len as u32,
+                format.0.as_raw(),
+                width,
+                QUITE_TALL_HEIGHT,
+                &mut ptr,
+            );
+            wrap(hr, ptr, TextLayout)
+        }
+    }
+
+    pub(crate) fn set_alignment(&mut self, alignment: TextAlignment) {
+        let alignment = match alignment {
+            TextAlignment::Start => DWRITE_TEXT_ALIGNMENT_LEADING,
+            TextAlignment::End => DWRITE_TEXT_ALIGNMENT_TRAILING,
+            TextAlignment::Center => DWRITE_TEXT_ALIGNMENT_CENTER,
+            TextAlignment::Justified => DWRITE_TEXT_ALIGNMENT_JUSTIFIED,
+        };
+
+        unsafe {
+            self.0.SetTextAlignment(alignment);
+        }
+    }
+
+    pub(crate) fn set_weight(&mut self, start: usize, len: usize, weight: FontWeight) {
+        let range = make_text_range(start, len);
+        let weight = weight.to_raw() as DWRITE_FONT_WEIGHT;
+        unsafe {
+            self.0.SetFontWeight(weight, range);
+        }
+    }
+
+    pub(crate) fn set_font_family(&mut self, start: usize, len: usize, family: &FamilyName) {
+        let range = make_text_range(start, len);
+        unsafe {
+            self.0.SetFontFamilyName(family.wide_name.as_ptr(), range);
+        }
+    }
+
+    pub(crate) fn set_italic(&mut self, start: usize, len: usize) {
+        let range = make_text_range(start, len);
+        unsafe {
+            self.0.SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range);
+        }
+    }
+
+    pub(crate) fn set_underline(&mut self, start: usize, len: usize) {
+        let range = make_text_range(start, len);
+        unsafe {
+            self.0.SetUnderline(1, range);
+        }
+    }
+
+    pub(crate) fn set_size(&mut self, start: usize, len: usize, size: f32) {
+        let range = make_text_range(start, len);
+        unsafe {
+            self.0.SetFontSize(size, range);
+        }
+    }
+
+    pub(crate) fn set_foregound_brush(&mut self, start: usize, len: usize, brush: Brush) {
+        let range = make_text_range(start, len);
+        unsafe {
+            self.0
+                .SetDrawingEffect(brush.as_raw() as *mut IUnknown, range);
+        }
+    }
+
     /// Get line metrics, storing them in the provided buffer.
     ///
     /// Note: this isn't necessarily the lowest level wrapping, as it requires
@@ -413,5 +527,20 @@ impl From<DWRITE_HIT_TEST_METRICS> for HitTestMetrics {
             is_text: metrics.isText != 0,
             is_trimmed: metrics.isTrimmed != 0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn family_names() {
+        let factory = DwriteFactory::new().unwrap();
+        let fonts = factory.system_font_collection().unwrap();
+        assert!(fonts.font_family("serif").is_none());
+        assert!(fonts.font_family("arial").is_some());
+        assert!(fonts.font_family("Arial").is_some());
+        assert!(fonts.font_family("Times New Roman").is_some());
     }
 }
