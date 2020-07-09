@@ -258,7 +258,7 @@ mod test {
 
         let input = "piet text!";
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
 
@@ -339,7 +339,7 @@ mod test {
 
         let mut text_layout = D2DText::new(dwrite.clone());
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
         let layout = text_layout
@@ -358,7 +358,7 @@ mod test {
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
 
         //let mut text_layout = D2DText::new();
-        //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        //let font = text_layout.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         //let layout = text_layout.new_text_layout(&font, input, None).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
@@ -371,7 +371,7 @@ mod test {
 
         let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
         let layout = text_layout
@@ -412,7 +412,7 @@ mod test {
 
         let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
         let layout = text_layout
@@ -493,7 +493,7 @@ mod test {
         let mut text_layout = D2DText::new(dwrite);
 
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
         let layout = text_layout
@@ -541,7 +541,7 @@ mod test {
 
         let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
         let layout = text_layout
@@ -585,7 +585,7 @@ mod test {
         let dwrite = dwrite::DwriteFactory::new().unwrap();
         let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
         let layout = text_layout
@@ -611,7 +611,7 @@ mod test {
         let dwrite = dwrite::DwriteFactory::new().unwrap();
         let mut text_layout = D2DText::new(dwrite);
         let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
+            .new_font_by_name("Segoe UI", 12.0)
             .build()
             .unwrap();
         let mut layout = text_layout
@@ -639,7 +639,7 @@ mod test {
 
         let input = "piet  text!";
         let font = text_layout
-            .new_font_by_name("sans-serif", 15.0)
+            .new_font_by_name("Segoe UI", 15.0)
             .build()
             .unwrap();
 
@@ -794,7 +794,7 @@ mod test {
         let dwrite = dwrite::DwriteFactory::new().unwrap();
         let mut text = D2DText::new(dwrite);
 
-        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
+        let font = text.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         // this should break into four lines
         let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
         println!("{}", layout.line_metric(0).unwrap().baseline); // 12.94...
