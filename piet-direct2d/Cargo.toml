@@ -16,7 +16,7 @@ wio = "0.2.2"
 
 [dependencies.winapi]
 version = "0.3.8"
-features = ["d2d1", "d2d1_1", "d2d1effects", "d3d11", "dxgi"]
+features = ["d2d1", "d2d1_1", "d2d1effects", "d3d11", "dxgi", "winnls"]
 
 [dev-dependencies]
 piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
