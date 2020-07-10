@@ -92,6 +92,9 @@ impl Text for D2DText {
 
     fn system_font(&mut self, size: f64) -> Self::Font {
         let collection = self.dwrite.system_font_collection().unwrap();
+        //TODO: this is maybe not the best thing? I _think_ if we pass an empty string
+        //when creating a layout it will pick a fallback font for us, which would
+        //let us skip this unwrap.
         let family = collection
             .font_family("Segoe UI")
             .or_else(|| collection.font_family("Arial"))

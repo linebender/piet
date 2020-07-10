@@ -52,6 +52,11 @@ pub struct TextFormat(pub(crate) ComPtr<IDWriteTextFormat>);
 #[derive(Clone)]
 struct FontFamily(ComPtr<IDWriteFontFamily>);
 
+/// A cheap to clone reference to an existing family name.
+///
+/// We hold onto both the wide string and the rust string.
+///
+/// This type AsRefs to both `str` and `[u16]`.
 #[derive(Clone, Debug)]
 pub(crate) struct FamilyName {
     wide_name: Arc<[u16]>,
@@ -310,6 +315,7 @@ impl TextLayout {
         }
     }
 
+    /// Set the alignment for this entire layout.
     pub(crate) fn set_alignment(&mut self, alignment: TextAlignment) {
         let alignment = match alignment {
             TextAlignment::Start => DWRITE_TEXT_ALIGNMENT_LEADING,
@@ -323,6 +329,7 @@ impl TextLayout {
         }
     }
 
+    /// Set the weight for a range of this layout. `start` and `len` are in utf16.
     pub(crate) fn set_weight(&mut self, start: usize, len: usize, weight: FontWeight) {
         let range = make_text_range(start, len);
         let weight = weight.to_raw() as DWRITE_FONT_WEIGHT;
