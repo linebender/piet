@@ -31,6 +31,9 @@ use piet::{FontWeight, TextAlignment};
 
 use crate::Brush;
 
+/// "en-US" as null-terminated utf16.
+const DEFAULT_LOCALE: [u16; 6] = [101, 110, 45, 85, 83, 0];
+
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
 pub enum Error {
@@ -200,8 +203,7 @@ impl FontFamily {
                 hr
             };
             if !SUCCEEDED(hr) || exists == 0 {
-                let us_en = "en-us".to_wide_null();
-                hr = names.FindLocaleName(us_en.as_ptr(), &mut index, &mut exists);
+                hr = names.FindLocaleName(DEFAULT_LOCALE.as_ptr(), &mut index, &mut exists);
             }
 
             if !SUCCEEDED(hr) {
@@ -245,8 +247,6 @@ impl TextFormat {
         size: f32,
     ) -> Result<TextFormat, Error> {
         let family = family.as_ref();
-        //TODO: this should be the user's locale? It will influence font fallback behaviour?
-        let locale = "en-US".to_wide_null();
 
         unsafe {
             let mut ptr = null_mut();
@@ -257,7 +257,8 @@ impl TextFormat {
                 DWRITE_FONT_STYLE_NORMAL,
                 DWRITE_FONT_STRETCH_NORMAL,
                 size,
-                locale.as_ptr(),
+                //TODO: this should be the user's locale? It will influence font fallback behaviour?
+                DEFAULT_LOCALE.as_ptr(),
                 &mut ptr,
             );
 
@@ -549,5 +550,10 @@ mod tests {
         assert!(fonts.font_family("arial").is_some());
         assert!(fonts.font_family("Arial").is_some());
         assert!(fonts.font_family("Times New Roman").is_some());
+    }
+
+    #[test]
+    fn default_locale() {
+        assert_eq!("en-US".to_wide_null().as_slice(), &DEFAULT_LOCALE);
     }
 }
