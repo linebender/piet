@@ -116,12 +116,6 @@ impl AttributedString {
         AttributedString { inner, rtl }
     }
 
-    //string.set_attribute::<CFBoolean>(
-    //char_range,
-    //string_attributes::kCTForegroundColorFromContextAttributeName,
-    //&CFBoolean::true_value(),
-    //);
-
     pub(crate) fn set_alignment(&mut self, alignment: TextAlignment) {
         let alignment = CTParagraphStyleSetting::alignment(alignment, self.rtl);
         let settings = [alignment];

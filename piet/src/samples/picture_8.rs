@@ -27,7 +27,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let en_leading = text
         .new_text_layout(&font, SAMPLE_EN, 200.0)
         .alignment(TextAlignment::Start)
-        .add_attribute(10..80, 8.0)
+        .add_attribute(10..80, TextAttribute::Size(8.0))
         .add_attribute(20..120, serif)
         .add_attribute(40..60, FontWeight::BOLD)
         .add_attribute(60..140, FontWeight::THIN)
@@ -45,7 +45,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
             TextAttribute::ForegroundColor(Color::rgb(0., 0., 0.6)),
         )
         .add_attribute(200.., FontWeight::EXTRA_BLACK)
-        .add_attribute(220.., 18.0)
+        .add_attribute(220.., TextAttribute::Size(18.0))
         .add_attribute(240.., TextAttribute::Italic)
         .add_attribute(280.., TextAttribute::Underline)
         .build()?;

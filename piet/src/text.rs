@@ -16,16 +16,8 @@ pub trait Text: Clone {
     //like, and could also let us remove the `system_font()` method.
     //What I'm imagining here is a small list of generic family names, like
     //["serif", "sans-serif", "monospace", "system-ui"].
-
-    ///// Attempt to locate a font with a given family name.
-    /////
-    ///// This should return `Some(Font)` if a font with a matching family name
-    ///// is found, and `None` if not.
-    /////
-    ///// This may be fuzzy; for instance on macOS the "Courier New" family might
-    ///// be returned when asking for "courier", for instance.
-    //fn font_with_family(&mut self, family_name: &str) -> Option<Self::Font>;
-
+    //TODO: remove `FontBuilder`
+    //TODO: decouple font size from family
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
     /// Returns a font suitable for use in UI on this platform.
@@ -55,7 +47,7 @@ pub trait Font: Clone {}
 /// prefer the constants defined on this type, such as `FontWeight::REGULAR` or
 /// `FontWeight::BOLD`.
 ///
-/// [CSS `font-weeight`]: https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight
+/// [CSS `font-weight`]: https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FontWeight(u16);
 
@@ -97,10 +89,21 @@ impl FontWeight {
     }
 }
 
-impl Default for FontWeight {
-    fn default() -> Self {
-        FontWeight::REGULAR
-    }
+/// Attributes that can be applied to text.
+pub enum TextAttribute<T> {
+    /// The font family.
+    Font(T),
+    /// The font size, in points.
+    Size(f64),
+    /// The [`FontWeight`](struct.FontWeight.html).
+    Weight(FontWeight),
+    /// The foreground color of the text.
+    ForegroundColor(crate::Color),
+    //BackgroundColor(crate::Color),
+    /// Italics.
+    Italic,
+    /// Underline.
+    Underline,
 }
 
 pub trait FontBuilder {
@@ -118,6 +121,49 @@ pub trait TextLayoutBuilder {
     /// [`TextAlignment`]: enum.TextAlignment.html
     fn alignment(self, alignment: TextAlignment) -> Self;
 
+    /// Add a [`TextAttribute`] to a range of this layout.
+    ///
+    /// The `range` argument is can be any of the range forms accepted by
+    /// slice indexing, such as `..`, `..n`, `n..`, `n..m`, etcetera.
+    ///
+    /// The `attribute` argument is a [`TextAttribute`] or any type that can be
+    /// converted to such an attribute; for instance you may pass a [`FontWeight`]
+    /// directly.
+    ///
+    /// ## Notes
+    ///
+    /// This is a low-level API; what this means in particular is that it is designed
+    /// to be efficiently implemented, not necessarily ergonomic to use, and there
+    /// may be a few gotchas.
+    ///
+    /// **ranges of added attributes should be added in non-decreasing start order**.
+    /// This is to say that attributes should be added in the order of the start
+    /// of their ranges. Attributes added out of order may be skipped.
+    ///
+    /// **attributes do not stack**. Setting the range `0..100` to `FontWeight::BOLD`
+    /// and then setting the range `20..50` to `FontWeight::THIN` will result in
+    /// the range `50..100` being reset to the default font weight; we will not
+    /// remember that you had earlier set it to `BOLD`.
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// # use piet::*;
+    /// # let mut ctx = NullRenderContext::new();
+    /// # let mut text = ctx.text();
+    ///
+    /// let font = text.system_font(12.0);
+    /// let times = text.new_font_by_name("Times New Roman", 12.0).build().unwrap();
+    /// let layout = text.new_text_layout(&font, "This API is okay, I guess?", 100.0)
+    ///     .add_attribute(.., TextAttribute::Italic)
+    ///     .add_attribute(..5, FontWeight::BOLD)
+    ///     .add_attribute(5..14, times)
+    ///     .add_attribute(20.., TextAttribute::ForegroundColor(Color::rgb(1.0, 0., 0.,)))
+    ///     .build();
+    /// ```
+    ///
+    /// [`TextAttribute`]: enum.TextAttribute.html
+    /// [`FontWeight`]: struct.FontWeight.html
     fn add_attribute(
         self,
         range: impl RangeBounds<usize>,
@@ -125,35 +171,6 @@ pub trait TextLayoutBuilder {
     ) -> Self;
 
     fn build(self) -> Result<Self::Out, Error>;
-}
-
-/// Attributes that can be applied to text.
-pub enum TextAttribute<T> {
-    Font(T),
-    Size(f64),
-    Weight(FontWeight),
-    ForegroundColor(crate::Color),
-    //BackgroundColor(crate::Color),
-    Italic,
-    Underline,
-}
-
-impl<T: Font> From<T> for TextAttribute<T> {
-    fn from(t: T) -> TextAttribute<T> {
-        TextAttribute::Font(t)
-    }
-}
-
-impl<T> From<FontWeight> for TextAttribute<T> {
-    fn from(src: FontWeight) -> TextAttribute<T> {
-        TextAttribute::Weight(src)
-    }
-}
-
-impl<T> From<f64> for TextAttribute<T> {
-    fn from(src: f64) -> TextAttribute<T> {
-        TextAttribute::Size(src)
-    }
 }
 
 /// The alignment of text in a [`TextLayout`].
@@ -169,12 +186,6 @@ pub enum TextAlignment {
     End,
     Center,
     Justified,
-}
-
-impl Default for TextAlignment {
-    fn default() -> Self {
-        TextAlignment::Start
-    }
 }
 
 /// # Text Layout
@@ -336,4 +347,28 @@ pub struct HitTestMetrics {
     // TODO:
     // consider adding other metrics as needed, such as those provided in
     // [DWRITE_HIT_TEST_METRICS](https://docs.microsoft.com/en-us/windows/win32/api/dwrite/ns-dwrite-dwrite_hit_test_metrics).
+}
+
+impl<T: Font> From<T> for TextAttribute<T> {
+    fn from(t: T) -> TextAttribute<T> {
+        TextAttribute::Font(t)
+    }
+}
+
+impl<T> From<FontWeight> for TextAttribute<T> {
+    fn from(src: FontWeight) -> TextAttribute<T> {
+        TextAttribute::Weight(src)
+    }
+}
+
+impl Default for TextAlignment {
+    fn default() -> Self {
+        TextAlignment::Start
+    }
+}
+
+impl Default for FontWeight {
+    fn default() -> Self {
+        FontWeight::REGULAR
+    }
 }

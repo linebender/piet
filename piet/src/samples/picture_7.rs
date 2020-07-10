@@ -1,7 +1,7 @@
 //! Text layouts
 
 use crate::kurbo::Size;
-use crate::{Color, Error, RenderContext, Text, TextAlignment, TextLayoutBuilder};
+use crate::{Color, Error, RenderContext, Text, TextAlignment, TextAttribute, TextLayoutBuilder};
 
 pub const SIZE: Size = Size::new(800., 800.);
 static SAMPLE_EN: &str = r#"
@@ -18,7 +18,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let en_leading = text
         .new_text_layout(&font, SAMPLE_EN, 100.0)
         .alignment(TextAlignment::Start)
-        .add_attribute(.., 8.0)
+        .add_attribute(.., TextAttribute::Size(8.0))
         .build()?;
 
     let en_trailing = text

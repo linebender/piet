@@ -23,6 +23,7 @@ use piet::{
 
 use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
 
+//TODO: this should be a CTFontDescriptor maybe?
 #[derive(Debug, Clone)]
 pub struct CoreGraphicsFont(CTFont);
 
@@ -42,6 +43,7 @@ pub struct CoreGraphicsTextLayout {
     width_constraint: f64,
 }
 
+/// Building text layouts for `CoreGraphics`.
 pub struct CoreGraphicsTextLayoutBuilder {
     width: f64,
     alignment: TextAlignment,
@@ -72,6 +74,23 @@ impl<T> Span<T> {
 }
 
 impl CoreGraphicsTextLayoutBuilder {
+    /// ## Note
+    ///
+    /// The implementation of this has a few particularities.
+    ///
+    /// The main Foundation type for representing a rich text string is NSAttributedString
+    /// (CFAttributedString in CoreFoundation); however not all attributes are set
+    /// directly. Attributes that implicate font selection (such as size, weight, etc)
+    /// are all part of the string's 'font' attribute; we can't set them individually.
+    ///
+    /// To make this work, we keep track of the active value for each of the relevant
+    /// attributes. Each span of the string with a common set of these values is assigned
+    /// the appropriate concrete font as the attributes are added.
+    ///
+    /// This behaviour relies on the condition that spans are added in non-decreasing
+    /// start order. The algorithm is quite simple; whenever a new attribute of one
+    /// of the relevant types is added, we know that spans in the string up to
+    /// the start of the newly added span can no longer be changed, and we can resolve them.
     fn add(&mut self, attr: TextAttribute<CoreGraphicsFont>, range: Range<usize>) {
         // Some attributes are 'standalone' and can just be added to the attributed string
         // immediately.
@@ -123,7 +142,6 @@ impl CoreGraphicsTextLayoutBuilder {
             }
         };
         self.attr_string.inner.set_attribute(range, key, &value);
-        return;
     }
 
     fn finalize(&mut self) {
@@ -179,9 +197,6 @@ impl CoreGraphicsTextLayoutBuilder {
         //TODO: this is where caching would happen, if we were implementing caching;
         //store a tuple of attributes resolves to a generated CTFont.
         unsafe {
-            //let size_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontSizeAttribute);
-            //let size = CFNumber::from(self.size.unwrap_size());
-            //
             let weight_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontWeightTrait);
             let weight = convert_to_coretext(self.weight.payload);
             let family_key =
@@ -228,7 +243,7 @@ impl CoreGraphicsTextLayoutBuilder {
         }
 
         if self.italic.range.end == self.last_resolved_pos {
-            self.italic = Span::new(false, remaining_range.clone());
+            self.italic = Span::new(false, remaining_range);
         }
     }
 }
