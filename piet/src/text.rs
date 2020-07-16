@@ -12,15 +12,49 @@ pub trait Text: Clone {
     type TextLayoutBuilder: TextLayoutBuilder<Font = Self::Font, Out = Self::TextLayout>;
     type TextLayout: TextLayout;
 
-    //TODO: consider supporting "generic" family names? this would make us more CSS
-    //like, and could also let us remove the `system_font()` method.
-    //What I'm imagining here is a small list of generic family names, like
-    //["serif", "sans-serif", "monospace", "system-ui"].
-    //TODO: remove `FontBuilder`
-    //TODO: decouple font size from family
+    #[deprecated(since = "0.2.0", note = "use Text::font instead")]
     fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
+    /// Returns a a [`Font`] object corresponding to the given family name,
+    /// if one can be found.
+    ///
+    /// The family name should be either the explicit name of a font family
+    /// (such as "Times New Roman", or "Helvetica") or it can be a "generic
+    /// family name"; see below.
+    ///
+    /// ## Platform behaviour:
+    ///
+    /// Different platforms may search for fonts in different ways. On macOS,
+    /// for instance, passing "courier" will (assuming "Courier" is not installed)
+    /// will return "Courier New". on Windows, in the same situation, it will return
+    /// `None`. You should assume that matching is literal, and you should try
+    /// to use known literal names.
+    ///
+    /// ## Generic family names
+    ///
+    /// We provide limited support for "generic family names", as defined by CSS.
+    /// Currently, we support four of these names: `serif`, `sans-serif`, `monospace`,
+    /// and `system-ui`. These are available as constants on the [`Font`] trait.
+    ///
+    /// If you use a generic family name, this API **will not fail**, although
+    /// we do not guarantee we will always return an appropriate font; if nothing
+    /// can be found we will let the platform pick a fallback for us.
+    ///
+    /// # Examples
+    ///
+    /// Using the system UI font:
+    ///
+    /// ```
+    /// use piet::*;
+    /// let mut ctx = NullRenderContext::new();
+    /// let ui_font = ctx.text().font("system-ui").expect("generic family names won't fail");
+    /// ```
+    ///
+    /// [`Font`]: trait.Font.html
+    fn font(&mut self, family_name: &str) -> Option<Self::Font>;
+
     /// Returns a font suitable for use in UI on this platform.
+    //FIXME: delete this, we just use font("system-ui") instead.
     fn system_font(&mut self, size: f64) -> Self::Font;
 
     /// Create a new layout object to display the provided `text`.
@@ -38,7 +72,17 @@ pub trait Text: Clone {
 /// When loading a system font, this type can be thought of as a font *family*;
 /// if you change the weight or the style in a layout span, that may cause a
 /// different font in that family to be used for the actual drawing.
-pub trait Font: Clone {}
+pub trait Font: Clone {
+    /// A san-serif font, such as Arial or Helvetica.
+    const SAN_SERIF: &'static str = "sans-serif";
+    /// A serif font, such as Times New Roman or Charter.
+    const SERIF: &'static str = "serif";
+    /// A monospace font.
+    const MONOSPACE: &'static str = "monospace";
+    /// The platform's preferred UI font; San Francisco on macOS, and Segoe UI
+    /// on recent Windows.
+    const SYSTEM_UI: &'static str = "system-ui";
+}
 
 /// A font weight, represented as a value in the range 1..=1000.
 ///
@@ -138,7 +182,7 @@ pub trait TextLayoutBuilder: Sized {
     /// # let mut ctx = NullRenderContext::new();
     /// # let mut text = ctx.text();
     ///
-    /// let times = text.new_font_by_name("Times New Roman", 0.0).build().unwrap();
+    /// let times = text.font("Times New Roman").unwrap();
     ///
     /// // the following are equivalent
     /// let layout_one = text.new_text_layout("hello everyone!")

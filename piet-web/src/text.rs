@@ -73,6 +73,15 @@ impl Text for WebText {
         WebFontBuilder(font)
     }
 
+    fn font(&mut self, family_name: &str) -> Option<Self::Font> {
+        Some(WebFont {
+            family: family_name.to_owned(),
+            size: 0.0,
+            weight: 400,
+            style: FontStyle::Normal,
+        })
+    }
+
     fn system_font(&mut self, size: f64) -> Self::Font {
         let font = WebFont {
             family: "sans-serif".to_owned(),
@@ -430,7 +439,7 @@ pub(crate) fn text_width(text: &str, ctx: &CanvasRenderingContext2d) -> f64 {
 #[cfg(test)]
 pub(crate) mod test {
     use piet::kurbo::Point;
-    use piet::{FontBuilder, Text, TextLayout, TextLayoutBuilder};
+    use piet::{Text, TextLayout, TextLayoutBuilder};
     use wasm_bindgen_test::*;
     use web_sys::{console, window, HtmlCanvasElement};
 
@@ -478,10 +487,7 @@ pub(crate) mod test {
         let mut text_layout = WebText::new(context);
 
         let input = "piet text!";
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("sans-serif").unwrap();
 
         let layout = text_layout
             .new_text_layout(&input[0..4])
@@ -570,10 +576,7 @@ pub(crate) mod test {
         let input = "é";
         assert_eq!(input.len(), 2);
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -608,10 +611,7 @@ pub(crate) mod test {
         assert_eq!(input.len(), 7);
         assert_eq!(input.chars().count(), 3);
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -642,10 +642,7 @@ pub(crate) mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
         assert_eq!(input.len(), 14);
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font.clone(), 12.0)
@@ -712,10 +709,7 @@ pub(crate) mod test {
         let (_window, context) = setup_ctx();
         let mut text_layout = WebText::new(context);
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 16.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout("piet text!")
             .font(font, 16.0)
@@ -762,10 +756,7 @@ pub(crate) mod test {
         let mut text_layout = WebText::new(context);
 
         // base condition, one grapheme
-        let font = text_layout
-            .new_font_by_name("sans-serif", 16.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout("t")
             .font(font.clone(), 16.0)
@@ -809,8 +800,7 @@ pub(crate) mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let font = text_layout
-            .new_font_by_name("sans-serif", 13.0) // font size hacked to fit test
-            .build()
+            .font("sans-serif") // font size hacked to fit test
             .unwrap();
         let layout = text_layout
             .new_text_layout(input)
@@ -862,10 +852,7 @@ pub(crate) mod test {
         // This corresponds to the char 'y' in the input.
         let input = "tßßypi";
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 14.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 14.0)
@@ -892,8 +879,7 @@ pub(crate) mod test {
 
         let input = "piet  text!";
         let font = text_layout
-            .new_font_by_name("sans-serif", 15.0) // change this for osx
-            .build()
+            .font("sans-serif") // change this for osx
             .unwrap();
 
         let layout = text_layout
@@ -1064,7 +1050,7 @@ pub(crate) mod test {
         let (_window, context) = setup_ctx();
         let mut text = WebText::new(context);
 
-        let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();
+        let font = text.font("sans-serif").unwrap();
         // this should break into four lines
         // Had to shift font in order to break at 4 lines (larger font than cairo, wider lines)
         let layout = text

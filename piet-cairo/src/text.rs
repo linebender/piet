@@ -75,6 +75,12 @@ impl Text for CairoText {
         }
     }
 
+    fn font(&mut self, family_name: &str) -> Option<Self::Font> {
+        Some(CairoFont {
+            family: family_name.to_owned(),
+        })
+    }
+
     fn system_font(&mut self, _size: f64) -> Self::Font {
         CairoFontBuilder {
             family: "sans-serif".into(),
@@ -191,7 +197,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
-        // calculated by max x_advance, on TextLayout build
+        // calculated by max x_advance, in update_width
         self.size.width
     }
 
@@ -203,7 +209,6 @@ impl TextLayout for CairoTextLayout {
         self.size.to_rect()
     }
 
-    // TODO refactor this to use same code as new_text_layout
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
