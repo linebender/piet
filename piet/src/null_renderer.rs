@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::ops::RangeBounds;
 
-use kurbo::{Affine, Point, Rect, Shape};
+use kurbo::{Affine, Point, Rect, Shape, Size};
 
 use crate::{
     Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
@@ -197,6 +197,10 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
 impl TextLayout for NullTextLayout {
     fn width(&self) -> f64 {
         42.0
+    }
+
+    fn size(&self) -> Size {
+        Size::ZERO
     }
 
     fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<(), Error> {

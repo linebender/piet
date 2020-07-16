@@ -2,7 +2,7 @@
 
 use std::ops::{Range, RangeBounds};
 
-use crate::kurbo::Point;
+use crate::kurbo::{Point, Size};
 use crate::Error;
 
 pub trait Text: Clone {
@@ -228,7 +228,23 @@ pub enum TextAlignment {
 ///
 pub trait TextLayout: Clone {
     /// Measure the advance width of the text.
+    #[deprecated(since = "0.2.0", note = "Use size().width insead")]
     fn width(&self) -> f64;
+
+    /// The total size of this `TextLayout`.
+    ///
+    /// This is the size required to draw this `TextLayout`, as provided by the
+    /// platform text system.
+    ///
+    /// # Note
+    ///
+    /// This is not currently defined very rigorously; in particular we do not
+    /// specify whether this should include half-leading or paragraph spacing
+    /// above or below the text.
+    ///
+    /// We would ultimately like to review and attempt to standardize this
+    /// behaviour, but it is out of scope for the time being.
+    fn size(&self) -> Size;
 
     /// Change the width of this `TextLayout`.
     ///

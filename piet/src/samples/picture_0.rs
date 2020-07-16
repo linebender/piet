@@ -31,7 +31,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     );
 
     let layout = make_text(rc.text(), "Segoe UI", 12., "Hello piet!");
-    let w: f64 = layout.width();
+    let w: f64 = layout.size().width;
     rc.draw_text(&layout, (80.0, 10.0), &RED_ALPHA);
 
     rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &RED_ALPHA, 1.0);
