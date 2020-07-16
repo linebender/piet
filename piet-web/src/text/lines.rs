@@ -173,11 +173,13 @@ fn add_line_metric(
     cumulative_height: &mut f64,
     line_metrics: &mut Vec<LineMetric>,
 ) {
+    let y_offset = *cumulative_height;
     *cumulative_height += height;
 
     let line = &text[start_offset..end_offset];
     let trailing_whitespace = count_trailing_whitespace(line);
 
+    #[allow(deprecated)]
     let line_metric = LineMetric {
         start_offset,
         end_offset,
@@ -185,6 +187,7 @@ fn add_line_metric(
         baseline,
         height,
         cumulative_height: *cumulative_height,
+        y_offset,
     };
     line_metrics.push(line_metric);
 }

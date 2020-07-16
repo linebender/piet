@@ -229,7 +229,7 @@ impl RenderContext for WebRenderContext {
                 .fill_text(
                     &layout.text[lm.start_offset..lm.end_offset],
                     pos.x,
-                    pos.y + lm.cumulative_height - lm.height,
+                    pos.y + lm.y_offset,
                 )
                 .wrap();
 
