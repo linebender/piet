@@ -370,6 +370,10 @@ impl TextLayout for CoreGraphicsTextLayout {
         self.frame_size.width
     }
 
+    fn size(&self) -> Size {
+        self.frame_size
+    }
+
     #[allow(clippy::float_cmp)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let width = new_width.into().unwrap_or(f64::INFINITY);

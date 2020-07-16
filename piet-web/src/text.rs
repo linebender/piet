@@ -8,7 +8,7 @@ use std::ops::RangeBounds;
 
 use web_sys::CanvasRenderingContext2d;
 
-use piet::kurbo::Point;
+use piet::kurbo::{Point, Size};
 
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
@@ -38,7 +38,7 @@ pub struct WebTextLayout {
 
     // Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
-    width: f64,
+    size: Size,
 }
 
 pub struct WebTextLayoutBuilder {
@@ -149,45 +149,45 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
     fn build(self) -> Result<Self::Out, Error> {
         self.ctx.set_font(&self.font.get_font_string());
 
-        let line_metrics =
-            lines::calculate_line_metrics(&self.text, &self.ctx, self.width, self.font.size);
-
-        let widths = line_metrics
-            .iter()
-            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx));
-
-        let width = widths.fold(0.0, |a: f64, b| a.max(b));
-
-        Ok(WebTextLayout {
+        let mut layout = WebTextLayout {
             ctx: self.ctx,
             font: self.font,
             text: self.text,
-            line_metrics,
-            width,
-        })
+            line_metrics: Vec::new(),
+            size: Size::ZERO,
+        };
+
+        layout.update_width(self.width)?;
+        Ok(layout)
     }
 }
 
 impl TextLayout for WebTextLayout {
     fn width(&self) -> f64 {
         // precalculated on textlayout build
-        self.width
+        self.size.width
     }
 
-    // TODO refactor this to use same code as build
+    fn size(&self) -> Size {
+        self.size
+    }
+
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
-        self.line_metrics =
+        let line_metrics =
             lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
 
-        let widths = self
-            .line_metrics
+        let max_width = line_metrics
             .iter()
-            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx));
-
-        self.width = widths.fold(0.0, |a: f64, b| a.max(b));
-
+            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx))
+            .fold(0., f64::max);
+        let height = line_metrics
+            .last()
+            .map(|l| l.cumulative_height)
+            .unwrap_or_default();
+        self.line_metrics = line_metrics;
+        self.size = Size::new(max_width, height);
         Ok(())
     }
 
@@ -488,37 +488,37 @@ pub(crate) mod test {
             .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
             .build()
             .unwrap();
-        let piet_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
             .build()
             .unwrap();
-        let pi_width = layout.width();
+        let pi_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
             .build()
             .unwrap();
-        let p_width = layout.width();
+        let p_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, "", std::f64::INFINITY)
             .build()
             .unwrap();
-        let null_width = layout.width();
+        let null_width = layout.size().width;
 
         let full_layout = text_layout
             .new_text_layout(&font, input, std::f64::INFINITY)
             .build()
             .unwrap();
-        let full_width = full_layout.width();
+        let full_width = full_layout.size().width;
 
         assert_close_to(
             full_layout.hit_test_text_position(4).unwrap().point.x as f64,
@@ -585,7 +585,7 @@ pub(crate) mod test {
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -611,7 +611,7 @@ pub(crate) mod test {
         //let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
-        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
+        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.size().width));
         //assert_eq!(input.len(), 17);
 
         let input = "\u{0023}\u{FE0F}\u{20E3}"; // #️⃣
@@ -630,7 +630,7 @@ pub(crate) mod test {
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(7).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -685,22 +685,22 @@ pub(crate) mod test {
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
         assert_close_to(
             layout.hit_test_text_position(9).unwrap().point.x,
-            test_layout_1.width(),
+            test_layout_1.size().width,
             3.0,
         );
         assert_close_to(
             layout.hit_test_text_position(10).unwrap().point.x,
-            test_layout_2.width(),
+            test_layout_2.size().width,
             3.0,
         );
         assert_close_to(
             layout.hit_test_text_position(14).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -717,7 +717,7 @@ pub(crate) mod test {
         );
         assert_close_to(
             layout.hit_test_text_position(3).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
         assert_eq!(
@@ -730,7 +730,7 @@ pub(crate) mod test {
         );
         assert_close_to(
             layout.hit_test_text_position(6).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
         assert_eq!(
@@ -776,7 +776,7 @@ pub(crate) mod test {
         assert_eq!(pt.metrics.text_position, 5);
 
         // outside
-        console::log_1(&format!("layout_width: {:?}", layout.width()).into()); // 57.31...
+        console::log_1(&format!("layout_width: {:?}", layout.size().width).into()); // 57.31...
 
         let pt = layout.hit_test_point(Point::new(55.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10); // last text position
@@ -932,44 +932,44 @@ pub(crate) mod test {
             .new_text_layout(&font, &input[0..3], 30.0)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..4], 25.0)
             .build()
             .unwrap();
-        let piet_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..5], 30.0)
             .build()
             .unwrap();
-        let piet_space_width = layout.width();
+        let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
             .new_text_layout(&font, &input[6..10], 25.0)
             .build()
             .unwrap();
-        let text_width = layout.width();
+        let text_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[6..9], 25.0)
             .build()
             .unwrap();
-        let tex_width = layout.width();
+        let tex_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[6..8], 25.0)
             .build()
             .unwrap();
-        let te_width = layout.width();
+        let te_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[6..7], 25.0)
             .build()
             .unwrap();
-        let t_width = layout.width();
+        let t_width = layout.size().width;
 
         let full_layout = text_layout
             .new_text_layout(&font, input, 25.0)
@@ -977,7 +977,7 @@ pub(crate) mod test {
             .unwrap();
 
         println!("lm: {:#?}", full_layout.line_metrics);
-        println!("layout width: {:#?}", full_layout.width());
+        println!("layout width: {:#?}", full_layout.size().width);
 
         println!("'pie': {}", pie_width);
         println!("'piet': {}", piet_width);
@@ -1111,7 +1111,7 @@ pub(crate) mod test {
             .new_text_layout(&font, "best", std::f64::INFINITY)
             .build()
             .unwrap();
-        console::log_1(&format!("layout width: {:#?}", best_layout.width()).into()); // 22.55...
+        console::log_1(&format!("layout width: {:#?}", best_layout.size().width).into()); // 22.55...
 
         let pt = layout.hit_test_point(Point::new(1.0, 55.0));
         assert_eq!(pt.metrics.text_position, 15);
@@ -1130,7 +1130,7 @@ pub(crate) mod test {
             .new_text_layout(&font, "piet ", std::f64::INFINITY)
             .build()
             .unwrap();
-        console::log_1(&format!("layout width: {:#?}", piet_layout.width()).into()); // 24.49...
+        console::log_1(&format!("layout width: {:#?}", piet_layout.size().width).into()); // 24.49...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
         assert_eq!(pt.metrics.text_position, 0);

@@ -22,7 +22,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         .new_text_layout(&font, "piet text is the best text!", 50.0)
         .build()?;
 
-    let width = layout.width();
+    let width = layout.size().width;
 
     let brush = rc.solid_brush(Color::rgba8(0x00, 0x80, 0x80, 0xF0));
 

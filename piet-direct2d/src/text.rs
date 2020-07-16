@@ -5,19 +5,17 @@ mod lines;
 use std::convert::TryInto;
 use std::ops::RangeBounds;
 
-use wio::wide::ToWide;
-
 pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
+use wio::wide::ToWide;
 
-use piet::kurbo::Point;
+use piet::kurbo::{Point, Size};
 use piet::util;
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
     TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
-use self::lines::fetch_line_metrics;
 use crate::conv;
 use crate::d2d;
 use crate::dwrite::{self, FamilyName, TextFormat};
@@ -44,6 +42,7 @@ pub struct D2DTextLayout {
     pub text: String,
     // currently calculated on build
     line_metrics: Vec<LineMetric>,
+    size: Size,
     pub layout: dwrite::TextLayout,
 }
 
@@ -174,19 +173,27 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
 
     fn build(self) -> Result<Self::Out, Error> {
         let layout = self.layout?;
-        let line_metrics = fetch_line_metrics(&layout);
+        let line_metrics = lines::fetch_line_metrics(&layout);
+        let text_metrics = layout.get_metrics();
+        let width = text_metrics.width as f64;
+        let height = text_metrics.height as f64;
 
         Ok(D2DTextLayout {
             text: self.text,
             line_metrics,
             layout,
+            size: Size::new(width, height),
         })
     }
 }
 
 impl TextLayout for D2DTextLayout {
     fn width(&self) -> f64 {
-        self.layout.get_metrics().widthIncludingTrailingWhitespace as f64
+        self.size.width
+    }
+
+    fn size(&self) -> Size {
+        self.size
     }
 
     /// given a new max width, update width of text layout to fit within the max width
@@ -195,7 +202,7 @@ impl TextLayout for D2DTextLayout {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
         self.layout.set_max_width(new_width)?;
-        self.line_metrics = fetch_line_metrics(&self.layout);
+        self.line_metrics = lines::fetch_line_metrics(&self.layout);
 
         Ok(())
     }
@@ -320,37 +327,37 @@ mod test {
             .new_text_layout(&font, &input[0..4], None)
             .build()
             .unwrap();
-        let piet_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..3], None)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..2], None)
             .build()
             .unwrap();
-        let pi_width = layout.width();
+        let pi_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..1], None)
             .build()
             .unwrap();
-        let p_width = layout.width();
+        let p_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, "", None)
             .build()
             .unwrap();
-        let null_width = layout.width();
+        let null_width = layout.size().width;
 
         let full_layout = text_layout
             .new_text_layout(&font, input, None)
             .build()
             .unwrap();
-        let full_width = full_layout.width();
+        let full_width = full_layout.size().width;
 
         assert_close!(
             full_layout.hit_test_text_position(4).unwrap().point.x,
@@ -403,7 +410,7 @@ mod test {
         assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close!(
             layout.hit_test_text_position(2).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -415,7 +422,7 @@ mod test {
         //let layout = text_layout.new_text_layout(&font, input, None).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
-        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(layout.width()));
+        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(layout.size().width));
         //assert_eq!(input.len(), 17);
 
         let input = "\u{0023}\u{FE0F}\u{20E3}"; // #️⃣
@@ -436,7 +443,7 @@ mod test {
         assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close!(
             layout.hit_test_text_position(7).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -490,22 +497,22 @@ mod test {
         assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close!(
             layout.hit_test_text_position(2).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
         assert_close!(
             layout.hit_test_text_position(9).unwrap().point.x,
-            test_layout_1.width(),
+            test_layout_1.size().width,
             3.0,
         );
         assert_close!(
             layout.hit_test_text_position(10).unwrap().point.x,
-            test_layout_2.width(),
+            test_layout_2.size().width,
             3.0,
         );
         assert_close!(
             layout.hit_test_text_position(14).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -513,7 +520,7 @@ mod test {
         // Width should stay at the current grapheme boundary.
         assert_close!(
             layout.hit_test_text_position(3).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
         assert_eq!(
@@ -526,7 +533,7 @@ mod test {
         );
         assert_close!(
             layout.hit_test_text_position(6).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
         assert_eq!(
@@ -569,7 +576,7 @@ mod test {
         assert_eq!(pt.metrics.text_position, 5);
 
         // outside
-        println!("layout_width: {:?}", layout.width()); // 46.916015625
+        println!("layout_width: {:?}", layout.size().width); // 46.916015625
 
         let pt = layout.hit_test_point(Point::new(48.0, 0.0));
         assert_eq!(pt.metrics.text_position, 10); // last text position
@@ -694,51 +701,51 @@ mod test {
             .new_text_layout(&font, &input[0..4], 30.0)
             .build()
             .unwrap();
-        let piet_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..3], 30.0)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[0..5], 30.0)
             .build()
             .unwrap();
-        let piet_space_width = layout.width();
+        let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
             .new_text_layout(&font, &input[6..10], 30.0)
             .build()
             .unwrap();
-        let text_width = layout.width();
+        let text_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[6..9], 30.0)
             .build()
             .unwrap();
-        let tex_width = layout.width();
+        let tex_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[6..8], 30.0)
             .build()
             .unwrap();
-        let te_width = layout.width();
+        let te_width = layout.size().width;
 
         let layout = text_layout
             .new_text_layout(&font, &input[6..7], 30.0)
             .build()
             .unwrap();
-        let t_width = layout.width();
+        let t_width = layout.size().width;
 
         let full_layout = text_layout
             .new_text_layout(&font, input, 30.0)
             .build()
             .unwrap();
         println!("lm: {:#?}", full_layout.line_metrics);
-        println!("layout width: {:#?}", full_layout.width());
+        println!("layout width: {:#?}", full_layout.size().width);
 
         println!("'pie': {}", pie_width);
         println!("'piet': {}", piet_width);
@@ -786,12 +793,9 @@ mod test {
             3.0,
         );
 
-        // This tests that trailing whitespace is included in the first line width.
-        assert_close!(
-            full_layout.hit_test_text_position(5).unwrap().point.x,
-            piet_space_width,
-            3.0,
-        );
+        // This tests that hit-testing trailing whitespace can return points
+        // outside of the layout's reported width.
+        assert!(full_layout.hit_test_text_position(5).unwrap().point.x > piet_space_width + 3.0,);
 
         // These test y position of text positions on line 1 (0-index)
         assert_close!(
@@ -867,7 +871,7 @@ mod test {
 
         // over on y axis, but x still affects the text position
         let best_layout = text.new_text_layout(&font, "best", None).build().unwrap();
-        println!("layout width: {:#?}", best_layout.width()); // 22.48...
+        println!("layout width: {:#?}", best_layout.size().width); // 22.48...
 
         let pt = layout.hit_test_point(Point::new(1.0, 52.0));
         assert_eq!(pt.metrics.text_position, 15);
@@ -883,7 +887,7 @@ mod test {
 
         // under
         let piet_layout = text.new_text_layout(&font, "piet ", None).build().unwrap();
-        println!("layout width: {:#?}", piet_layout.width()); // 23.58...
+        println!("layout width: {:#?}", piet_layout.size().width); // 23.58...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
         assert_eq!(pt.metrics.text_position, 0);

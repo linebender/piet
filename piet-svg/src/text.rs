@@ -2,7 +2,7 @@
 
 use std::ops::RangeBounds;
 
-use piet::kurbo::Point;
+use piet::kurbo::{Point, Size};
 use piet::{Error, HitTestPoint, HitTestTextPosition, LineMetric, TextAttribute};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -88,6 +88,10 @@ pub struct TextLayout;
 
 impl piet::TextLayout for TextLayout {
     fn width(&self) -> f64 {
+        unimplemented!()
+    }
+
+    fn size(&self) -> Size {
         unimplemented!()
     }
 
