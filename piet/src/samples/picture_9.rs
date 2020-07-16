@@ -2,8 +2,7 @@
 
 use crate::kurbo::{Line, Size, Vec2};
 use crate::{
-    Color, Error, FontBuilder, RenderContext, Text, TextAlignment, TextAttribute, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, RenderContext, Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 pub const SIZE: Size = Size::new(464., 800.);
@@ -25,11 +24,8 @@ const GREEN: Color = Color::rgb8(105, 255, 0);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(LIGHT_GREY);
     let text = rc.text();
-    let font = text.system_font(24.0);
-    let mono = text
-        .new_font_by_name("Courier New", 18.0)
-        .build()
-        .expect("missing Courier New");
+    let font = text.font("system-ui").unwrap();
+    let mono = text.font("monospace").unwrap();
 
     let layout = text
         .new_text_layout(SAMPLE_EN)

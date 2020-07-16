@@ -92,6 +92,14 @@ impl Text for D2DText {
         D2DFontBuilder { font }
     }
 
+    fn font(&mut self, family_name: &str) -> Option<Self::Font> {
+        self.dwrite
+            .system_font_collection()
+            .ok()
+            .and_then(|fonts| fonts.font_family(name))
+            .map(|family| D2DFont { family, size: 12.0 })
+    }
+
     fn system_font(&mut self, size: f64) -> Self::Font {
         let collection = self.dwrite.system_font_collection().unwrap();
         //TODO: this is maybe not the best thing? I _think_ if we pass an empty string
