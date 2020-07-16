@@ -219,8 +219,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let pos = pos.into();
 
         for lm in &layout.line_metrics {
-            self.ctx
-                .move_to(pos.x, pos.y + lm.cumulative_height - lm.height);
+            self.ctx.move_to(pos.x, pos.y + lm.y_offset);
             self.ctx.show_text(&layout.text[lm.range()]);
         }
     }

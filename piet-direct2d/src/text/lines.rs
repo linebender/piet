@@ -14,11 +14,13 @@ pub(crate) fn fetch_line_metrics(layout: &dwrite::TextLayout) -> Vec<LineMetric>
 
             let cumulative_height = *height_agg + line_metric.height as f64;
 
+            #[allow(deprecated)]
             let res = LineMetric {
                 start_offset,
                 end_offset,
                 trailing_whitespace,
                 height: line_metric.height as f64,
+                y_offset: *height_agg,
                 cumulative_height,
                 baseline: line_metric.baseline as f64,
             };
@@ -68,6 +70,7 @@ mod test {
     //
     // TODO figure out how to deal with height floats
     #[test]
+    #[allow(deprecated)]
     fn test_fetch_line_metrics() {
         // Setup input, width, and expected
         let input = "piet text most best";
@@ -78,6 +81,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 5,
                 trailing_whitespace: 1,
+                y_offset: 0.0,
                 cumulative_height: 15.960_937_5,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
@@ -86,6 +90,7 @@ mod test {
                 start_offset: 5,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 15.960_937_5,
                 cumulative_height: 31.921_875,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
@@ -94,6 +99,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 15,
                 trailing_whitespace: 1,
+                y_offset: 31.921_875,
                 cumulative_height: 47.882_812_5,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
@@ -102,6 +108,7 @@ mod test {
                 start_offset: 15,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 47.882_812_5,
                 cumulative_height: 63.843_75,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
@@ -114,6 +121,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 0.0,
                 cumulative_height: 15.960_937_5,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
@@ -122,6 +130,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 15.960_937_5,
                 cumulative_height: 31.921_875,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
@@ -133,6 +142,7 @@ mod test {
             start_offset: 0,
             end_offset: 19,
             trailing_whitespace: 0,
+            y_offset: 0.0,
             cumulative_height: 15.960_937_5,
             baseline: 12.949_218_75,
             height: 15.960_937_5,
@@ -143,6 +153,7 @@ mod test {
             start_offset: 0,
             end_offset: 0,
             trailing_whitespace: 0,
+            y_offset: 0.0,
             cumulative_height: 15.960_937_5,
             baseline: 12.949_218_75,
             height: 15.960_937_5,

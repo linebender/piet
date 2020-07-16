@@ -158,17 +158,20 @@ fn add_line_metric(
     cumulative_height: &mut f64,
     line_metrics: &mut Vec<LineMetric>,
 ) {
+    let y_offset = *cumulative_height;
     *cumulative_height += height;
 
     let line = &text[start_offset..end_offset];
     let trailing_whitespace = count_trailing_whitespace(line);
 
+    #[allow(deprecated)]
     let line_metric = LineMetric {
         start_offset,
         end_offset,
         trailing_whitespace,
         baseline,
         height,
+        y_offset,
         cumulative_height: *cumulative_height,
     };
     line_metrics.push(line_metric);
@@ -200,8 +203,8 @@ mod test {
             assert_eq!(metric.range(), exp.range());
             assert_eq!(metric.trailing_whitespace, exp.trailing_whitespace);
             assert!(
-                metric.cumulative_height < exp.cumulative_height + ((i as f64 + 1.0) * 3.0)
-                    && metric.cumulative_height > exp.cumulative_height - ((i as f64 + 1.0) * 3.0)
+                metric.y_offset < exp.y_offset + ((i as f64 + 1.0) * 3.0)
+                    && metric.y_offset > exp.y_offset - ((i as f64 + 1.0) * 3.0)
             );
             assert!(metric.baseline < exp.baseline + 3.0 && metric.baseline > exp.baseline - 3.0);
             assert!(metric.height < exp.height + 3.0 && metric.height > exp.height - 3.0);
@@ -311,6 +314,7 @@ mod test {
     // - large is no split.
     //
     // Also test empty string input
+    #[allow(deprecated)]
     #[test]
     fn test_basic_calculate_line_metrics() {
         // Setup input, width, and expected
@@ -327,6 +331,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 5,
                 trailing_whitespace: 1,
+                y_offset: 0.,
                 cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -335,6 +340,7 @@ mod test {
                 start_offset: 5,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 14.0,
                 cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -343,6 +349,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 15,
                 trailing_whitespace: 1,
+                y_offset: 28.0,
                 cumulative_height: 42.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -351,6 +358,7 @@ mod test {
                 start_offset: 15,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 42.0,
                 cumulative_height: 56.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -363,6 +371,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 0.0,
                 cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -371,6 +380,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 14.0,
                 cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -382,6 +392,7 @@ mod test {
             start_offset: 0,
             end_offset: 19,
             trailing_whitespace: 0,
+            y_offset: 0.0,
             cumulative_height: 14.0,
             baseline: 12.0,
             height: 14.0,
@@ -392,6 +403,7 @@ mod test {
             start_offset: 0,
             end_offset: 0,
             trailing_whitespace: 0,
+            y_offset: 0.0,
             cumulative_height: 14.0,
             baseline: 12.0,
             height: 14.0,
@@ -421,6 +433,7 @@ mod test {
     }
 
     #[test]
+    #[allow(deprecated)]
     #[cfg(target_os = "linux")]
     // TODO determine if we need to test macos too for this. I don't think it's a big deal right
     // now, just wanted to make sure hard breaks work.
@@ -439,6 +452,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 5,
                 trailing_whitespace: 1,
+                y_offset: 0.0,
                 cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -447,6 +461,7 @@ mod test {
                 start_offset: 5,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 14.0,
                 cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -455,6 +470,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 15,
                 trailing_whitespace: 1,
+                y_offset: 28.0,
                 cumulative_height: 42.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -463,6 +479,7 @@ mod test {
                 start_offset: 15,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 42.0,
                 cumulative_height: 56.0,
                 baseline: 12.0,
                 height: 14.0,

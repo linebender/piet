@@ -329,17 +329,29 @@ pub struct LineMetric {
     /// [`TextLayout`]: trait.TextLayout.html
     pub end_offset: usize,
 
-    /// Length in (in UTF-8 code units) of current line's trailing whitespace.
+    /// The length of the trailing whitespace at the end of this line, in utf-8 code units.
     pub trailing_whitespace: usize,
 
-    /// Distance of the baseline from the top of the line
+    /// The distance from the top of the line (`y_offset`) to the baseline.
     pub baseline: f64,
 
-    /// Line height
+    /// The height of the line.
+    ///
+    /// This value is intended to be used to determine the height of features
+    /// such as cursors and selection regions. Although it is generally the case
+    /// that `y_offset + height` for line `n` is equal to the `y_offset` of
+    /// line `n + 1`, this is not strictly enforced, and should not be counted on.
     pub height: f64,
 
     /// Cumulative line height (includes previous line heights)
+    #[deprecated(since = "0.2.0", note = "use y_offset instead")]
     pub cumulative_height: f64,
+
+    /// The y position of the top of this line, relative to the top of the layout.
+    ///
+    /// It should be possible to use this position, in conjunction with `height`,
+    /// to determine the region that would be used for things like text selection.
+    pub y_offset: f64,
 }
 
 impl LineMetric {
