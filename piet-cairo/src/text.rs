@@ -96,11 +96,9 @@ impl Text for CairoText {
 
         let line_metrics = lines::calculate_line_metrics(text, &font.0, width);
 
-        let widths = line_metrics.iter().map(|lm| {
-            font.0
-                .text_extents(&text[lm.start_offset..lm.end_offset])
-                .x_advance
-        });
+        let widths = line_metrics
+            .iter()
+            .map(|lm| font.0.text_extents(&text[lm.range()]).x_advance);
 
         let width = widths.fold(0.0, |a: f64, b| a.max(b));
 
@@ -163,11 +161,10 @@ impl TextLayout for CairoTextLayout {
 
         self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
 
-        let widths = self.line_metrics.iter().map(|lm| {
-            self.font
-                .text_extents(&self.text[lm.start_offset..lm.end_offset])
-                .x_advance
-        });
+        let widths = self
+            .line_metrics
+            .iter()
+            .map(|lm| self.font.text_extents(&self.text[lm.range()]).x_advance);
 
         self.width = widths.fold(0.0, |a: f64, b| a.max(b));
 
@@ -177,7 +174,7 @@ impl TextLayout for CairoTextLayout {
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_metrics
             .get(line_number)
-            .map(|lm| &self.text[lm.start_offset..(lm.end_offset)])
+            .map(|lm| &self.text[lm.range()])
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
@@ -229,7 +226,7 @@ impl TextLayout for CairoTextLayout {
 
         // Then for the line, do hit test point
         // Trailing whitespace is remove for the line
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        let line = &self.text[lm.range()];
 
         let mut htp = hit_test_line_point(&self.font, line, point);
         htp.metrics.text_position += lm.start_offset;
@@ -267,7 +264,7 @@ impl TextLayout for CairoTextLayout {
 
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        let line = &self.text[lm.range()];
         let line_position = text_position - lm.start_offset;
 
         let mut http = hit_test_line_position(&self.font, line, line_position);

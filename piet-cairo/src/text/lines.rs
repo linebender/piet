@@ -200,8 +200,7 @@ mod test {
         for (i, (metric, exp)) in line_metrics.iter().zip(expected).enumerate() {
             println!("calculated: {:?}\nexpected: {:?}", metric, exp);
 
-            assert_eq!(metric.start_offset, exp.start_offset);
-            assert_eq!(metric.end_offset, exp.end_offset);
+            assert_eq!(metric.range(), exp.range());
             assert_eq!(metric.trailing_whitespace, exp.trailing_whitespace);
             assert!(
                 metric.y_offset < exp.y_offset + ((i as f64 + 1.0) * 3.0)
@@ -263,7 +262,7 @@ mod test {
             font.0.text_extents("piet text ").x_advance
         );
         for lm in &line_metrics {
-            let line_text = &input[lm.start_offset..lm.end_offset];
+            let line_text = &input[lm.range()];
             println!(
                 "{}: {:?}",
                 font.0.text_extents(line_text).x_advance,
@@ -290,7 +289,7 @@ mod test {
         println!("{}: \"piet\n\"", font.0.text_extents("piet\n").x_advance);
         println!("{}: \"text\"", font.0.text_extents("text").x_advance);
         for lm in &line_metrics {
-            let line_text = &input[lm.start_offset..lm.end_offset];
+            let line_text = &input[lm.range()];
             println!(
                 "{}: {:?}",
                 font.0.text_extents(line_text).x_advance,

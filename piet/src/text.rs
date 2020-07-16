@@ -1,6 +1,6 @@
 //! Traits for fonts and text handling.
 
-use std::ops::RangeBounds;
+use std::ops::{Range, RangeBounds};
 
 use crate::kurbo::Point;
 use crate::Error;
@@ -297,13 +297,20 @@ pub trait TextLayout: Clone {
 /// Metadata about each line in a text layout.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct LineMetric {
-    /// Index (in code units) of the start of the line, offset from the beginning of the text.
+    /// The start index of this line in the underlying `String` used to create the
+    /// [`TextLayout`] to which this line belongs.
+    ///
+    /// [`TextLayout`]: trait.TextLayout.html
     pub start_offset: usize,
 
-    /// Line length (in UTF-8 code units), but offset from the beginning of the text. So it's the length
-    /// of this line summed with the lengths of all the lines before it.
+    /// The end index of this line in the underlying `String` used to create the
+    /// [`TextLayout`] to which this line belongs.
+    ///
+    /// This is the end of an exclusive range; this index is not part of the line.
     ///
     /// Includes trailing whitespace.
+    ///
+    /// [`TextLayout`]: trait.TextLayout.html
     pub end_offset: usize,
 
     /// The length of the trailing whitespace at the end of this line, in utf-8 code units.
@@ -324,6 +331,17 @@ pub struct LineMetric {
     /// It should be possible to use this position, in conjunction with `height`,
     /// to determine the region that would be used for things like text selection.
     pub y_offset: f64,
+}
+
+impl LineMetric {
+    /// The utf-8 range in the underlying `String` used to create the
+    /// [`TextLayout`] to which this line belongs.
+    ///
+    /// [`TextLayout`]: trait.TextLayout.html
+    #[inline]
+    pub fn range(&self) -> Range<usize> {
+        self.start_offset..self.end_offset
+    }
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
