@@ -65,7 +65,6 @@ fn make_image_data(width: usize, height: usize, format: ImageFormat) -> Vec<u8> 
                     result[ix + 1] = g;
                     result[ix + 2] = b;
                 }
-                _ => (),
             }
         }
     }
