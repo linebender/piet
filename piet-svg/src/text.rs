@@ -28,6 +28,10 @@ impl piet::Text for Text {
         FontBuilder
     }
 
+    fn font(&mut self, _family_name: &str) -> Option<Self::Font> {
+        Some(Font)
+    }
+
     fn system_font(&mut self, _size: f64) -> Self::Font {
         Font
     }

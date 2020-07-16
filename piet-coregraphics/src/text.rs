@@ -344,6 +344,12 @@ impl Text for CoreGraphicsText {
         CoreGraphicsFontBuilder(font::new_from_name(name, size).ok())
     }
 
+    fn font(&mut self, family_name: &str) -> Option<Self::Font> {
+        font::new_from_name(family_name, 12.0)
+            .ok()
+            .map(CoreGraphicsFont)
+    }
+
     fn system_font(&mut self, size: f64) -> Self::Font {
         CoreGraphicsFont(crate::ct_helpers::system_font(size))
     }

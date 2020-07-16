@@ -2,8 +2,8 @@
 
 use crate::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Size, Vec2};
 use crate::{
-    Color, Error, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder,
+    Color, Error, ImageFormat, InterpolationMode, RenderContext, Text, TextAttribute, TextLayout,
+    TextLayoutBuilder,
 };
 
 const BLUE: Color = Color::rgb8(0x00, 0x00, 0x80);
@@ -18,8 +18,8 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &BLUE, 1.0);
 
-    let segoe = rc.text().new_font_by_name("Segoe UI", 12.).build()?;
-    let georgia = rc.text().new_font_by_name("Georgia", 8.).build()?;
+    let segoe = rc.text().font("Segoe UI").ok_or(Error::MissingFont)?;
+    let georgia = rc.text().font("Georgia").ok_or(Error::MissingFont)?;
 
     let path = arc1();
     rc.stroke(path, &GREEN, 1.0);

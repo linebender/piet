@@ -150,6 +150,10 @@ impl Text for NullText {
     fn new_text_layout(&mut self, _text: &str) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
+
+    fn font(&mut self, _family_name: &str) -> Option<Self::Font> {
+        Some(NullFont)
+    }
 }
 
 impl Font for NullFont {}
