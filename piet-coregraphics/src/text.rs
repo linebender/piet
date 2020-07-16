@@ -415,11 +415,15 @@ impl TextLayout for CoreGraphicsTextLayout {
                 _ => false,
             })
             .count();
-        let height = typo_bounds.ascent + typo_bounds.descent + typo_bounds.leading;
         // this may not be exactly right, but i'm also not sure we ever use this?
         //  see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
-        let cumulative_height =
-            (self.line_y_positions[line_number] + typo_bounds.descent + typo_bounds.leading).ceil();
+        let ascent = (typo_bounds.ascent + 0.5).floor();
+        let descent = (typo_bounds.descent + 0.5).floor();
+        let leading = (typo_bounds.leading + 0.5).floor();
+        let height = ascent + descent + leading;
+        let y_offset = self.line_y_positions[line_number] - ascent;
+        let cumulative_height = self.line_y_positions[line_number] + ascent + leading;
+        #[allow(deprecated)]
         Some(LineMetric {
             start_offset,
             end_offset,
@@ -427,6 +431,7 @@ impl TextLayout for CoreGraphicsTextLayout {
             baseline: typo_bounds.ascent,
             height,
             cumulative_height,
+            y_offset,
         })
     }
 
@@ -643,7 +648,7 @@ mod tests {
         assert_eq!(line4.trailing_whitespace, 0);
 
         let total_height = layout.frame_size.height;
-        assert_eq!(line4.cumulative_height, total_height);
+        assert_eq!(line4.y_offset + line4.height, total_height);
 
         assert!(layout.line_metric(4).is_none());
     }

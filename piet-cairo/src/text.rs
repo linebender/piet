@@ -213,7 +213,7 @@ impl TextLayout for CairoTextLayout {
         let mut lm = self
             .line_metrics
             .iter()
-            .skip_while(|l| l.cumulative_height - first_baseline < point.y);
+            .skip_while(|l| l.y_offset + l.height < point.y);
         let lm = lm
             .next()
             .or_else(|| {

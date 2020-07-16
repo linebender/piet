@@ -306,17 +306,24 @@ pub struct LineMetric {
     /// Includes trailing whitespace.
     pub end_offset: usize,
 
-    /// Length in (in UTF-8 code units) of current line's trailing whitespace.
+    /// The length of the trailing whitespace at the end of this line, in utf-8 code units.
     pub trailing_whitespace: usize,
 
-    /// Distance of the baseline from the top of the line
+    /// The distance from the top of the line (`y_offset`) to the baseline.
     pub baseline: f64,
 
-    /// Line height
+    /// The height of the line.
     pub height: f64,
 
     /// Cumulative line height (includes previous line heights)
+    #[deprecated(since = "0.2.0", note = "use y_offset instead")]
     pub cumulative_height: f64,
+
+    /// The y position of the top of this line, relative to the top of the layout.
+    ///
+    /// It should be possible to use this position, in conjunction with `height`,
+    /// to determine the region that would be used for things like text selection.
+    pub y_offset: f64,
 }
 
 /// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
