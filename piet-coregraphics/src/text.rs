@@ -629,14 +629,12 @@ mod tests {
                 .unwrap();
 
         let line1 = layout.line_metric(0).unwrap();
-        assert_eq!(line1.start_offset, 0);
-        assert_eq!(line1.end_offset, 6);
+        assert_eq!(line1.range(), 0..6);
         assert_eq!(line1.trailing_whitespace, 1);
         layout.line_metric(1);
 
         let line3 = layout.line_metric(2).unwrap();
-        assert_eq!(line3.start_offset, 15);
-        assert_eq!(line3.end_offset, 30);
+        assert_eq!(line3.range(), 15..30);
         assert_eq!(line3.trailing_whitespace, 2);
 
         let line4 = layout.line_metric(3).unwrap();
