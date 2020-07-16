@@ -242,10 +242,7 @@ impl TextLayout for CoreGraphicsTextLayout {
     }
 
     fn hit_test_text_position(&self, offset: usize) -> Option<HitTestTextPosition> {
-        let line_num = match self.line_offsets.binary_search(&offset) {
-            Ok(line) => line.saturating_sub(1),
-            Err(line) => line.saturating_sub(1),
-        };
+        let line_num = self.line_number_for_utf8_offset(offset);
         let line: Line = self.unwrap_frame().get_line(line_num)?.into();
         let text = self.line_text(line_num)?;
 
@@ -297,6 +294,13 @@ impl CoreGraphicsTextLayout {
     #[inline]
     fn unwrap_frame(&self) -> &Frame {
         self.frame.as_ref().expect("always inited in ::new")
+    }
+
+    fn line_number_for_utf8_offset(&self, offset: usize) -> usize {
+        match self.line_offsets.binary_search(&offset) {
+            Ok(line) => line,
+            Err(line) => line.saturating_sub(1),
+        }
     }
 
     /// for each line in a layout, determine its offset in utf8.
