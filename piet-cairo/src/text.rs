@@ -203,46 +203,34 @@ impl TextLayout for CairoTextLayout {
             return HitTestPoint::default();
         }
 
-        // this assumes that all heights/baselines are the same.
-        // Uses line bounding box to do hit testpoint, but with coordinates starting at 0.0 at
-        // first baseline
-        let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
+        let height = self
+            .line_metrics
+            .last()
+            .map(|lm| lm.y_offset + lm.height)
+            .unwrap_or(0.0);
 
-        // check out of bounds above top
-        // out of bounds on bottom during iteration
-        let mut is_y_inside = true;
-        if point.y < -1.0 * first_baseline {
-            is_y_inside = false
+        // determine whether this click is within the y bounds of the layout,
+        // and what line it coorresponds to. (For points above and below the layout,
+        // we hittest the first and last lines respectively.)
+        let (y_inside, lm) = if point.y < 0. {
+            (false, self.line_metrics.first().unwrap())
+        } else if point.y >= height {
+            (false, self.line_metrics.last().unwrap())
+        } else {
+            let line = self
+                .line_metrics
+                .iter()
+                .find(|l| point.y >= l.y_offset && point.y < l.y_offset + l.height)
+                .unwrap();
+            (true, line)
         };
 
-        // get the line metric
-        let mut lm = self
-            .line_metrics
-            .iter()
-            .skip_while(|l| l.y_offset + l.height - l.baseline < point.y);
-        let lm = lm
-            .next()
-            .or_else(|| {
-                // This means it went over the last line, so return the last line.
-                is_y_inside = false;
-                self.line_metrics.last()
-            })
-            .cloned() // TODO remove this clone?
-            .unwrap_or_else(|| {
-                is_y_inside = false;
-                Default::default()
-            });
-
-        // Then for the line, do hit test point
         // Trailing whitespace is remove for the line
         let line = &self.text[lm.range()];
 
         let mut htp = hit_test_line_point(&self.font, line, point);
         htp.metrics.text_position += lm.start_offset;
-
-        if !is_y_inside {
-            htp.is_inside = false;
-        }
+        htp.is_inside &= y_inside;
 
         htp
     }
@@ -265,11 +253,10 @@ impl TextLayout for CairoTextLayout {
 
         // In cairo toy text, all baselines and heights are the same.
         // We're counting the first line baseline as 0, and measuring to each line's baseline.
-        let y = if count == 0 {
+        if count == 0 {
             return Some(HitTestTextPosition::default());
-        } else {
-            (count - 1) as f64 * lm.height
-        };
+        }
+        let y = lm.y_offset + lm.baseline;
 
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
@@ -1108,8 +1095,14 @@ mod test {
         println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
-        let line_zero_baseline = 0.0;
-        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+        let line_zero_baseline = full_layout
+            .line_metric(0)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
+        let line_one_baseline = full_layout
+            .line_metric(1)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
 
         // these just test the x position of text positions on the second line
         assert_close!(
@@ -1263,8 +1256,14 @@ mod test {
         println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
-        let line_zero_baseline = 0.0;
-        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+        let line_zero_baseline = full_layout
+            .line_metric(0)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
+        let line_one_baseline = full_layout
+            .line_metric(1)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
 
         // these just test the x position of text positions on the second line
         assert_close!(
@@ -1357,21 +1356,22 @@ mod test {
         let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
         // this should break into four lines
         let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
-        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 13.9999)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 27.9999)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 41.99999)
+        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 12.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 26.0)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 40.0)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 53.99999)
 
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_inside, true);
+        assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
         assert_eq!(pt.metrics.text_position, 0);
-        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
+        assert!(pt.is_inside);
+        let pt = layout.hit_test_point(Point::new(1.0, 14.0));
         assert_eq!(pt.metrics.text_position, 5);
-        let pt = layout.hit_test_point(Point::new(1.0, 18.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 28.0));
         assert_eq!(pt.metrics.text_position, 10);
-        let pt = layout.hit_test_point(Point::new(1.0, 32.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 44.0));
         assert_eq!(pt.metrics.text_position, 15);
 
         // over on y axis, but x still affects the text position
@@ -1381,15 +1381,15 @@ mod test {
             .unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 26.0...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 46.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 56.0));
         assert_eq!(pt.metrics.text_position, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(25.0, 46.0));
+        let pt = layout.hit_test_point(Point::new(25.0, 56.0));
         assert_eq!(pt.metrics.text_position, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(27.0, 46.0));
+        let pt = layout.hit_test_point(Point::new(27.0, 56.0));
         assert_eq!(pt.metrics.text_position, 19);
         assert_eq!(pt.is_inside, false);
 
@@ -1424,21 +1424,25 @@ mod test {
         // this should break into four lines
         let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 12.0)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 24.0)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 36.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 13.0)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 26.0)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 39.0)
 
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_inside, true);
+        assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
         assert_eq!(pt.metrics.text_position, 0);
-        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
+        assert!(pt.is_inside);
+        let pt = layout.hit_test_point(Point::new(1.0, 12.));
+        assert_eq!(pt.metrics.text_position, 0);
+        let pt = layout.hit_test_point(Point::new(1.0, 13.));
         assert_eq!(pt.metrics.text_position, 5);
-        let pt = layout.hit_test_point(Point::new(1.0, 18.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 26.0));
         assert_eq!(pt.metrics.text_position, 10);
-        let pt = layout.hit_test_point(Point::new(1.0, 32.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 39.0));
         assert_eq!(pt.metrics.text_position, 15);
+        assert!(pt.is_inside);
 
         // over on y axis, but x still affects the text position
         let best_layout = text
@@ -1447,15 +1451,15 @@ mod test {
             .unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 26.0...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 46.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 52.0));
         assert_eq!(pt.metrics.text_position, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(25.0, 46.0));
+        let pt = layout.hit_test_point(Point::new(25.0, 52.0));
         assert_eq!(pt.metrics.text_position, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(27.0, 46.0));
+        let pt = layout.hit_test_point(Point::new(27.0, 52.0));
         assert_eq!(pt.metrics.text_position, 19);
         assert_eq!(pt.is_inside, false);
 

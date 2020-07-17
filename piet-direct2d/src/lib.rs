@@ -288,9 +288,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             // Layout is empty, don't bother drawing.
             return;
         }
-        // Direct2D takes upper-left, so adjust for baseline.
-        let mut pos = to_point2f(pos.into());
-        pos.y -= line_metrics[0].baseline;
+
+        let pos = to_point2f(pos.into());
         let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
 
         self.rt

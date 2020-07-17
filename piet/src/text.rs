@@ -379,7 +379,12 @@ pub struct HitTestPoint {
 /// return values for [`hit_test_text_position`](../piet/trait.TextLayout.html#tymethod.hit_test_text_position).
 #[derive(Debug, Default)]
 pub struct HitTestTextPosition {
-    /// the `point`'s `x` value is the position of the leading edge of the grapheme cluster containing the text position.
+    /// the `point`'s `x` value is the position of the leading edge of the
+    /// grapheme cluster containing the text position. The `y` value corresponds
+    /// to the baseline of the line containing that grapheme cluster.
+    //FIXME: maybe we should communicate more about this position? for instance
+    //instead of returning an x/y point, we could return the x offset, the line's y_offset,
+    //and the line height (everything tou would need to draw a cursor)
     pub point: Point,
     /// `metrics.text_position` will give you the text position.
     pub metrics: HitTestMetrics,

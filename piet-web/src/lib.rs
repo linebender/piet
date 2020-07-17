@@ -226,11 +226,7 @@ impl RenderContext for WebRenderContext {
         for lm in &layout.line_metrics {
             let draw_line = self
                 .ctx
-                .fill_text(
-                    &layout.text[lm.start_offset..lm.end_offset],
-                    pos.x,
-                    pos.y + lm.y_offset,
-                )
+                .fill_text(&layout.text[lm.start_offset..lm.end_offset], pos.x, pos.y)
                 .wrap();
 
             if let Err(e) = draw_line {
