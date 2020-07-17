@@ -3,6 +3,7 @@
 // TODO: get rid of this when we actually do use everything
 #![allow(unused)]
 
+use std::convert::TryInto;
 use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::mem::MaybeUninit;
@@ -32,7 +33,7 @@ use piet::{FontWeight, TextAlignment};
 use crate::Brush;
 
 /// "en-US" as null-terminated utf16.
-const DEFAULT_LOCALE: [u16; 6] = [101, 110, 45, 85, 83, 0];
+const DEFAULT_LOCALE: &[u16] = utf16_lit::utf16_null!("en-US");
 
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
@@ -286,8 +287,8 @@ const E_NOT_SUFFICIENT_BUFFER: HRESULT = 0x8007007A;
 
 fn make_text_range(start: usize, len: usize) -> DWRITE_TEXT_RANGE {
     DWRITE_TEXT_RANGE {
-        startPosition: start as u32,
-        length: len as u32,
+        startPosition: start.try_into().unwrap(),
+        length: len.try_into().unwrap(),
     }
 }
 
@@ -299,8 +300,7 @@ impl TextLayout {
         text: &[u16],
     ) -> Result<Self, Error> {
         const QUITE_TALL_HEIGHT: f32 = 1e6;
-        let len = text.len();
-        assert!(len <= 0xffff_ffff);
+        let len: u32 = text.len().try_into().unwrap();
 
         unsafe {
             let mut ptr = null_mut();
@@ -554,6 +554,6 @@ mod tests {
 
     #[test]
     fn default_locale() {
-        assert_eq!("en-US".to_wide_null().as_slice(), &DEFAULT_LOCALE);
+        assert_eq!("en-US".to_wide_null().as_slice(), DEFAULT_LOCALE);
     }
 }

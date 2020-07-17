@@ -11,6 +11,7 @@ categories = ["rendering::graphics-api"]
 
 [dependencies]
 piet = { version = "0.2.0", path = "../piet" }
+utf16_lit = "1.0"
 
 wio = "0.2.2"
 
