@@ -217,30 +217,25 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         let brush = brush.make_brush(self, || layout.frame_size.to_rect());
         let pos = pos.into();
         self.ctx.save();
-        // drawing is from the baseline of the first line, which is normally flipped
-        let y_off = layout.frame_size.height - layout.line_y_positions.first().unwrap_or(&0.);
         // inverted coordinate system; text is drawn from bottom left corner,
         // and (0, 0) in context is also bottom left.
-        self.ctx.translate(pos.x, y_off + pos.y);
+        self.ctx.translate(pos.x, layout.frame_size.height + pos.y);
         self.ctx.scale(1.0, -1.0);
         match brush.as_ref() {
             Brush::Solid(color) => {
                 self.set_fill_color(color);
                 layout.draw(self.ctx);
+                self.ctx.restore();
             }
             Brush::Gradient(grad) => {
                 self.ctx
                     .set_text_drawing_mode(CGTextDrawingMode::CGTextClip);
                 layout.draw(self.ctx);
-
-                // Need to revert the text transformations in order to render the gradient.
-                self.ctx.scale(1.0, -1.0);
-                self.ctx.translate(-pos.x, -(y_off + pos.y));
+                self.ctx.restore();
 
                 grad.fill(self.ctx, GRADIENT_DRAW_BEFORE_AND_AFTER);
             }
         }
-        self.ctx.restore();
     }
 
     fn save(&mut self) -> Result<(), Error> {

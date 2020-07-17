@@ -20,7 +20,7 @@ static SAMPLE_EN: &str = r#"1nnyyÊbbbb soft break
 const LIGHT_GREY: Color = Color::grey8(0xc0);
 const RED: Color = Color::rgb8(255, 0, 0);
 const BLUE: Color = Color::rgb8(0, 0, 255);
-const YELLOW: Color = Color::rgb8(255, 255, 0);
+const GREEN: Color = Color::rgb8(105, 255, 0);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(LIGHT_GREY);
@@ -58,7 +58,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         let bottom_line = Line::new((0., bottom), (line_width, bottom));
 
         rc.stroke(line_top, &RED, 1.0);
-        rc.stroke(baseline_line, &YELLOW, 1.0);
+        rc.stroke(baseline_line, &GREEN, 1.0);
         rc.stroke(bottom_line, &BLUE, 1.0);
     }
 
