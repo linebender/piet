@@ -252,6 +252,7 @@ impl CoreGraphicsTextLayoutBuilder {
 /// to css-style weights. This is a fudge, adapted from QT:
 ///
 /// https://git.sailfishos.org/mer-core/qtbase/commit/9ba296cc4cefaeb9d6c5abc2e0c0b272f2288733#1b84d1913347bd20dd0a134247f8cd012a646261_44_55
+//TODO: a better solution would be piecewise linear interpolation between these values
 fn convert_to_coretext(weight: FontWeight) -> CFNumber {
     match weight.to_raw() {
         0..=199 => -0.8,
