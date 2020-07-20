@@ -2,7 +2,8 @@
 
 use crate::kurbo::{Line, Size, Vec2};
 use crate::{
-    Color, Error, RenderContext, Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
+    Color, Error, FontFamily, RenderContext, Text, TextAlignment, TextAttribute, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub const SIZE: Size = Size::new(464., 800.);
@@ -24,19 +25,17 @@ const GREEN: Color = Color::rgb8(105, 255, 0);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(LIGHT_GREY);
     let text = rc.text();
-    let font = text.font("system-ui").unwrap();
-    let mono = text.font("monospace").unwrap();
 
     let layout = text
         .new_text_layout(SAMPLE_EN)
-        .default_attribute(font)
+        .default_attribute(FontFamily::SYSTEM_UI)
         .default_attribute(TextAttribute::Size(24.0))
         .max_width(200.0)
         .alignment(TextAlignment::Start)
         .default_attribute(TextAttribute::Size(24.0))
-        .range_attribute(23..35, mono.clone())
+        .range_attribute(23..35, FontFamily::MONOSPACE)
         .range_attribute(23..35, TextAttribute::Size(18.0))
-        .range_attribute(47..52, mono)
+        .range_attribute(47..52, FontFamily::MONOSPACE)
         .range_attribute(47..52, TextAttribute::Size(36.0))
         .build()?;
 

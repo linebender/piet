@@ -2,7 +2,8 @@
 
 use crate::kurbo::Size;
 use crate::{
-    Color, Error, FontWeight, RenderContext, Text, TextAlignment, TextAttribute, TextLayoutBuilder,
+    Color, Error, FontFamily, FontWeight, RenderContext, Text, TextAlignment, TextAttribute,
+    TextLayoutBuilder,
 };
 
 pub const SIZE: Size = Size::new(400., 800.);
@@ -12,20 +13,17 @@ static SAMPLE_EN: &str = r#"This essay is an effort to build an ironic political
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     let text = rc.text();
-    let font = text.font("system-ui").unwrap();
-    let serif = text.font("serif").unwrap();
-    let mono = text.font("monospace").unwrap();
 
     let en_leading = text
         .new_text_layout(SAMPLE_EN)
         .max_width(200.0)
-        .default_attribute(font)
+        .default_attribute(FontFamily::SYSTEM_UI)
         .alignment(TextAlignment::Start)
         .range_attribute(10..80, TextAttribute::Size(8.0))
-        .range_attribute(20..120, serif)
+        .range_attribute(20..120, FontFamily::SERIF)
         .range_attribute(40..60, FontWeight::BOLD)
         .range_attribute(60..140, FontWeight::THIN)
-        .range_attribute(90..300, mono)
+        .range_attribute(90..300, FontFamily::MONOSPACE)
         .range_attribute(
             120..150,
             TextAttribute::ForegroundColor(Color::rgb(0.6, 0., 0.)),

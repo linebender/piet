@@ -2,7 +2,8 @@
 
 use crate::kurbo::{Size, Vec2};
 use crate::{
-    Color, Error, FontWeight, RenderContext, Text, TextAttribute, TextLayout, TextLayoutBuilder,
+    Color, Error, FontFamily, FontWeight, RenderContext, Text, TextAttribute, TextLayout,
+    TextLayoutBuilder,
 };
 
 pub const SIZE: Size = Size::new(480., 560.);
@@ -15,12 +16,10 @@ const BLUE: Color = Color::rgb8(0, 0, 255);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     let text = rc.text();
-    let font = text.font("system-ui").unwrap();
-    let font2 = text.font("monospace").unwrap();
     let layout = text
         .new_text_layout(TEXT)
         .max_width(200.0)
-        .default_attribute(font2)
+        .default_attribute(FontFamily::MONOSPACE)
         .default_attribute(TextAttribute::Underline(true))
         .default_attribute(TextAttribute::Italic(true))
         .default_attribute(TextAttribute::ForegroundColor(RED))
@@ -30,7 +29,8 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(40..300, TextAttribute::Underline(false))
         .range_attribute(60..160, TextAttribute::Italic(false))
         .range_attribute(140..220, FontWeight::NORMAL)
-        .range_attribute(240.., font)
+        .range_attribute(240.., FontFamily::SYSTEM_UI)
+        .range_attribute(340.., TextAttribute::Size(24.0))
         .build()?;
 
     let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);

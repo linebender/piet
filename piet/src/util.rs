@@ -172,14 +172,32 @@ impl ArcOrStaticStr {
     pub(crate) fn new_arc(s: Arc<str>) -> Self {
         ArcOrStaticStr::Arc(s)
     }
-}
 
-impl AsRef<str> for ArcOrStaticStr {
-    fn as_ref(&self) -> &str {
+    pub(crate) fn as_str(&self) -> &str {
         match self {
             ArcOrStaticStr::Arc(s) => &s,
             ArcOrStaticStr::Static(s) => s,
         }
+    }
+}
+
+impl AsRef<str> for ArcOrStaticStr {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl PartialEq for ArcOrStaticStr {
+    fn eq(&self, other: &ArcOrStaticStr) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+
+impl Eq for ArcOrStaticStr {}
+
+impl std::hash::Hash for ArcOrStaticStr {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_str().hash(state);
     }
 }
 
