@@ -10,7 +10,7 @@ use core_foundation::{
     attributed_string::CFMutableAttributedString,
     base::{CFTypeID, TCFType},
     declare_TCFType,
-    dictionary::CFDictionaryRef,
+    dictionary::{CFDictionary, CFDictionaryRef},
     impl_TCFType,
     number::CFNumber,
     string::{CFString, CFStringRef},
@@ -23,9 +23,12 @@ use core_graphics::{
     path::CGPathRef,
 };
 use core_text::{
-    font::{kCTFontSystemFontType, CTFont, CTFontRef, CTFontUIFontType},
+    font::{
+        self, kCTFontSystemFontType, kCTFontUserFixedPitchFontType, CTFont, CTFontRef,
+        CTFontUIFontType,
+    },
     font_collection::{self, CTFontCollection, CTFontCollectionRef},
-    font_descriptor::CTFontDescriptor,
+    font_descriptor::{self, CTFontDescriptor},
     frame::{CTFrame, CTFrameRef},
     framesetter::CTFramesetter,
     line::{CTLine, CTLineRef, TypographicBounds},
@@ -269,12 +272,58 @@ impl<'a> From<CTLine> for Line<'a> {
     }
 }
 
-#[allow(dead_code)]
-pub(crate) fn system_font(size: CGFloat) -> CTFont {
-    unsafe {
-        let font = CTFontCreateUIFontForLanguage(kCTFontSystemFontType, size, std::ptr::null());
-        CTFont::wrap_under_create_rule(font)
+/// The apple system fonts can resolve to different concrete families at
+/// different point sizes (SF Text vs. SF Displaykj,w)
+pub(crate) fn ct_family_name(family: &FontFamily, size: f64) -> CFString {
+    if family.is_generic_family() {
+        let font = system_font(family, size);
+        unsafe {
+            let name = CTFontCopyName(font.as_concrete_TypeRef(), kCTFontFamilyNameKey);
+            CFString::wrap_under_create_rule(name)
+        }
+    } else {
+        CFString::new(family.as_str())
     }
+}
+
+/// Create a generic system font.
+fn system_font(family: &FontFamily, size: f64) -> CTFont {
+    system_font_impl(family, size).unwrap_or_else(create_font_comma_never_fail_period)
+}
+
+fn system_font_impl(family: &FontFamily, size: f64) -> Option<CTFont> {
+    match family {
+        f if f == &FontFamily::SANS_SERIF || f == &FontFamily::SYSTEM_UI => {
+            create_system_font(kCTFontSystemFontType, size)
+        }
+        //TODO: on 10.15 + we should be using new york here
+        f if f == &FontFamily::SERIF => font::new_from_name("Charter", size)
+            .or_else(|_| font::new_from_name("Times", size))
+            .or_else(|_| font::new_from_name("Times New Roman", size))
+            .ok(),
+        //TODO: on 10.15 we should be using SF-Mono here
+        f if f == &FontFamily::MONOSPACE => font::new_from_name("Menlo", size)
+            .ok()
+            .or_else(|| create_system_font(kCTFontUserFixedPitchFontType, size)),
+        _ => panic!("system fontz only"),
+    }
+}
+
+fn create_system_font(typ: CTFontUIFontType, size: f64) -> Option<CTFont> {
+    unsafe {
+        let font = CTFontCreateUIFontForLanguage(typ, size, std::ptr::null());
+        if font.is_null() {
+            None
+        } else {
+            Some(CTFont::wrap_under_create_rule(font))
+        }
+    }
+}
+
+fn create_font_comma_never_fail_period() -> CTFont {
+    let empty_attributes = CFDictionary::from_CFType_pairs(&[]);
+    let descriptor = font_descriptor::new_from_attributes(&empty_attributes);
+    font::new_from_descriptor(&descriptor, 0.0)
 }
 
 //TODO: this will probably be shared at some point?
@@ -321,6 +370,8 @@ impl FontCollection {
 
 #[link(name = "CoreText", kind = "framework")]
 extern "C" {
+    static kCTFontFamilyNameKey: CFStringRef;
+
     fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
     fn CTFontCreateUIFontForLanguage(
         font_type: CTFontUIFontType,
@@ -338,4 +389,5 @@ extern "C" {
         family: CFStringRef,
         option: CFDictionaryRef,
     ) -> CFArrayRef;
+    fn CTFontCopyName(font: CTFontRef, nameKey: CFStringRef) -> CFStringRef;
 }

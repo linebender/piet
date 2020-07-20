@@ -5,7 +5,7 @@ use std::ops::{Range, RangeBounds};
 use std::sync::{Arc, Mutex};
 
 use core_foundation::base::TCFType;
-use core_foundation::dictionary::CFMutableDictionary;
+use core_foundation::dictionary::{CFDictionary, CFMutableDictionary};
 use core_foundation::number::CFNumber;
 use core_foundation::string::CFString;
 use core_foundation_sys::base::CFRange;
@@ -21,7 +21,7 @@ use piet::{
     TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
-use crate::ct_helpers::{AttributedString, FontCollection, Frame, Framesetter, Line};
+use crate::ct_helpers::{self, AttributedString, FontCollection, Frame, Framesetter, Line};
 
 #[derive(Clone)]
 pub struct CoreGraphicsText {
@@ -219,13 +219,13 @@ impl CoreGraphicsTextLayoutBuilder {
     /// for the range that begins at `self.last_resolved_pos`.
     fn current_font(&self) -> CTFont {
         //TODO: this is where caching would happen, if we were implementing caching;
-        //store a tuple of attributes resolves to a generated CTFont.
+        //store a tuple of attributes resolved to a generated CTFont.
         unsafe {
-            let weight_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontWeightTrait);
-            let weight = convert_to_coretext(self.attrs.weight());
             let family_key =
                 CFString::wrap_under_create_rule(font_descriptor::kCTFontFamilyNameAttribute);
-            let family = CFString::new(self.attrs.font().as_str());
+            let family_name = ct_helpers::ct_family_name(self.attrs.font(), self.attrs.size());
+            let weight_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontWeightTrait);
+            let weight = convert_to_coretext(self.attrs.weight());
 
             let traits_key =
                 CFString::wrap_under_create_rule(font_descriptor::kCTFontTraitsAttribute);
@@ -238,12 +238,13 @@ impl CoreGraphicsTextLayoutBuilder {
                 traits.set(symbolic_traits_key, symbolic_traits.as_CFType());
             }
 
-            let mut attributes = CFMutableDictionary::new();
-            attributes.set(traits_key, traits.as_CFType());
-            attributes.set(family_key, family.as_CFType());
-
-            let descriptor = font_descriptor::new_from_attributes(&attributes.to_immutable());
-            font::new_from_descriptor(&descriptor, self.attrs.size())
+            let attributes = CFDictionary::from_CFType_pairs(&[
+                (family_key, family_name.as_CFType()),
+                (traits_key, traits.as_CFType()),
+            ]);
+            let descriptor = font_descriptor::new_from_attributes(&attributes);
+            let font = font::new_from_descriptor(&descriptor, self.attrs.size());
+            font
         }
     }
 

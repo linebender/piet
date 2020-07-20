@@ -52,7 +52,7 @@ pub trait Text: Clone {
 /// [`Text::font`] API.
 ///
 /// [`Text::font`]: trait.Text.html#tymethod.font
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FontFamily {
     inner: ArcOrStaticStr,
 }
@@ -84,6 +84,13 @@ impl FontFamily {
 
     pub fn as_str(&self) -> &str {
         self.inner.as_ref()
+    }
+
+    pub fn is_generic_family(&self) -> bool {
+        self == &FontFamily::SYSTEM_UI
+            || self == &FontFamily::SERIF
+            || self == &FontFamily::SANS_SERIF
+            || self == &FontFamily::MONOSPACE
     }
 }
 
