@@ -6,7 +6,7 @@ use std::ops::RangeBounds;
 use kurbo::{Affine, Point, Rect, Shape, Size};
 
 use crate::{
-    Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
+    Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestPosition, ImageFormat,
     InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextAttribute,
     TextLayout, TextLayoutBuilder,
 };
@@ -227,7 +227,7 @@ impl TextLayout for NullTextLayout {
         HitTestPoint::default()
     }
 
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestPosition> {
         None
     }
 }

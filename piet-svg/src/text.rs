@@ -3,7 +3,7 @@
 use std::ops::RangeBounds;
 
 use piet::kurbo::{Point, Rect, Size};
-use piet::{Error, HitTestPoint, HitTestTextPosition, LineMetric, TextAttribute};
+use piet::{Error, HitTestPoint, HitTestPosition, LineMetric, TextAttribute};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -123,7 +123,7 @@ impl piet::TextLayout for TextLayout {
         unimplemented!()
     }
 
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestPosition> {
         unimplemented!()
     }
 }

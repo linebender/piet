@@ -12,8 +12,8 @@ use wio::wide::ToWide;
 use piet::kurbo::{Insets, Point, Rect, Size};
 use piet::util;
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
-    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, HitTestPoint, HitTestPosition, LineMetric, Text, TextAlignment,
+    TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::conv;
@@ -270,13 +270,13 @@ impl TextLayout for D2DTextLayout {
             .unwrap_or_else(|| self.text.len());
 
         HitTestPoint {
-            metrics: HitTestMetrics { text_position },
+            idx: text_position,
             is_inside: htp.is_inside,
         }
     }
 
     // Can panic if text position is not at a code point boundary, or if it's out of bounds.
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
         // Note: Directwrite will just return the line width if text position is
         // out of bounds. This is what want for piet; return line width for the last text position
         // (equal to line.len()). This is basically returning line width for the last cursor
@@ -295,16 +295,8 @@ impl TextLayout for D2DTextLayout {
 
         self.layout
             .hit_test_text_position(idx_16, trailing)
-            .map(|http| {
-                HitTestTextPosition {
-                    point: Point {
-                        x: http.point_x as f64,
-                        y: http.point_y as f64,
-                    },
-                    metrics: HitTestMetrics {
-                        text_position, // no need to use directwrite return value
-                    },
-                }
+            .map(|http| HitTestPosition {
+                point: Point::new(http.point_x as f64, http.point_y as f64),
             })
     }
 }
@@ -466,14 +458,6 @@ mod test {
 
         // note code unit not at grapheme boundary
         assert_close!(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
-        assert_eq!(
-            layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .metrics
-                .text_position,
-            1
-        );
     }
 
     #[test]
@@ -540,26 +524,10 @@ mod test {
             test_layout_0.size().width,
             3.0,
         );
-        assert_eq!(
-            layout
-                .hit_test_text_position(3)
-                .unwrap()
-                .metrics
-                .text_position,
-            3
-        );
         assert_close!(
             layout.hit_test_text_position(6).unwrap().point.x,
             test_layout_0.size().width,
             3.0,
-        );
-        assert_eq!(
-            layout
-                .hit_test_text_position(6)
-                .unwrap()
-                .metrics
-                .text_position,
-            6
         );
     }
 
@@ -582,25 +550,25 @@ mod test {
         // test hit test point
         // all inside
         let pt = layout.hit_test_point(Point::new(21.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(22.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(24.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
 
         // outside
         println!("layout_width: {:?}", layout.size().width); // 46.916015625
 
         let pt = layout.hit_test_point(Point::new(48.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0); // first text position
+        assert_eq!(pt.idx, 0); // first text position
         assert_eq!(pt.is_inside, false);
     }
 
@@ -628,27 +596,27 @@ mod test {
         println!("text pos 14: {:?}", layout.hit_test_text_position(14)); // 33.3046875, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(7.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(10.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(19.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(32.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(35.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
     }
 
     #[test]
@@ -871,35 +839,35 @@ mod test {
         println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 47.88...)
 
         let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         println!("{:?}", pt);
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, true);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(1.0, 04.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(1.0, 20.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(1.0, 36.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
         let best_layout = text.new_text_layout(&font, "best", None).build().unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 22.48...
 
         let pt = layout.hit_test_point(Point::new(1.0, 52.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(22.0, 52.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(24.0, 52.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
         // under
@@ -907,15 +875,15 @@ mod test {
         println!("layout width: {:#?}", piet_layout.size().width); // 23.58...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(23.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
     }
 }
