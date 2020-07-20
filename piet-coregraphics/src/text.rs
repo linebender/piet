@@ -17,8 +17,8 @@ use core_text::{font, font::CTFont, font_descriptor, string_attributes};
 use piet::kurbo::{Point, Rect, Size};
 use piet::util;
 use piet::{
-    Error, Font, FontBuilder, FontWeight, HitTestMetrics, HitTestPoint, HitTestTextPosition,
-    LineMetric, Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, FontWeight, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
@@ -464,7 +464,7 @@ impl TextLayout for CoreGraphicsTextLayout {
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         if self.line_y_positions.is_empty() {
             return HitTestPoint {
-                metrics: HitTestMetrics { text_position: 0 },
+                idx: 0,
                 is_inside: false,
             };
         }
@@ -515,14 +515,12 @@ impl TextLayout for CoreGraphicsTextLayout {
         let is_inside_x = point.x >= 0. && point.x <= typo_bounds.width;
 
         HitTestPoint {
-            metrics: HitTestMetrics {
-                text_position: offset,
-            },
+            idx: offset,
             is_inside: is_inside_x && is_inside_y,
         }
     }
 
-    fn hit_test_text_position(&self, offset: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, offset: usize) -> Option<HitTestPosition> {
         let line_num = self.line_number_for_utf8_offset(offset);
         let line: Line = self.unwrap_frame().get_line(line_num)?.into();
         let text = self.line_text(line_num)?;
@@ -533,11 +531,8 @@ impl TextLayout for CoreGraphicsTextLayout {
         let char_idx = line_range.location + off16 as isize;
         let x_pos = line.get_offset_for_string_index(char_idx);
         let y_pos = self.line_y_positions[line_num];
-        Some(HitTestTextPosition {
+        Some(HitTestPosition {
             point: Point::new(x_pos, y_pos),
-            metrics: HitTestMetrics {
-                text_position: offset,
-            },
         })
     }
 }
@@ -684,29 +679,29 @@ mod tests {
                 .unwrap();
 
         let p1 = layout.hit_test_point(Point::ZERO);
-        assert_eq!(p1.metrics.text_position, 0);
+        assert_eq!(p1.idx, 0);
         assert!(p1.is_inside);
         let p2 = layout.hit_test_point(Point::new(2.0, 19.0));
-        assert_eq!(p2.metrics.text_position, 0);
+        assert_eq!(p2.idx, 0);
         assert!(p2.is_inside);
 
         //FIXME: figure out correct multiline behaviour; this should be
         //before the newline, but other backends aren't doing this right now either?
 
         //let p3 = layout.hit_test_point(Point::new(50.0, 10.0));
-        //assert_eq!(p3.metrics.text_position, 1);
+        //assert_eq!(p3.idx, 1);
         //assert!(!p3.is_inside);
 
         let p4 = layout.hit_test_point(Point::new(4.0, 25.0));
-        assert_eq!(p4.metrics.text_position, 2);
+        assert_eq!(p4.idx, 2);
         assert!(p4.is_inside);
 
         let p5 = layout.hit_test_point(Point::new(2.0, 83.0));
-        assert_eq!(p5.metrics.text_position, 9);
+        assert_eq!(p5.idx, 9);
         assert!(p5.is_inside);
 
         let p6 = layout.hit_test_point(Point::new(10.0, 83.0));
-        assert_eq!(p6.metrics.text_position, 10);
+        assert_eq!(p6.idx, 10);
         assert!(p6.is_inside);
     }
 
@@ -719,14 +714,14 @@ mod tests {
                 .build()
                 .unwrap();
         let pt = layout.hit_test_point(Point::new(0.0, 5.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, true);
         let next_to_last = layout.frame_size.width - 10.0;
         let pt = layout.hit_test_point(Point::new(next_to_last, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         assert_eq!(pt.is_inside, true);
         let pt = layout.hit_test_point(Point::new(100.0, 5.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
     }
 
@@ -739,7 +734,7 @@ mod tests {
                 .build()
                 .unwrap();
         let pt = layout.hit_test_point(Point::new(0.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
     }
 
     #[test]

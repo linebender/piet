@@ -313,7 +313,7 @@ pub trait TextLayout: Clone {
     ///
     /// [`HitTestTextPosition`]: struct.HitTestTextPosition.html
     /// [`HitTestMetrics`]: struct.HitTestMetrics.html
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition>;
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition>;
 }
 
 /// Metadata about each line in a text layout.
@@ -371,20 +371,33 @@ impl LineMetric {
     }
 }
 
-/// return values for [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
+/// Result of hit testing a point in a [`TextLayout`].
+///
+/// This type is returned by [`TextLayout::hit_test_point`].
+///
+/// [`TextLayout`]: ../piet/trait.TextLayout.html
+/// [`TextLayout::hit_test_point`]: ../piet/trait.TextLayout.html#tymethod.hit_test_point
 #[derive(Debug, Default, PartialEq)]
 pub struct HitTestPoint {
-    /// `metrics.text_position` will give you the text position.
-    pub metrics: HitTestMetrics,
-    /// `is_inside` indicates whether the hit test point landed within the text.
+    /// The index representing the grapheme boundary closest to the `Point`.
+    pub idx: usize,
+    /// Whether or not the point was inside the bounds of the layout object.
+    ///
+    /// A click outside the layout object will still resolve to a position in the
+    /// text; for instance a click to the right edge of a line will resolve to the
+    /// end of that line, and a click below the last line will resolve to a
+    /// position in that line.
     pub is_inside: bool,
-    // removing until needed for BIDI or other.
-    //pub is_trailing_hit: bool,
 }
 
-/// return values for [`hit_test_text_position`](../piet/trait.TextLayout.html#tymethod.hit_test_text_position).
+/// Result of hit testing a text position in a [`TextLayout`].
+///
+/// This type is returned by [`TextLayout::hit_test_text_position`].
+///
+/// [`TextLayout`]: ../piet/trait.TextLayout.html
+/// [`TextLayout::hit_test_text_position`]: ../piet/trait.TextLayout.html#tymethod.hit_test_text_position
 #[derive(Debug, Default)]
-pub struct HitTestTextPosition {
+pub struct HitTestPosition {
     /// the `point`'s `x` value is the position of the leading edge of the
     /// grapheme cluster containing the text position. The `y` value corresponds
     /// to the baseline of the line containing that grapheme cluster.
@@ -392,18 +405,6 @@ pub struct HitTestTextPosition {
     //instead of returning an x/y point, we could return the x offset, the line's y_offset,
     //and the line height (everything tou would need to draw a cursor)
     pub point: Point,
-    /// `metrics.text_position` will give you the text position.
-    pub metrics: HitTestMetrics,
-}
-
-#[derive(Debug, Default, PartialEq)]
-/// Hit test metrics, returned as part of [`hit_test_text_position`](../piet/trait.TextLayout.html#tymethod.hit_test_text_position)
-/// and [`hit_test_point`](../piet/trait.TextLayout.html#tymethod.hit_test_point).
-pub struct HitTestMetrics {
-    pub text_position: usize,
-    // TODO:
-    // consider adding other metrics as needed, such as those provided in
-    // [DWRITE_HIT_TEST_METRICS](https://docs.microsoft.com/en-us/windows/win32/api/dwrite/ns-dwrite-dwrite_hit_test_metrics).
 }
 
 impl<T: Font> From<T> for TextAttribute<T> {
