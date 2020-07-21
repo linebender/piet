@@ -203,6 +203,10 @@ impl TextLayout for NullTextLayout {
         Size::ZERO
     }
 
+    fn image_bounds(&self) -> Rect {
+        Rect::ZERO
+    }
+
     fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         Ok(())
     }

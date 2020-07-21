@@ -2,7 +2,7 @@
 
 use std::ops::{Range, RangeBounds};
 
-use crate::kurbo::{Point, Size};
+use crate::kurbo::{Point, Rect, Size};
 use crate::Error;
 
 pub trait Text: Clone {
@@ -245,6 +245,12 @@ pub trait TextLayout: Clone {
     /// We would ultimately like to review and attempt to standardize this
     /// behaviour, but it is out of scope for the time being.
     fn size(&self) -> Size;
+
+    /// Returns a `Rect` representing the bounding box of the glyphs in this layout,
+    /// relative to the top-left of the layout object.
+    ///
+    /// This is sometimes called the bounding box or the inking rect.
+    fn image_bounds(&self) -> Rect;
 
     /// Change the width of this `TextLayout`.
     ///

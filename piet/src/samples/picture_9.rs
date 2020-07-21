@@ -42,7 +42,10 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
 
     let text_pos = Vec2::new(0.0, 50.0);
     let layout_rect = layout.size().to_rect() + text_pos;
+    let image_rect = layout.image_bounds() + text_pos;
+
     rc.fill(layout_rect, &Color::WHITE);
+    rc.stroke(image_rect, &Color::BLACK, 0.5);
 
     for idx in 0..layout.line_count() {
         let metrics = layout.line_metric(idx).unwrap();

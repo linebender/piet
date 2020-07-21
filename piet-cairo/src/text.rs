@@ -7,8 +7,7 @@ use std::ops::RangeBounds;
 
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
-use piet::kurbo::{Point, Size};
-
+use piet::kurbo::{Point, Rect, Size};
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric,
     RoundInto, Text, TextAttribute, TextLayout, TextLayoutBuilder,
@@ -156,6 +155,10 @@ impl TextLayout for CairoTextLayout {
 
     fn size(&self) -> Size {
         self.size
+    }
+
+    fn image_bounds(&self) -> Rect {
+        self.size.to_rect()
     }
 
     // TODO refactor this to use same code as new_text_layout

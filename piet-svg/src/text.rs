@@ -2,7 +2,7 @@
 
 use std::ops::RangeBounds;
 
-use piet::kurbo::{Point, Size};
+use piet::kurbo::{Point, Rect, Size};
 use piet::{Error, HitTestPoint, HitTestTextPosition, LineMetric, TextAttribute};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -92,6 +92,10 @@ impl piet::TextLayout for TextLayout {
     }
 
     fn size(&self) -> Size {
+        unimplemented!()
+    }
+
+    fn image_bounds(&self) -> Rect {
         unimplemented!()
     }
 
