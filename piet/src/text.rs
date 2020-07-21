@@ -269,51 +269,58 @@ pub trait TextLayout: Clone {
 
     /// Given a `Point`, determine the corresponding text position.
     ///
+    /// This is used for things like mapping a mouse click to a cursor position.
+    ///
+    /// The point should be in the coordinate space of the layout object.
+    ///
     /// ## Return value:
     /// Returns a [`HitTestPoint`][] describing the results of the test.
     ///
-    /// [`HitTestPoint`][] field `is_inside` is true if the tested point falls within the bounds of the text, `false` otherwise.
+    /// The [`HitTestPoint`][] field `is_inside` is true if the tested point
+    /// falls within the bounds of the text, `false` otherwise.
     ///
-    /// [`HitTestPoint`][] field `metrics` is a [`HitTestMetrics`][] struct. [`HitTestMetrics`][] field `text_position` is the text
-    /// position closest to the tested point.
+    /// The [`HitTestPoint`][] field `idx` is the index, in the string used to
+    /// create this [`TextLayout`][], of the start of the grapheme cluster
+    /// closest to the tested point.
     ///
     /// ## Notes:
     ///
-    /// Some text position will always be returned; if the tested point is inside, it returns the appropriate text
-    /// position; if it's outside, it will return the nearest text position (either `0` or `text.len()`).
+    /// This will always return *some* text position. If the point is outside of
+    /// the bounds of the layout, it will return the nearest text position.
     ///
-    /// For more on text positions, see docs for the [`TextLayout`](../piet/trait.TextLayout.html)
-    /// trait.
+    /// For more on text positions, see docs for the [`TextLayout`] trait.
     ///
     /// [`HitTestPoint`]: struct.HitTestPoint.html
-    /// [`HitTestMetrics`]: struct.HitTestMetrics.html
+    /// [`TextLayout`]: ../piet/trait.TextLayout.html
     fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
-    /// Given a text position, determine the corresponding pixel location.
-    /// (currently consider the text layout just one line)
+    /// Given a grapheme boundary in the string used to create this [`TextLayout`],
+    /// return information about the location of that boundary within the layout
+    /// object.
+    ///
     ///
     /// ## Return value:
-    /// Returns a [`HitTestTextPosition`][] describing the results of the test.
+    /// Returns a [`HitTestPosition`][] struct describing the results of the test.
     ///
-    /// [`HitTestTextPosition`][] field `point` is the point offset of the boundary of the
-    /// grapheme cluster that the text position is a part of.
+    /// The [`HitTestPosition`][] field `point` is a `Point`, on the baseline
+    /// of the line containing this grapheme cluster, of the grapheme's leading edge,
+    /// relative to the origin of the layout object.
     ///
-    /// [`HitTestTextPosition`][] field `metrics` is a [`HitTestMetrics`][] struct. [`HitTestMetrics`][] field `text_position` is the original text position (unless out of bounds).
+    /// ## Panics:
     ///
-    /// ## Notes:
-    /// In directwrite, if a text position is not at code point boundary, this method will panic.
-    /// Cairo and web are more lenient and may not panic.
+    // FIXME: behaviour currently differs between backends, but some backends panic.
+    // decide whether this panics or not, and standardize backend behaviour.
+    /// This method may panic if the text position is not a codepoint boundary,
+    /// or if it is greater than the length of the text.
     ///
-    /// For text position that is greater than `text.len()`, web/cairo will return the
-    /// [`HitTestTextPosition`][] as if `text_position == text.len()`. In directwrite, the method will
-    /// panic, as the text position is out of bounds.
+    /// For more on text positions, see docs for the [`TextLayout`] trait.
     ///
-    /// For more on text positions, see docs for the [`TextLayout`](../piet/trait.TextLayout.html)
-    /// trait.
-    ///
-    /// [`HitTestTextPosition`]: struct.HitTestTextPosition.html
-    /// [`HitTestMetrics`]: struct.HitTestMetrics.html
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition>;
+    /// [`HitTestPosition`]: struct.HitTestPosition.html
+    /// [`TextLayout`]: ../piet/trait.TextLayout.html
+    //FIXME: under what circumstances should this return `None`? A reasonable
+    //case would be when trimming has caused an index to not be included in the
+    //layout's text?`
+    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition>;
 }
 
 /// Metadata about each line in a text layout.
