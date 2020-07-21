@@ -69,11 +69,11 @@ impl piet::RenderContext for RenderContext {
     }
 
     fn clear(&mut self, color: Color) {
-        let brush = color.make_brush(self, || Rect::ZERO);
         let mut rect = svg::node::element::Rectangle::new()
             .set("width", "100%")
             .set("height", "100%")
-            .set("fill", brush.val());
+            .set("fill", fmt_color(&color))
+            .set("fill-opacity", fmt_opacity(&color));
         if let Some(id) = self.state.clip {
             rect.assign("clip-path", format!("url(#{})", id.to_string()));
         }
@@ -101,7 +101,8 @@ impl piet::RenderContext for RenderContext {
                     gradient.append(
                         svg::node::element::Stop::new()
                             .set("offset", stop.pos)
-                            .set("stop-color", fmt_color(&stop.color)),
+                            .set("stop-color", fmt_color(&stop.color))
+                            .set("stop-opacity", fmt_opacity(&stop.color)),
                     );
                 }
                 self.doc.append(gradient);
@@ -119,7 +120,8 @@ impl piet::RenderContext for RenderContext {
                     gradient.append(
                         svg::node::element::Stop::new()
                             .set("offset", stop.pos)
-                            .set("stop-color", fmt_color(&stop.color)),
+                            .set("stop-color", fmt_color(&stop.color))
+                            .set("stop-opacity", fmt_opacity(&stop.color)),
                     );
                 }
                 self.doc.append(gradient);
@@ -307,7 +309,10 @@ impl Attrs<'_> {
             node.assign("clip-path", format!("url(#{})", id.to_string()));
         }
         if let Some((ref brush, rule)) = self.fill {
-            node.assign("fill", brush.val());
+            node.assign("fill", brush.val_color());
+            if let Some(opacity) = brush.val_opacity() {
+                node.assign("fill-opacity", opacity);
+            }
             if let Some(rule) = rule {
                 node.assign("fill-rule", rule);
             }
@@ -315,7 +320,10 @@ impl Attrs<'_> {
             node.assign("fill", "none");
         }
         if let Some((ref stroke, width, style)) = self.stroke {
-            node.assign("stroke", stroke.val());
+            node.assign("stroke", stroke.val_color());
+            if let Some(opacity) = stroke.val_opacity() {
+                node.assign("stroke-opacity", opacity);
+            }
             if width != 1.0 {
                 node.assign("stroke-width", width);
             }
@@ -411,10 +419,17 @@ enum BrushKind {
 }
 
 impl Brush {
-    fn val(&self) -> svg::node::Value {
+    fn val_color(&self) -> svg::node::Value {
         match self.kind {
             BrushKind::Solid(ref color) => fmt_color(color).into(),
             BrushKind::Ref(id) => format!("url(#{})", id.to_string()).into(),
+        }
+    }
+
+    fn val_opacity(&self) -> Option<svg::node::Value> {
+        match self.kind {
+            BrushKind::Solid(ref color) => Some(fmt_opacity(color).into()),
+            BrushKind::Ref(_) => None,
         }
     }
 }
@@ -429,9 +444,17 @@ impl IntoBrush<RenderContext> for Brush {
     }
 }
 
+// RGB in hex representation
 fn fmt_color(color: &Color) -> String {
     match color {
-        Color::Rgba32(x) => format!("#{:08x}", x),
+        Color::Rgba32(x) => format!("#{:06x}", x >> 8),
+    }
+}
+
+// Opacity as value from [0, 1]
+fn fmt_opacity(color: &Color) -> String {
+    match color {
+        Color::Rgba32(x) => format!("{}", (x & 0xFF) as f32 / 255.0),
     }
 }
 
