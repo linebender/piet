@@ -35,6 +35,13 @@ use crate::Brush;
 /// "en-US" as null-terminated utf16.
 const DEFAULT_LOCALE: &[u16] = utf16_lit::utf16_null!("en-US");
 
+/// The max layout constraint we use with dwrite.
+///
+/// On other platforms we use infinity, but on dwrite that contaminates
+/// the values that we get back when calculating the image bounds.
+// approximately the largest f32 without integer error
+const MAX_LAYOUT_CONSTRAINT: f32 = 1.6e7;
+
 // TODO: minimize cut'n'paste; probably the best way to do this is
 // unify with the crate error type
 pub enum Error {
@@ -299,8 +306,13 @@ impl TextLayout {
         width: f32,
         text: &[u16],
     ) -> Result<Self, Error> {
-        const QUITE_TALL_HEIGHT: f32 = 1e6;
         let len: u32 = text.len().try_into().unwrap();
+        // d2d doesn't handle infinity very well
+        let width = if !width.is_finite() {
+            MAX_LAYOUT_CONSTRAINT
+        } else {
+            width
+        };
 
         unsafe {
             let mut ptr = null_mut();
@@ -309,7 +321,7 @@ impl TextLayout {
                 len as u32,
                 format.0.as_raw(),
                 width,
-                QUITE_TALL_HEIGHT,
+                MAX_LAYOUT_CONSTRAINT,
                 &mut ptr,
             );
             wrap(hr, ptr, TextLayout)
@@ -413,6 +425,13 @@ impl TextLayout {
     }
 
     pub fn set_max_width(&mut self, max_width: f64) -> Result<(), Error> {
+        // infinity produces nonsense values for the inking rect on d2d
+        let max_width = if !max_width.is_finite() {
+            MAX_LAYOUT_CONSTRAINT
+        } else {
+            max_width as f32
+        };
+
         unsafe {
             let hr = self.0.SetMaxWidth(max_width as f32);
 
