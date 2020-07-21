@@ -126,5 +126,7 @@ mod tests {
         assert_eq!(count_until_utf16(input, 3), Some(6));
         assert_eq!(count_until_utf16(input, 4), Some(9));
         assert_eq!(count_until_utf16(input, 5), None);
+
+        assert_eq!(count_until_utf16("", 0), None);
     }
 }
