@@ -5,7 +5,6 @@ use crate::{Error, RenderContext};
 
 mod picture_0;
 mod picture_1;
-mod picture_10;
 mod picture_2;
 mod picture_3;
 mod picture_4;
@@ -15,9 +14,11 @@ mod picture_7;
 mod picture_8;
 mod picture_9;
 
+mod picture_10;
+mod picture_11;
+
 use picture_0::draw as draw_picture_0;
 use picture_1::draw as draw_picture_1;
-use picture_10::draw as draw_picture_10;
 use picture_2::draw as draw_picture_2;
 use picture_3::draw as draw_picture_3;
 use picture_4::draw as draw_picture_4;
@@ -26,6 +27,9 @@ use picture_6::draw as draw_picture_6;
 use picture_7::draw as draw_picture_7;
 use picture_8::draw as draw_picture_8;
 use picture_9::draw as draw_picture_9;
+
+use picture_10::draw as draw_picture_10;
+use picture_11::draw as draw_picture_11;
 
 /// Draw a test picture, by number.
 ///
@@ -44,6 +48,7 @@ pub fn draw_test_picture(rc: &mut impl RenderContext, number: usize) -> Result<(
         8 => draw_picture_8(rc),
         9 => draw_picture_9(rc),
         10 => draw_picture_10(rc),
+        11 => draw_picture_11(rc),
         _ => {
             eprintln!(
                 "Don't have test picture {} yet. Why don't you make it?",
@@ -67,6 +72,7 @@ pub fn size_for_test_picture(number: usize) -> Result<Size, Error> {
         8 => Ok(picture_8::SIZE),
         9 => Ok(picture_9::SIZE),
         10 => Ok(picture_10::SIZE),
+        11 => Ok(picture_11::SIZE),
         other => {
             eprintln!("test picture {} does not exist.", other);
             Err(Error::InvalidInput)
