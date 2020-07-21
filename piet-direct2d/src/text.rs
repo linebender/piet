@@ -9,7 +9,7 @@ pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
 use wio::wide::ToWide;
 
-use piet::kurbo::{Point, Size};
+use piet::kurbo::{Insets, Point, Rect, Size};
 use piet::util;
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
@@ -43,6 +43,8 @@ pub struct D2DTextLayout {
     // currently calculated on build
     line_metrics: Vec<LineMetric>,
     size: Size,
+    /// insets that, when applied to our layout rect, generates our inking/image rect.
+    inking_insets: Insets,
     pub layout: dwrite::TextLayout,
 }
 
@@ -175,14 +177,25 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
         let layout = self.layout?;
         let line_metrics = lines::fetch_line_metrics(&layout);
         let text_metrics = layout.get_metrics();
-        let width = text_metrics.width as f64;
-        let height = text_metrics.height as f64;
+        let overhang = layout.get_overhang_metrics();
+
+        let size = Size::new(text_metrics.width as f64, text_metrics.height as f64);
+        let overhang_width = text_metrics.layoutWidth as f64 + overhang.x1;
+        let overhang_height = text_metrics.layoutHeight as f64 + overhang.y1;
+
+        let inking_insets = Insets::new(
+            overhang.x0,
+            overhang.y0,
+            overhang_width - size.width,
+            overhang_height - size.height,
+        );
 
         Ok(D2DTextLayout {
             text: self.text,
             line_metrics,
             layout,
-            size: Size::new(width, height),
+            size,
+            inking_insets,
         })
     }
 }
@@ -194,6 +207,10 @@ impl TextLayout for D2DTextLayout {
 
     fn size(&self) -> Size {
         self.size
+    }
+
+    fn image_bounds(&self) -> Rect {
+        self.size.to_rect() + self.inking_insets
     }
 
     /// given a new max width, update width of text layout to fit within the max width

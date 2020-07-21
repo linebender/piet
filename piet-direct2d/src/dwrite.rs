@@ -17,9 +17,9 @@ use winapi::um::dwrite::{
     IDWriteLocalizedStrings, IDWriteTextFormat, IDWriteTextLayout, DWRITE_FACTORY_TYPE_SHARED,
     DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE, DWRITE_FONT_STYLE_ITALIC,
     DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_FONT_WEIGHT_NORMAL,
-    DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS, DWRITE_TEXT_ALIGNMENT_CENTER,
-    DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_TEXT_ALIGNMENT_TRAILING,
-    DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
+    DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS, DWRITE_OVERHANG_METRICS,
+    DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING,
+    DWRITE_TEXT_ALIGNMENT_TRAILING, DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
 };
 use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winnls::GetUserDefaultLocaleName;
@@ -28,6 +28,7 @@ use winapi::Interface;
 use wio::com::ComPtr;
 use wio::wide::{FromWide, ToWide};
 
+use piet::kurbo::Insets;
 use piet::{FontWeight, TextAlignment};
 
 use crate::Brush;
@@ -421,6 +422,26 @@ impl TextLayout {
             let mut result = std::mem::zeroed();
             self.0.GetMetrics(&mut result);
             result
+        }
+    }
+
+    /// Return the DWRITE_OVERHANG_METRICS, converted to an `Insets` struct.
+    ///
+    /// The 'right' and 'bottom' values of this struct are relative to the *layout*
+    /// width and height; that is, the width and height constraints used to create
+    /// the layout, not the actual size of the generated layout.
+    pub fn get_overhang_metrics(&self) -> Insets {
+        unsafe {
+            let mut result = std::mem::zeroed();
+            // returning all 0s on failure feels okay?
+            let _ = self.0.GetOverhangMetrics(&mut result);
+            let DWRITE_OVERHANG_METRICS {
+                left,
+                top,
+                right,
+                bottom,
+            } = result;
+            Insets::new(left as f64, top as f64, right as f64, bottom as f64)
         }
     }
 

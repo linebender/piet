@@ -14,7 +14,7 @@ use core_graphics::geometry::{CGPoint, CGRect, CGSize};
 use core_graphics::path::CGPath;
 use core_text::{font, font::CTFont, font_descriptor, string_attributes};
 
-use piet::kurbo::{Point, Size};
+use piet::kurbo::{Point, Rect, Size};
 use piet::util;
 use piet::{
     Error, Font, FontBuilder, FontWeight, HitTestMetrics, HitTestPoint, HitTestTextPosition,
@@ -22,6 +22,9 @@ use piet::{
 };
 
 use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
+
+#[derive(Clone)]
+pub struct CoreGraphicsText;
 
 //TODO: this should be a CTFontDescriptor maybe?
 #[derive(Debug, Clone)]
@@ -40,6 +43,7 @@ pub struct CoreGraphicsTextLayout {
     /// offsets in utf8 of lines
     line_offsets: Vec<usize>,
     pub(crate) frame_size: Size,
+    image_bounds: Rect,
     width_constraint: f64,
 }
 
@@ -268,9 +272,6 @@ fn convert_to_coretext(weight: FontWeight) -> CFNumber {
     .into()
 }
 
-#[derive(Clone)]
-pub struct CoreGraphicsText;
-
 impl CoreGraphicsText {
     /// Create a new factory that satisfies the piet `Text` trait.
     #[allow(clippy::new_without_default)]
@@ -374,6 +375,10 @@ impl TextLayout for CoreGraphicsTextLayout {
         self.frame_size
     }
 
+    fn image_bounds(&self) -> Rect {
+        self.image_bounds
+    }
+
     #[allow(clippy::float_cmp)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let width = new_width.into().unwrap_or(f64::INFINITY);
@@ -385,7 +390,8 @@ impl TextLayout for CoreGraphicsTextLayout {
             let path = CGPath::from_rect(rect, None);
             self.width_constraint = width;
             let frame = self.framesetter.create_frame(char_range, &path);
-            let line_count = frame.get_lines().len();
+            let lines = frame.get_lines();
+            let line_count = lines.len();
             let line_origins = frame.get_line_origins(CFRange::init(0, line_count));
             self.line_y_positions = line_origins
                 .iter()
@@ -393,6 +399,16 @@ impl TextLayout for CoreGraphicsTextLayout {
                 .collect();
             self.frame = Some(frame);
             self.frame_size = Size::new(frame_size.width, frame_size.height);
+
+            let mut line_bounds = lines
+                .iter()
+                .map(|l| Line::new(&l).get_image_bounds())
+                .zip(self.line_y_positions.iter())
+                .map(|(rect, y_pos)| Rect::new(rect.x0, y_pos - rect.y1, rect.x1, y_pos - rect.y0));
+
+            let first_line_bounds = line_bounds.next().unwrap_or_default();
+            self.image_bounds = line_bounds.fold(first_line_bounds, |acc, el| acc.union(el));
+
             self.rebuild_line_offsets();
         }
         Ok(())
@@ -537,6 +553,7 @@ impl CoreGraphicsTextLayout {
             // all of this is correctly set in `update_width` below
             frame: None,
             frame_size: Size::ZERO,
+            image_bounds: Rect::ZERO,
             line_y_positions: Vec::new(),
             // NaN to ensure we always execute code in update_width
             width_constraint: f64::NAN,

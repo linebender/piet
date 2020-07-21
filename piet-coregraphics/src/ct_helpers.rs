@@ -15,19 +15,20 @@ use core_foundation::{
 use core_foundation_sys::base::CFRange;
 use core_graphics::{
     base::CGFloat,
-    geometry::{CGPoint, CGSize},
+    geometry::{CGPoint, CGRect, CGSize},
     path::CGPathRef,
 };
 use core_text::{
     font::{kCTFontSystemFontType, CTFont, CTFontRef, CTFontUIFontType},
     frame::{CTFrame, CTFrameRef},
     framesetter::CTFramesetter,
-    line::{CTLine, TypographicBounds},
+    line::{CTLine, CTLineRef, TypographicBounds},
     string_attributes,
 };
 
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
+use piet::kurbo::Rect;
 use piet::TextAlignment;
 
 #[derive(Clone)]
@@ -192,6 +193,13 @@ impl<'a> Line<'a> {
         self.0.get_typographic_bounds()
     }
 
+    pub(crate) fn get_image_bounds(&self) -> Rect {
+        unsafe {
+            let r = CTLineGetImageBounds(self.0.as_concrete_TypeRef(), std::ptr::null_mut());
+            Rect::from_origin_size((r.origin.x, r.origin.y), (r.size.width, r.size.height))
+        }
+    }
+
     pub(crate) fn get_string_index_for_position(&self, position: CGPoint) -> CFIndex {
         self.0.get_string_index_for_position(position)
     }
@@ -250,4 +258,5 @@ extern "C" {
         settings: *const CTParagraphStyleSetting,
         count: usize,
     ) -> CTParagraphStyleRef;
+    fn CTLineGetImageBounds(line: CTLineRef, ctx: *mut c_void) -> CGRect;
 }

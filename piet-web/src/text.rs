@@ -8,7 +8,7 @@ use std::ops::RangeBounds;
 
 use web_sys::CanvasRenderingContext2d;
 
-use piet::kurbo::{Point, Size};
+use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
     Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
@@ -170,6 +170,11 @@ impl TextLayout for WebTextLayout {
 
     fn size(&self) -> Size {
         self.size
+    }
+
+    fn image_bounds(&self) -> Rect {
+        //FIXME: figure out actual image bounds on web?
+        self.size.to_rect()
     }
 
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
