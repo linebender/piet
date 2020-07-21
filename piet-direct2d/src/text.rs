@@ -173,7 +173,7 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
 
     fn build(self) -> Result<Self::Out, Error> {
         let layout = self.layout?;
-        let line_metrics = lines::fetch_line_metrics(&layout);
+        let line_metrics = lines::fetch_line_metrics(&self.text, &layout);
         let text_metrics = layout.get_metrics();
         let width = text_metrics.width as f64;
         let height = text_metrics.height as f64;
@@ -202,7 +202,7 @@ impl TextLayout for D2DTextLayout {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
         self.layout.set_max_width(new_width)?;
-        self.line_metrics = lines::fetch_line_metrics(&self.layout);
+        self.line_metrics = lines::fetch_line_metrics(&self.text, &self.layout);
 
         Ok(())
     }
