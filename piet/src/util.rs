@@ -1,7 +1,14 @@
 //! Code useful for multiple backends
 
 use crate::kurbo::{Rect, Size};
+use crate::{Color, FontWeight, TextAttribute};
 use std::ops::{Bound, Range, RangeBounds};
+
+/// The default point sie for text in piet.
+pub const DEFAULT_FONT_SIZE: f64 = 12.0;
+
+/// The default foreground text color.
+pub const DEFAULT_TEXT_COLOR: Color = Color::BLACK;
 
 /// Counts the number of utf-16 code units in the given string.
 /// from xi-editor
@@ -105,6 +112,50 @@ fn compute_erf7(x: f64) -> f64 {
     let xx = x * x;
     let x = x + (0.24295 + (0.03395 + 0.0104 * xx) * xx) * (x * xx);
     x / (1.0 + x * x).sqrt()
+}
+
+/// A type backends can use to represent the default values for a `TextLayout`
+#[non_exhaustive]
+pub struct LayoutDefaults<T> {
+    pub font: Option<T>,
+    pub font_size: f64,
+    pub weight: FontWeight,
+    pub fg_color: Color,
+    pub italic: bool,
+    pub underline: bool,
+}
+
+impl<T> LayoutDefaults<T> {
+    pub fn new(font: T) -> Self {
+        LayoutDefaults {
+            font: Some(font),
+            ..Default::default()
+        }
+    }
+    /// Set the default value for a given `TextAttribute`.
+    pub fn set(&mut self, val: impl Into<TextAttribute<T>>) {
+        match val.into() {
+            TextAttribute::Font(t) => self.font = Some(t),
+            TextAttribute::Size(size) => self.font_size = size,
+            TextAttribute::Weight(weight) => self.weight = weight,
+            TextAttribute::Italic(flag) => self.italic = flag,
+            TextAttribute::Underline(flag) => self.underline = flag,
+            TextAttribute::ForegroundColor(color) => self.fg_color = color,
+        }
+    }
+}
+
+impl<T> Default for LayoutDefaults<T> {
+    fn default() -> Self {
+        LayoutDefaults {
+            font: None,
+            font_size: DEFAULT_FONT_SIZE,
+            weight: FontWeight::default(),
+            fg_color: DEFAULT_TEXT_COLOR,
+            italic: false,
+            underline: false,
+        }
+    }
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@
 mod lines;
 
 use std::convert::TryInto;
-use std::ops::RangeBounds;
+use std::ops::{Range, RangeBounds};
 
 pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
@@ -51,6 +51,7 @@ pub struct D2DTextLayout {
 pub struct D2DTextLayoutBuilder {
     text: String,
     layout: Result<dwrite::TextLayout, Error>,
+    len_utf16: usize,
     device: d2d::DeviceContext,
 }
 
@@ -105,22 +106,23 @@ impl Text for D2DText {
 
     fn new_text_layout(
         &mut self,
-        font: &Self::Font,
+        _font: &Self::Font,
         text: &str,
         width: impl Into<Option<f64>>,
     ) -> Self::TextLayoutBuilder {
         let width = width.into().unwrap_or(std::f64::INFINITY);
-        let layout = TextFormat::new(&self.dwrite, &font.family, font.size as f32)
+        let wide_str = text.to_wide();
+        let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32)
             .and_then(|format| {
-                let wide_str = text.to_wide();
                 dwrite::TextLayout::new(&self.dwrite, format, width as f32, &wide_str)
             })
             .map_err(Into::into);
 
         D2DTextLayoutBuilder {
-            text: text.to_owned(),
-            device: self.device.clone(),
             layout,
+            text: text.to_owned(),
+            len_utf16: wide_str.len(),
+            device: self.device.clone(),
         }
     }
 }
@@ -146,30 +148,20 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
         self
     }
 
-    fn add_attribute(
+    fn default_attribute(mut self, attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        self.add_attribute_shared(attribute.into(), None);
+        self
+    }
+
+    fn range_attribute(
         mut self,
         range: impl RangeBounds<usize>,
         attribute: impl Into<TextAttribute<Self::Font>>,
     ) -> Self {
         let range = util::resolve_range(range, self.text.len());
-        let start = util::count_utf16(&self.text[..range.start]);
-        let len = util::count_utf16(&self.text[range]);
         let attribute = attribute.into();
-        if let Ok(layout) = self.layout.as_mut() {
-            match attribute {
-                TextAttribute::Font(font) => layout.set_font_family(start, len, &font.family),
-                TextAttribute::Size(size) => layout.set_size(start, len, size as f32),
-                TextAttribute::Weight(weight) => layout.set_weight(start, len, weight),
-                TextAttribute::Italic(flag) => layout.set_italic(start, len, flag),
-                TextAttribute::Underline(flag) => layout.set_underline(start, len, flag),
-                TextAttribute::ForegroundColor(color) => {
-                    if let Ok(brush) = self.device.create_solid_color(conv::color_to_colorf(color))
-                    {
-                        layout.set_foregound_brush(start, len, brush)
-                    }
-                }
-            }
-        }
+
+        self.add_attribute_shared(attribute, Some(range));
         self
     }
 
@@ -197,6 +189,40 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
             size,
             inking_insets,
         })
+    }
+}
+
+impl D2DTextLayoutBuilder {
+    /// used for both range and default attributes
+    fn add_attribute_shared(&mut self, attr: TextAttribute<D2DFont>, range: Option<Range<usize>>) {
+        if let Ok(layout) = self.layout.as_mut() {
+            let (start, len) = match range {
+                Some(range) => {
+                    let start = util::count_utf16(&self.text[..range.start]);
+                    let len = if range.end == self.text.len() {
+                        self.len_utf16
+                    } else {
+                        util::count_utf16(&self.text[range])
+                    };
+                    (start, len)
+                }
+                None => (0, self.len_utf16),
+            };
+
+            match attr {
+                TextAttribute::Font(font) => layout.set_font_family(start, len, &font.family),
+                TextAttribute::Size(size) => layout.set_size(start, len, size as f32),
+                TextAttribute::Weight(weight) => layout.set_weight(start, len, weight),
+                TextAttribute::Italic(flag) => layout.set_italic(start, len, flag),
+                TextAttribute::Underline(flag) => layout.set_underline(start, len, flag),
+                TextAttribute::ForegroundColor(color) => {
+                    if let Ok(brush) = self.device.create_solid_color(conv::color_to_colorf(color))
+                    {
+                        layout.set_foregound_brush(start, len, brush)
+                    }
+                }
+            }
+        }
     }
 }
 

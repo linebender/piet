@@ -17,7 +17,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
 
     let layout = text
         .new_text_layout(&font, SAMPLE_EN, None)
-        .add_attribute(.., TextAttribute::Size(24.0))
+        .default_attribute(TextAttribute::Size(24.0))
         .build()?;
 
     let text_pos = Vec2::new(50.0, 50.0);

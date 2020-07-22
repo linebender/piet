@@ -18,42 +18,49 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let en_leading = text
         .new_text_layout(&font, SAMPLE_EN, 100.0)
         .alignment(TextAlignment::Start)
-        .add_attribute(.., TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     let en_trailing = text
         .new_text_layout(&font, SAMPLE_EN, 100.0)
         .alignment(TextAlignment::End)
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     let en_center = text
         .new_text_layout(&font, SAMPLE_EN, 100.0)
         .alignment(TextAlignment::Center)
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     let en_justify = text
         .new_text_layout(&font, SAMPLE_EN, 100.0)
         .alignment(TextAlignment::Justified)
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     let ar_leading = text
         .new_text_layout(&font, SAMPLE_AR, 100.0)
         .alignment(TextAlignment::Start)
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     let ar_trailing = text
         .new_text_layout(&font, SAMPLE_AR, 100.0)
         .alignment(TextAlignment::End)
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     let ar_center = text
         .new_text_layout(&font, SAMPLE_AR, 100.0)
         .alignment(TextAlignment::Center)
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     let ar_justify = text
         .new_text_layout(&font, SAMPLE_AR, 100.0)
         .alignment(TextAlignment::Justified)
+        .default_attribute(TextAttribute::Size(8.0))
         .build()?;
 
     rc.draw_text(&en_leading, (0., 0.));
