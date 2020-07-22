@@ -309,8 +309,8 @@ impl Attrs<'_> {
             node.assign("clip-path", format!("url(#{})", id.to_string()));
         }
         if let Some((ref brush, rule)) = self.fill {
-            node.assign("fill", brush.val_color());
-            if let Some(opacity) = brush.val_opacity() {
+            node.assign("fill", brush.color());
+            if let Some(opacity) = brush.opacity() {
                 node.assign("fill-opacity", opacity);
             }
             if let Some(rule) = rule {
@@ -320,8 +320,8 @@ impl Attrs<'_> {
             node.assign("fill", "none");
         }
         if let Some((ref stroke, width, style)) = self.stroke {
-            node.assign("stroke", stroke.val_color());
-            if let Some(opacity) = stroke.val_opacity() {
+            node.assign("stroke", stroke.color());
+            if let Some(opacity) = stroke.opacity() {
                 node.assign("stroke-opacity", opacity);
             }
             if width != 1.0 {
@@ -419,14 +419,14 @@ enum BrushKind {
 }
 
 impl Brush {
-    fn val_color(&self) -> svg::node::Value {
+    fn color(&self) -> svg::node::Value {
         match self.kind {
             BrushKind::Solid(ref color) => fmt_color(color).into(),
             BrushKind::Ref(id) => format!("url(#{})", id.to_string()).into(),
         }
     }
 
-    fn val_opacity(&self) -> Option<svg::node::Value> {
+    fn opacity(&self) -> Option<svg::node::Value> {
         match self.kind {
             BrushKind::Solid(ref color) => Some(fmt_opacity(color).into()),
             BrushKind::Ref(_) => None,
