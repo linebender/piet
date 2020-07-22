@@ -101,9 +101,9 @@ pub enum TextAttribute<T> {
     ForegroundColor(crate::Color),
     //BackgroundColor(crate::Color),
     /// Italics.
-    Italic,
+    Italic(bool),
     /// Underline.
-    Underline,
+    Underline(bool),
 }
 
 pub trait FontBuilder {
@@ -155,7 +155,7 @@ pub trait TextLayoutBuilder {
     /// let font = text.system_font(12.0);
     /// let times = text.new_font_by_name("Times New Roman", 12.0).build().unwrap();
     /// let layout = text.new_text_layout(&font, "This API is okay, I guess?", 100.0)
-    ///     .add_attribute(.., TextAttribute::Italic)
+    ///     .add_attribute(.., TextAttribute::Italic(true))
     ///     .add_attribute(..5, FontWeight::BOLD)
     ///     .add_attribute(5..14, times)
     ///     .add_attribute(20.., TextAttribute::ForegroundColor(Color::rgb(1.0, 0., 0.,)))
