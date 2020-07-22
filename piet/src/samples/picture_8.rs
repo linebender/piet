@@ -26,27 +26,27 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let en_leading = text
         .new_text_layout(&font, SAMPLE_EN, 200.0)
         .alignment(TextAlignment::Start)
-        .add_attribute(10..80, TextAttribute::Size(8.0))
-        .add_attribute(20..120, serif)
-        .add_attribute(40..60, FontWeight::BOLD)
-        .add_attribute(60..140, FontWeight::THIN)
-        .add_attribute(90..300, mono)
-        .add_attribute(
+        .range_attribute(10..80, TextAttribute::Size(8.0))
+        .range_attribute(20..120, serif)
+        .range_attribute(40..60, FontWeight::BOLD)
+        .range_attribute(60..140, FontWeight::THIN)
+        .range_attribute(90..300, mono)
+        .range_attribute(
             120..150,
             TextAttribute::ForegroundColor(Color::rgb(0.6, 0., 0.)),
         )
-        .add_attribute(
+        .range_attribute(
             160..190,
             TextAttribute::ForegroundColor(Color::rgb(0., 0.6, 0.)),
         )
-        .add_attribute(
+        .range_attribute(
             200..240,
             TextAttribute::ForegroundColor(Color::rgb(0., 0., 0.6)),
         )
-        .add_attribute(200.., FontWeight::EXTRA_BLACK)
-        .add_attribute(220.., TextAttribute::Size(18.0))
-        .add_attribute(240.., TextAttribute::Italic(true))
-        .add_attribute(280.., TextAttribute::Underline(true))
+        .range_attribute(200.., FontWeight::EXTRA_BLACK)
+        .range_attribute(220.., TextAttribute::Size(18.0))
+        .range_attribute(240.., TextAttribute::Italic(true))
+        .range_attribute(280.., TextAttribute::Underline(true))
         .build()?;
 
     rc.draw_text(&en_leading, (0., 0.));

@@ -18,13 +18,13 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let layout = rc
         .text()
         .new_text_layout(&font, "piet text!", None)
-        .add_attribute(.., TextAttribute::ForegroundColor(TEXT_COLOR))
+        .default_attribute(TextAttribute::ForegroundColor(TEXT_COLOR))
         .build()?;
 
     let layout_multiline = rc
         .text()
         .new_text_layout(&font, "piet text is the best text!", 50.0)
-        .add_attribute(.., TextAttribute::ForegroundColor(TEXT_COLOR))
+        .default_attribute(TextAttribute::ForegroundColor(TEXT_COLOR))
         .build()?;
 
     let width = layout.size().width;

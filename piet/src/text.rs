@@ -121,6 +121,18 @@ pub trait TextLayoutBuilder {
     /// [`TextAlignment`]: enum.TextAlignment.html
     fn alignment(self, alignment: TextAlignment) -> Self;
 
+    /// Add a default [`TextAttribute`] for this layout.
+    ///
+    /// Default attributes will be used for regions of the layout that do not
+    /// have explicit attributes added via [`range_attribute`].
+    ///
+    /// You must set default attributes before setting range attributes,
+    /// or the implementation is free to ignore them.
+    ///
+    /// [`TextAttribute`]: enum.TextAttribute.html
+    /// [`range_attribute`]: #tymethod.range_attribute
+    fn default_attribute(self, attribute: impl Into<TextAttribute<Self::Font>>) -> Self;
+
     /// Add a [`TextAttribute`] to a range of this layout.
     ///
     /// The `range` argument is can be any of the range forms accepted by
@@ -155,16 +167,16 @@ pub trait TextLayoutBuilder {
     /// let font = text.system_font(12.0);
     /// let times = text.new_font_by_name("Times New Roman", 12.0).build().unwrap();
     /// let layout = text.new_text_layout(&font, "This API is okay, I guess?", 100.0)
-    ///     .add_attribute(.., TextAttribute::Italic(true))
-    ///     .add_attribute(..5, FontWeight::BOLD)
-    ///     .add_attribute(5..14, times)
-    ///     .add_attribute(20.., TextAttribute::ForegroundColor(Color::rgb(1.0, 0., 0.,)))
+    ///     .default_attribute(TextAttribute::Italic(true))
+    ///     .range_attribute(..5, FontWeight::BOLD)
+    ///     .range_attribute(5..14, times)
+    ///     .range_attribute(20.., TextAttribute::ForegroundColor(Color::rgb(1.0, 0., 0.,)))
     ///     .build();
     /// ```
     ///
     /// [`TextAttribute`]: enum.TextAttribute.html
     /// [`FontWeight`]: struct.FontWeight.html
-    fn add_attribute(
+    fn range_attribute(
         self,
         range: impl RangeBounds<usize>,
         attribute: impl Into<TextAttribute<Self::Font>>,

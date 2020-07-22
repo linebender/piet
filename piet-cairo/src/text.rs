@@ -9,7 +9,7 @@ use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    Error, Font, FontBuilder, HitTestPoint, HitTestPosition, LineMetric, RoundInto, Text,
+    util, Color, Error, Font, FontBuilder, HitTestPoint, HitTestPosition, LineMetric, Text,
     TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
@@ -25,17 +25,19 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 pub struct CairoText;
 
 #[derive(Clone)]
-pub struct CairoFont(ScaledFont);
+pub struct CairoFont {
+    family: String,
+}
 
 pub struct CairoFontBuilder {
     family: String,
-    weight: FontWeight,
-    slant: FontSlant,
-    size: f64,
 }
 
 #[derive(Clone)]
 pub struct CairoTextLayout {
+    // we currently don't handle range attributes, so we stash the default
+    // color here and then just grab it when we draw ourselves.
+    pub(crate) fg_color: Color,
     size: Size,
     pub(crate) font: ScaledFont,
     pub(crate) text: String,
@@ -45,7 +47,8 @@ pub struct CairoTextLayout {
 }
 
 pub struct CairoTextLayoutBuilder {
-    layout: CairoTextLayout,
+    text: String,
+    defaults: util::LayoutDefaults<CairoFont>,
     width_constraint: f64,
 }
 
@@ -66,21 +69,15 @@ impl Text for CairoText {
     type TextLayout = CairoTextLayout;
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
+    fn new_font_by_name(&mut self, name: &str, _size: f64) -> Self::FontBuilder {
         CairoFontBuilder {
             family: name.to_owned(),
-            size: size.round_into(),
-            weight: FontWeight::Normal,
-            slant: FontSlant::Normal,
         }
     }
 
-    fn system_font(&mut self, size: f64) -> Self::Font {
+    fn system_font(&mut self, _size: f64) -> Self::Font {
         CairoFontBuilder {
             family: "sans-serif".into(),
-            size: size.round_into(),
-            weight: FontWeight::Normal,
-            slant: FontSlant::Normal,
         }
         .build()
         .unwrap()
@@ -94,15 +91,9 @@ impl Text for CairoText {
     ) -> Self::TextLayoutBuilder {
         let width = width.into().unwrap_or(std::f64::INFINITY);
 
-        // invalid until build() is called
-        let text_layout = CairoTextLayout {
-            size: Size::ZERO,
-            font: font.0.clone(),
-            text: text.to_owned(),
-            line_metrics: Vec::new(),
-        };
         CairoTextLayoutBuilder {
-            layout: text_layout,
+            defaults: util::LayoutDefaults::new(font.clone()),
+            text: text.to_owned(),
             width_constraint: width,
         }
     }
@@ -112,16 +103,36 @@ impl FontBuilder for CairoFontBuilder {
     type Out = CairoFont;
 
     fn build(self) -> Result<Self::Out, Error> {
-        let font_face = FontFace::toy_create(&self.family, self.slant, self.weight);
-        let font_matrix = scale_matrix(self.size);
-        let ctm = scale_matrix(1.0);
-        let options = FontOptions::default();
-        let scaled_font = ScaledFont::new(&font_face, &font_matrix, &ctm, &options);
-        Ok(CairoFont(scaled_font))
+        Ok(CairoFont {
+            family: self.family,
+        })
     }
 }
 
 impl Font for CairoFont {}
+
+impl CairoFont {
+    #[cfg(test)]
+    pub(crate) fn new(family: impl Into<String>) -> Self {
+        CairoFont {
+            family: family.into(),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn resolve_simple(&self, size: f64) -> ScaledFont {
+        self.resolve(size, FontSlant::Normal, FontWeight::Normal)
+    }
+
+    /// Create a ScaledFont for this family.
+    pub(crate) fn resolve(&self, size: f64, slant: FontSlant, weight: FontWeight) -> ScaledFont {
+        let font_face = FontFace::toy_create(&self.family, slant, weight);
+        let font_matrix = scale_matrix(size);
+        let ctm = scale_matrix(1.0);
+        let options = FontOptions::default();
+        ScaledFont::new(&font_face, &font_matrix, &ctm, &options)
+    }
+}
 
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
@@ -132,7 +143,12 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         self
     }
 
-    fn add_attribute(
+    fn default_attribute(mut self, attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        self.defaults.set(attribute);
+        self
+    }
+
+    fn range_attribute(
         self,
         _range: impl RangeBounds<usize>,
         _attribute: impl Into<TextAttribute<Self::Font>>,
@@ -141,7 +157,31 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 
     fn build(self) -> Result<Self::Out, Error> {
-        let mut layout = self.layout;
+        // set our default font
+        let family = self.defaults.font.as_ref().unwrap();
+        let size = self.defaults.font_size;
+        let weight = if self.defaults.weight.to_raw() <= piet::FontWeight::MEDIUM.to_raw() {
+            FontWeight::Normal
+        } else {
+            FontWeight::Bold
+        };
+        let slant = if self.defaults.italic {
+            FontSlant::Italic
+        } else {
+            FontSlant::Normal
+        };
+
+        let scaled_font = family.resolve(size, slant, weight);
+
+        // invalid until update_width() is called
+        let mut layout = CairoTextLayout {
+            fg_color: self.defaults.fg_color,
+            font: scaled_font,
+            size: Size::ZERO,
+            line_metrics: Vec::new(),
+            text: self.text,
+        };
+
         layout.update_width(self.width_constraint)?;
         Ok(layout)
     }
@@ -1374,7 +1414,11 @@ mod test {
 
         let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
         // this should break into four lines
-        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        let layout = text
+            .new_text_layout(&font, input, 30.0)
+            .default_attribute(TextAttribute::Size(13.0))
+            .build()
+            .unwrap();
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
         println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 13.0)
         println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 26.0)

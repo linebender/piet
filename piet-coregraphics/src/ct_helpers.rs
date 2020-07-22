@@ -10,11 +10,13 @@ use core_foundation::{
     attributed_string::CFMutableAttributedString,
     base::{CFTypeID, TCFType},
     declare_TCFType, impl_TCFType,
+    number::CFNumber,
     string::{CFString, CFStringRef},
 };
 use core_foundation_sys::base::CFRange;
 use core_graphics::{
     base::CGFloat,
+    color::CGColor,
     geometry::{CGPoint, CGRect, CGSize},
     path::CGPathRef,
 };
@@ -29,7 +31,7 @@ use core_text::{
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
 use piet::kurbo::Rect;
-use piet::TextAlignment;
+use piet::{Color, TextAlignment};
 
 #[derive(Clone)]
 pub(crate) struct AttributedString {
@@ -128,6 +130,44 @@ impl AttributedString {
                 string_attributes::kCTParagraphStyleAttributeName,
                 &style,
             );
+        }
+    }
+
+    pub(crate) fn set_font(&mut self, range: CFRange, font: &CTFont) {
+        unsafe {
+            self.inner
+                .set_attribute(range, string_attributes::kCTFontAttributeName, font);
+        }
+    }
+
+    #[allow(non_upper_case_globals)]
+    pub(crate) fn set_underline(&mut self, range: CFRange, underline: bool) {
+        const kCTUnderlineStyleNone: i32 = 0x00;
+        const kCTUnderlineStyleSingle: i32 = 0x01;
+
+        let value = if underline {
+            kCTUnderlineStyleSingle
+        } else {
+            kCTUnderlineStyleNone
+        };
+        unsafe {
+            self.inner.set_attribute(
+                range,
+                string_attributes::kCTUnderlineStyleAttributeName,
+                &CFNumber::from(value).as_CFType(),
+            )
+        }
+    }
+
+    pub(crate) fn set_fg_color(&mut self, range: CFRange, color: &Color) {
+        let (r, g, b, a) = color.as_rgba();
+        let color = CGColor::rgb(r, g, b, a);
+        unsafe {
+            self.inner.set_attribute(
+                range,
+                string_attributes::kCTForegroundColorAttributeName,
+                &color.as_CFType(),
+            )
         }
     }
 

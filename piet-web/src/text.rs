@@ -137,7 +137,12 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
         self
     }
 
-    fn add_attribute(
+    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        web_sys::console::log_1(&"Text attributes not yet implemented for web".into());
+        self
+    }
+
+    fn range_attribute(
         self,
         _range: impl RangeBounds<usize>,
         _attribute: impl Into<TextAttribute<Self::Font>>,

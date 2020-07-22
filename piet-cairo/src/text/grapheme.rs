@@ -69,12 +69,8 @@ mod test {
     #[test]
     fn test_grapheme_boundaries() {
         let text = "piet";
-        let mut text_layout = CairoText::new();
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+        let font = CairoFont::new("sans-serif").resolve_simple(12.0);
 
         let expected_3 = GraphemeBoundaries {
             curr_idx: 3,
@@ -85,14 +81,14 @@ mod test {
 
         // test grapheme boundaries
         assert_eq!(
-            get_grapheme_boundaries(&font.0, text, 3).unwrap().curr_idx,
+            get_grapheme_boundaries(&font, text, 3).unwrap().curr_idx,
             expected_3.curr_idx
         );
         assert_eq!(
-            get_grapheme_boundaries(&font.0, text, 3).unwrap().next_idx,
+            get_grapheme_boundaries(&font, text, 3).unwrap().next_idx,
             expected_3.next_idx
         );
-        assert_eq!(get_grapheme_boundaries(&font.0, text, 4), None);
+        assert_eq!(get_grapheme_boundaries(&font, text, 4), None);
     }
 
     #[test]

@@ -34,10 +34,11 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let layout = text
         .new_text_layout(&font, SAMPLE_EN, 200.0)
         .alignment(TextAlignment::Start)
-        .add_attribute(23..35, mono.clone())
-        .add_attribute(23..35, TextAttribute::Size(18.0))
-        .add_attribute(47..52, mono)
-        .add_attribute(47..52, TextAttribute::Size(36.0))
+        .default_attribute(TextAttribute::Size(24.0))
+        .range_attribute(23..35, mono.clone())
+        .range_attribute(23..35, TextAttribute::Size(18.0))
+        .range_attribute(47..52, mono)
+        .range_attribute(47..52, TextAttribute::Size(36.0))
         .build()?;
 
     let text_pos = Vec2::new(0.0, 50.0);

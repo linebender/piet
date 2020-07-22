@@ -13,7 +13,7 @@ use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
 use piet::{
     Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
-    RenderContext, StrokeStyle,
+    RenderContext, StrokeStyle, TextLayout,
 };
 
 pub use crate::text::{
@@ -207,9 +207,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
-        // TODO: bounding box for text
-        self.ctx.set_scaled_font(&layout.font);
         let pos = pos.into();
+        let rect = layout.image_bounds() + pos.to_vec2();
+        let brush = layout.fg_color.make_brush(self, || rect);
+        self.ctx.set_scaled_font(&layout.font);
+        self.set_brush(&*brush);
 
         for lm in &layout.line_metrics {
             self.ctx.move_to(pos.x, pos.y + lm.y_offset + lm.baseline);

@@ -69,7 +69,11 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
         self
     }
 
-    fn add_attribute(
+    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        self
+    }
+
+    fn range_attribute(
         self,
         _range: impl RangeBounds<usize>,
         _attribute: impl Into<TextAttribute<Self::Font>>,
