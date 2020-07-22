@@ -160,8 +160,8 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
                 TextAttribute::Font(font) => layout.set_font_family(start, len, &font.family),
                 TextAttribute::Size(size) => layout.set_size(start, len, size as f32),
                 TextAttribute::Weight(weight) => layout.set_weight(start, len, weight),
-                TextAttribute::Italic => layout.set_italic(start, len),
-                TextAttribute::Underline => layout.set_underline(start, len),
+                TextAttribute::Italic(flag) => layout.set_italic(start, len, flag),
+                TextAttribute::Underline(flag) => layout.set_underline(start, len, flag),
                 TextAttribute::ForegroundColor(color) => {
                     if let Ok(brush) = self.device.create_solid_color(conv::color_to_colorf(color))
                     {

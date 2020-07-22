@@ -98,7 +98,7 @@ impl CoreGraphicsTextLayoutBuilder {
     fn add(&mut self, attr: TextAttribute<CoreGraphicsFont>, range: Range<usize>) {
         // Some attributes are 'standalone' and can just be added to the attributed string
         // immediately.
-        if matches!(&attr, TextAttribute::ForegroundColor(_) | TextAttribute::Underline) {
+        if matches!(&attr, TextAttribute::ForegroundColor(_) | TextAttribute::Underline(_)) {
             return self.add_immediately(attr, range);
         }
 
@@ -114,7 +114,7 @@ impl CoreGraphicsTextLayoutBuilder {
             TextAttribute::Font(font) => self.font = Span::new(font, range),
             TextAttribute::Weight(weight) => self.weight = Span::new(weight, range),
             TextAttribute::Size(size) => self.size = Span::new(size, range),
-            TextAttribute::Italic => self.italic = Span::new(true, range),
+            TextAttribute::Italic(flag) => self.italic = Span::new(flag, range),
             _ => unreachable!(),
         }
     }
@@ -134,12 +134,19 @@ impl CoreGraphicsTextLayoutBuilder {
                         color.as_CFType(),
                     )
                 }
-                TextAttribute::Underline => {
-                    #[allow(non_upper_case_globals)]
+                #[allow(non_upper_case_globals)]
+                TextAttribute::Underline(flag) => {
+                    const kCTUnderlineStyleNone: i32 = 0x00;
                     const kCTUnderlineStyleSingle: i32 = 0x01;
+
+                    let value = if flag {
+                        kCTUnderlineStyleSingle
+                    } else {
+                        kCTUnderlineStyleNone
+                    };
                     (
                         string_attributes::kCTUnderlineStyleAttributeName,
-                        CFNumber::from(kCTUnderlineStyleSingle).as_CFType(),
+                        CFNumber::from(value).as_CFType(),
                     )
                 }
                 _ => unreachable!(),

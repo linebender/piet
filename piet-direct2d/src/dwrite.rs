@@ -10,6 +10,7 @@ use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 use std::sync::Arc;
 
+use winapi::shared::minwindef::{FALSE, TRUE};
 use winapi::shared::ntdef::LOCALE_NAME_MAX_LENGTH;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED, S_OK};
 use winapi::um::dwrite::{
@@ -359,17 +360,23 @@ impl TextLayout {
         }
     }
 
-    pub(crate) fn set_italic(&mut self, start: usize, len: usize) {
+    pub(crate) fn set_italic(&mut self, start: usize, len: usize, ital: bool) {
         let range = make_text_range(start, len);
+        let val = if ital {
+            DWRITE_FONT_STYLE_ITALIC
+        } else {
+            DWRITE_FONT_STYLE_NORMAL
+        };
         unsafe {
-            self.0.SetFontStyle(DWRITE_FONT_STYLE_ITALIC, range);
+            self.0.SetFontStyle(val, range);
         }
     }
 
-    pub(crate) fn set_underline(&mut self, start: usize, len: usize) {
+    pub(crate) fn set_underline(&mut self, start: usize, len: usize, flag: bool) {
         let range = make_text_range(start, len);
+        let flag = if flag { TRUE } else { FALSE };
         unsafe {
-            self.0.SetUnderline(1, range);
+            self.0.SetUnderline(flag, range);
         }
     }
 

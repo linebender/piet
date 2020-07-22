@@ -45,8 +45,8 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         )
         .add_attribute(200.., FontWeight::EXTRA_BLACK)
         .add_attribute(220.., TextAttribute::Size(18.0))
-        .add_attribute(240.., TextAttribute::Italic)
-        .add_attribute(280.., TextAttribute::Underline)
+        .add_attribute(240.., TextAttribute::Italic(true))
+        .add_attribute(280.., TextAttribute::Underline(true))
         .build()?;
 
     rc.draw_text(&en_leading, (0., 0.), &Color::BLACK);
