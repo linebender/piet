@@ -6,9 +6,9 @@ use std::ops::RangeBounds;
 use kurbo::{Affine, Point, Rect, Shape, Size};
 
 use crate::{
-    Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestPosition, ImageFormat,
-    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder,
+    Color, Error, FixedGradient, Font, FontBuilder, FontFamily, HitTestPoint, HitTestPosition,
+    ImageFormat, InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text,
+    TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 /// A render context that doesn't render.
@@ -151,8 +151,8 @@ impl Text for NullText {
         NullTextLayoutBuilder
     }
 
-    fn font(&mut self, _family_name: &str) -> Option<Self::Font> {
-        Some(NullFont)
+    fn font(&mut self, _family_name: &str) -> Option<FontFamily> {
+        Some(FontFamily::default())
     }
 }
 
@@ -178,14 +178,14 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
         self
     }
 
-    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+    fn default_attribute(self, _attribute: impl Into<TextAttribute>) -> Self {
         self
     }
 
     fn range_attribute(
         self,
         _range: impl RangeBounds<usize>,
-        _attribute: impl Into<TextAttribute<Self::Font>>,
+        _attribute: impl Into<TextAttribute>,
     ) -> Self {
         self
     }
