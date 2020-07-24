@@ -104,18 +104,11 @@ impl Text for D2DText {
         D2DFont { family, size }
     }
 
-    fn new_text_layout(
-        &mut self,
-        _font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
-        let width = width.into().unwrap_or(std::f64::INFINITY);
+    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+        let width = f32::INFINITY;
         let wide_str = text.to_wide();
         let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32)
-            .and_then(|format| {
-                dwrite::TextLayout::new(&self.dwrite, format, width as f32, &wide_str)
-            })
+            .and_then(|format| dwrite::TextLayout::new(&self.dwrite, format, width, &wide_str))
             .map_err(Into::into);
 
         D2DTextLayoutBuilder {
@@ -140,6 +133,17 @@ impl Font for D2DFont {}
 impl TextLayoutBuilder for D2DTextLayoutBuilder {
     type Out = D2DTextLayout;
     type Font = D2DFont;
+
+    fn max_width(mut self, width: f64) -> Self {
+        let result = match self.layout.as_mut() {
+            Ok(layout) => layout.set_max_width(width),
+            Err(_) => Ok(()),
+        };
+        if let Err(err) = result {
+            self.layout = Err(err.into());
+        }
+        self
+    }
 
     fn alignment(mut self, alignment: TextAlignment) -> Self {
         if let Ok(layout) = self.layout.as_mut() {
@@ -359,37 +363,43 @@ mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], None)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], None)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..2], None)
+            .new_text_layout(&input[0..2])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let pi_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..1], None)
+            .new_text_layout(&input[0..1])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let p_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, "", None)
+            .new_text_layout("")
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let null_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, None)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
         let full_width = full_layout.size().width;
@@ -438,7 +448,8 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, None)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
@@ -471,7 +482,8 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, None)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
@@ -503,22 +515,14 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, None)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
-        let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2], None)
-            .build()
-            .unwrap();
-        let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9], None)
-            .build()
-            .unwrap();
-        let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10], None)
-            .build()
-            .unwrap();
+        let test_layout_0 = text_layout.new_text_layout(&input[0..2]).build().unwrap();
+        let test_layout_1 = text_layout.new_text_layout(&input[0..9]).build().unwrap();
+        let test_layout_2 = text_layout.new_text_layout(&input[0..10]).build().unwrap();
 
         // Note: text position is in terms of utf8 code units
         assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
@@ -566,7 +570,8 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "piet text!", None)
+            .new_text_layout("piet text!")
+            .font(font, 12.0)
             .build()
             .unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 20.302734375
@@ -613,7 +618,8 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, None)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.275390625
@@ -656,7 +662,9 @@ mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, width_small)
+            .new_text_layout(input)
+            .max_width(width_small)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
@@ -681,7 +689,9 @@ mod test {
             .build()
             .unwrap();
         let mut layout = text_layout
-            .new_text_layout(&font, input, width_small)
+            .new_text_layout(input)
+            .font(font, 12.0)
+            .max_width(width_small)
             .build()
             .unwrap();
 
@@ -709,50 +719,60 @@ mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 30.0)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], 30.0)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let pie_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..5], 30.0)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(&input[0..5]).build().unwrap();
         let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[6..10], 30.0)
+            .new_text_layout(&input[6..10])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let text_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..9], 30.0)
+            .new_text_layout(&input[6..9])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let tex_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..8], 30.0)
+            .new_text_layout(&input[6..8])
+            .max_width(30.0)
             .build()
             .unwrap();
         let te_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..7], 30.0)
+            .new_text_layout(&input[6..7])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let t_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 30.0)
+            .new_text_layout(input)
+            .font(font, 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         println!("lm: {:#?}", full_layout.line_metrics);
@@ -857,7 +877,12 @@ mod test {
 
         let font = text.new_font_by_name("Segoe UI", 12.0).build().unwrap();
         // this should break into four lines
-        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        let layout = text
+            .new_text_layout(input)
+            .font(font, 12.0)
+            .max_width(30.0)
+            .build()
+            .unwrap();
         println!("{}", layout.line_metric(0).unwrap().baseline); // 12.94...
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
         println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 15.96...)
@@ -881,7 +906,7 @@ mod test {
         assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
-        let best_layout = text.new_text_layout(&font, "best", None).build().unwrap();
+        let best_layout = text.new_text_layout("best").build().unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 22.48...
 
         let pt = layout.hit_test_point(Point::new(1.0, 52.0));
@@ -897,7 +922,7 @@ mod test {
         assert_eq!(pt.is_inside, false);
 
         // under
-        let piet_layout = text.new_text_layout(&font, "piet ", None).build().unwrap();
+        let piet_layout = text.new_text_layout("piet ").build().unwrap();
         println!("layout width: {:#?}", piet_layout.size().width); // 23.58...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under

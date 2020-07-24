@@ -13,10 +13,9 @@ const LIGHT_GREY: Color = Color::grey8(0xc0);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(LIGHT_GREY);
     let text = rc.text();
-    let font = text.system_font(24.0);
 
     let layout = text
-        .new_text_layout(&font, SAMPLE_EN, None)
+        .new_text_layout(SAMPLE_EN)
         .default_attribute(TextAttribute::Size(24.0))
         .build()?;
 

@@ -75,7 +75,7 @@ impl Text for WebText {
 
     fn system_font(&mut self, size: f64) -> Self::Font {
         let font = WebFont {
-            family: "san-serif".to_owned(),
+            family: "sans-serif".to_owned(),
             size,
             weight: 400,
             style: FontStyle::Normal,
@@ -83,21 +83,14 @@ impl Text for WebText {
         WebFontBuilder(font).build().unwrap()
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
-        let width = width.into().unwrap_or(std::f64::INFINITY);
-
+    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
-            font: font.clone(),
+            font: self.system_font(piet::util::DEFAULT_FONT_SIZE),
             text: text.to_owned(),
-            width,
+            width: f64::INFINITY,
         }
     }
 }
@@ -131,6 +124,11 @@ impl WebFont {
 impl TextLayoutBuilder for WebTextLayoutBuilder {
     type Out = WebTextLayout;
     type Font = WebFont;
+
+    fn max_width(mut self, width: f64) -> Self {
+        self.width = width;
+        self
+    }
 
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
         web_sys::console::log_1(&"TextLayout alignment unsupported on web".into());
@@ -486,37 +484,43 @@ pub(crate) mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
+            .new_text_layout(&input[0..2])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let pi_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
+            .new_text_layout(&input[0..1])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let p_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, "", std::f64::INFINITY)
+            .new_text_layout("")
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let null_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
         let full_width = full_layout.size().width;
@@ -571,7 +575,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
@@ -608,7 +613,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
@@ -641,20 +647,24 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
 
         let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
+            .new_text_layout(&input[0..2])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9], std::f64::INFINITY)
+            .new_text_layout(&input[0..9])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10], std::f64::INFINITY)
+            .new_text_layout(&input[0..10])
+            .font(font, 12.0)
             .build()
             .unwrap();
 
@@ -707,7 +717,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
+            .new_text_layout("piet text!")
+            .font(font, 16.0)
             .build()
             .unwrap();
         console::log_1(&format!("text pos 4: {:?}", layout.hit_test_text_position(4)).into()); // 23.99...
@@ -756,7 +767,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "t", std::f64::INFINITY)
+            .new_text_layout("t")
+            .font(font.clone(), 16.0)
             .build()
             .unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
@@ -766,7 +778,8 @@ pub(crate) mod test {
         assert_eq!(pt.idx, 0);
 
         let layout = text_layout
-            .new_text_layout(&font, "te", std::f64::INFINITY)
+            .new_text_layout("te")
+            .font(font, 16.0)
             .build()
             .unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
@@ -800,7 +813,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 13.0)
             .build()
             .unwrap();
         console::log_1(&format!("text pos 2: {:?}", layout.hit_test_text_position(2)).into()); // 5.77...
@@ -853,7 +867,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 14.0)
             .build()
             .unwrap();
         console::log_1(&format!("text pos 0: {:?}", layout.hit_test_text_position(0)).into()); // 0.0
@@ -882,50 +897,66 @@ pub(crate) mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], 30.0)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 25.0)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..5], 30.0)
+            .new_text_layout(&input[0..5])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[6..10], 25.0)
+            .new_text_layout(&input[6..10])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let text_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..9], 25.0)
+            .new_text_layout(&input[6..9])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let tex_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..8], 25.0)
+            .new_text_layout(&input[6..8])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let te_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..7], 25.0)
+            .new_text_layout(&input[6..7])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let t_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 25.0)
+            .new_text_layout(input)
+            .font(font, 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
 
@@ -1036,7 +1067,12 @@ pub(crate) mod test {
         let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();
         // this should break into four lines
         // Had to shift font in order to break at 4 lines (larger font than cairo, wider lines)
-        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        let layout = text
+            .new_text_layout(input)
+            .font(font.clone(), 14.0)
+            .max_width(30.0)
+            .build()
+            .unwrap();
         console::log_1(&format!("text pos 01: {:?}", layout.hit_test_text_position(0)).into()); // (0.0,0.0)
         console::log_1(&format!("text pos 06: {:?}", layout.hit_test_text_position(5)).into()); // (0.0, 16.8)
         console::log_1(&format!("text pos 11: {:?}", layout.hit_test_text_position(10)).into()); // (0.0, 33.6)
@@ -1061,7 +1097,8 @@ pub(crate) mod test {
 
         // over on y axis, but x still affects the text position
         let best_layout = text
-            .new_text_layout(&font, "best", std::f64::INFINITY)
+            .new_text_layout("best")
+            .font(font.clone(), 14.0)
             .build()
             .unwrap();
         console::log_1(&format!("layout width: {:#?}", best_layout.size().width).into()); // 22.55...
@@ -1080,7 +1117,8 @@ pub(crate) mod test {
 
         // under
         let piet_layout = text
-            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .new_text_layout("piet ")
+            .font(font, 14.0)
             .build()
             .unwrap();
         console::log_1(&format!("layout width: {:#?}", piet_layout.size().width).into()); // 24.49...

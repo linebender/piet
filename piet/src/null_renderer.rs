@@ -147,12 +147,7 @@ impl Text for NullText {
         NullFont
     }
 
-    fn new_text_layout(
-        &mut self,
-        _font: &Self::Font,
-        _text: &str,
-        _width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, _text: &str) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
 }
@@ -170,6 +165,10 @@ impl FontBuilder for NullFontBuilder {
 impl TextLayoutBuilder for NullTextLayoutBuilder {
     type Out = NullTextLayout;
     type Font = NullFont;
+
+    fn max_width(self, _width: f64) -> Self {
+        self
+    }
 
     fn alignment(self, _alignment: crate::TextAlignment) -> Self {
         self

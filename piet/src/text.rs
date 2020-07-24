@@ -23,12 +23,11 @@ pub trait Text: Clone {
     /// Returns a font suitable for use in UI on this platform.
     fn system_font(&mut self, size: f64) -> Self::Font;
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder;
+    /// Create a new layout object to display the provided `text`.
+    ///
+    /// The returned object is a [`TextLayoutBuilder`]; methods on that type
+    /// can be used to customize the layout.
+    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder;
 }
 
 /// A representation of a font.
@@ -112,14 +111,50 @@ pub trait FontBuilder {
     fn build(self) -> Result<Self::Out, Error>;
 }
 
-pub trait TextLayoutBuilder {
+pub trait TextLayoutBuilder: Sized {
     type Out: TextLayout;
     type Font: Font;
+
+    /// Set a max width for this layout.
+    ///
+    /// You may pass an `f64` to this method to indicate a width (in display points)
+    /// that will be used for word-wrapping.
+    ///
+    /// If you pass `f64::INFINITY`, words will not be wrapped; this is the
+    /// default behaviour.
+    fn max_width(self, width: f64) -> Self;
 
     /// Set the [`TextAlignment`] to be used for this layout.
     ///
     /// [`TextAlignment`]: enum.TextAlignment.html
     fn alignment(self, alignment: TextAlignment) -> Self;
+
+    /// A convenience method for setting the default font family and size.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use piet::*;
+    /// # let mut ctx = NullRenderContext::new();
+    /// # let mut text = ctx.text();
+    ///
+    /// let times = text.new_font_by_name("Times New Roman", 0.0).build().unwrap();
+    ///
+    /// // the following are equivalent
+    /// let layout_one = text.new_text_layout("hello everyone!")
+    ///     .font(times.clone(), 12.0)
+    ///     .build();
+    ///
+    /// let layout_two = text.new_text_layout("hello everyone!")
+    ///     .default_attribute(TextAttribute::Font(times.clone()))
+    ///     .default_attribute(TextAttribute::Size(12.0))
+    ///     .build();
+    ///
+    /// ```
+    fn font(self, font: Self::Font, font_size: f64) -> Self {
+        self.default_attribute(TextAttribute::Font(font))
+            .default_attribute(TextAttribute::Size(font_size))
+    }
 
     /// Add a default [`TextAttribute`] for this layout.
     ///
@@ -166,7 +201,8 @@ pub trait TextLayoutBuilder {
     ///
     /// let font = text.system_font(12.0);
     /// let times = text.new_font_by_name("Times New Roman", 12.0).build().unwrap();
-    /// let layout = text.new_text_layout(&font, "This API is okay, I guess?", 100.0)
+    /// let layout = text.new_text_layout("This API is okay, I guess?")
+    ///     .font(font, 12.0)
     ///     .default_attribute(TextAttribute::Italic(true))
     ///     .range_attribute(..5, FontWeight::BOLD)
     ///     .range_attribute(5..14, times)
