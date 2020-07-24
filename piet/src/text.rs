@@ -7,14 +7,8 @@ use crate::util::ArcOrStaticStr;
 use crate::Error;
 
 pub trait Text: Clone {
-    type FontBuilder: FontBuilder<Out = Self::Font>;
-    type Font: Font;
-
-    type TextLayoutBuilder: TextLayoutBuilder<Font = Self::Font, Out = Self::TextLayout>;
+    type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
-
-    #[deprecated(since = "0.2.0", note = "use Text::font instead")]
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder;
 
     /// Returns a a [`Font`] object corresponding to the given family name,
     /// if one can be found.
@@ -46,17 +40,16 @@ pub trait Text: Clone {
     /// Using the system UI font:
     ///
     /// ```
-    /// use piet::*;
-    /// let mut ctx = NullRenderContext::new();
-    /// let ui_font = ctx.text().font("system-ui").expect("generic family names won't fail");
+    /// # use piet::*;
+    /// # let mut ctx = NullRenderContext::new();
+    /// # let text = ctx.text();
+    /// let text_font = text.font("Charter")
+    ///     .or_else(|| text.font("Garamond"))
+    ///     .unwrap_or(FontFamily::SERIF);
     /// ```
     ///
     /// [`Font`]: trait.Font.html
     fn font(&mut self, family_name: &str) -> Option<FontFamily>;
-
-    /// Returns a font suitable for use in UI on this platform.
-    //FIXME: delete this, we just use font("system-ui") instead.
-    fn system_font(&mut self, size: f64) -> Self::Font;
 
     /// Create a new layout object to display the provided `text`.
     ///
@@ -65,35 +58,20 @@ pub trait Text: Clone {
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder;
 }
 
-/// A representation of a font.
-///
-/// This type may not be an actual font object, but is some type that can
-/// be resolved to a concrete font.
-///
-/// When loading a system font, this type can be thought of as a font *family*;
-/// if you change the weight or the style in a layout span, that may cause a
-/// different font in that family to be used for the actual drawing.
-pub trait Font: Clone {
-    /// A san-serif font, such as Arial or Helvetica.
-    const SAN_SERIF: &'static str = "sans-serif";
-    /// A serif font, such as Times New Roman or Charter.
-    const SERIF: &'static str = "serif";
-    /// A monospace font.
-    const MONOSPACE: &'static str = "monospace";
-    /// The platform's preferred UI font; San Francisco on macOS, and Segoe UI
-    /// on recent Windows.
-    const SYSTEM_UI: &'static str = "system-ui";
-}
-
 #[derive(Debug, Clone)]
 pub struct FontFamily {
     inner: ArcOrStaticStr,
 }
 
 impl FontFamily {
+    /// A san-serif font, such as Arial or Helvetica.
     pub const SANS_SERIF: FontFamily = FontFamily::new_const("sans-serif");
+    /// A serif font, such as Times New Roman or Charter.
     pub const SERIF: FontFamily = FontFamily::new_const("serif");
+    /// The platform's preferred UI font; San Francisco on macOS, and Segoe UI
+    /// on recent Windows.
     pub const SYSTEM_UI: FontFamily = FontFamily::new_const("system-ui");
+    /// A monospace font.
     pub const MONOSPACE: FontFamily = FontFamily::new_const("monospace");
 
     const fn new_const(s: &'static str) -> Self {
@@ -186,15 +164,8 @@ pub enum TextAttribute {
     Underline(bool),
 }
 
-pub trait FontBuilder {
-    type Out: Font;
-
-    fn build(self) -> Result<Self::Out, Error>;
-}
-
 pub trait TextLayoutBuilder: Sized {
     type Out: TextLayout;
-    type Font: Font;
 
     /// Set a max width for this layout.
     ///

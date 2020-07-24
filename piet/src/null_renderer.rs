@@ -6,9 +6,9 @@ use std::ops::RangeBounds;
 use kurbo::{Affine, Point, Rect, Shape, Size};
 
 use crate::{
-    Color, Error, FixedGradient, Font, FontBuilder, FontFamily, HitTestPoint, HitTestPosition,
-    ImageFormat, InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text,
-    TextAttribute, TextLayout, TextLayoutBuilder,
+    Color, Error, FixedGradient, FontFamily, HitTestPoint, HitTestPosition, ImageFormat,
+    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 
 /// A render context that doesn't render.
@@ -27,12 +27,6 @@ pub struct NullImage;
 #[derive(Clone)]
 #[doc(hidden)]
 pub struct NullText;
-
-#[doc(hidden)]
-#[derive(Clone)]
-pub struct NullFont;
-#[doc(hidden)]
-pub struct NullFontBuilder;
 
 #[doc(hidden)]
 #[derive(Clone)]
@@ -134,18 +128,8 @@ impl RenderContext for NullRenderContext {
 }
 
 impl Text for NullText {
-    type Font = NullFont;
-    type FontBuilder = NullFontBuilder;
     type TextLayout = NullTextLayout;
     type TextLayoutBuilder = NullTextLayoutBuilder;
-
-    fn new_font_by_name(&mut self, _name: &str, _size: f64) -> Self::FontBuilder {
-        NullFontBuilder
-    }
-
-    fn system_font(&mut self, _size: f64) -> Self::Font {
-        NullFont
-    }
 
     fn new_text_layout(&mut self, _text: &str) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
@@ -156,19 +140,8 @@ impl Text for NullText {
     }
 }
 
-impl Font for NullFont {}
-
-impl FontBuilder for NullFontBuilder {
-    type Out = NullFont;
-
-    fn build(self) -> Result<Self::Out, Error> {
-        Ok(NullFont)
-    }
-}
-
 impl TextLayoutBuilder for NullTextLayoutBuilder {
     type Out = NullTextLayout;
-    type Font = NullFont;
 
     fn max_width(self, _width: f64) -> Self {
         self

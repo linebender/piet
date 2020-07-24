@@ -9,8 +9,8 @@ use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    util, Color, Error, Font, FontBuilder, FontFamily, HitTestPoint, HitTestPosition, LineMetric,
-    Text, TextAttribute, TextLayout, TextLayoutBuilder,
+    util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -25,12 +25,8 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 pub struct CairoText;
 
 #[derive(Clone)]
-pub struct CairoFont {
-    family: String,
-}
-
-pub struct CairoFontBuilder {
-    family: String,
+struct CairoFont {
+    family: FontFamily,
 }
 
 #[derive(Clone)]
@@ -64,27 +60,11 @@ impl CairoText {
 }
 
 impl Text for CairoText {
-    type Font = CairoFont;
-    type FontBuilder = CairoFontBuilder;
     type TextLayout = CairoTextLayout;
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, name: &str, _size: f64) -> Self::FontBuilder {
-        CairoFontBuilder {
-            family: name.to_owned(),
-        }
-    }
-
     fn font(&mut self, family_name: &str) -> Option<FontFamily> {
         Some(FontFamily::new_unchecked(family_name))
-    }
-
-    fn system_font(&mut self, _size: f64) -> Self::Font {
-        CairoFontBuilder {
-            family: "sans-serif".into(),
-        }
-        .build()
-        .unwrap()
     }
 
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
@@ -96,23 +76,9 @@ impl Text for CairoText {
     }
 }
 
-impl FontBuilder for CairoFontBuilder {
-    type Out = CairoFont;
-
-    fn build(self) -> Result<Self::Out, Error> {
-        Ok(CairoFont {
-            family: self.family,
-        })
-    }
-}
-
-impl Font for CairoFont {}
-
 impl CairoFont {
-    pub(crate) fn new(family: impl Into<String>) -> Self {
-        CairoFont {
-            family: family.into(),
-        }
+    pub(crate) fn new(family: FontFamily) -> Self {
+        CairoFont { family }
     }
 
     #[cfg(test)]
@@ -122,7 +88,7 @@ impl CairoFont {
 
     /// Create a ScaledFont for this family.
     pub(crate) fn resolve(&self, size: f64, slant: FontSlant, weight: FontWeight) -> ScaledFont {
-        let font_face = FontFace::toy_create(&self.family, slant, weight);
+        let font_face = FontFace::toy_create(self.family.as_str(), slant, weight);
         let font_matrix = scale_matrix(size);
         let ctm = scale_matrix(1.0);
         let options = FontOptions::default();
@@ -132,7 +98,6 @@ impl CairoFont {
 
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
-    type Font = CairoFont;
 
     fn max_width(mut self, width: f64) -> Self {
         self.width_constraint = width;
@@ -159,7 +124,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
     fn build(self) -> Result<Self::Out, Error> {
         // set our default font
-        let font = CairoFont::new(self.defaults.font.as_str());
+        let font = CairoFont::new(self.defaults.font.clone());
         let size = self.defaults.font_size;
         let weight = if self.defaults.weight.to_raw() <= piet::FontWeight::MEDIUM.to_raw() {
             FontWeight::Normal
@@ -1132,7 +1097,7 @@ mod test {
 
         let full_layout = text_layout
             .new_text_layout(input)
-            .font(font.clone(), 15.0)
+            .font(font, 15.0)
             .max_width(25.0)
             .build()
             .unwrap();
@@ -1358,7 +1323,7 @@ mod test {
         // under
         let piet_layout = text
             .new_text_layout("piet ")
-            .font(font.clone(), 13.0)
+            .font(font, 13.0)
             .build()
             .unwrap();
         println!("layout width: {:#?}", piet_layout.size().width); // ???

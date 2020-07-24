@@ -30,16 +30,6 @@ pub type Brush = piet_cairo::Brush;
 /// This type matches `RenderContext::Text`
 pub type PietText = CairoText;
 
-/// The associated font type for this backend.
-///
-/// This type matches `RenderContext::Text::Font`
-pub type PietFont = CairoFont;
-
-/// The associated font builder for this backend.
-///
-/// This type matches `RenderContext::Text::FontBuilder`
-pub type PietFontBuilder = CairoFontBuilder;
-
 /// The associated text layout type for this backend.
 ///
 /// This type matches `RenderContext::Text::TextLayout`

@@ -17,8 +17,8 @@ use core_text::{font, font::CTFont, font_descriptor, string_attributes};
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    util, Error, Font, FontBuilder, FontFamily, FontWeight, HitTestPoint, HitTestPosition,
-    LineMetric, Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
+    util, Error, FontFamily, FontWeight, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::ct_helpers::{AttributedString, FontCollection, Frame, Framesetter, Line};
@@ -226,7 +226,6 @@ impl CoreGraphicsTextLayoutBuilder {
             let family_key =
                 CFString::wrap_under_create_rule(font_descriptor::kCTFontFamilyNameAttribute);
             let family = CFString::new(self.attrs.font().as_str());
-            //let family = self.attrs.font().family_name();
 
             let traits_key =
                 CFString::wrap_under_create_rule(font_descriptor::kCTFontTraitsAttribute);
@@ -366,35 +365,15 @@ impl CoreGraphicsText {
 }
 
 impl Text for CoreGraphicsText {
-    type Font = CoreGraphicsFont;
-    type FontBuilder = CoreGraphicsFontBuilder;
     type TextLayout = CoreGraphicsTextLayout;
     type TextLayoutBuilder = CoreGraphicsTextLayoutBuilder;
-
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
-        CoreGraphicsFontBuilder(font::new_from_name(name, size).ok())
-    }
 
     fn font(&mut self, family_name: &str) -> Option<FontFamily> {
         self.shared.get_font(family_name)
     }
 
-    fn system_font(&mut self, size: f64) -> Self::Font {
-        CoreGraphicsFont(crate::ct_helpers::system_font(size))
-    }
-
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
         CoreGraphicsTextLayoutBuilder::new(text)
-    }
-}
-
-impl Font for CoreGraphicsFont {}
-
-impl FontBuilder for CoreGraphicsFontBuilder {
-    type Out = CoreGraphicsFont;
-
-    fn build(self) -> Result<Self::Out, Error> {
-        self.0.map(CoreGraphicsFont).ok_or(Error::MissingFont)
     }
 }
 
@@ -435,7 +414,6 @@ impl CoreGraphicsTextLayoutBuilder {
 
 impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
     type Out = CoreGraphicsTextLayout;
-    type Font = CoreGraphicsFont;
 
     fn max_width(mut self, width: f64) -> Self {
         self.width = width;

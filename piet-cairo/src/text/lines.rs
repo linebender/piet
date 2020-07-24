@@ -219,7 +219,7 @@ mod test {
         let input = "piet text is the best text!";
         let width = 50.0;
 
-        let font = CairoFont::new("sans-serif").resolve_simple(12.0);
+        let font = CairoFont::new(FontFamily::SANS_SERIF).resolve_simple(12.0);
         let line_metrics = calculate_line_metrics(input, &font, width);
 
         // Some print debugging, in case font size/width needs to be changed in future because of
@@ -249,7 +249,7 @@ mod test {
         let input = "piet text is the best text!";
         let width = 50.0;
 
-        let font = CairoFont::new("sans-serif").resolve_simple(14.0);
+        let font = CairoFont::new(FontFamily::SANS_SERIF).resolve_simple(14.0);
         let line_metrics = calculate_line_metrics(input, &font, width);
 
         // Some print debugging, in case font size/width needs to be changed in future because of
@@ -277,7 +277,7 @@ mod test {
         let input = "piet\ntext";
         let width = 10.0;
 
-        let font = CairoFont::new("sans-serif").resolve_simple(12.0);
+        let font = CairoFont::new(FontFamily::SANS_SERIF).resolve_simple(12.0);
         let line_metrics = calculate_line_metrics(input, &font, width);
 
         // Some print debugging, in case font size/width needs to be changed in future because of
@@ -406,7 +406,7 @@ mod test {
         }];
 
         // setup cairo layout
-        let font = CairoFont::new("sans-serif").resolve_simple(13.0);
+        let font = CairoFont::new(FontFamily::SANS_SERIF).resolve_simple(13.0);
 
         println!(
             "piet text width: {}",
@@ -482,7 +482,7 @@ mod test {
         ];
 
         // setup cairo layout
-        let font = CairoFont::new("sans-serif").resolve_simple(13.0);
+        let font = CairoFont::new(FontFamily::SANS_SERIF).resolve_simple(13.0);
 
         test_metrics_with_width(width_small, expected_small, input, &font);
     }
