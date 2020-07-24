@@ -12,8 +12,8 @@ use wio::wide::ToWide;
 use piet::kurbo::{Insets, Point, Rect, Size};
 use piet::util;
 use piet::{
-    Error, Font, FontBuilder, HitTestPoint, HitTestPosition, LineMetric, Text, TextAlignment,
-    TextAttribute, TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::conv;
@@ -92,12 +92,12 @@ impl Text for D2DText {
         D2DFontBuilder { font }
     }
 
-    fn font(&mut self, family_name: &str) -> Option<Self::Font> {
+    fn font(&mut self, family_name: &str) -> Option<FontFamily> {
         self.dwrite
             .system_font_collection()
             .ok()
-            .and_then(|fonts| fonts.font_family(name))
-            .map(|family| D2DFont { family, size: 12.0 })
+            .and_then(|fonts| fonts.font_family(family_name))
+            .map(|family| FontFamily::new_unchecked(family.as_ref()))
     }
 
     fn system_font(&mut self, size: f64) -> Self::Font {
@@ -160,7 +160,7 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
         self
     }
 
-    fn default_attribute(mut self, attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+    fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
         self.add_attribute_shared(attribute.into(), None);
         self
     }
@@ -168,7 +168,7 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     fn range_attribute(
         mut self,
         range: impl RangeBounds<usize>,
-        attribute: impl Into<TextAttribute<Self::Font>>,
+        attribute: impl Into<TextAttribute>,
     ) -> Self {
         let range = util::resolve_range(range, self.text.len());
         let attribute = attribute.into();
@@ -206,7 +206,7 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
 
 impl D2DTextLayoutBuilder {
     /// used for both range and default attributes
-    fn add_attribute_shared(&mut self, attr: TextAttribute<D2DFont>, range: Option<Range<usize>>) {
+    fn add_attribute_shared(&mut self, attr: TextAttribute, range: Option<Range<usize>>) {
         if let Ok(layout) = self.layout.as_mut() {
             let (start, len) = match range {
                 Some(range) => {
@@ -222,7 +222,7 @@ impl D2DTextLayoutBuilder {
             };
 
             match attr {
-                TextAttribute::Font(font) => layout.set_font_family(start, len, &font.family),
+                TextAttribute::Font(font) => layout.set_font_family(start, len, &font.as_str()),
                 TextAttribute::Size(size) => layout.set_size(start, len, size as f32),
                 TextAttribute::Weight(weight) => layout.set_weight(start, len, weight),
                 TextAttribute::Italic(flag) => layout.set_italic(start, len, flag),
@@ -365,10 +365,7 @@ mod test {
         let mut text_layout = D2DText::new_for_test();
 
         let input = "piet text!";
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
 
         let layout = text_layout
             .new_text_layout(&input[0..4])
@@ -451,10 +448,7 @@ mod test {
         let input = "é";
         assert_eq!(input.len(), 2);
 
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -485,10 +479,7 @@ mod test {
 
         let mut text_layout = D2DText::new_for_test();
 
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -518,10 +509,7 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
         assert_eq!(input.len(), 14);
 
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -573,10 +561,7 @@ mod test {
     fn test_hit_test_point_basic() {
         let mut text_layout = D2DText::new_for_test();
 
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout("piet text!")
             .font(font, 12.0)
@@ -621,10 +606,7 @@ mod test {
         // 14 utf-8 code units (2/1/3/3/1/4)
         // 4 graphemes
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -665,10 +647,7 @@ mod test {
         let width_small = 30.0;
 
         let mut text_layout = D2DText::new_for_test();
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .max_width(width_small)
@@ -692,10 +671,7 @@ mod test {
         let width_large = 1000.0;
 
         let mut text_layout = D2DText::new_for_test();
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 12.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
         let mut layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -721,10 +697,7 @@ mod test {
         let mut text_layout = D2DText::new_for_test();
 
         let input = "piet  text!";
-        let font = text_layout
-            .new_font_by_name("Segoe UI", 15.0)
-            .build()
-            .unwrap();
+        let font = text_layout.font("Segoe UI").unwrap();
 
         let layout = text_layout
             .new_text_layout(&input[0..4])
@@ -883,7 +856,7 @@ mod test {
 
         let mut text = D2DText::new_for_test();
 
-        let font = text.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text.font("Segoe UI").unwrap();
         // this should break into four lines
         let layout = text
             .new_text_layout(input)

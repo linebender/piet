@@ -11,8 +11,8 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
-    Error, Font, FontBuilder, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder,
+    Error, Font, FontBuilder, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAttribute, TextLayout, TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -73,13 +73,8 @@ impl Text for WebText {
         WebFontBuilder(font)
     }
 
-    fn font(&mut self, family_name: &str) -> Option<Self::Font> {
-        Some(WebFont {
-            family: family_name.to_owned(),
-            size: 0.0,
-            weight: 400,
-            style: FontStyle::Normal,
-        })
+    fn font(&mut self, family_name: &str) -> Option<FontFamily> {
+        Some(FontFamily::new_unchecked(family_name))
     }
 
     fn system_font(&mut self, size: f64) -> Self::Font {
@@ -144,7 +139,7 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
         self
     }
 
-    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+    fn default_attribute(self, _attribute: impl Into<TextAttribute>) -> Self {
         web_sys::console::log_1(&"Text attributes not yet implemented for web".into());
         self
     }
@@ -152,7 +147,7 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
     fn range_attribute(
         self,
         _range: impl RangeBounds<usize>,
-        _attribute: impl Into<TextAttribute<Self::Font>>,
+        _attribute: impl Into<TextAttribute>,
     ) -> Self {
         web_sys::console::log_1(&"Text attributes not yet implemented for web".into());
         self

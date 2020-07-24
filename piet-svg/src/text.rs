@@ -3,7 +3,7 @@
 use std::ops::RangeBounds;
 
 use piet::kurbo::{Point, Rect, Size};
-use piet::{Error, HitTestPoint, HitTestPosition, LineMetric, TextAttribute};
+use piet::{Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, TextAttribute};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -28,8 +28,8 @@ impl piet::Text for Text {
         FontBuilder
     }
 
-    fn font(&mut self, _family_name: &str) -> Option<Self::Font> {
-        Some(Font)
+    fn font(&mut self, _family_name: &str) -> Option<FontFamily> {
+        Some(FontFamily::default())
     }
 
     fn system_font(&mut self, _size: f64) -> Self::Font {
@@ -72,14 +72,14 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
         self
     }
 
-    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+    fn default_attribute(self, _attribute: impl Into<TextAttribute>) -> Self {
         self
     }
 
     fn range_attribute(
         self,
         _range: impl RangeBounds<usize>,
-        _attribute: impl Into<TextAttribute<Self::Font>>,
+        _attribute: impl Into<TextAttribute>,
     ) -> Self {
         self
     }

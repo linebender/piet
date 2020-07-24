@@ -59,7 +59,7 @@ mod test {
         expected: Vec<LineMetric>,
         input: &str,
         text_layout: &mut D2DText,
-        font: &D2DFont,
+        font: &FontFamily,
         font_size: f64,
     ) {
         let layout = text_layout
@@ -177,7 +177,7 @@ mod test {
 
         // setup dwrite layout
         let mut text = D2DText::new_for_test();
-        let font = text.new_font_by_name("Segoe UI", 12.0).build().unwrap();
+        let font = text.font("Segoe UI").unwrap();
 
         test_metrics_with_width(width_small, expected_small, input, &mut text, &font, 12.0);
         test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font, 12.0);
