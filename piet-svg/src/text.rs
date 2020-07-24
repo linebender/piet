@@ -32,12 +32,7 @@ impl piet::Text for Text {
         Font
     }
 
-    fn new_text_layout(
-        &mut self,
-        _font: &Self::Font,
-        _text: &str,
-        _width: impl Into<Option<f64>>,
-    ) -> TextLayoutBuilder {
+    fn new_text_layout(&mut self, _text: &str) -> TextLayoutBuilder {
         TextLayoutBuilder
     }
 }
@@ -64,6 +59,10 @@ pub struct TextLayoutBuilder;
 impl piet::TextLayoutBuilder for TextLayoutBuilder {
     type Out = TextLayout;
     type Font = Font;
+
+    fn max_width(self, _width: f64) -> Self {
+        self
+    }
 
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
         self

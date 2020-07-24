@@ -16,8 +16,7 @@ const BLUE: Color = Color::rgb8(0, 0, 255);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(LIGHT_GREY);
     let text = rc.text();
-    let font = text.system_font(12.0);
-    let layout = text.new_text_layout(&font, TEXT, 200.0).build()?;
+    let layout = text.new_text_layout(TEXT).max_width(200.0).build()?;
 
     let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);
 

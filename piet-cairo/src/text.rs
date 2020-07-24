@@ -83,18 +83,15 @@ impl Text for CairoText {
         .unwrap()
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
-        let width = width.into().unwrap_or(std::f64::INFINITY);
+    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+        let default_font = CairoFont {
+            family: "sans-serif".into(),
+        };
 
         CairoTextLayoutBuilder {
-            defaults: util::LayoutDefaults::new(font.clone()),
+            defaults: util::LayoutDefaults::new(default_font),
             text: text.to_owned(),
-            width_constraint: width,
+            width_constraint: f64::INFINITY,
         }
     }
 }
@@ -137,6 +134,11 @@ impl CairoFont {
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
     type Font = CairoFont;
+
+    fn max_width(mut self, width: f64) -> Self {
+        self.width_constraint = width;
+        self
+    }
 
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
         eprintln!("TextAlignment not supported by cairo toy text");
@@ -466,45 +468,23 @@ mod test {
         let mut text_layout = CairoText::new();
 
         let input = "piet text!";
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(&input[0..4]).build().unwrap();
         let piet_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(&input[0..3]).build().unwrap();
         let pie_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(&input[0..2]).build().unwrap();
         let pi_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(&input[0..1]).build().unwrap();
         let p_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, "", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("").build().unwrap();
         let null_width = layout.size().width;
 
-        let full_layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let full_layout = text_layout.new_text_layout(input).build().unwrap();
         let full_width = full_layout.size().width;
 
         assert_close!(
@@ -550,14 +530,7 @@ mod test {
         assert_eq!(input.len(), 2);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
 
         assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close!(
@@ -588,14 +561,7 @@ mod test {
         assert_eq!(input.chars().count(), 3);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
 
         assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close!(
@@ -619,27 +585,11 @@ mod test {
         assert_eq!(input.len(), 14);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
 
-        let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10], std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let test_layout_0 = text_layout.new_text_layout(&input[0..2]).build().unwrap();
+        let test_layout_1 = text_layout.new_text_layout(&input[0..9]).build().unwrap();
+        let test_layout_2 = text_layout.new_text_layout(&input[0..10]).build().unwrap();
 
         // Note: text position is in terms of utf8 code units
         assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
@@ -683,14 +633,7 @@ mod test {
     fn test_hit_test_point_basic_0() {
         let mut text_layout = CairoText::new();
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("piet text!").build().unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 23.0
         println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 27.0
 
@@ -730,14 +673,7 @@ mod test {
     fn test_hit_test_point_basic_0() {
         let mut text_layout = CairoText::new();
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("piet text!").build().unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 19.34765625
         println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 22.681640625
 
@@ -777,24 +713,14 @@ mod test {
         let mut text_layout = CairoText::new();
 
         // base condition, one grapheme
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "t", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("t").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
 
         // two graphemes (to check that middle moves)
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
         assert_eq!(pt.idx, 0);
 
-        let layout = text_layout
-            .new_text_layout(&font, "te", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("te").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
 
@@ -815,24 +741,14 @@ mod test {
         let mut text_layout = CairoText::new();
 
         // base condition, one grapheme
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "t", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("t").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
 
         // two graphemes (to check that middle moves)
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
         assert_eq!(pt.idx, 0);
 
-        let layout = text_layout
-            .new_text_layout(&font, "te", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("te").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
 
@@ -857,14 +773,7 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         //println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.99999999
         //println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 24.0
         //println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 32.0
@@ -909,14 +818,7 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.673828125
         println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 28.55859375
         println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 35.232421875
@@ -962,14 +864,7 @@ mod test {
         let input = "tßßypi";
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
@@ -994,14 +889,7 @@ mod test {
         let input = "tßßypi";
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
@@ -1022,56 +910,56 @@ mod test {
         let mut text_layout = CairoText::new();
 
         let input = "piet  text!";
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..3], 30.0)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(&input[0..3]).build().unwrap();
         let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 25.0)
+            .new_text_layout(&input[0..4])
+            .max_width(25.0)
             .build()
             .unwrap();
         let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..5], 30.0)
+            .new_text_layout(&input[0..5])
+            .max_width(30.)
             .build()
             .unwrap();
         let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[6..10], 25.0)
+            .new_text_layout(&input[6..10])
+            .max_width(25.0)
             .build()
             .unwrap();
         let text_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..9], 25.0)
+            .new_text_layout(&input[6..9])
+            .max_width(25.0)
             .build()
             .unwrap();
         let tex_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..8], 25.0)
+            .new_text_layout(&input[6..8])
+            .max_width(25.0)
             .build()
             .unwrap();
         let te_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..7], 25.0)
+            .new_text_layout(&input[6..7])
+            .max_width(25.0)
             .build()
             .unwrap();
         let t_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 25.0)
+            .new_text_layout(input)
+            .max_width(25.0)
             .build()
             .unwrap();
 
@@ -1184,55 +1072,71 @@ mod test {
 
         let input = "piet  text!";
         let font = text_layout
-            .new_font_by_name("sans-serif", 15.0) // change this for osx
+            .new_font_by_name("Helvetica", 15.0) // change this for osx
             .build()
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], 30.0)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 25.0)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..5], 30.0)
+            .new_text_layout(&input[0..5])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[6..10], 25.0)
+            .new_text_layout(&input[6..10])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let text_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..9], 25.0)
+            .new_text_layout(&input[6..9])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let tex_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..8], 25.0)
+            .new_text_layout(&input[6..8])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let te_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..7], 25.0)
+            .new_text_layout(&input[6..7])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
         let t_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 25.0)
+            .new_text_layout(input)
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
 
@@ -1345,9 +1249,8 @@ mod test {
         let input = "piet text most best";
         let mut text = CairoText::new();
 
-        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
         // this should break into four lines
-        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        let layout = text.new_text_layout(input).max_width(30.0).build().unwrap();
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 12.0)
         println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 26.0)
         println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 40.0)
@@ -1367,10 +1270,7 @@ mod test {
         assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
-        let best_layout = text
-            .new_text_layout(&font, "best", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let best_layout = text.new_text_layout("best").build().unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 26.0...
 
         let pt = layout.hit_test_point(Point::new(1.0, 56.0));
@@ -1386,10 +1286,7 @@ mod test {
         assert_eq!(pt.is_inside, false);
 
         // under
-        let piet_layout = text
-            .new_text_layout(&font, "piet ", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let piet_layout = text.new_text_layout("piet ").build().unwrap();
         println!("layout width: {:#?}", piet_layout.size().width); // 27.0...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
@@ -1412,11 +1309,12 @@ mod test {
         let input = "piet text most best";
         let mut text = CairoText::new();
 
-        let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
+        let font = text.new_font_by_name("Helvetica", 13.0).build().unwrap();
         // this should break into four lines
         let layout = text
-            .new_text_layout(&font, input, 30.0)
-            .default_attribute(TextAttribute::Size(13.0))
+            .new_text_layout(input)
+            .font(font.clone(), 13.0)
+            .max_width(30.0)
             .build()
             .unwrap();
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
@@ -1442,7 +1340,8 @@ mod test {
 
         // over on y axis, but x still affects the text position
         let best_layout = text
-            .new_text_layout(&font, "best", std::f64::INFINITY)
+            .new_text_layout("best")
+            .font(font.clone(), 13.0)
             .build()
             .unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 26.0...
@@ -1461,7 +1360,8 @@ mod test {
 
         // under
         let piet_layout = text
-            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .new_text_layout("piet ")
+            .font(font.clone(), 13.0)
             .build()
             .unwrap();
         println!("layout width: {:#?}", piet_layout.size().width); // ???

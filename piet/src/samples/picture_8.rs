@@ -24,7 +24,9 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let mono = text.new_font_by_name(MONO, 12.0).build().unwrap();
 
     let en_leading = text
-        .new_text_layout(&font, SAMPLE_EN, 200.0)
+        .new_text_layout(SAMPLE_EN)
+        .max_width(200.0)
+        .default_attribute(font)
         .alignment(TextAlignment::Start)
         .range_attribute(10..80, TextAttribute::Size(8.0))
         .range_attribute(20..120, serif)

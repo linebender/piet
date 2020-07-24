@@ -19,7 +19,8 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let font = text.system_font(12.0);
     let font2 = text.new_font_by_name("Courier New", 12.0).build().unwrap();
     let layout = text
-        .new_text_layout(&font, TEXT, 200.0)
+        .new_text_layout(TEXT)
+        .max_width(200.0)
         .default_attribute(font2)
         .default_attribute(TextAttribute::Underline(true))
         .default_attribute(TextAttribute::Italic(true))

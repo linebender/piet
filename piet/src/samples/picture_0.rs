@@ -35,7 +35,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
 
     let layout = rc
         .text()
-        .new_text_layout(&segoe, "Hello piet!", None)
+        .new_text_layout("Hello piet!")
         .default_attribute(segoe)
         .default_attribute(TextAttribute::Size(12.0))
         .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))
@@ -84,7 +84,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
 
     let layout = rc
         .text()
-        .new_text_layout(&georgia, "CLIPPED", None)
+        .new_text_layout("CLIPPED")
         .default_attribute(georgia)
         .default_attribute(TextAttribute::Size(8.0))
         .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))

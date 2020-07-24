@@ -60,9 +60,12 @@ mod test {
         input: &str,
         text_layout: &mut D2DText,
         font: &D2DFont,
+        font_size: f64,
     ) {
         let layout = text_layout
-            .new_text_layout(&font, input, width)
+            .new_text_layout(input)
+            .max_width(width)
+            .font(font.clone(), font_size)
             .build()
             .unwrap();
         let line_metrics = fetch_line_metrics(input, &layout.layout);
@@ -176,10 +179,17 @@ mod test {
         let mut text = D2DText::new_for_test();
         let font = text.new_font_by_name("Segoe UI", 12.0).build().unwrap();
 
-        test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
-        test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font);
-        test_metrics_with_width(width_large, expected_large, input, &mut text, &font);
-        test_metrics_with_width(width_small, expected_empty, empty_input, &mut text, &font);
+        test_metrics_with_width(width_small, expected_small, input, &mut text, &font, 12.0);
+        test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font, 12.0);
+        test_metrics_with_width(width_large, expected_large, input, &mut text, &font, 12.0);
+        test_metrics_with_width(
+            width_small,
+            expected_empty,
+            empty_input,
+            &mut text,
+            &font,
+            12.0,
+        );
     }
 
     #[test]
@@ -187,8 +197,7 @@ mod test {
         let input = "€tf\n16";
 
         let mut text = D2DText::new_for_test();
-        let font = text.new_font_by_name("Segoe UI", 12.0).build().unwrap();
-        let layout = text.new_text_layout(&font, input, 100.0).build().unwrap();
+        let layout = text.new_text_layout(input).build().unwrap();
         let metric = layout.line_metric(0).unwrap();
         assert_eq!(&input[metric.range()], "€tf\n");
         let metric = layout.line_metric(1).unwrap();

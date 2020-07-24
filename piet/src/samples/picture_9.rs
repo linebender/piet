@@ -32,7 +32,10 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .expect("missing Courier New");
 
     let layout = text
-        .new_text_layout(&font, SAMPLE_EN, 200.0)
+        .new_text_layout(SAMPLE_EN)
+        .default_attribute(font)
+        .default_attribute(TextAttribute::Size(24.0))
+        .max_width(200.0)
         .alignment(TextAlignment::Start)
         .default_attribute(TextAttribute::Size(24.0))
         .range_attribute(23..35, mono.clone())

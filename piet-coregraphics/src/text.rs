@@ -348,14 +348,10 @@ impl Text for CoreGraphicsText {
         CoreGraphicsFont(crate::ct_helpers::system_font(size))
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
-        let width = width.into().unwrap_or(f64::INFINITY);
-        CoreGraphicsTextLayoutBuilder::new(font, text, width)
+    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+        let width = f64::INFINITY;
+        let font = crate::ct_helpers::system_font(0.0);
+        CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(font), text, width)
     }
 }
 
@@ -370,10 +366,10 @@ impl FontBuilder for CoreGraphicsFontBuilder {
 }
 
 impl CoreGraphicsTextLayoutBuilder {
-    fn new(font: &CoreGraphicsFont, text: &str, width: f64) -> Self {
+    fn new(font: CoreGraphicsFont, text: &str, width: f64) -> Self {
         let attr_string = AttributedString::new(text);
         let attrs = Attributes {
-            defaults: util::LayoutDefaults::new(font.clone()),
+            defaults: util::LayoutDefaults::new(font),
             ..Default::default()
         };
 
@@ -393,6 +389,11 @@ impl CoreGraphicsTextLayoutBuilder {
 impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
     type Out = CoreGraphicsTextLayout;
     type Font = CoreGraphicsFont;
+
+    fn max_width(mut self, width: f64) -> Self {
+        self.width = width;
+        self
+    }
 
     fn alignment(mut self, alignment: piet::TextAlignment) -> Self {
         self.alignment = alignment;
@@ -692,7 +693,7 @@ mod tests {
         let text = "hi\ni'm\n😀 four\nlines";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
         let layout =
-            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+            CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(a_font), text, f64::INFINITY)
                 .build()
                 .unwrap();
         assert_eq!(layout.line_text(0), Some("hi\n"));
@@ -706,7 +707,7 @@ mod tests {
         let text = "🤡:\na string\nwith a number \n of lines";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
         let layout =
-            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+            CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(a_font), text, f64::INFINITY)
                 .build()
                 .unwrap();
 
@@ -735,7 +736,7 @@ mod tests {
         let text = "1\n😀\n8\nA";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
         let layout =
-            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+            CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(a_font), text, f64::INFINITY)
                 .default_attribute(TextAttribute::Size(16.0))
                 .build()
                 .unwrap();
@@ -772,7 +773,7 @@ mod tests {
         let text = "hello";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
         let layout =
-            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+            CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(a_font), text, f64::INFINITY)
                 .default_attribute(TextAttribute::Size(16.0))
                 .build()
                 .unwrap();
@@ -793,7 +794,7 @@ mod tests {
         let text = "";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
         let layout =
-            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+            CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(a_font), text, f64::INFINITY)
                 .build()
                 .unwrap();
         let pt = layout.hit_test_point(Point::new(0.0, 0.0));
@@ -805,7 +806,7 @@ mod tests {
         let text = "aaaaa\nbbbbb";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
         let layout =
-            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+            CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(a_font), text, f64::INFINITY)
                 .default_attribute(TextAttribute::Size(16.0))
                 .build()
                 .unwrap();
@@ -823,7 +824,7 @@ mod tests {
         let text = "👾🤠\n🤖🎃👾";
         let a_font = font::new_from_name("Helvetica", 16.0).unwrap();
         let layout =
-            CoreGraphicsTextLayoutBuilder::new(&CoreGraphicsFont(a_font), text, f64::INFINITY)
+            CoreGraphicsTextLayoutBuilder::new(CoreGraphicsFont(a_font), text, f64::INFINITY)
                 .default_attribute(TextAttribute::Size(16.0))
                 .build()
                 .unwrap();
