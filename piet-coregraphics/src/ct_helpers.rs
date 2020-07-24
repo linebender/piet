@@ -262,6 +262,7 @@ impl<'a> From<CTLine> for Line<'a> {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn system_font(size: CGFloat) -> CTFont {
     unsafe {
         let font = CTFontCreateUIFontForLanguage(kCTFontSystemFontType, size, std::ptr::null());

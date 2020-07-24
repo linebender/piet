@@ -29,16 +29,6 @@ pub type Brush = piet_coregraphics::Brush;
 /// This type matches `RenderContext::Text`
 pub type PietText = CoreGraphicsText;
 
-/// The associated font type for this backend.
-///
-/// This type matches `RenderContext::Text::Font`
-pub type PietFont = CoreGraphicsFont;
-
-/// The associated font builder for this backend.
-///
-/// This type matches `RenderContext::Text::FontBuilder`
-pub type PietFontBuilder = CoreGraphicsFontBuilder;
-
 /// The associated text layout type for this backend.
 ///
 /// This type matches `RenderContext::Text::TextLayout`

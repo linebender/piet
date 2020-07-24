@@ -32,7 +32,7 @@ use piet::{
 use crate::d2d::wrap_unit;
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use crate::dwrite::DwriteFactory;
-pub use crate::text::{D2DFont, D2DFontBuilder, D2DText, D2DTextLayout, D2DTextLayoutBuilder};
+pub use crate::text::{D2DText, D2DTextLayout, D2DTextLayoutBuilder};
 
 use crate::conv::{
     affine_to_matrix3x2f, color_to_colorf, convert_stroke_style, gradient_stop_to_d2d,

@@ -30,7 +30,7 @@ use wio::com::ComPtr;
 use wio::wide::{FromWide, ToWide};
 
 use piet::kurbo::Insets;
-use piet::{FontWeight, TextAlignment};
+use piet::{FontFamily as PietFontFamily, FontWeight, TextAlignment};
 
 use crate::Brush;
 
@@ -64,17 +64,6 @@ pub struct TextFormat(pub(crate) ComPtr<IDWriteTextFormat>);
 
 #[derive(Clone)]
 struct FontFamily(ComPtr<IDWriteFontFamily>);
-
-/// A cheap to clone reference to an existing family name.
-///
-/// We hold onto both the wide string and the rust string.
-///
-/// This type AsRefs to both `str` and `[u16]`.
-#[derive(Clone, Debug)]
-pub(crate) struct FamilyName {
-    wide_name: Arc<[u16]>,
-    name: Arc<str>,
-}
 
 pub struct FontCollection(ComPtr<IDWriteFontCollection>);
 
@@ -162,7 +151,7 @@ impl DwriteFactory {
 }
 
 impl FontCollection {
-    pub(crate) fn font_family(&self, name: &str) -> Option<FamilyName> {
+    pub(crate) fn font_family(&self, name: &str) -> Option<PietFontFamily> {
         let wname = name.to_wide_null();
         let mut idx = u32::max_value();
         let mut exists = 0_i32;
@@ -189,7 +178,7 @@ impl FontCollection {
 impl FontFamily {
     // this monster is taken right out of the docs :/
     /// Returns the localized name of this family.
-    fn family_name(&self) -> Result<FamilyName, Error> {
+    fn family_name(&self) -> Result<PietFontFamily, Error> {
         unsafe {
             let mut names = null_mut();
             let hr = self.0.GetFamilyNames(&mut names);
@@ -238,11 +227,9 @@ impl FontFamily {
                 wide_name.set_len(length as usize + 1);
                 let name = OsString::from_wide(&wide_name)
                     .into_string()
-                    .unwrap_or_else(|err| err.to_string_lossy().into_owned())
-                    .into();
-                let wide_name = Arc::from(wide_name);
+                    .unwrap_or_else(|err| err.to_string_lossy().into_owned());
 
-                Ok(FamilyName { name, wide_name })
+                Ok(PietFontFamily::new_unchecked(&name))
             } else {
                 Err(hr.into())
             }
@@ -275,18 +262,6 @@ impl TextFormat {
             let r = wrap(hr, ptr, TextFormat)?;
             Ok(r)
         }
-    }
-}
-
-impl AsRef<str> for FamilyName {
-    fn as_ref(&self) -> &str {
-        &self.name
-    }
-}
-
-impl AsRef<[u16]> for FamilyName {
-    fn as_ref(&self) -> &[u16] {
-        &self.wide_name
     }
 }
 

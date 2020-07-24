@@ -16,9 +16,7 @@ use piet::{
     RenderContext, StrokeStyle, TextLayout,
 };
 
-pub use crate::text::{
-    CairoFont, CairoFontBuilder, CairoText, CairoTextLayout, CairoTextLayoutBuilder,
-};
+pub use crate::text::{CairoText, CairoTextLayout, CairoTextLayoutBuilder};
 
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid

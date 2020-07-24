@@ -12,29 +12,18 @@ use wio::wide::ToWide;
 use piet::kurbo::{Insets, Point, Rect, Size};
 use piet::util;
 use piet::{
-    Error, Font, FontBuilder, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
+    Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAlignment,
+    TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::conv;
 use crate::d2d;
-use crate::dwrite::{self, FamilyName, TextFormat};
+use crate::dwrite::{self, TextFormat};
 
 #[derive(Clone)]
 pub struct D2DText {
     dwrite: DwriteFactory,
     device: d2d::DeviceContext,
-}
-
-#[derive(Clone)]
-pub struct D2DFont {
-    //TODO: size should be separated out from font, which becomes just about family?
-    size: f64,
-    family: FamilyName,
-}
-
-pub struct D2DFontBuilder {
-    font: Option<D2DFont>,
 }
 
 #[derive(Clone)]
@@ -77,39 +66,14 @@ impl D2DText {
 }
 
 impl Text for D2DText {
-    type FontBuilder = D2DFontBuilder;
-    type Font = D2DFont;
     type TextLayoutBuilder = D2DTextLayoutBuilder;
     type TextLayout = D2DTextLayout;
-
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
-        let font = self
-            .dwrite
-            .system_font_collection()
-            .ok()
-            .and_then(|fonts| fonts.font_family(name))
-            .map(|family| D2DFont { family, size });
-        D2DFontBuilder { font }
-    }
 
     fn font(&mut self, family_name: &str) -> Option<FontFamily> {
         self.dwrite
             .system_font_collection()
             .ok()
             .and_then(|fonts| fonts.font_family(family_name))
-            .map(|family| FontFamily::new_unchecked(family.as_ref()))
-    }
-
-    fn system_font(&mut self, size: f64) -> Self::Font {
-        let collection = self.dwrite.system_font_collection().unwrap();
-        //TODO: this is maybe not the best thing? I _think_ if we pass an empty string
-        //when creating a layout it will pick a fallback font for us, which would
-        //let us skip this unwrap.
-        let family = collection
-            .font_family("Segoe UI")
-            .or_else(|| collection.font_family("Arial"))
-            .unwrap();
-        D2DFont { family, size }
     }
 
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
@@ -128,19 +92,8 @@ impl Text for D2DText {
     }
 }
 
-impl FontBuilder for D2DFontBuilder {
-    type Out = D2DFont;
-
-    fn build(self) -> Result<Self::Out, Error> {
-        self.font.ok_or(Error::MissingFont)
-    }
-}
-
-impl Font for D2DFont {}
-
 impl TextLayoutBuilder for D2DTextLayoutBuilder {
     type Out = D2DTextLayout;
-    type Font = D2DFont;
 
     fn max_width(mut self, width: f64) -> Self {
         let result = match self.layout.as_mut() {

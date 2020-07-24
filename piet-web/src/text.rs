@@ -11,8 +11,8 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
-    Error, Font, FontBuilder, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAttribute, TextLayout, TextLayoutBuilder,
+    Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute, TextLayout,
+    TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -21,13 +21,11 @@ use crate::WebText;
 
 #[derive(Clone)]
 pub struct WebFont {
-    family: String,
+    family: FontFamily,
     weight: u32,
     style: FontStyle,
     size: f64,
 }
-
-pub struct WebFontBuilder(WebFont);
 
 #[derive(Clone)]
 pub struct WebTextLayout {
@@ -58,33 +56,11 @@ enum FontStyle {
 }
 
 impl Text for WebText {
-    type Font = WebFont;
-    type FontBuilder = WebFontBuilder;
     type TextLayout = WebTextLayout;
     type TextLayoutBuilder = WebTextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
-        let font = WebFont {
-            family: name.to_owned(),
-            size,
-            weight: 400,
-            style: FontStyle::Normal,
-        };
-        WebFontBuilder(font)
-    }
-
     fn font(&mut self, family_name: &str) -> Option<FontFamily> {
         Some(FontFamily::new_unchecked(family_name))
-    }
-
-    fn system_font(&mut self, size: f64) -> Self::Font {
-        let font = WebFont {
-            family: "sans-serif".to_owned(),
-            size,
-            weight: 400,
-            style: FontStyle::Normal,
-        };
-        WebFontBuilder(font).build().unwrap()
     }
 
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
@@ -92,24 +68,23 @@ impl Text for WebText {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
-            font: self.system_font(piet::util::DEFAULT_FONT_SIZE),
+            font: WebFont::new(FontFamily::default()),
             text: text.to_owned(),
             width: f64::INFINITY,
         }
     }
 }
 
-impl FontBuilder for WebFontBuilder {
-    type Out = WebFont;
-
-    fn build(self) -> Result<Self::Out, Error> {
-        Ok(self.0)
-    }
-}
-
-impl Font for WebFont {}
-
 impl WebFont {
+    fn new(family: FontFamily) -> Self {
+        WebFont {
+            family,
+            style: FontStyle::Normal,
+            size: piet::util::DEFAULT_FONT_SIZE,
+            weight: 400,
+        }
+    }
+
     // TODO should this be pub(crate)?
     pub fn get_font_string(&self) -> String {
         let style_str = match self.style {
@@ -120,14 +95,16 @@ impl WebFont {
         };
         format!(
             "{} {} {}px \"{}\"",
-            style_str, self.weight, self.size, self.family
+            style_str,
+            self.weight,
+            self.size,
+            self.family.as_str()
         )
     }
 }
 
 impl TextLayoutBuilder for WebTextLayoutBuilder {
     type Out = WebTextLayout;
-    type Font = WebFont;
 
     fn max_width(mut self, width: f64) -> Self {
         self.width = width;
