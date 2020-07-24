@@ -3,6 +3,7 @@
 use std::ops::{Range, RangeBounds};
 
 use crate::kurbo::{Point, Rect, Size};
+use crate::util::ArcOrStaticStr;
 use crate::Error;
 
 pub trait Text: Clone {
@@ -51,7 +52,7 @@ pub trait Text: Clone {
     /// ```
     ///
     /// [`Font`]: trait.Font.html
-    fn font(&mut self, family_name: &str) -> Option<Self::Font>;
+    fn font(&mut self, family_name: &str) -> Option<FontFamily>;
 
     /// Returns a font suitable for use in UI on this platform.
     //FIXME: delete this, we just use font("system-ui") instead.
@@ -82,6 +83,42 @@ pub trait Font: Clone {
     /// The platform's preferred UI font; San Francisco on macOS, and Segoe UI
     /// on recent Windows.
     const SYSTEM_UI: &'static str = "system-ui";
+}
+
+#[derive(Debug, Clone)]
+pub struct FontFamily {
+    inner: ArcOrStaticStr,
+}
+
+impl FontFamily {
+    pub const SANS_SERIF: FontFamily = FontFamily::new_const("sans-serif");
+    pub const SERIF: FontFamily = FontFamily::new_const("serif");
+    pub const SYSTEM_UI: FontFamily = FontFamily::new_const("system-ui");
+    pub const MONOSPACE: FontFamily = FontFamily::new_const("monospace");
+
+    const fn new_const(s: &'static str) -> Self {
+        FontFamily {
+            inner: ArcOrStaticStr::new_const(s),
+        }
+    }
+
+    /// TODO: document me: this should generally not be used, instead get your
+    /// font from the text system, or use one of the consts.
+    pub fn new_unchecked(s: &str) -> Self {
+        FontFamily {
+            inner: ArcOrStaticStr::new_arc(s.into()),
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.inner.as_ref()
+    }
+}
+
+impl Default for FontFamily {
+    fn default() -> Self {
+        FontFamily::SYSTEM_UI
+    }
 }
 
 /// A font weight, represented as a value in the range 1..=1000.
@@ -133,9 +170,9 @@ impl FontWeight {
 }
 
 /// Attributes that can be applied to text.
-pub enum TextAttribute<T> {
+pub enum TextAttribute {
     /// The font family.
-    Font(T),
+    Font(FontFamily),
     /// The font size, in points.
     Size(f64),
     /// The [`FontWeight`](struct.FontWeight.html).
@@ -195,7 +232,7 @@ pub trait TextLayoutBuilder: Sized {
     ///     .build();
     ///
     /// ```
-    fn font(self, font: Self::Font, font_size: f64) -> Self {
+    fn font(self, font: FontFamily, font_size: f64) -> Self {
         self.default_attribute(TextAttribute::Font(font))
             .default_attribute(TextAttribute::Size(font_size))
     }
@@ -210,7 +247,7 @@ pub trait TextLayoutBuilder: Sized {
     ///
     /// [`TextAttribute`]: enum.TextAttribute.html
     /// [`range_attribute`]: #tymethod.range_attribute
-    fn default_attribute(self, attribute: impl Into<TextAttribute<Self::Font>>) -> Self;
+    fn default_attribute(self, attribute: impl Into<TextAttribute>) -> Self;
 
     /// Add a [`TextAttribute`] to a range of this layout.
     ///
@@ -243,10 +280,9 @@ pub trait TextLayoutBuilder: Sized {
     /// # let mut ctx = NullRenderContext::new();
     /// # let mut text = ctx.text();
     ///
-    /// let font = text.system_font(12.0);
-    /// let times = text.new_font_by_name("Times New Roman", 12.0).build().unwrap();
+    /// let times = text.font("Times New Roman").unwrap();
     /// let layout = text.new_text_layout("This API is okay, I guess?")
-    ///     .font(font, 12.0)
+    ///     .font(FontFamily::MONOSPACE, 12.0)
     ///     .default_attribute(TextAttribute::Italic(true))
     ///     .range_attribute(..5, FontWeight::BOLD)
     ///     .range_attribute(5..14, times)
@@ -259,7 +295,7 @@ pub trait TextLayoutBuilder: Sized {
     fn range_attribute(
         self,
         range: impl RangeBounds<usize>,
-        attribute: impl Into<TextAttribute<Self::Font>>,
+        attribute: impl Into<TextAttribute>,
     ) -> Self;
 
     fn build(self) -> Result<Self::Out, Error>;
@@ -506,14 +542,14 @@ pub struct HitTestPosition {
     pub point: Point,
 }
 
-impl<T: Font> From<T> for TextAttribute<T> {
-    fn from(t: T) -> TextAttribute<T> {
+impl From<FontFamily> for TextAttribute {
+    fn from(t: FontFamily) -> TextAttribute {
         TextAttribute::Font(t)
     }
 }
 
-impl<T> From<FontWeight> for TextAttribute<T> {
-    fn from(src: FontWeight) -> TextAttribute<T> {
+impl From<FontWeight> for TextAttribute {
+    fn from(src: FontWeight) -> TextAttribute {
         TextAttribute::Weight(src)
     }
 }

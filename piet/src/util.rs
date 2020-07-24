@@ -1,8 +1,10 @@
 //! Code useful for multiple backends
 
-use crate::kurbo::{Rect, Size};
-use crate::{Color, FontWeight, TextAttribute};
 use std::ops::{Bound, Range, RangeBounds};
+use std::sync::Arc;
+
+use crate::kurbo::{Rect, Size};
+use crate::{Color, FontFamily, FontWeight, TextAttribute};
 
 /// The default point sie for text in piet.
 pub const DEFAULT_FONT_SIZE: f64 = 12.0;
@@ -116,8 +118,8 @@ fn compute_erf7(x: f64) -> f64 {
 
 /// A type backends can use to represent the default values for a `TextLayout`
 #[non_exhaustive]
-pub struct LayoutDefaults<T> {
-    pub font: Option<T>,
+pub struct LayoutDefaults {
+    pub font: FontFamily,
     pub font_size: f64,
     pub weight: FontWeight,
     pub fg_color: Color,
@@ -125,17 +127,11 @@ pub struct LayoutDefaults<T> {
     pub underline: bool,
 }
 
-impl<T> LayoutDefaults<T> {
-    pub fn new(font: T) -> Self {
-        LayoutDefaults {
-            font: Some(font),
-            ..Default::default()
-        }
-    }
+impl LayoutDefaults {
     /// Set the default value for a given `TextAttribute`.
-    pub fn set(&mut self, val: impl Into<TextAttribute<T>>) {
+    pub fn set(&mut self, val: impl Into<TextAttribute>) {
         match val.into() {
-            TextAttribute::Font(t) => self.font = Some(t),
+            TextAttribute::Font(t) => self.font = t,
             TextAttribute::Size(size) => self.font_size = size,
             TextAttribute::Weight(weight) => self.weight = weight,
             TextAttribute::Italic(flag) => self.italic = flag,
@@ -145,15 +141,44 @@ impl<T> LayoutDefaults<T> {
     }
 }
 
-impl<T> Default for LayoutDefaults<T> {
+impl Default for LayoutDefaults {
     fn default() -> Self {
         LayoutDefaults {
-            font: None,
+            font: FontFamily::default(),
             font_size: DEFAULT_FONT_SIZE,
             weight: FontWeight::default(),
             fg_color: DEFAULT_TEXT_COLOR,
             italic: false,
             underline: false,
+        }
+    }
+}
+
+/// Kind of like a Cow, but dumber and simpler.
+///
+/// The main rationale for this type is that we can have a `const` constructor,
+/// which we can't have for `Arc<str>` on its own.
+#[derive(Debug, Clone)]
+pub(crate) enum ArcOrStaticStr {
+    Arc(Arc<str>),
+    Static(&'static str),
+}
+
+impl ArcOrStaticStr {
+    pub(crate) const fn new_const(s: &'static str) -> Self {
+        ArcOrStaticStr::Static(s)
+    }
+
+    pub(crate) fn new_arc(s: Arc<str>) -> Self {
+        ArcOrStaticStr::Arc(s)
+    }
+}
+
+impl AsRef<str> for ArcOrStaticStr {
+    fn as_ref(&self) -> &str {
+        match self {
+            ArcOrStaticStr::Arc(s) => &s,
+            ArcOrStaticStr::Static(s) => s,
         }
     }
 }

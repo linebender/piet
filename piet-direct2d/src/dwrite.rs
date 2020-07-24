@@ -353,10 +353,11 @@ impl TextLayout {
         }
     }
 
-    pub(crate) fn set_font_family(&mut self, start: usize, len: usize, family: &FamilyName) {
+    pub(crate) fn set_font_family(&mut self, start: usize, len: usize, family: &str) {
         let range = make_text_range(start, len);
+        let wide_name = family.to_wide_null();
         unsafe {
-            self.0.SetFontFamilyName(family.wide_name.as_ptr(), range);
+            self.0.SetFontFamilyName(wide_name.as_ptr(), range);
         }
     }
 
