@@ -10,34 +10,14 @@ pub trait Text: Clone {
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
 
-    /// Returns a a [`Font`] object corresponding to the given family name,
-    /// if one can be found.
+    /// Query the platform for a font with a given name, and return a `FontFamily`
+    /// object corresponding to that font, if it is found.
     ///
-    /// The family name should be either the explicit name of a font family
-    /// (such as "Times New Roman", or "Helvetica") or it can be a "generic
-    /// family name"; see below.
-    ///
-    /// ## Platform behaviour:
-    ///
-    /// Different platforms may search for fonts in different ways. On macOS,
-    /// for instance, passing "courier" will (assuming "Courier" is not installed)
-    /// will return "Courier New". on Windows, in the same situation, it will return
-    /// `None`. You should assume that matching is literal, and you should try
-    /// to use known literal names.
-    ///
-    /// ## Generic family names
-    ///
-    /// We provide limited support for "generic family names", as defined by CSS.
-    /// Currently, we support four of these names: `serif`, `sans-serif`, `monospace`,
-    /// and `system-ui`. These are available as constants on the [`Font`] trait.
-    ///
-    /// If you use a generic family name, this API **will not fail**, although
-    /// we do not guarantee we will always return an appropriate font; if nothing
-    /// can be found we will let the platform pick a fallback for us.
+    /// If that font exists, `Some` will be returned,
     ///
     /// # Examples
     ///
-    /// Using the system UI font:
+    /// Trying a preferred font, falling back if it isn't found.
     ///
     /// ```
     /// # use piet::*;
@@ -58,6 +38,20 @@ pub trait Text: Clone {
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder;
 }
 
+/// A reference to a font family.
+///
+/// This may be either a CSS-style "generic family name", such as "serif"
+/// or "monospace", or it can be an explicit family name.
+///
+/// To use a generic family name, use the provided associated constants:
+/// `FontFamily::SERIF`, `FontFamily::SANS_SERIF`, `FontFamily::SYSTEM_UI`,
+/// and `FontFamily::MONOSPACE`.
+///
+/// To use a specific font family you should not construct this type directly;
+/// instead you should verify that the desired family exists, via the
+/// [`Text::font`] API.
+///
+/// [`Text::font`]: trait.Text.html#tymethod.font
 #[derive(Debug, Clone)]
 pub struct FontFamily {
     inner: ArcOrStaticStr,
