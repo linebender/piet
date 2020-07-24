@@ -29,16 +29,6 @@ pub type Brush = piet_web::Brush;
 /// This type matches `RenderContext::Text`
 pub type PietText = WebText;
 
-/// The associated font type for this backend.
-///
-/// This type matches `RenderContext::Text::Font`
-pub type PietFont = WebFont;
-
-/// The associated font builder for this backend.
-///
-/// This type matches `RenderContext::Text::FontBuilder`
-pub type PietFontBuilder = WebFontBuilder;
-
 /// The associated text layout type for this backend.
 ///
 /// This type matches `RenderContext::Text::TextLayout`

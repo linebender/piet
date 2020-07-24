@@ -70,7 +70,7 @@ mod test {
     fn test_grapheme_boundaries() {
         let text = "piet";
 
-        let font = CairoFont::new("sans-serif").resolve_simple(12.0);
+        let font = CairoFont::new(FontFamily::SANS_SERIF).resolve_simple(12.0);
 
         let expected_3 = GraphemeBoundaries {
             curr_idx: 3,

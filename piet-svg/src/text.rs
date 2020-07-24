@@ -19,21 +19,11 @@ impl Text {
 }
 
 impl piet::Text for Text {
-    type Font = Font;
-    type FontBuilder = FontBuilder;
     type TextLayout = TextLayout;
     type TextLayoutBuilder = TextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, _name: &str, _size: f64) -> FontBuilder {
-        FontBuilder
-    }
-
     fn font(&mut self, _family_name: &str) -> Option<FontFamily> {
         Some(FontFamily::default())
-    }
-
-    fn system_font(&mut self, _size: f64) -> Self::Font {
-        Font
     }
 
     fn new_text_layout(&mut self, _text: &str) -> TextLayoutBuilder {
@@ -41,28 +31,10 @@ impl piet::Text for Text {
     }
 }
 
-/// SVG font builder (unimplemented)
-pub struct FontBuilder;
-
-impl piet::FontBuilder for FontBuilder {
-    type Out = Font;
-
-    fn build(self) -> Result<Font> {
-        Err(Error::NotSupported)
-    }
-}
-
-/// SVG font (unimplemented)
-#[derive(Clone)]
-pub struct Font;
-
-impl piet::Font for Font {}
-
 pub struct TextLayoutBuilder;
 
 impl piet::TextLayoutBuilder for TextLayoutBuilder {
     type Out = TextLayout;
-    type Font = Font;
 
     fn max_width(self, _width: f64) -> Self {
         self

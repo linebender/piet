@@ -24,7 +24,7 @@ use piet::{
     LineJoin, RenderContext, StrokeStyle,
 };
 
-pub use text::{WebFont, WebFontBuilder, WebTextLayout, WebTextLayoutBuilder};
+pub use text::{WebFont, WebTextLayout, WebTextLayoutBuilder};
 
 pub struct WebRenderContext {
     ctx: CanvasRenderingContext2d,

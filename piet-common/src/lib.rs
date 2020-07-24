@@ -65,8 +65,6 @@ mod test {
         piet: Piet<'a>,
         brush: Brush,
         piet_text: PietText,
-        piet_font: PietFont,
-        piet_font_builder: PietFontBuilder,
         piet_text_layout: PietTextLayout,
         piet_text_layout_builder: PietTextLayoutBuilder,
         image: Image,

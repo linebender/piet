@@ -31,16 +31,6 @@ pub type Brush = D2DBrush;
 /// This type matches `RenderContext::Text`
 pub type PietText = D2DText;
 
-/// The associated font type for this backend.
-///
-/// This type matches `RenderContext::Text::Font`
-pub type PietFont = D2DFont;
-
-/// The associated font builder for this backend.
-///
-/// This type matches `RenderContext::Text::FontBuilder`
-pub type PietFontBuilder = D2DFontBuilder;
-
 /// The associated text layout type for this backend.
 ///
 /// This type matches `RenderContext::Text::TextLayout`
