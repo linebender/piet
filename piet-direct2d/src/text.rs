@@ -175,7 +175,10 @@ impl D2DTextLayoutBuilder {
             };
 
             match attr {
-                TextAttribute::Font(font) => layout.set_font_family(start, len, &font.as_str()),
+                TextAttribute::Font(font) => {
+                    let family_name = resolve_family_name(&font);
+                    layout.set_font_family(start, len, family_name);
+                }
                 TextAttribute::Size(size) => layout.set_size(start, len, size as f32),
                 TextAttribute::Weight(weight) => layout.set_weight(start, len, weight),
                 TextAttribute::Italic(flag) => layout.set_italic(start, len, flag),
@@ -289,6 +292,16 @@ impl TextLayout for D2DTextLayout {
             .map(|http| HitTestPosition {
                 point: Point::new(http.point_x as f64, http.point_y as f64),
             })
+    }
+}
+
+//  this is not especially robust, but all of these are preinstalled on win 7+
+fn resolve_family_name(family: &FontFamily) -> &str {
+    match family {
+        f if f == &FontFamily::SYSTEM_UI || f == &FontFamily::SANS_SERIF => "Segoe UI",
+        f if f == &FontFamily::SERIF => "Times New Roman",
+        f if f == &FontFamily::MONOSPACE => "Consolas",
+        other => other.as_str(),
     }
 }
 
