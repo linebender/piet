@@ -12,13 +12,13 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
 
     for raw_metric in raw_line_metrics {
         // this may/will panic if `text` is not the text used to create this layout.
-        let (non_ws_end_8, ws_len_8) = end_offset_and_ws_len_utf8(
+        let (non_ws_len_8, ws_len_8) = len_and_ws_len_utf8(
             &text[offset_utf8..],
             raw_metric.length,
             raw_metric.trailingWhitespaceLength,
         );
 
-        let end_offset = offset_utf8 + non_ws_end_8 + ws_len_8;
+        let end_offset = offset_utf8 + non_ws_len_8 + ws_len_8;
         let y_offset = cumulative_height;
         cumulative_height += raw_metric.height as f64;
 
@@ -41,23 +41,12 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
 
 // handles the weirdness where we're dealing with lengths but count_until_utf16 deals
 // with offsets
-/// Return the end offset of the text, not including trailing whitespace,
-/// along with the length of any trailing whitespace.
-fn end_offset_and_ws_len_utf8(s: &str, total_len_16: u32, ws_len_16: u32) -> (usize, usize) {
+fn len_and_ws_len_utf8(s: &str, total_len_16: u32, ws_len_16: u32) -> (usize, usize) {
     let non_ws_len_16 = (total_len_16 - ws_len_16) as usize;
-    let non_ws_end_8 = if non_ws_len_16 > 0 {
-        1 + util::count_until_utf16(s, non_ws_len_16 - 1).unwrap()
-    } else {
-        0
-    };
-
-    let ws_len_8 = if ws_len_16 > 0 {
-        1 + util::count_until_utf16(&s[non_ws_end_8..], ws_len_16 as usize - 1).unwrap()
-    } else {
-        0
-    };
-
-    (non_ws_end_8, ws_len_8)
+    let non_ws_len_8 = util::count_until_utf16(s, non_ws_len_16).unwrap_or_else(|| s.len());
+    let s = &s[non_ws_len_8..];
+    let ws_len_8 = util::count_until_utf16(s, ws_len_16 as usize).unwrap_or_else(|| s.len());
+    (non_ws_len_8, ws_len_8)
 }
 
 #[cfg(test)]
@@ -195,12 +184,14 @@ mod test {
 
     #[test]
     fn test_string_range() {
-        let input = "€tf-16";
+        let input = "€tf\n16";
 
         let mut text = D2DText::new_for_test();
         let font = text.new_font_by_name("Segoe UI", 12.0).build().unwrap();
-        let layout = text.new_text_layout(&font, input, None).build().unwrap();
+        let layout = text.new_text_layout(&font, input, 100.0).build().unwrap();
         let metric = layout.line_metric(0).unwrap();
-        assert_eq!(metric.end_offset, 8);
+        assert_eq!(&input[metric.range()], "€tf\n");
+        let metric = layout.line_metric(1).unwrap();
+        assert_eq!(&input[metric.range()], "16");
     }
 }
