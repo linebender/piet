@@ -27,6 +27,3 @@ pub use crate::null_renderer::*;
 pub use crate::render_context::*;
 pub use crate::shapes::*;
 pub use crate::text::*;
-
-#[cfg(feature = "samples")]
-pub use samples::{draw_test_picture, size_for_test_picture};

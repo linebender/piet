@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlCanvasElement};
 
-use piet::RenderContext;
+use piet::{samples, RenderContext};
 use piet_web::WebRenderContext;
 
 #[wasm_bindgen]
@@ -35,6 +35,6 @@ pub fn run() {
     let mut piet_context = WebRenderContext::new(context, window);
 
     // TODO: make the test picture selectable
-    piet::draw_test_picture(&mut piet_context, 0).unwrap();
+    samples::get(0).draw(&mut piet_context).unwrap();
     piet_context.finish().unwrap();
 }
