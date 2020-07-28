@@ -157,3 +157,11 @@ impl DxgiDevice {
         self.0.as_raw()
     }
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "HRESULT error {}", self.0)
+    }
+}
+
+impl std::error::Error for Error {}

@@ -19,5 +19,4 @@ unic-bidi = "0.9"
 
 [dev-dependencies]
 piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
-
 png = "0.16.2"
