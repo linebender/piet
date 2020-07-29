@@ -36,8 +36,6 @@ jobs:
     name: cargo clippy+test
     steps:
       - uses: actions/checkout@v2
-        with:
-            submodules: 'true'
 
       - name: install libgtk-dev
         run: |
@@ -132,27 +130,6 @@ jobs:
         with:
           command: test
           args: --manifest-path=piet-common/Cargo.toml --features=png
-
-      - name: compare snapshots piet-cairo
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --out=snapshot_out --compare=./snapshots/cairo
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: compare snapshots piet-coregraphics
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --out=snapshot_out --compare=./snapshots/coregraphics
-        if: contains(matrix.os, 'macOS')
-
-      - name: compare snapshots piet-direct2d
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --out=snapshot_out --compare=./snapshots/d2d
-        if: contains(matrix.os, 'windows')
 
   test-stable-wasm:
     runs-on: ${{ matrix.os }}
