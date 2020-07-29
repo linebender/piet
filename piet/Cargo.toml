@@ -12,6 +12,7 @@ categories = ["rendering::graphics-api"]
 [dependencies]
 kurbo = "0.6.2"
 pico-args =  { version = "0.3.3", optional = true }
+png = {version = "0.16.2", optional = true }
 
 [features]
-samples = ["pico-args"]
+samples = ["pico-args", "png"]

@@ -1,6 +1,8 @@
 //! Drawing examples for testing backends
 
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 
 use crate::kurbo::Size;
@@ -63,7 +65,9 @@ struct Args {
 /// The important thing here is the fn argument; this should be a method that
 /// takes a number and a path, executes the corresponding sample, and saves a
 /// PNG to the path.
-pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>) -> Result<(), BoxErr> {
+///
+/// The `prefix` argument is used for the file names of failure cases.
+pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> Result<(), BoxErr> {
     let args = Args::from_env()?;
 
     if !args.out_dir.exists() {
@@ -77,10 +81,21 @@ pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>) -> Result<(), Box
     }
 
     if let Some(compare_dir) = args.compare_dir.as_ref() {
-        if let Err(e) = compare_snapshots(compare_dir, &args.out_dir) {
-            eprintln!("{}", e);
-            std::process::exit(1);
+        let results = compare_snapshots(compare_dir, &args.out_dir, prefix)?;
+        for (number, result) in results.iter() {
+            print!("Image {:02}: ", number);
+            match result {
+                Some(failure) => println!("{}", failure),
+                None => println!("Ok"),
+            }
         }
+
+        let exit_code = if results.values().any(Option::is_some) {
+            1
+        } else {
+            0
+        };
+        std::process::exit(exit_code);
     }
 
     Ok(())
@@ -144,8 +159,12 @@ fn run_all(f: impl Fn(usize) -> Result<(), BoxErr>) -> Result<(), BoxErr> {
     }
 }
 
-fn compare_snapshots(base: &Path, revised: &Path) -> Result<(), BoxErr> {
-    let mut failures = Vec::new();
+fn compare_snapshots(
+    base: &Path,
+    revised: &Path,
+    prefix: &str,
+) -> Result<BTreeMap<usize, Option<FailureReason>>, BoxErr> {
+    let mut failures = BTreeMap::new();
     let base_paths = get_sample_files(base)?;
     let rev_paths = get_sample_files(revised)?;
 
@@ -153,33 +172,115 @@ fn compare_snapshots(base: &Path, revised: &Path) -> Result<(), BoxErr> {
         let rev_path = match rev_paths.get(number) {
             Some(path) => path,
             None => {
-                failures.push(ComparisonError::Missing(*number));
+                failures.insert(*number, Some(FailureReason::MissingRevision));
                 continue;
             }
         };
 
-        if !compare_files(&base_path, rev_path)? {
-            failures.push(ComparisonError::DifferentData(*number));
-        }
+        let result = compare_files(*number, &base_path, rev_path, prefix)?;
+        failures.insert(*number, result);
     }
 
     for key in rev_paths.keys().filter(|k| !base_paths.contains_key(k)) {
-        eprintln!("Example {} exists in revision but not in base", key);
+        failures.insert(*key, Some(FailureReason::MissingBase));
     }
-
-    if failures.is_empty() {
-        eprintln!("Compared {} items", base_paths.len());
-        Ok(())
-    } else {
-        Err(Box::new(SnapshotError { failures }))
-    }
+    Ok(failures)
 }
 
 // this can get fancier at some point if we like
-fn compare_files(p1: &Path, p2: &Path) -> Result<bool, BoxErr> {
-    let one = std::fs::read(p1)?;
-    let two = std::fs::read(p2)?;
-    Ok(one == two)
+fn compare_files(
+    number: usize,
+    p1: &Path,
+    p2: &Path,
+    prefix: &str,
+) -> Result<Option<FailureReason>, BoxErr> {
+    let (one_info, one) = get_png_data(p1)?;
+    let (two_info, two) = get_png_data(p2)?;
+    let one_size = Size::new(one_info.width as f64, one_info.height as f64);
+    let two_size = Size::new(two_info.width as f64, two_info.height as f64);
+    if one_size != two_size {
+        return Ok(Some(FailureReason::WrongSize {
+            base: one_size,
+            rev: two_size,
+        }));
+    }
+    assert_eq!(
+        one_info.color_type, two_info.color_type,
+        "color types should always match"
+    );
+    let err_write_path = p2.with_file_name(&format!("{}{}-diff.png", prefix, number));
+    compare_pngs(one_info, &one, &two, err_write_path)
+}
+
+fn get_png_data(path: &Path) -> Result<(png::OutputInfo, Vec<u8>), BoxErr> {
+    let decoder = png::Decoder::new(File::open(path)?);
+    let (info, mut reader) = decoder.read_info()?;
+    // Allocate the output buffer.
+    let mut buf = vec![0; info.buffer_size()];
+    // Read the next frame. An APNG might contain multiple frames.
+    reader.next_frame(&mut buf)?;
+    Ok((info, buf))
+}
+
+/// Compare two pngs; in the case of difference, write a visualization of that difference
+/// to `write_path`.
+///
+/// Returns `Err` if there is an intermediate error; returns `Ok(None)` if the pngs
+/// are identical, and `Ok(Some(PathBuf))` if they are different, returning the path
+/// we were given.
+fn compare_pngs(
+    info: png::OutputInfo,
+    one: &[u8],
+    two: &[u8],
+    write_path: PathBuf,
+) -> Result<Option<FailureReason>, BoxErr> {
+    if one == two {
+        return Ok(None);
+    }
+    let samples = info.color_type.samples();
+    assert_eq!(one.len(), two.len(), "buffers must have equal length");
+    assert_eq!(
+        one.len() % samples,
+        0,
+        "png buffer length should be divisible by number of samples"
+    );
+
+    let file = File::create(&write_path)?;
+    let mut w = BufWriter::new(file);
+
+    let mut encoder = png::Encoder::new(&mut w, info.width, info.height); // Width is 2 pixels and height is 1.
+    encoder.set_color(png::ColorType::Grayscale);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header()?;
+
+    let mut buf = vec![0; (info.width * info.height) as usize];
+
+    let mut overall_diff = 0.;
+    for (i, (p1, p2)) in one.chunks(samples).zip(two.chunks(samples)).enumerate() {
+        let total_diff: i32 = p1
+            .iter()
+            .zip(p2.iter())
+            .map(|(one, two)| (*one as i32 - *two as i32).abs())
+            .sum();
+        let avg_diff = total_diff / samples as i32;
+        overall_diff += total_diff as f32 / samples as f32;
+        let avg_diff = if avg_diff > 0 {
+            // we want all difference to be visible, so we set a threshold.
+            avg_diff.max(24) as u8
+        } else {
+            0
+        };
+        buf[i] = avg_diff;
+    }
+
+    let overall_avg = overall_diff / buf.len() as f32;
+    let avg_perc = (overall_avg / 0xFF as f32) * 100.;
+
+    writer.write_image_data(&buf)?;
+    Ok(Some(FailureReason::DifferentData {
+        avg_diff_pct: avg_perc,
+        diff_path: write_path,
+    }))
 }
 
 fn get_sample_files(in_dir: &Path) -> Result<BTreeMap<usize, PathBuf>, BoxErr> {
@@ -202,9 +303,23 @@ fn extract_number(path: &Path) -> Option<usize> {
 }
 
 #[derive(Debug, Clone)]
-enum ComparisonError {
-    Missing(usize),
-    DifferentData(usize),
+enum FailureReason {
+    MissingBase,
+    MissingRevision,
+    WrongSize {
+        base: Size,
+        rev: Size,
+    },
+    DifferentData {
+        avg_diff_pct: f32,
+        diff_path: PathBuf,
+    },
+}
+
+#[derive(Debug, Clone)]
+struct ComparisonError {
+    number: usize,
+    reason: FailureReason,
 }
 
 #[derive(Debug, Clone)]
@@ -212,23 +327,23 @@ struct SnapshotError {
     failures: Vec<ComparisonError>,
 }
 
-impl std::fmt::Display for ComparisonError {
+impl std::fmt::Display for FailureReason {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ComparisonError::Missing(n) => write!(f, "{:>2}: Revision is missing", n),
-            ComparisonError::DifferentData(n) => write!(f, "{:>2}: Data differs", n),
+            FailureReason::MissingBase => write!(f, "Base file is missing"),
+            FailureReason::MissingRevision => write!(f, "Revised file is missing"),
+            FailureReason::DifferentData {
+                avg_diff_pct,
+                diff_path,
+            } => write!(
+                f,
+                "Data differs {:>5.2}%: {}",
+                avg_diff_pct,
+                diff_path.to_string_lossy(),
+            ),
+            FailureReason::WrongSize { base, rev } => {
+                write!(f, "Mismatched sizes, base {}, revision {}", base, rev)
+            }
         }
     }
 }
-
-impl std::fmt::Display for SnapshotError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        writeln!(f, "Encountered {} failures", self.failures.len())?;
-        for failure in &self.failures {
-            writeln!(f, "{}", failure)?;
-        }
-        Ok(())
-    }
-}
-
-impl std::error::Error for SnapshotError {}
