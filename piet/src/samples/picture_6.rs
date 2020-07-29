@@ -69,12 +69,16 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         stops: create_gradient_stops(),
     }))?;
 
-    let jp_font = rc.text().new_font_by_name("Noto Sans JP", 8.0).build()?;
+    let font = rc.text().new_font_by_name("Segoe UI", 8.0).build()?;
+    let jp_font = rc
+        .text()
+        .new_font_by_name("Noto Sans JP", 8.0)
+        .build()
+        .unwrap_or_else(|_| font.clone());
     let jp_text = rc
         .text()
         .new_text_layout(&jp_font, "ローカリゼーション作品", None)
         .build()?;
-    let font = rc.text().new_font_by_name("Segoe UI", 8.0).build()?;
     let en_text = rc
         .text()
         .new_text_layout(&font, "Text with gradient", None)
