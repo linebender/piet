@@ -1,5 +1,6 @@
 //! Drawing examples for testing backends
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::kurbo::Size;
@@ -54,6 +55,7 @@ struct Args {
     all: bool,
     out_dir: PathBuf,
     number: Option<usize>,
+    compare_dir: Option<PathBuf>,
 }
 
 /// A shared `main` fn for diferent backends.
@@ -72,6 +74,13 @@ pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>) -> Result<(), Box
         run_all(|number| f(number, &args.out_dir))?;
     } else if let Some(number) = args.number {
         f(number, &args.out_dir)?;
+    }
+
+    if let Some(compare_dir) = args.compare_dir.as_ref() {
+        if let Err(e) = compare_snapshots(compare_dir, &args.out_dir) {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
     }
 
     Ok(())
@@ -101,10 +110,11 @@ impl Args {
         let args = Args {
             all: args.contains("--all"),
             out_dir: out_dir.unwrap_or_else(|| PathBuf::from(".")),
+            compare_dir: args.opt_value_from_str("--compare")?,
             number: args.free_from_str()?,
         };
 
-        if !args.all && args.number.is_none() {
+        if !(args.all || args.number.is_some() || args.compare_dir.is_some()) {
             Err(Box::new(Error::InvalidSampleArgs))
         } else {
             Ok(args)
@@ -133,3 +143,92 @@ fn run_all(f: impl Fn(usize) -> Result<(), BoxErr>) -> Result<(), BoxErr> {
         Err(errs.remove(0).1)
     }
 }
+
+fn compare_snapshots(base: &Path, revised: &Path) -> Result<(), BoxErr> {
+    let mut failures = Vec::new();
+    let base_paths = get_sample_files(base)?;
+    let rev_paths = get_sample_files(revised)?;
+
+    for (number, base_path) in &base_paths {
+        let rev_path = match rev_paths.get(number) {
+            Some(path) => path,
+            None => {
+                failures.push(ComparisonError::Missing(*number));
+                continue;
+            }
+        };
+
+        if !compare_files(&base_path, rev_path)? {
+            failures.push(ComparisonError::DifferentData(*number));
+        }
+    }
+
+    for key in rev_paths.keys().filter(|k| !base_paths.contains_key(k)) {
+        eprintln!("Example {} exists in revision but not in base", key);
+    }
+
+    if failures.is_empty() {
+        eprintln!("Compared {} items", base_paths.len());
+        Ok(())
+    } else {
+        Err(Box::new(SnapshotError { failures }))
+    }
+}
+
+// this can get fancier at some point if we like
+fn compare_files(p1: &Path, p2: &Path) -> Result<bool, BoxErr> {
+    let one = std::fs::read(p1)?;
+    let two = std::fs::read(p2)?;
+    Ok(one == two)
+}
+
+fn get_sample_files(in_dir: &Path) -> Result<BTreeMap<usize, PathBuf>, BoxErr> {
+    let mut out = BTreeMap::new();
+    for entry in std::fs::read_dir(in_dir)? {
+        let path = entry?.path();
+        if let Some(number) = extract_number(&path) {
+            out.insert(number, path);
+        }
+    }
+    Ok(out)
+}
+
+/// Extract the '12' from a path to a file like 'cairo-test-12'
+fn extract_number(path: &Path) -> Option<usize> {
+    let stem = path.file_stem()?;
+    let stem_str = stem.to_str()?;
+    let stripped = stem_str.split('-').last()?;
+    stripped.parse().ok()
+}
+
+#[derive(Debug, Clone)]
+enum ComparisonError {
+    Missing(usize),
+    DifferentData(usize),
+}
+
+#[derive(Debug, Clone)]
+struct SnapshotError {
+    failures: Vec<ComparisonError>,
+}
+
+impl std::fmt::Display for ComparisonError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ComparisonError::Missing(n) => write!(f, "{:>2}: Revision is missing", n),
+            ComparisonError::DifferentData(n) => write!(f, "{:>2}: Data differs", n),
+        }
+    }
+}
+
+impl std::fmt::Display for SnapshotError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        writeln!(f, "Encountered {} failures", self.failures.len())?;
+        for failure in &self.failures {
+            writeln!(f, "{}", failure)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::error::Error for SnapshotError {}
