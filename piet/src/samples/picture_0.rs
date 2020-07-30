@@ -19,7 +19,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &BLUE, 1.0);
 
     let segoe = rc.text().new_font_by_name("Segoe UI", 12.).build()?;
-    let georgia = rc.text().new_font_by_name("Georgia", 12.).build()?;
+    let georgia = rc.text().new_font_by_name("Georgia", 8.).build()?;
 
     let path = arc1();
     rc.stroke(path, &GREEN, 1.0);
@@ -36,6 +36,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let layout = rc
         .text()
         .new_text_layout(&segoe, "Hello piet!", None)
+        .default_attribute(segoe)
         .default_attribute(TextAttribute::Size(12.0))
         .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))
         .build()?;
@@ -84,6 +85,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let layout = rc
         .text()
         .new_text_layout(&georgia, "CLIPPED", None)
+        .default_attribute(georgia)
         .default_attribute(TextAttribute::Size(8.0))
         .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))
         .build()?;
