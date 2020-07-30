@@ -2,8 +2,8 @@
 
 use crate::kurbo::{Circle, Point, Rect, RoundedRect, Size, Vec2};
 use crate::{
-    Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, FontBuilder,
-    GradientStop, LineCap, LineJoin, RenderContext, StrokeStyle, Text, TextLayoutBuilder,
+    Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, GradientStop, LineCap,
+    LineJoin, RenderContext, StrokeStyle,
 };
 
 pub const SIZE: Size = Size::new(400., 200.);
@@ -56,45 +56,6 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     );
     rc.stroke(Rect::new(60.0, 80.0, 100.0, 100.0), &linear_gradient, 4.0);
 
-    // Text rendering with gradients
-    let linear_gradient = rc.gradient(FixedGradient::Linear(FixedLinearGradient {
-        start: Point::new(120.0, 20.0),
-        end: Point::new(150.0, 50.0),
-        stops: create_gradient_stops(),
-    }))?;
-    let radial_gradient = rc.gradient(FixedGradient::Radial(FixedRadialGradient {
-        center: Point::new(130.0, 70.0),
-        origin_offset: Vec2::new(30.0, 10.0),
-        radius: 40.0,
-        stops: create_gradient_stops(),
-    }))?;
-
-    let font = rc.text().new_font_by_name("Segoe UI", 8.0).build()?;
-    let jp_font = rc
-        .text()
-        .new_font_by_name("Noto Sans JP", 8.0)
-        .build()
-        .unwrap_or_else(|_| font.clone());
-    let jp_text = rc
-        .text()
-        .new_text_layout(&jp_font, "ローカリゼーション作品", None)
-        .build()?;
-    let en_text = rc
-        .text()
-        .new_text_layout(&font, "Text with gradient", None)
-        .build()?;
-
-    // Linear gradient
-    rc.draw_text(&jp_text, Point::new(110.0, 10.0), &linear_gradient);
-    rc.draw_text(&en_text, Point::new(110.0, 20.0), &linear_gradient);
-    rc.draw_text(&jp_text, Point::new(110.0, 30.0), &linear_gradient);
-    rc.draw_text(&en_text, Point::new(110.0, 40.0), &linear_gradient);
-
-    // Radial gradient
-    rc.draw_text(&jp_text, Point::new(110.0, 60.0), &radial_gradient);
-    rc.draw_text(&en_text, Point::new(110.0, 70.0), &radial_gradient);
-    rc.draw_text(&jp_text, Point::new(110.0, 80.0), &radial_gradient);
-    rc.draw_text(&en_text, Point::new(110.0, 90.0), &radial_gradient);
     Ok(())
 }
 

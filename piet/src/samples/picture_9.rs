@@ -65,7 +65,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         rc.stroke(bottom_line, &BLUE, 1.0);
     }
 
-    rc.draw_text(&layout, text_pos.to_point(), &Color::BLACK);
+    rc.draw_text(&layout, text_pos.to_point());
 
     Ok(())
 }

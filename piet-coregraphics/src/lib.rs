@@ -13,9 +13,7 @@ use core_graphics::base::{
     kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
 };
 use core_graphics::color_space::CGColorSpace;
-use core_graphics::context::{
-    CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin, CGTextDrawingMode,
-};
+use core_graphics::context::{CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin};
 use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::gradient::CGGradientDrawingOptions;
@@ -208,34 +206,15 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         &mut self.text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    ) {
-        let brush = brush.make_brush(self, || layout.frame_size.to_rect());
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         let pos = pos.into();
         self.ctx.save();
         // inverted coordinate system; text is drawn from bottom left corner,
         // and (0, 0) in context is also bottom left.
         self.ctx.translate(pos.x, layout.frame_size.height + pos.y);
         self.ctx.scale(1.0, -1.0);
-        match brush.as_ref() {
-            Brush::Solid(color) => {
-                self.set_fill_color(color);
-                layout.draw(self.ctx);
-                self.ctx.restore();
-            }
-            Brush::Gradient(grad) => {
-                self.ctx
-                    .set_text_drawing_mode(CGTextDrawingMode::CGTextClip);
-                layout.draw(self.ctx);
-                self.ctx.restore();
-
-                grad.fill(self.ctx, GRADIENT_DRAW_BEFORE_AND_AFTER);
-            }
-        }
+        layout.draw(self.ctx);
+        self.ctx.restore();
     }
 
     fn save(&mut self) -> Result<(), Error> {

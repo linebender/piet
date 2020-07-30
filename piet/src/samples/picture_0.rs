@@ -2,8 +2,8 @@
 
 use crate::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Size, Vec2};
 use crate::{
-    Color, Error, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, FontBuilder, ImageFormat, InterpolationMode, RenderContext, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 
 const BLUE: Color = Color::rgb8(0x00, 0x00, 0x80);
@@ -18,6 +18,9 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &BLUE, 1.0);
 
+    let segoe = rc.text().new_font_by_name("Segoe UI", 12.).build()?;
+    let georgia = rc.text().new_font_by_name("Georgia", 12.).build()?;
+
     let path = arc1();
     rc.stroke(path, &GREEN, 1.0);
 
@@ -30,15 +33,21 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         1.0,
     );
 
-    let layout = make_text(rc.text(), "Segoe UI", 12., "Hello piet!");
+    let layout = rc
+        .text()
+        .new_text_layout(&segoe, "Hello piet!", None)
+        .add_attribute(.., TextAttribute::Size(12.0))
+        .add_attribute(.., TextAttribute::ForegroundColor(RED_ALPHA))
+        .build()?;
+
     let w: f64 = layout.size().width;
-    rc.draw_text(&layout, (80.0, 10.0), &RED_ALPHA);
+    rc.draw_text(&layout, (80.0, 10.0));
 
     rc.stroke(Line::new((80.0, 12.0), (80.0 + w, 12.0)), &RED_ALPHA, 1.0);
 
     rc.with_save(|rc| {
         rc.transform(Affine::rotate(0.1));
-        rc.draw_text(&layout, (80.0, 10.0), &RED_ALPHA);
+        rc.draw_text(&layout, (80.0, 10.0));
         Ok(())
     })?;
 
@@ -72,15 +81,15 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.fill(&clip_path, &YELLOW_ALPHA);
     rc.clip(clip_path);
 
-    let layout = make_text(rc.text(), "Georgia", 8.0, "CLIPPED");
-    rc.draw_text(&layout, (80.0, 50.0), &RED_ALPHA);
+    let layout = rc
+        .text()
+        .new_text_layout(&georgia, "CLIPPED", None)
+        .add_attribute(.., TextAttribute::Size(8.0))
+        .add_attribute(.., TextAttribute::ForegroundColor(RED_ALPHA))
+        .build()?;
+    rc.draw_text(&layout, (80.0, 50.0));
 
     Ok(())
-}
-
-fn make_text<T: Text>(ctx: &mut T, font: &str, size: f64, text: &str) -> T::TextLayout {
-    let font = ctx.new_font_by_name(font, size).build().unwrap();
-    ctx.new_text_layout(&font, text, None).build().unwrap()
 }
 
 fn arc1() -> BezPath {

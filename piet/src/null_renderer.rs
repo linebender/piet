@@ -88,13 +88,7 @@ impl RenderContext for NullRenderContext {
         &mut self.0
     }
 
-    fn draw_text(
-        &mut self,
-        _layout: &Self::TextLayout,
-        _pos: impl Into<Point>,
-        _brush: &impl IntoBrush<Self>,
-    ) {
-    }
+    fn draw_text(&mut self, _layout: &Self::TextLayout, _pos: impl Into<Point>) {}
 
     fn save(&mut self) -> Result<(), Error> {
         Ok(())
