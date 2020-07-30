@@ -27,6 +27,9 @@ type BoxErr = Box<dyn std::error::Error>;
 /// The total number of samples in this module.
 pub const SAMPLE_COUNT: usize = 12;
 
+/// file we save an os fingerprint to
+pub const GENERATED_BY: &str = "GENERATED_BY";
+
 /// Return a specific sample for drawing.
 pub fn get<R: RenderContext>(number: usize) -> SamplePicture<R> {
     match number {
@@ -75,13 +78,20 @@ pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> 
     }
 
     if args.all {
+        write_os_info(&args.out_dir)?;
         run_all(|number| f(number, &args.out_dir))?;
     } else if let Some(number) = args.number {
         f(number, &args.out_dir)?;
     }
 
     if let Some(compare_dir) = args.compare_dir.as_ref() {
+        let info_one = read_os_info(compare_dir)?;
+        let info_two = read_os_info(&args.out_dir)?;
         let results = compare_snapshots(compare_dir, &args.out_dir, prefix)?;
+        println!("Compared {} snapshots", results.len());
+        print!("base: {}", info_one);
+        println!("rev : {}", info_two);
+
         for (number, result) in results.iter() {
             print!("Image {:02}: ", number);
             match result {
@@ -300,6 +310,23 @@ fn extract_number(path: &Path) -> Option<usize> {
     let stem_str = stem.to_str()?;
     let stripped = stem_str.split('-').last()?;
     stripped.parse().ok()
+}
+
+fn write_os_info(base_dir: &Path) -> std::io::Result<()> {
+    let path = base_dir.join(GENERATED_BY);
+    std::fs::write(&path, make_os_info_string().as_bytes())
+}
+
+fn read_os_info(base_dir: &Path) -> std::io::Result<String> {
+    let path = base_dir.join(GENERATED_BY);
+    std::fs::read_to_string(&path)
+}
+
+/// Get info about the system used to create these samples.
+//TODO: include info about generic fonts? anything else?
+fn make_os_info_string() -> String {
+    let info = os_info::get();
+    format!("{} {}\n", info.os_type(), info.version())
 }
 
 #[derive(Debug, Clone)]
