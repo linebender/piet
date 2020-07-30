@@ -274,14 +274,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self.inner_text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
-        let brush = brush.make_brush(self, || Rect::ZERO);
         let mut line_metrics = Vec::with_capacity(1);
         layout.layout.get_line_metrics(&mut line_metrics);
         if line_metrics.is_empty() {
@@ -291,9 +285,12 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
         let pos = to_point2f(pos.into());
         let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
+        // this is used for regions that don't have other colors set;
+        // we could be doing this elsewhere but here seems fine
+        let black_brush = self.solid_brush(Color::BLACK);
 
         self.rt
-            .draw_text_layout(pos, &layout.layout, &*brush, text_options);
+            .draw_text_layout(pos, &layout.layout, &black_brush, text_options);
     }
 
     fn save(&mut self) -> Result<(), Error> {

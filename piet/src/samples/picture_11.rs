@@ -44,7 +44,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         }
         y += TEST_ADVANCE;
     }
-    rc.draw_text(&layout, text_pos.to_point(), &Color::BLACK);
+    rc.draw_text(&layout, text_pos.to_point());
 
     Ok(())
 }

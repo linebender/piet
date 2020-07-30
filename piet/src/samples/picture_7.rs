@@ -56,15 +56,15 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .alignment(TextAlignment::Justified)
         .build()?;
 
-    rc.draw_text(&en_leading, (0., 0.), &Color::BLACK);
-    rc.draw_text(&en_trailing, (100., 0.), &Color::BLACK);
-    rc.draw_text(&en_center, (200., 0.), &Color::BLACK);
-    rc.draw_text(&en_justify, (300., 0.), &Color::BLACK);
+    rc.draw_text(&en_leading, (0., 0.));
+    rc.draw_text(&en_trailing, (100., 0.));
+    rc.draw_text(&en_center, (200., 0.));
+    rc.draw_text(&en_justify, (300., 0.));
 
-    rc.draw_text(&ar_leading, (0., 200.), &Color::BLACK);
-    rc.draw_text(&ar_trailing, (100., 200.), &Color::BLACK);
-    rc.draw_text(&ar_center, (200., 200.), &Color::BLACK);
-    rc.draw_text(&ar_justify, (300., 200.), &Color::BLACK);
+    rc.draw_text(&ar_leading, (0., 200.));
+    rc.draw_text(&ar_trailing, (100., 200.));
+    rc.draw_text(&ar_center, (200., 200.));
+    rc.draw_text(&ar_justify, (300., 200.));
 
     Ok(())
 }

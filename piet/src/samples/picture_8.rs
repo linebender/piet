@@ -49,7 +49,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .add_attribute(280.., TextAttribute::Underline(true))
         .build()?;
 
-    rc.draw_text(&en_leading, (0., 0.), &Color::BLACK);
+    rc.draw_text(&en_leading, (0., 0.));
 
     Ok(())
 }

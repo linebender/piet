@@ -206,16 +206,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self.text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
-        let brush = brush.make_brush(self, || Rect::ZERO);
         self.ctx.set_scaled_font(&layout.font);
-        self.set_brush(&*brush);
         let pos = pos.into();
 
         for lm in &layout.line_metrics {

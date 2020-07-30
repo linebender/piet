@@ -214,12 +214,7 @@ impl piet::RenderContext for RenderContext {
         &mut self.text
     }
 
-    fn draw_text(
-        &mut self,
-        _layout: &Self::TextLayout,
-        _pos: impl Into<Point>,
-        _brush: &impl IntoBrush<Self>,
-    ) {
+    fn draw_text(&mut self, _layout: &Self::TextLayout, _pos: impl Into<Point>) {
         unimplemented!()
     }
 

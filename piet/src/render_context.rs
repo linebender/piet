@@ -120,12 +120,7 @@ where
     ///
     /// The `pos` parameter specifies the baseline of the left starting place of
     /// the text. Note: this is true even if the text is right-to-left.
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    );
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>);
 
     /// Save the context state.
     ///
