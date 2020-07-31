@@ -78,7 +78,7 @@ impl<'a> CoreGraphicsContext<'a> {
 
         CoreGraphicsContext {
             ctx,
-            text: CoreGraphicsText::new(),
+            text: CoreGraphicsText::new_with_unique_state(),
             transform_stack: Vec::new(),
         }
     }

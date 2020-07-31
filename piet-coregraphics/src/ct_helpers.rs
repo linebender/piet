@@ -9,7 +9,9 @@ use core_foundation::{
     array::{CFArray, CFArrayRef, CFIndex},
     attributed_string::CFMutableAttributedString,
     base::{CFTypeID, TCFType},
-    declare_TCFType, impl_TCFType,
+    declare_TCFType,
+    dictionary::CFDictionaryRef,
+    impl_TCFType,
     number::CFNumber,
     string::{CFString, CFStringRef},
 };
@@ -22,6 +24,8 @@ use core_graphics::{
 };
 use core_text::{
     font::{kCTFontSystemFontType, CTFont, CTFontRef, CTFontUIFontType},
+    font_collection::{self, CTFontCollection, CTFontCollectionRef},
+    font_descriptor::CTFontDescriptor,
     frame::{CTFrame, CTFrameRef},
     framesetter::CTFramesetter,
     line::{CTLine, CTLineRef, TypographicBounds},
@@ -31,7 +35,7 @@ use core_text::{
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
 use piet::kurbo::Rect;
-use piet::{Color, TextAlignment};
+use piet::{Color, FontFamily, TextAlignment};
 
 #[derive(Clone)]
 pub(crate) struct AttributedString {
@@ -46,6 +50,9 @@ pub(crate) struct Framesetter(CTFramesetter);
 pub(crate) struct Frame(pub(crate) CTFrame);
 #[derive(Debug, Clone)]
 pub(crate) struct Line<'a>(pub(crate) Cow<'a, CTLine>);
+
+#[derive(Debug, Clone)]
+pub(crate) struct FontCollection(CTFontCollection);
 
 pub enum __CTParagraphStyle {}
 type CTParagraphStyleRef = *const __CTParagraphStyle;
@@ -285,6 +292,32 @@ fn first_strong_rtl(text: &str) -> bool {
         .unwrap_or(false)
 }
 
+impl FontCollection {
+    pub(crate) fn new_with_all_fonts() -> FontCollection {
+        FontCollection(font_collection::create_for_all_families())
+    }
+
+    pub(crate) fn font_for_family_name(&mut self, name: &str) -> Option<FontFamily> {
+        let name = CFString::from(name);
+        unsafe {
+            let array = CTFontCollectionCreateMatchingFontDescriptorsForFamily(
+                self.0.as_concrete_TypeRef(),
+                name.as_concrete_TypeRef(),
+                std::ptr::null(),
+            );
+
+            if array.is_null() {
+                None
+            } else {
+                let array = CFArray::<CTFontDescriptor>::wrap_under_create_rule(array);
+                array
+                    .get(0)
+                    .map(|desc| FontFamily::new_unchecked(&desc.family_name()))
+            }
+        }
+    }
+}
+
 #[link(name = "CoreText", kind = "framework")]
 extern "C" {
     fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
@@ -299,4 +332,9 @@ extern "C" {
         count: usize,
     ) -> CTParagraphStyleRef;
     fn CTLineGetImageBounds(line: CTLineRef, ctx: *mut c_void) -> CGRect;
+    fn CTFontCollectionCreateMatchingFontDescriptorsForFamily(
+        collection: CTFontCollectionRef,
+        family: CFStringRef,
+        option: CFDictionaryRef,
+    ) -> CFArrayRef;
 }

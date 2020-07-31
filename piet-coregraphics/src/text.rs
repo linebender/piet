@@ -1,6 +1,8 @@
 //! Text related stuff for the coregraphics backend
 
+use std::collections::HashMap;
 use std::ops::{Range, RangeBounds};
+use std::sync::{Arc, Mutex};
 
 use core_foundation::base::TCFType;
 use core_foundation::dictionary::CFMutableDictionary;
@@ -19,10 +21,26 @@ use piet::{
     LineMetric, Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
-use crate::ct_helpers::{AttributedString, Frame, Framesetter, Line};
+use crate::ct_helpers::{AttributedString, FontCollection, Frame, Framesetter, Line};
 
 #[derive(Clone)]
-pub struct CoreGraphicsText;
+pub struct CoreGraphicsText {
+    shared: SharedTextState,
+}
+
+/// State shared by all `CoreGraphicsText` objects.
+///
+/// This is for holding onto expensive to create objects, and for things
+/// like caching fonts.
+#[derive(Clone)]
+struct SharedTextState {
+    inner: Arc<Mutex<TextState>>,
+}
+
+struct TextState {
+    collection: FontCollection,
+    family_cache: HashMap<String, Option<FontFamily>>,
+}
 
 //TODO: this should be a CTFontDescriptor maybe?
 #[derive(Debug, Clone)]
@@ -329,9 +347,21 @@ fn convert_to_coretext(weight: FontWeight) -> CFNumber {
 
 impl CoreGraphicsText {
     /// Create a new factory that satisfies the piet `Text` trait.
+    ///
+    /// The returned type will have freshly initiated inner state; this means
+    /// it will not share a cache with any other objects created with this method.
+    ///
+    /// In general this should be created once and then cloned and passed around.
     #[allow(clippy::new_without_default)]
-    pub fn new() -> CoreGraphicsText {
-        CoreGraphicsText
+    pub(crate) fn new_with_unique_state() -> CoreGraphicsText {
+        let collection = FontCollection::new_with_all_fonts();
+        let inner = Arc::new(Mutex::new(TextState {
+            collection,
+            family_cache: HashMap::new(),
+        }));
+        CoreGraphicsText {
+            shared: SharedTextState { inner },
+        }
     }
 }
 
@@ -346,9 +376,7 @@ impl Text for CoreGraphicsText {
     }
 
     fn font(&mut self, family_name: &str) -> Option<FontFamily> {
-        font::new_from_name(family_name, 12.0)
-            .ok()
-            .map(|ct_font| FontFamily::new_unchecked(&ct_font.family_name()))
+        self.shared.get_font(family_name)
     }
 
     fn system_font(&mut self, size: f64) -> Self::Font {
@@ -367,6 +395,25 @@ impl FontBuilder for CoreGraphicsFontBuilder {
 
     fn build(self) -> Result<Self::Out, Error> {
         self.0.map(CoreGraphicsFont).ok_or(Error::MissingFont)
+    }
+}
+
+impl SharedTextState {
+    /// return the family object for this family name, if it exists.
+    ///
+    /// This hits a cache before doing a lookup with the system.
+    fn get_font(&mut self, family_name: &str) -> Option<FontFamily> {
+        let mut inner = self.inner.lock().unwrap();
+        match inner.family_cache.get(family_name) {
+            Some(family) => family.clone(),
+            None => {
+                let maybe_family = inner.collection.font_for_family_name(family_name);
+                inner
+                    .family_cache
+                    .insert(family_name.to_owned(), maybe_family.clone());
+                maybe_family
+            }
+        }
     }
 }
 
@@ -831,5 +878,12 @@ mod tests {
         assert!(p1.point.x > p0.point.x);
         assert!(p1.point.y == p0.point.y);
         assert!(p2.point.y > p1.point.y);
+    }
+
+    #[test]
+    fn missing_font_is_missing() {
+        assert!(CoreGraphicsText::new_with_unique_state()
+            .font("Segoe UI")
+            .is_none());
     }
 }

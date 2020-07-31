@@ -918,4 +918,10 @@ mod test {
         assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
     }
+
+    #[test]
+    fn missing_font_is_missing() {
+        let mut text = D2DText::new_for_test();
+        assert!(text.font("A Quite Unlikely Font Ñame").is_none());
+    }
 }
