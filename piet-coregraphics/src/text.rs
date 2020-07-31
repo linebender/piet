@@ -243,8 +243,7 @@ impl CoreGraphicsTextLayoutBuilder {
                 (traits_key, traits.as_CFType()),
             ]);
             let descriptor = font_descriptor::new_from_attributes(&attributes);
-            let font = font::new_from_descriptor(&descriptor, self.attrs.size());
-            font
+            font::new_from_descriptor(&descriptor, self.attrs.size())
         }
     }
 

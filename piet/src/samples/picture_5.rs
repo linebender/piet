@@ -16,10 +16,11 @@ const BLUE: Color = Color::rgb8(0, 0, 255);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     let text = rc.text();
+    let courier = text.font("Courier New").unwrap_or(FontFamily::MONOSPACE);
     let layout = text
         .new_text_layout(TEXT)
         .max_width(200.0)
-        .default_attribute(FontFamily::MONOSPACE)
+        .default_attribute(courier)
         .default_attribute(TextAttribute::Underline(true))
         .default_attribute(TextAttribute::Italic(true))
         .default_attribute(TextAttribute::ForegroundColor(RED))
@@ -30,7 +31,6 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(60..160, TextAttribute::Italic(false))
         .range_attribute(140..220, FontWeight::NORMAL)
         .range_attribute(240.., FontFamily::SYSTEM_UI)
-        .range_attribute(340.., TextAttribute::Size(24.0))
         .build()?;
 
     let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);

@@ -25,17 +25,15 @@ const GREEN: Color = Color::rgb8(105, 255, 0);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(LIGHT_GREY);
     let text = rc.text();
-
+    let courier = text.font("Courier New").unwrap_or(FontFamily::MONOSPACE);
     let layout = text
         .new_text_layout(SAMPLE_EN)
-        .default_attribute(FontFamily::SYSTEM_UI)
-        .default_attribute(TextAttribute::Size(24.0))
         .max_width(200.0)
         .alignment(TextAlignment::Start)
-        .default_attribute(TextAttribute::Size(24.0))
-        .range_attribute(23..35, FontFamily::MONOSPACE)
+        .font(FontFamily::SYSTEM_UI, 24.0)
+        .range_attribute(23..35, courier.clone())
         .range_attribute(23..35, TextAttribute::Size(18.0))
-        .range_attribute(47..52, FontFamily::MONOSPACE)
+        .range_attribute(47..52, courier)
         .range_attribute(47..52, TextAttribute::Size(36.0))
         .build()?;
 
