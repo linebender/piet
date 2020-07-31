@@ -2,8 +2,8 @@
 
 use crate::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Size, Vec2};
 use crate::{
-    Color, Error, ImageFormat, InterpolationMode, RenderContext, Text, TextAttribute, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, FontFamily, ImageFormat, InterpolationMode, RenderContext, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 
 const BLUE: Color = Color::rgb8(0x00, 0x00, 0x80);
@@ -18,7 +18,6 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &BLUE, 1.0);
 
-    let segoe = rc.text().font("Segoe UI").ok_or(Error::MissingFont)?;
     let georgia = rc.text().font("Georgia").ok_or(Error::MissingFont)?;
 
     let path = arc1();
@@ -36,8 +35,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let layout = rc
         .text()
         .new_text_layout("Hello piet!")
-        .default_attribute(segoe)
-        .default_attribute(TextAttribute::Size(12.0))
+        .font(FontFamily::SYSTEM_UI, 12.0)
         .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))
         .build()?;
 
@@ -85,8 +83,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     let layout = rc
         .text()
         .new_text_layout("CLIPPED")
-        .default_attribute(georgia)
-        .default_attribute(TextAttribute::Size(8.0))
+        .font(georgia, 8.0)
         .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))
         .build()?;
     rc.draw_text(&layout, (80.0, 50.0));
