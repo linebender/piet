@@ -10,7 +10,7 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-piet = { version = "0.0.12", path = "../piet" }
+piet = { version = "0.2.0", path = "../piet" }
 unicode-segmentation = "1.3.0"
 xi-unicode = "0.2.0"
 gl = "0.14.0"
@@ -25,6 +25,5 @@ image = { version = "0.23.4", default-features = false }
 skribo = "0.1.0"
 
 [dev-dependencies]
-piet-test = { version = "0.0.12", path = "../piet-test" }
 glutin = "0.24.0"
 

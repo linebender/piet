@@ -1,9 +1,9 @@
 use ::{
     image::RgbaImage,
     pathfinder_canvas::{
-        CanvasFontContext, CanvasImageSource, CanvasRenderingContext2D, ColorU, FillRule,
-        FillStyle, ImageSmoothingQuality, LineCap as PfLineCap, LineJoin as PfLineJoin, Path2D,
-        RectF, Transform2F, Vector2F,
+        CanvasImageSource, CanvasRenderingContext2D, ColorU, FillRule, FillStyle,
+        ImageSmoothingQuality, LineCap as PfLineCap, LineJoin as PfLineJoin, Path2D, RectF,
+        Transform2F, Vector2F,
     },
     pathfinder_content::{
         gradient::{ColorStop, Gradient},
@@ -11,30 +11,34 @@ use ::{
     },
     piet::{
         kurbo::{Affine, Circle, Line, PathEl, Point, Rect, Shape},
-        Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, Font, FontBuilder,
-        GradientStop, HitTestPoint, HitTestTextPosition, ImageFormat, InterpolationMode, IntoBrush,
-        LineCap, LineJoin, LineMetric, RenderContext, RoundFrom, RoundInto, StrokeStyle, Text,
-        TextLayout, TextLayoutBuilder,
+        Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, GradientStop,
+        ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin, RenderContext, RoundFrom,
+        RoundInto, StrokeStyle,
     },
-    skribo::FontCollection,
-    std::{borrow::Cow, convert::TryInto, f32::consts::PI, ops::Deref, sync::Arc},
+    std::{borrow::Cow, convert::TryInto, f32::consts::PI},
 };
+
+pub mod text;
 
 pub struct PfContext<'a> {
     render_ctx: &'a mut CanvasRenderingContext2D,
+    text: text::PfText,
 }
 
 impl<'a> PfContext<'a> {
     pub fn new(render_ctx: &'a mut CanvasRenderingContext2D) -> Self {
-        PfContext { render_ctx }
+        PfContext {
+            render_ctx,
+            text: text::PfText,
+        }
     }
 }
 
 impl RenderContext for PfContext<'_> {
     type Brush = FillStyle;
     // TODO the whole text thing needs overhauling, including allowing the user to select fonts.
-    type Text = Self;
-    type TextLayout = PfTextLayout;
+    type Text = text::PfText;
+    type TextLayout = text::PfTextLayout;
     type Image = PfImage;
 
     fn status(&mut self) -> Result<(), Error> {
@@ -114,18 +118,13 @@ impl RenderContext for PfContext<'_> {
     }
 
     fn text(&mut self) -> &mut Self::Text {
-        self
+        &mut self.text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         let pos = pos.into();
         //self.render_ctx.set_font(layout.font.name.as_str());
-        self.render_ctx.set_font_size(layout.font.size);
+        self.render_ctx.set_font_size(layout.font.size as f32);
         let metrics = self.render_ctx.measure_text(&layout.text);
         let bbox = Rect::new(
             pos.x - f64::round_from(metrics.actual_bounding_box_left),
@@ -133,7 +132,7 @@ impl RenderContext for PfContext<'_> {
             pos.y - f64::round_from(metrics.actual_bounding_box_ascent),
             pos.y + f64::round_from(metrics.actual_bounding_box_descent),
         );
-        let brush = brush.make_brush(self, || bbox);
+        let brush = layout.color.make_brush(self, || bbox);
         self.render_ctx.set_fill_style(brush.into_owned());
         self.render_ctx
             .fill_text(&layout.text, point_to_vec2f(pos.into()));
@@ -230,100 +229,6 @@ impl IntoBrush<PfContext<'_>> for FillStyle {
         Cow::Borrowed(self)
     }
 }
-
-#[derive(Clone)]
-pub struct PfTextLayout {
-    font: PfFont,
-    text: String,
-    width: f64,
-}
-
-impl TextLayout for PfTextLayout {
-    fn width(&self) -> f64 {
-        todo!()
-    }
-
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
-        todo!()
-    }
-
-    fn line_text(&self, line_number: usize) -> Option<&str> {
-        todo!()
-    }
-
-    fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        todo!()
-    }
-
-    fn line_count(&self) -> usize {
-        todo!()
-    }
-
-    fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        todo!()
-    }
-
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
-        todo!()
-    }
-}
-
-impl Text for PfContext<'_> {
-    type FontBuilder = PfFontBuilder;
-    type Font = PfFont;
-    type TextLayoutBuilder = PfTextLayout;
-    type TextLayout = PfTextLayout;
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
-        Self::FontBuilder {
-            name: name.to_string(),
-            size: size.round_into(),
-        }
-    }
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
-        let width = width.into().unwrap_or(std::f64::INFINITY);
-        PfTextLayout {
-            font: font.clone(),
-            text: text.to_string(),
-            width,
-        }
-    }
-}
-
-pub struct PfFontBuilder {
-    name: String,
-    size: f32,
-}
-
-impl FontBuilder for PfFontBuilder {
-    type Out = PfFont;
-    fn build(self) -> Result<Self::Out, Error> {
-        Ok(PfFont {
-            name: self.name,
-            size: self.size,
-        })
-    }
-}
-
-#[derive(Clone)]
-pub struct PfFont {
-    name: String,
-    size: f32,
-}
-
-impl Font for PfFont {}
-
-impl TextLayoutBuilder for PfTextLayout {
-    type Out = Self;
-    fn build(self) -> Result<Self::Out, Error> {
-        Ok(self)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct PfImage(pub image::RgbaImage);
 
@@ -342,7 +247,7 @@ impl CanvasImageSource for PfImage {
 // helpers
 
 fn map_color(input: Color) -> ColorU {
-    let (r, g, b, a) = input.as_rgba_u8();
+    let (r, g, b, a) = input.as_rgba8();
     ColorU::new(r, g, b, a)
 }
 
@@ -476,10 +381,10 @@ fn set_interpolation(ctx: &mut PfContext, interp: InterpolationMode) {
 
 #[inline]
 fn not_supported() -> Error {
-    piet::new_error(piet::ErrorKind::NotSupported)
+    piet::Error::NotSupported
 }
 
 #[inline]
 fn invalid_input() -> Error {
-    piet::new_error(piet::ErrorKind::InvalidInput)
+    piet::Error::InvalidInput
 }

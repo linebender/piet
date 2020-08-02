@@ -63,6 +63,7 @@ fn main() {
     );
 
     // Make a canvas. We're going to draw a house.
+    // In future this could happen in `piet-pathfinder`, to enable customization of font source.
     let font_context = CanvasFontContext::from_system_source();
     let mut canvas = Canvas::new(window_size.to_f32()).get_context_2d(font_context);
     use_piet(PfContext::new(&mut canvas));
@@ -152,7 +153,7 @@ fn use_piet(mut ctx: impl RenderContext) {
     */
     let text = ctx.text();
     let font = text.new_font_by_name("DajaVu Sans", 20.0).build().unwrap();
-    let house_text = text.new_text_layout(&font, "house", None).build().unwrap();
-    ctx.draw_text(&house_text, (300.0, 420.0), &cool_brush);
+    let house_text = text.new_text_layout("house").build().unwrap();
+    ctx.draw_text(&house_text, (300.0, 420.0));
     ctx.finish().unwrap();
 }
