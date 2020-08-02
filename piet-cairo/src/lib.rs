@@ -1,9 +1,7 @@
-// allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
-#![allow(clippy::identity_op)]
-
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
-mod blurred_rect;
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 mod text;
 
 use std::borrow::Cow;
@@ -14,8 +12,8 @@ use cairo::{BorrowError, Context, Filter, Format, ImageSurface, Matrix, Status, 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
-    LineCap, LineJoin, RenderContext, StrokeStyle,
+    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
+    RenderContext, StrokeStyle, TextLayout,
 };
 
 pub use crate::text::{
@@ -25,8 +23,13 @@ pub use crate::text::{
 pub struct CairoRenderContext<'a> {
     // Cairo has this as Clone and with &self methods, but we do this to avoid
     // concurrency problems.
-    ctx: &'a mut Context,
-    text: CairoText<'a>,
+    ctx: &'a Context,
+    text: CairoText,
+    // because of the relationship between GTK and cairo (where GTK applies a transform
+    // to adjust for menus and window borders) we cannot trust the transform returned
+    // by cairo. Instead we maintain our own stack, which will contain
+    // only those transforms applied by us.
+    transform_stack: Vec<Affine>,
 }
 
 impl<'a> CairoRenderContext<'a> {
@@ -35,10 +38,11 @@ impl<'a> CairoRenderContext<'a> {
     /// At the moment, it uses the "toy text API" for text layout, but when
     /// we change to a more sophisticated text layout approach, we'll probably
     /// need a factory for that as an additional argument.
-    pub fn new(ctx: &mut Context) -> CairoRenderContext {
+    pub fn new(ctx: &Context) -> CairoRenderContext {
         CairoRenderContext {
             ctx,
             text: CairoText::new(),
+            transform_stack: Vec::new(),
         }
     }
 }
@@ -105,7 +109,7 @@ macro_rules! set_gradient_stops {
 impl<'a> RenderContext for CairoRenderContext<'a> {
     type Brush = Brush;
 
-    type Text = CairoText<'a>;
+    type Text = CairoText;
     type TextLayout = CairoTextLayout;
 
     type Image = ImageSurface;
@@ -202,48 +206,57 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         &mut self.text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    ) {
-        // TODO: bounding box for text
-        let brush = brush.make_brush(self, || Rect::ZERO);
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
+        let pos = pos.into();
+        let rect = layout.image_bounds() + pos.to_vec2();
+        let brush = layout.fg_color.make_brush(self, || rect);
         self.ctx.set_scaled_font(&layout.font);
         self.set_brush(&*brush);
-        let pos = pos.into();
 
         for lm in &layout.line_metrics {
-            self.ctx
-                .move_to(pos.x, pos.y + lm.cumulative_height - lm.height);
-            self.ctx
-                .show_text(&layout.text[lm.start_offset..lm.end_offset]);
+            self.ctx.move_to(pos.x, pos.y + lm.y_offset + lm.baseline);
+            self.ctx.show_text(&layout.text[lm.range()]);
         }
     }
 
     fn save(&mut self) -> Result<(), Error> {
         self.ctx.save();
+        let state = self.transform_stack.last().copied().unwrap_or_default();
+        self.transform_stack.push(state);
         self.status()
     }
 
     fn restore(&mut self) -> Result<(), Error> {
-        self.ctx.restore();
-        self.status()
+        if self.transform_stack.pop().is_some() {
+            // we're defensive about calling restore on the inner context,
+            // because an unbalanced call will trigger a panic in cairo-rs
+            self.ctx.restore();
+            self.status()
+        } else {
+            Err(Error::StackUnbalance)
+        }
     }
 
     fn finish(&mut self) -> Result<(), Error> {
+        self.ctx.get_target().flush();
         self.status()
     }
 
     fn transform(&mut self, transform: Affine) {
+        if let Some(last) = self.transform_stack.last_mut() {
+            *last *= transform;
+        } else {
+            self.transform_stack.push(transform);
+        }
         self.ctx.transform(affine_to_matrix(transform));
     }
 
     fn current_transform(&self) -> Affine {
-        matrix_to_affine(self.ctx.get_matrix())
+        self.transform_stack.last().copied().unwrap_or_default()
     }
 
+    // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
+    #[allow(clippy::identity_op)]
     fn make_image(
         &mut self,
         width: usize,
@@ -254,7 +267,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let cairo_fmt = match format {
             ImageFormat::Rgb => Format::Rgb24,
             ImageFormat::RgbaSeparate | ImageFormat::RgbaPremul => Format::ARgb32,
-            _ => return Err(new_error(ErrorKind::NotSupported)),
+            _ => return Err(Error::NotSupported),
         };
         let mut image = ImageSurface::create(cairo_fmt, width as i32, height as i32).wrap()?;
         // Confident no borrow errors because we just created it.
@@ -298,7 +311,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                             data[dst_off + x * 4 + 3] = a;
                         }
                     }
-                    _ => return Err(new_error(ErrorKind::NotSupported)),
+                    _ => return Err(Error::NotSupported),
                 }
             }
         }
@@ -328,7 +341,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
-        let (image, origin) = crate::blurred_rect::compute_blurred_rect(rect, blur_radius);
+        let (image, origin) = compute_blurred_rect(rect, blur_radius);
         self.set_brush(&*brush);
         self.ctx.mask_surface(&image, origin.x, origin.y);
     }
@@ -482,8 +495,15 @@ fn affine_to_matrix(affine: Affine) -> Matrix {
     }
 }
 
-fn matrix_to_affine(matrix: Matrix) -> Affine {
-    Affine::new([
-        matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0,
-    ])
+fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
+    let size = piet::util::size_for_blurred_rect(rect, radius);
+    // TODO: maybe not panic on error (but likely to happen only in extreme cases such as OOM)
+    let mut image =
+        ImageSurface::create(Format::A8, size.width as i32, size.height as i32).unwrap();
+    let stride = image.get_stride() as usize;
+    let mut data = image.get_data().unwrap();
+    let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut *data);
+    std::mem::drop(data);
+    let origin = rect_exp.origin();
+    (image, origin)
 }

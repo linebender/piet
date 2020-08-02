@@ -20,6 +20,7 @@ pub enum InterpolationMode {
 
 /// The pixel format for bitmap images.
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum ImageFormat {
     /// 3 bytes per pixel, in RGB order.
     Rgb,
@@ -27,9 +28,6 @@ pub enum ImageFormat {
     RgbaSeparate,
     /// 4 bytes per pixel, in RGBA order, with premultiplied alpha.
     RgbaPremul,
-    /// More formats may be added later.
-    #[doc(hidden)]
-    _NonExhaustive,
 }
 
 impl ImageFormat {
@@ -37,7 +35,6 @@ impl ImageFormat {
         match self {
             ImageFormat::Rgb => 3,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => 4,
-            _ => panic!(),
         }
     }
 }
@@ -123,12 +120,7 @@ where
     ///
     /// The `pos` parameter specifies the baseline of the left starting place of
     /// the text. Note: this is true even if the text is right-to-left.
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    );
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>);
 
     /// Save the context state.
     ///

@@ -1,6 +1,7 @@
 #![cfg(windows)]
 // allows for nice formatting for e.g. new_buf[i * 4 + 0] = premul(buf[i * 4 + 0, a)
 #![allow(clippy::identity_op)]
+#![deny(clippy::trivially_copy_pass_by_ref)]
 
 //! The Direct2D backend for the Piet 2D graphics abstraction.
 
@@ -24,8 +25,8 @@ use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED}
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
 use piet::{
-    new_error, Color, Error, ErrorKind, FixedGradient, ImageFormat, InterpolationMode, IntoBrush,
-    RenderContext, StrokeStyle,
+    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
+    StrokeStyle,
 };
 
 use crate::d2d::wrap_unit;
@@ -41,7 +42,7 @@ use crate::d2d::{Bitmap, Brush, DeviceContext, FillRule, PathGeometry};
 
 pub struct D2DRenderContext<'a> {
     factory: &'a D2DFactory,
-    inner_text: D2DText<'a>,
+    inner_text: D2DText,
     rt: &'a mut D2DDeviceContext,
 
     /// The context state stack. There is always at least one, until finishing.
@@ -65,10 +66,10 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
     /// TODO: check signature.
     pub fn new(
         factory: &'a D2DFactory,
-        dwrite: &'a DwriteFactory,
+        dwrite: DwriteFactory,
         rt: &'b mut DeviceContext,
     ) -> D2DRenderContext<'b> {
-        let inner_text = D2DText::new(dwrite);
+        let inner_text = D2DText::new(dwrite, rt.clone());
         D2DRenderContext {
             factory,
             inner_text,
@@ -148,7 +149,7 @@ fn path_from_shape(
 impl<'a> RenderContext for D2DRenderContext<'a> {
     type Brush = Brush;
 
-    type Text = D2DText<'a>;
+    type Text = D2DText;
 
     type TextLayout = D2DTextLayout;
 
@@ -273,27 +274,23 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         &mut self.inner_text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
-        let brush = brush.make_brush(self, || Rect::ZERO);
         let mut line_metrics = Vec::with_capacity(1);
         layout.layout.get_line_metrics(&mut line_metrics);
         if line_metrics.is_empty() {
             // Layout is empty, don't bother drawing.
             return;
         }
-        // Direct2D takes upper-left, so adjust for baseline.
-        let mut pos = to_point2f(pos.into());
-        pos.y -= line_metrics[0].baseline;
+
+        let pos = to_point2f(pos.into());
         let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
+        // this is used for regions that don't have other colors set;
+        // we could be doing this elsewhere but here seems fine
+        let black_brush = self.solid_brush(Color::BLACK);
 
         self.rt
-            .draw_text_layout(pos, &layout.layout, &*brush, text_options);
+            .draw_text_layout(pos, &layout.layout, &black_brush, text_options);
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -307,7 +304,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn restore(&mut self) -> Result<(), Error> {
         if self.ctx_stack.len() <= 1 {
-            return Err(new_error(ErrorKind::StackUnbalance));
+            return Err(Error::StackUnbalance);
         }
         self.pop_state();
         // Move this code into impl to avoid duplication with transform?
@@ -321,7 +318,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     // to do other stuff, possibly related to incremental paint.
     fn finish(&mut self) -> Result<(), Error> {
         if self.ctx_stack.len() != 1 {
-            return Err(new_error(ErrorKind::StackUnbalance));
+            return Err(Error::StackUnbalance);
         }
         self.pop_state();
         std::mem::replace(&mut self.err, Ok(()))
@@ -349,7 +346,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let alpha_mode = match format {
             ImageFormat::Rgb => D2D1_ALPHA_MODE_IGNORE,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => D2D1_ALPHA_MODE_PREMULTIPLIED,
-            _ => return Err(new_error(ErrorKind::NotSupported)),
+            _ => return Err(Error::NotSupported),
         };
         let buf = match format {
             ImageFormat::Rgb => {
@@ -379,7 +376,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
             ImageFormat::RgbaPremul => Cow::from(buf),
             // This should be unreachable, we caught it above.
-            _ => return Err(new_error(ErrorKind::NotSupported)),
+            _ => return Err(Error::NotSupported),
         };
         let bitmap = self.rt.create_bitmap(width, height, &buf, alpha_mode)?;
         Ok(bitmap)

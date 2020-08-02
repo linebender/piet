@@ -26,6 +26,15 @@ pub struct D3D11DeviceContext(ComPtr<ID3D11DeviceContext>);
 pub struct D3D11Texture2D(ComPtr<ID3D11Texture2D>);
 pub struct DxgiDevice(ComPtr<IDXGIDevice>);
 
+// According to Microsoft's docs, D3D11Device does its own synchronization. It also says that "only
+// one thread can call a ID3D11DeviceContext at a time", so D3D11DeviceContext is definitely not
+// Sync, but probably Send (or else they would have said something).
+//
+// https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-render-multi-thread-intro
+unsafe impl Send for D3D11Device {}
+unsafe impl Sync for D3D11Device {}
+unsafe impl Send for D3D11DeviceContext {}
+
 pub enum TextureMode {
     Target,
     Read,
@@ -148,3 +157,11 @@ impl DxgiDevice {
         self.0.as_raw()
     }
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "HRESULT error {}", self.0)
+    }
+}
+
+impl std::error::Error for Error {}

@@ -158,17 +158,20 @@ fn add_line_metric(
     cumulative_height: &mut f64,
     line_metrics: &mut Vec<LineMetric>,
 ) {
+    let y_offset = *cumulative_height;
     *cumulative_height += height;
 
     let line = &text[start_offset..end_offset];
     let trailing_whitespace = count_trailing_whitespace(line);
 
+    #[allow(deprecated)]
     let line_metric = LineMetric {
         start_offset,
         end_offset,
         trailing_whitespace,
         baseline,
         height,
+        y_offset,
         cumulative_height: *cumulative_height,
     };
     line_metrics.push(line_metric);
@@ -189,20 +192,18 @@ mod test {
         width: f64,
         expected: Vec<LineMetric>,
         input: &str,
-        _text_layout: &mut CairoText, // actually not needed for test?
-        font: &CairoFont,
+        font: &ScaledFont,
     ) {
-        let line_metrics = calculate_line_metrics(input, &font.0, width);
+        let line_metrics = calculate_line_metrics(input, &font, width);
 
         for (i, (metric, exp)) in line_metrics.iter().zip(expected).enumerate() {
             println!("calculated: {:?}\nexpected: {:?}", metric, exp);
 
-            assert_eq!(metric.start_offset, exp.start_offset);
-            assert_eq!(metric.end_offset, exp.end_offset);
+            assert_eq!(metric.range(), exp.range());
             assert_eq!(metric.trailing_whitespace, exp.trailing_whitespace);
             assert!(
-                metric.cumulative_height < exp.cumulative_height + ((i as f64 + 1.0) * 3.0)
-                    && metric.cumulative_height > exp.cumulative_height - ((i as f64 + 1.0) * 3.0)
+                metric.y_offset < exp.y_offset + ((i as f64 + 1.0) * 3.0)
+                    && metric.y_offset > exp.y_offset - ((i as f64 + 1.0) * 3.0)
             );
             assert!(metric.baseline < exp.baseline + 3.0 && metric.baseline > exp.baseline - 3.0);
             assert!(metric.height < exp.height + 3.0 && metric.height > exp.height - 3.0);
@@ -218,21 +219,20 @@ mod test {
         let input = "piet text is the best text!";
         let width = 50.0;
 
-        let mut text = CairoText::new();
-        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
-        let line_metrics = calculate_line_metrics(input, &font.0, width);
+        let font = CairoFont::new("sans-serif").resolve_simple(12.0);
+        let line_metrics = calculate_line_metrics(input, &font, width);
 
         // Some print debugging, in case font size/width needs to be changed in future because of
         // brittle tests
         println!(
             "{}: \"piet text \"",
-            font.0.text_extents("piet text ").x_advance
+            font.text_extents("piet text ").x_advance
         );
         for lm in &line_metrics {
             let line_text = &input[lm.start_offset..lm.end_offset];
             println!(
                 "{}: {:?}",
-                font.0.text_extents(line_text).x_advance,
+                font.text_extents(line_text).x_advance,
                 line_text
             );
         }
@@ -249,21 +249,20 @@ mod test {
         let input = "piet text is the best text!";
         let width = 50.0;
 
-        let mut text = CairoText::new();
-        let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();
-        let line_metrics = calculate_line_metrics(input, &font.0, width);
+        let font = CairoFont::new("sans-serif").resolve_simple(14.0);
+        let line_metrics = calculate_line_metrics(input, &font, width);
 
         // Some print debugging, in case font size/width needs to be changed in future because of
         // brittle tests
         println!(
             "{}: \"piet text \"",
-            font.0.text_extents("piet text ").x_advance
+            font.text_extents("piet text ").x_advance
         );
         for lm in &line_metrics {
-            let line_text = &input[lm.start_offset..lm.end_offset];
+            let line_text = &input[lm.range()];
             println!(
                 "{}: {:?}",
-                font.0.text_extents(line_text).x_advance,
+                font.text_extents(line_text).x_advance,
                 line_text
             );
         }
@@ -278,19 +277,18 @@ mod test {
         let input = "piet\ntext";
         let width = 10.0;
 
-        let mut text = CairoText::new();
-        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
-        let line_metrics = calculate_line_metrics(input, &font.0, width);
+        let font = CairoFont::new("sans-serif").resolve_simple(12.0);
+        let line_metrics = calculate_line_metrics(input, &font, width);
 
         // Some print debugging, in case font size/width needs to be changed in future because of
         // brittle tests
-        println!("{}: \"piet\n\"", font.0.text_extents("piet\n").x_advance);
-        println!("{}: \"text\"", font.0.text_extents("text").x_advance);
+        println!("{}: \"piet\n\"", font.text_extents("piet\n").x_advance);
+        println!("{}: \"text\"", font.text_extents("text").x_advance);
         for lm in &line_metrics {
-            let line_text = &input[lm.start_offset..lm.end_offset];
+            let line_text = &input[lm.range()];
             println!(
                 "{}: {:?}",
-                font.0.text_extents(line_text).x_advance,
+                font.text_extents(line_text).x_advance,
                 line_text
             );
         }
@@ -312,6 +310,7 @@ mod test {
     // - large is no split.
     //
     // Also test empty string input
+    #[allow(deprecated)]
     #[test]
     fn test_basic_calculate_line_metrics() {
         // Setup input, width, and expected
@@ -328,6 +327,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 5,
                 trailing_whitespace: 1,
+                y_offset: 0.,
                 cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -336,6 +336,7 @@ mod test {
                 start_offset: 5,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 14.0,
                 cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -344,6 +345,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 15,
                 trailing_whitespace: 1,
+                y_offset: 28.0,
                 cumulative_height: 42.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -352,6 +354,7 @@ mod test {
                 start_offset: 15,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 42.0,
                 cumulative_height: 56.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -364,6 +367,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 0.0,
                 cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -372,6 +376,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 14.0,
                 cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -383,6 +388,7 @@ mod test {
             start_offset: 0,
             end_offset: 19,
             trailing_whitespace: 0,
+            y_offset: 0.0,
             cumulative_height: 14.0,
             baseline: 12.0,
             height: 14.0,
@@ -393,35 +399,36 @@ mod test {
             start_offset: 0,
             end_offset: 0,
             trailing_whitespace: 0,
+            y_offset: 0.0,
             cumulative_height: 14.0,
             baseline: 12.0,
             height: 14.0,
         }];
 
         // setup cairo layout
-        let mut text = CairoText::new();
-        let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
+        let font = CairoFont::new("sans-serif").resolve_simple(13.0);
 
         println!(
             "piet text width: {}",
-            font.0.text_extents("piet text").x_advance
+            font.text_extents("piet text").x_advance
         ); // 55
         println!(
             "most best width: {}",
-            font.0.text_extents("most best").x_advance
+            font.text_extents("most best").x_advance
         ); // 65
         println!(
             "piet text most best width: {}",
-            font.0.text_extents("piet text most best").x_advance
+            font.text_extents("piet text most best").x_advance
         ); // 124
 
-        test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
-        test_metrics_with_width(width_medium, expected_medium, input, &mut text, &font);
-        test_metrics_with_width(width_large, expected_large, input, &mut text, &font);
-        test_metrics_with_width(width_small, expected_empty, empty_input, &mut text, &font);
+        test_metrics_with_width(width_small, expected_small, input, &font);
+        test_metrics_with_width(width_medium, expected_medium, input, &font);
+        test_metrics_with_width(width_large, expected_large, input, &font);
+        test_metrics_with_width(width_small, expected_empty, empty_input, &font);
     }
 
     #[test]
+    #[allow(deprecated)]
     #[cfg(target_os = "linux")]
     // TODO determine if we need to test macos too for this. I don't think it's a big deal right
     // now, just wanted to make sure hard breaks work.
@@ -440,6 +447,7 @@ mod test {
                 start_offset: 0,
                 end_offset: 5,
                 trailing_whitespace: 1,
+                y_offset: 0.0,
                 cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -448,6 +456,7 @@ mod test {
                 start_offset: 5,
                 end_offset: 10,
                 trailing_whitespace: 1,
+                y_offset: 14.0,
                 cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -456,6 +465,7 @@ mod test {
                 start_offset: 10,
                 end_offset: 15,
                 trailing_whitespace: 1,
+                y_offset: 28.0,
                 cumulative_height: 42.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -464,6 +474,7 @@ mod test {
                 start_offset: 15,
                 end_offset: 19,
                 trailing_whitespace: 0,
+                y_offset: 42.0,
                 cumulative_height: 56.0,
                 baseline: 12.0,
                 height: 14.0,
@@ -471,10 +482,9 @@ mod test {
         ];
 
         // setup cairo layout
-        let mut text = CairoText::new();
-        let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
+        let font = CairoFont::new("sans-serif").resolve_simple(13.0);
 
-        test_metrics_with_width(width_small, expected_small, input, &mut text, &font);
+        test_metrics_with_width(width_small, expected_small, input, &font);
     }
 
     #[test]

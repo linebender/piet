@@ -1,11 +1,12 @@
 //! Gradients.
 
-use piet::kurbo::{Point, Rect, Vec2};
-
-use piet::{
+use crate::kurbo::{Point, Rect, Size, Vec2};
+use crate::{
     Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, GradientStop,
     RenderContext,
 };
+
+pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::WHITE);

@@ -19,8 +19,8 @@ pub(crate) fn get_grapheme_boundaries(
     let next_edge = hit_test_line_position(font, text, next_text_position)?;
 
     let res = GraphemeBoundaries {
-        curr_idx: curr_edge.metrics.text_position,
-        next_idx: next_edge.metrics.text_position,
+        curr_idx: text_position,
+        next_idx: next_text_position,
         leading: curr_edge.point.x,
         trailing: next_edge.point.x,
     };
@@ -32,7 +32,6 @@ pub(crate) fn point_x_in_grapheme(
     point_x: f64,
     grapheme_boundaries: &GraphemeBoundaries,
 ) -> Option<HitTestPoint> {
-    let mut res = HitTestPoint::default();
     let leading = grapheme_boundaries.leading;
     let trailing = grapheme_boundaries.trailing;
     let curr_idx = grapheme_boundaries.curr_idx;
@@ -42,14 +41,13 @@ pub(crate) fn point_x_in_grapheme(
         // Check which boundary it's closer to.
         // Round up to next grapheme boundary if
         let midpoint = leading + ((trailing - leading) / 2.0);
-        if point_x >= midpoint {
-            res.metrics.text_position = next_idx;
+        let is_inside = true;
+        let idx = if point_x >= midpoint {
+            next_idx
         } else {
-            res.metrics.text_position = curr_idx;
-        }
-
-        res.is_inside = true;
-        Some(res)
+            curr_idx
+        };
+        Some(HitTestPoint { idx, is_inside })
     } else {
         None
     }
@@ -71,12 +69,8 @@ mod test {
     #[test]
     fn test_grapheme_boundaries() {
         let text = "piet";
-        let mut text_layout = CairoText::new();
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+        let font = CairoFont::new("sans-serif").resolve_simple(12.0);
 
         let expected_3 = GraphemeBoundaries {
             curr_idx: 3,
@@ -87,14 +81,14 @@ mod test {
 
         // test grapheme boundaries
         assert_eq!(
-            get_grapheme_boundaries(&font.0, text, 3).unwrap().curr_idx,
+            get_grapheme_boundaries(&font, text, 3).unwrap().curr_idx,
             expected_3.curr_idx
         );
         assert_eq!(
-            get_grapheme_boundaries(&font.0, text, 3).unwrap().next_idx,
+            get_grapheme_boundaries(&font, text, 3).unwrap().next_idx,
             expected_3.next_idx
         );
-        assert_eq!(get_grapheme_boundaries(&font.0, text, 4), None);
+        assert_eq!(get_grapheme_boundaries(&font, text, 4), None);
     }
 
     #[test]
@@ -107,11 +101,11 @@ mod test {
         };
 
         let expected_curr = Some(HitTestPoint {
-            metrics: HitTestMetrics { text_position: 2 },
+            idx: 2,
             is_inside: true,
         });
         let expected_next = Some(HitTestPoint {
-            metrics: HitTestMetrics { text_position: 4 },
+            idx: 4,
             is_inside: true,
         });
 

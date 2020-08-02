@@ -1,17 +1,20 @@
 //! Text functionality for Piet svg backend
 
-use piet::kurbo::Point;
-use piet::{new_error, Error, ErrorKind, HitTestPoint, HitTestTextPosition, LineMetric};
+use std::ops::RangeBounds;
+
+use piet::kurbo::{Point, Rect, Size};
+use piet::{Error, HitTestPoint, HitTestPosition, LineMetric, TextAttribute};
 
 type Result<T> = std::result::Result<T, Error>;
 
 /// SVG text (unimplemented)
-pub struct Text(());
+#[derive(Clone)]
+pub struct Text;
 
 impl Text {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Text(())
+        Text
     }
 }
 
@@ -22,51 +25,80 @@ impl piet::Text for Text {
     type TextLayoutBuilder = TextLayoutBuilder;
 
     fn new_font_by_name(&mut self, _name: &str, _size: f64) -> FontBuilder {
-        FontBuilder(())
+        FontBuilder
     }
 
-    fn new_text_layout(
-        &mut self,
-        _font: &Self::Font,
-        _text: &str,
-        _width: impl Into<Option<f64>>,
-    ) -> TextLayoutBuilder {
-        TextLayoutBuilder(())
+    fn system_font(&mut self, _size: f64) -> Self::Font {
+        Font
+    }
+
+    fn new_text_layout(&mut self, _text: &str) -> TextLayoutBuilder {
+        TextLayoutBuilder
     }
 }
 
 /// SVG font builder (unimplemented)
-pub struct FontBuilder(());
+pub struct FontBuilder;
 
 impl piet::FontBuilder for FontBuilder {
     type Out = Font;
 
     fn build(self) -> Result<Font> {
-        Err(new_error(ErrorKind::NotSupported))
+        Err(Error::NotSupported)
     }
 }
 
 /// SVG font (unimplemented)
-pub struct Font(());
+#[derive(Clone)]
+pub struct Font;
 
 impl piet::Font for Font {}
 
-pub struct TextLayoutBuilder(());
+pub struct TextLayoutBuilder;
 
 impl piet::TextLayoutBuilder for TextLayoutBuilder {
     type Out = TextLayout;
+    type Font = Font;
+
+    fn max_width(self, _width: f64) -> Self {
+        self
+    }
+
+    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
+        self
+    }
+
+    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        self
+    }
+
+    fn range_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
+        self
+    }
 
     fn build(self) -> Result<TextLayout> {
-        Err(new_error(ErrorKind::NotSupported))
+        Err(Error::NotSupported)
     }
 }
 
 /// SVG text layout (unimplemented)
 #[derive(Clone)]
-pub struct TextLayout(());
+pub struct TextLayout;
 
 impl piet::TextLayout for TextLayout {
     fn width(&self) -> f64 {
+        unimplemented!()
+    }
+
+    fn size(&self) -> Size {
+        unimplemented!()
+    }
+
+    fn image_bounds(&self) -> Rect {
         unimplemented!()
     }
 
@@ -94,7 +126,7 @@ impl piet::TextLayout for TextLayout {
         unimplemented!()
     }
 
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestPosition> {
         unimplemented!()
     }
 }

@@ -4,19 +4,20 @@ mod grapheme;
 mod lines;
 
 use std::borrow::Cow;
+use std::ops::RangeBounds;
 
 use web_sys::CanvasRenderingContext2d;
 
-use piet::kurbo::Point;
+use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric, Text,
+    Error, Font, FontBuilder, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
     TextLayout, TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
 use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
-use crate::WebRenderContext;
+use crate::WebText;
 
 #[derive(Clone)]
 pub struct WebFont {
@@ -37,7 +38,7 @@ pub struct WebTextLayout {
 
     // Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
-    width: f64,
+    size: Size,
 }
 
 pub struct WebTextLayoutBuilder {
@@ -56,7 +57,7 @@ enum FontStyle {
     Oblique(Option<f64>),
 }
 
-impl<'a> Text for WebRenderContext<'a> {
+impl Text for WebText {
     type Font = WebFont;
     type FontBuilder = WebFontBuilder;
     type TextLayout = WebTextLayout;
@@ -72,21 +73,24 @@ impl<'a> Text for WebRenderContext<'a> {
         WebFontBuilder(font)
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
-        let width = width.into().unwrap_or(std::f64::INFINITY);
+    fn system_font(&mut self, size: f64) -> Self::Font {
+        let font = WebFont {
+            family: "sans-serif".to_owned(),
+            size,
+            weight: 400,
+            style: FontStyle::Normal,
+        };
+        WebFontBuilder(font).build().unwrap()
+    }
 
+    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
-            font: font.clone(),
+            font: self.system_font(piet::util::DEFAULT_FONT_SIZE),
             text: text.to_owned(),
-            width,
+            width: f64::INFINITY,
         }
     }
 }
@@ -119,49 +123,79 @@ impl WebFont {
 
 impl TextLayoutBuilder for WebTextLayoutBuilder {
     type Out = WebTextLayout;
+    type Font = WebFont;
+
+    fn max_width(mut self, width: f64) -> Self {
+        self.width = width;
+        self
+    }
+
+    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
+        web_sys::console::log_1(&"TextLayout alignment unsupported on web".into());
+        self
+    }
+
+    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        web_sys::console::log_1(&"Text attributes not yet implemented for web".into());
+        self
+    }
+
+    fn range_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
+        web_sys::console::log_1(&"Text attributes not yet implemented for web".into());
+        self
+    }
 
     fn build(self) -> Result<Self::Out, Error> {
         self.ctx.set_font(&self.font.get_font_string());
 
-        let line_metrics =
-            lines::calculate_line_metrics(&self.text, &self.ctx, self.width, self.font.size);
-
-        let widths = line_metrics
-            .iter()
-            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx));
-
-        let width = widths.fold(0.0, |a: f64, b| a.max(b));
-
-        Ok(WebTextLayout {
+        let mut layout = WebTextLayout {
             ctx: self.ctx,
             font: self.font,
             text: self.text,
-            line_metrics,
-            width,
-        })
+            line_metrics: Vec::new(),
+            size: Size::ZERO,
+        };
+
+        layout.update_width(self.width)?;
+        Ok(layout)
     }
 }
 
 impl TextLayout for WebTextLayout {
     fn width(&self) -> f64 {
         // precalculated on textlayout build
-        self.width
+        self.size.width
     }
 
-    // TODO refactor this to use same code as build
+    fn size(&self) -> Size {
+        self.size
+    }
+
+    fn image_bounds(&self) -> Rect {
+        //FIXME: figure out actual image bounds on web?
+        self.size.to_rect()
+    }
+
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
-        self.line_metrics =
+        let line_metrics =
             lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
 
-        let widths = self
-            .line_metrics
+        let max_width = line_metrics
             .iter()
-            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx));
-
-        self.width = widths.fold(0.0, |a: f64, b| a.max(b));
-
+            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx))
+            .fold(0., f64::max);
+        let height = line_metrics
+            .last()
+            .map(|l| l.y_offset + l.height)
+            .unwrap_or_default();
+        self.line_metrics = line_metrics;
+        self.size = Size::new(max_width, height);
         Ok(())
     }
 
@@ -203,7 +237,7 @@ impl TextLayout for WebTextLayout {
         let mut lm = self
             .line_metrics
             .iter()
-            .skip_while(|l| l.cumulative_height - first_baseline < point.y);
+            .skip_while(|l| l.y_offset + l.height < point.y);
         let lm = lm
             .next()
             .or_else(|| {
@@ -221,8 +255,8 @@ impl TextLayout for WebTextLayout {
         // Trailing whitespace is remove for the line
         let line = &self.text[lm.start_offset..lm.end_offset];
 
-        let mut htp = hit_test_line_point(&self.ctx, line, &point);
-        htp.metrics.text_position += lm.start_offset;
+        let mut htp = hit_test_line_point(&self.ctx, line, point);
+        htp.idx += lm.start_offset;
 
         if !is_y_inside {
             htp.is_inside = false;
@@ -231,7 +265,7 @@ impl TextLayout for WebTextLayout {
         htp
     }
 
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
         // first need to find line it's on, and get line start offset
         let lm = self
             .line_metrics
@@ -250,7 +284,7 @@ impl TextLayout for WebTextLayout {
         // In web toy text, all baselines and heights are the same.
         // We're counting the first line baseline as 0, and measuring to each line's baseline.
         let y = if count == 0 {
-            return Some(HitTestTextPosition::default());
+            return Some(HitTestPosition::default());
         } else {
             (count - 1) as f64 * lm.height
         };
@@ -263,7 +297,6 @@ impl TextLayout for WebTextLayout {
         let mut http = hit_test_line_position(&self.ctx, line, line_position);
         if let Some(h) = http.as_mut() {
             h.point.y = y;
-            h.metrics.text_position += lm.start_offset;
         };
         http
     }
@@ -271,7 +304,7 @@ impl TextLayout for WebTextLayout {
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_point
 // Future: instead of passing ctx, should there be some other line-level text layout?
-fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: &Point) -> HitTestPoint {
+fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: Point) -> HitTestPoint {
     // null case
     if text.is_empty() {
         return HitTestPoint::default();
@@ -293,10 +326,12 @@ fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: &Point
 
     // first test beyond ends
     if point.x > end_bounds.trailing {
-        let mut res = HitTestPoint::default();
-        res.metrics.text_position = text.len();
-        return res;
+        return HitTestPoint {
+            idx: text.len(),
+            is_inside: false,
+        };
     }
+
     if point.x <= start_bounds.leading {
         return HitTestPoint::default();
     }
@@ -344,23 +379,20 @@ fn hit_test_line_position(
     ctx: &CanvasRenderingContext2d,
     text: &str,
     text_position: usize,
-) -> Option<HitTestTextPosition> {
+) -> Option<HitTestPosition> {
     // Using substrings with unicode grapheme awareness
 
     let text_len = text.len();
 
     if text_position == 0 {
-        return Some(HitTestTextPosition::default());
+        return Some(HitTestPosition::default());
     }
 
     if text_position as usize >= text_len {
-        return Some(HitTestTextPosition {
+        return Some(HitTestPosition {
             point: Point {
                 x: text_width(text, ctx),
                 y: 0.0,
-            },
-            metrics: HitTestMetrics {
-                text_position: text_len,
             },
         });
     }
@@ -375,20 +407,13 @@ fn hit_test_line_position(
     if let Some((byte_idx, _s)) = grapheme_indices.last() {
         let point_x = text_width(&text[0..byte_idx], ctx);
 
-        Some(HitTestTextPosition {
-            point: Point { x: point_x, y: 0.0 },
-            metrics: HitTestMetrics { text_position },
+        Some(HitTestPosition {
+            point: Point::new(point_x, 0.),
         })
     } else {
         // iterated to end boundary
-        Some(HitTestTextPosition {
-            point: Point {
-                x: text_width(text, ctx),
-                y: 0.0,
-            },
-            metrics: HitTestMetrics {
-                text_position: text_len,
-            },
+        Some(HitTestPosition {
+            point: Point::new(text_width(text, ctx), 0.0),
         })
     }
 }
@@ -449,9 +474,8 @@ pub(crate) mod test {
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_basic() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let input = "piet text!";
         let font = text_layout
@@ -460,40 +484,46 @@ pub(crate) mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
-        let piet_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
+            .new_text_layout(&input[0..2])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
-        let pi_width = layout.width();
+        let pi_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
+            .new_text_layout(&input[0..1])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
-        let p_width = layout.width();
+        let p_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, "", std::f64::INFINITY)
+            .new_text_layout("")
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
-        let null_width = layout.width();
+        let null_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
-        let full_width = full_layout.width();
+        let full_width = full_layout.size().width;
 
         assert_close_to(
             full_layout.hit_test_text_position(4).unwrap().point.x as f64,
@@ -530,21 +560,12 @@ pub(crate) mod test {
             full_width,
             3.0,
         );
-        assert_eq!(
-            full_layout
-                .hit_test_text_position(11)
-                .unwrap()
-                .metrics
-                .text_position,
-            10
-        )
     }
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_0() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let input = "é";
         assert_eq!(input.len(), 2);
@@ -554,14 +575,15 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -570,14 +592,6 @@ pub(crate) mod test {
         // But it works here! Harder to deal with this right now, since unicode-segmentation
         // doesn't give code point offsets.
         assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
-        assert_eq!(
-            layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .metrics
-                .text_position,
-            1
-        );
 
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
@@ -587,7 +601,7 @@ pub(crate) mod test {
         //let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
-        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
+        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.size().width));
         //assert_eq!(input.len(), 17);
 
         let input = "\u{0023}\u{FE0F}\u{20E3}"; // #️⃣
@@ -599,34 +613,26 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 12.0)
             .build()
             .unwrap();
 
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(7).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
         // note code unit not at grapheme boundary
         assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
-        assert_eq!(
-            layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .metrics
-                .text_position,
-            1
-        );
     }
 
     #[wasm_bindgen_test]
     pub fn test_hit_test_text_position_complex_1() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // Notes on this input:
         // 6 code points
@@ -641,20 +647,24 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
 
         let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
+            .new_text_layout(&input[0..2])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9], std::f64::INFINITY)
+            .new_text_layout(&input[0..9])
+            .font(font.clone(), 12.0)
             .build()
             .unwrap();
         let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10], std::f64::INFINITY)
+            .new_text_layout(&input[0..10])
+            .font(font, 12.0)
             .build()
             .unwrap();
 
@@ -662,77 +672,53 @@ pub(crate) mod test {
         assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
         assert_close_to(
             layout.hit_test_text_position(2).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
         assert_close_to(
             layout.hit_test_text_position(9).unwrap().point.x,
-            test_layout_1.width(),
+            test_layout_1.size().width,
             3.0,
         );
         assert_close_to(
             layout.hit_test_text_position(10).unwrap().point.x,
-            test_layout_2.width(),
+            test_layout_2.size().width,
             3.0,
         );
         assert_close_to(
             layout.hit_test_text_position(14).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
         // Code point boundaries, but not grapheme boundaries.
         // Width should stay at the last complete grapheme boundary.
         assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
-        assert_eq!(
-            layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .metrics
-                .text_position,
-            1
-        );
         assert_close_to(
             layout.hit_test_text_position(3).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
-        );
-        assert_eq!(
-            layout
-                .hit_test_text_position(3)
-                .unwrap()
-                .metrics
-                .text_position,
-            3
         );
         assert_close_to(
             layout.hit_test_text_position(6).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
-        );
-        assert_eq!(
-            layout
-                .hit_test_text_position(6)
-                .unwrap()
-                .metrics
-                .text_position,
-            6
         );
     }
 
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_0() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let font = text_layout
             .new_font_by_name("sans-serif", 16.0)
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
+            .new_text_layout("piet text!")
+            .font(font, 16.0)
             .build()
             .unwrap();
         console::log_1(&format!("text pos 4: {:?}", layout.hit_test_text_position(4)).into()); // 23.99...
@@ -741,40 +727,39 @@ pub(crate) mod test {
         // test hit test point
         // all inside
         let pt = layout.hit_test_point(Point::new(22.5, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(28.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
 
         // outside
-        console::log_1(&format!("layout_width: {:?}", layout.width()).into()); // 57.31...
+        console::log_1(&format!("layout_width: {:?}", layout.size().width).into()); // 57.31...
 
         let pt = layout.hit_test_point(Point::new(55.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, true);
 
         let pt = layout.hit_test_point(Point::new(58.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0); // first text position
+        assert_eq!(pt.idx, 0); // first text position
         assert_eq!(pt.is_inside, false);
     }
 
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_basic_1() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // base condition, one grapheme
         let font = text_layout
@@ -782,38 +767,39 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, "t", std::f64::INFINITY)
+            .new_text_layout("t")
+            .font(font.clone(), 16.0)
             .build()
             .unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
 
         // two graphemes (to check that middle moves)
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
 
         let layout = text_layout
-            .new_text_layout(&font, "te", std::f64::INFINITY)
+            .new_text_layout("te")
+            .font(font, 16.0)
             .build()
             .unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
 
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 1);
+        assert_eq!(pt.idx, 1);
         let pt = layout.hit_test_point(Point::new(6.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 1);
+        assert_eq!(pt.idx, 1);
         let pt = layout.hit_test_point(Point::new(11.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
     }
 
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_0() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // Notes on this input:
         // 6 code points
@@ -827,7 +813,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 13.0)
             .build()
             .unwrap();
         console::log_1(&format!("text pos 2: {:?}", layout.hit_test_text_position(2)).into()); // 5.77...
@@ -836,39 +823,38 @@ pub(crate) mod test {
         console::log_1(&format!("text pos 14: {:?}", layout.hit_test_text_position(14)).into()); // 38.27..., line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(7.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(10.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(29.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(32.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(35.5, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(38.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(40.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
     }
 
     // NOTE brittle test
     #[wasm_bindgen_test]
     pub fn test_hit_test_point_complex_1() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         // this input caused an infinite loop in the binary search when test position
         // > 21.0 && < 28.0
@@ -881,7 +867,8 @@ pub(crate) mod test {
             .build()
             .unwrap();
         let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
+            .new_text_layout(input)
+            .font(font, 14.0)
             .build()
             .unwrap();
         console::log_1(&format!("text pos 0: {:?}", layout.hit_test_text_position(0)).into()); // 0.0
@@ -895,14 +882,13 @@ pub(crate) mod test {
         console::log_1(&format!("text pos 8: {:?}", layout.hit_test_text_position(8)).into()); // 35.77..., end
 
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 6);
+        assert_eq!(pt.idx, 6);
     }
 
     #[wasm_bindgen_test]
     fn test_multiline_hit_test_text_position_basic() {
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text_layout = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text_layout = WebText::new(context);
 
         let input = "piet  text!";
         let font = text_layout
@@ -911,55 +897,71 @@ pub(crate) mod test {
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], 30.0)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 25.0)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let piet_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..5], 30.0)
+            .new_text_layout(&input[0..5])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
-        let piet_space_width = layout.width();
+        let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[6..10], 25.0)
+            .new_text_layout(&input[6..10])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let text_width = layout.width();
+        let text_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..9], 25.0)
+            .new_text_layout(&input[6..9])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let tex_width = layout.width();
+        let tex_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..8], 25.0)
+            .new_text_layout(&input[6..8])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let te_width = layout.width();
+        let te_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..7], 25.0)
+            .new_text_layout(&input[6..7])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let t_width = layout.width();
+        let t_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 25.0)
+            .new_text_layout(input)
+            .font(font, 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
 
         println!("lm: {:#?}", full_layout.line_metrics);
-        println!("layout width: {:#?}", full_layout.width());
+        println!("layout width: {:#?}", full_layout.size().width);
 
         println!("'pie': {}", pie_width);
         println!("'piet': {}", piet_width);
@@ -1059,14 +1061,18 @@ pub(crate) mod test {
     fn test_multiline_hit_test_point_basic() {
         let input = "piet text most best";
 
-        let (window, context) = setup_ctx();
-        let ctx = WebRenderContext::new(context, window);
-        let mut text = ctx;
+        let (_window, context) = setup_ctx();
+        let mut text = WebText::new(context);
 
         let font = text.new_font_by_name("sans-serif", 14.0).build().unwrap();
         // this should break into four lines
         // Had to shift font in order to break at 4 lines (larger font than cairo, wider lines)
-        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        let layout = text
+            .new_text_layout(input)
+            .font(font.clone(), 14.0)
+            .max_width(30.0)
+            .build()
+            .unwrap();
         console::log_1(&format!("text pos 01: {:?}", layout.hit_test_text_position(0)).into()); // (0.0,0.0)
         console::log_1(&format!("text pos 06: {:?}", layout.hit_test_text_position(5)).into()); // (0.0, 16.8)
         console::log_1(&format!("text pos 11: {:?}", layout.hit_test_text_position(10)).into()); // (0.0, 33.6)
@@ -1078,53 +1084,55 @@ pub(crate) mod test {
 
         // approx 13.5 baseline, and 17 height
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, true);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(1.0, 04.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(1.0, 21.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(1.0, 38.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
         let best_layout = text
-            .new_text_layout(&font, "best", std::f64::INFINITY)
+            .new_text_layout("best")
+            .font(font.clone(), 14.0)
             .build()
             .unwrap();
-        console::log_1(&format!("layout width: {:#?}", best_layout.width()).into()); // 22.55...
+        console::log_1(&format!("layout width: {:#?}", best_layout.size().width).into()); // 22.55...
 
         let pt = layout.hit_test_point(Point::new(1.0, 55.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(25.0, 55.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(27.0, 55.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
         // under
         let piet_layout = text
-            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .new_text_layout("piet ")
+            .font(font, 14.0)
             .build()
             .unwrap();
-        console::log_1(&format!("layout width: {:#?}", piet_layout.width()).into()); // 24.49...
+        console::log_1(&format!("layout width: {:#?}", piet_layout.size().width).into()); // 24.49...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(25.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
     }
 }

@@ -1,6 +1,11 @@
 //! A 2D graphics abstraction.
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 pub use kurbo;
+
+/// utilities shared by various backends
+pub mod util;
 
 mod color;
 mod conv;
@@ -10,6 +15,9 @@ mod null_renderer;
 mod render_context;
 mod shapes;
 mod text;
+
+#[cfg(feature = "samples")]
+pub mod samples;
 
 pub use crate::color::*;
 pub use crate::conv::*;

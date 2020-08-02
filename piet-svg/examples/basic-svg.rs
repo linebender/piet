@@ -2,8 +2,7 @@
 
 use std::io;
 
-use piet::RenderContext;
-use piet_test::draw_test_picture;
+use piet::{samples, RenderContext};
 
 fn main() {
     let test_picture_number = std::env::args()
@@ -11,7 +10,7 @@ fn main() {
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(0);
     let mut piet = piet_svg::RenderContext::new();
-    draw_test_picture(&mut piet, test_picture_number).unwrap();
+    samples::get(test_picture_number).draw(&mut piet).unwrap();
     piet.finish().unwrap();
     piet.write(io::stdout()).unwrap();
 }

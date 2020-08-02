@@ -24,6 +24,8 @@
 //! [kurbo]: https://crates.io/crates/kurbo
 //! [piet-cairo]: https://crates.io/crates/piet-cairo
 
+#![deny(clippy::trivially_copy_pass_by_ref)]
+
 pub use piet::*;
 
 #[doc(hidden)]
@@ -31,8 +33,11 @@ pub use piet::kurbo;
 
 cfg_if::cfg_if! {
     // if we have explicitly asked for cairo *or* we are not wasm, web, or windows:
-    if #[cfg(any(feature = "cairo", not(any(target_arch = "wasm32", feature="web", target_os = "windows"))))] {
+    if #[cfg(any(feature = "cairo", not(any(target_arch = "wasm32", feature="web", target_os="macos", target_os = "windows"))))] {
         #[path = "cairo_back.rs"]
+        mod backend;
+    } else if #[cfg(target_os = "macos")] {
+        #[path = "cg_back.rs"]
         mod backend;
     } else if #[cfg(target_os = "windows")] {
         #[path = "direct2d_back.rs"]
@@ -50,17 +55,24 @@ pub use backend::*;
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::marker::PhantomData;
+
+    use static_assertions as sa;
 
     // Make sure all the common types exist and don't get accidentally removed
     #[allow(dead_code)]
     struct Types<'a> {
         piet: Piet<'a>,
         brush: Brush,
-        piet_text: PietText<'a>,
+        piet_text: PietText,
         piet_font: PietFont,
-        piet_font_builder: PietFontBuilder<'a>,
+        piet_font_builder: PietFontBuilder,
         piet_text_layout: PietTextLayout,
-        piet_text_layout_builder: PietTextLayoutBuilder<'a>,
+        piet_text_layout_builder: PietTextLayoutBuilder,
         image: Image,
+        _phantom: PhantomData<&'a ()>,
     }
+
+    sa::assert_impl_all!(Device: Send);
+    sa::assert_not_impl_any!(Device: Sync);
 }

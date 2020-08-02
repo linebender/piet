@@ -1,8 +1,9 @@
 //! Rendering a cubic Bézier curve with its control points and handles
 
-use piet::kurbo::{BezPath, Line, Point};
+use crate::kurbo::{BezPath, Line, Point, Size};
+use crate::{Color, Error, RenderContext};
 
-use piet::{Color, Error, RenderContext};
+pub const SIZE: Size = Size::new(400., 200.);
 
 // TODO: this will eventually become a `kurbo::Shape`.
 fn circle<V: Into<Point>>(center: V, radius: f64, num_segments: usize) -> BezPath {

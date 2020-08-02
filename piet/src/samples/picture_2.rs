@@ -1,7 +1,9 @@
 //! A bunch of image test cases.
 
-use piet::kurbo::Rect;
-use piet::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
+use crate::kurbo::{Rect, Size};
+use crate::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
+
+pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
@@ -63,7 +65,6 @@ fn make_image_data(width: usize, height: usize, format: ImageFormat) -> Vec<u8> 
                     result[ix + 1] = g;
                     result[ix + 2] = b;
                 }
-                _ => (),
             }
         }
     }

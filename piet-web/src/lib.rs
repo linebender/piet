@@ -1,5 +1,6 @@
 // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
 #![allow(clippy::identity_op)]
+#![deny(clippy::trivially_copy_pass_by_ref)]
 
 //! The Web Canvas backend for the Piet 2D graphics abstraction.
 
@@ -25,22 +26,33 @@ use piet::{
 
 pub use text::{WebFont, WebFontBuilder, WebTextLayout, WebTextLayoutBuilder};
 
-pub struct WebRenderContext<'a> {
+pub struct WebRenderContext {
     ctx: CanvasRenderingContext2d,
     /// Used for creating image bitmaps and possibly other resources.
     window: Window,
+    text: WebText,
     err: Result<(), Error>,
-    phantom: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a> WebRenderContext<'a> {
-    pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext<'a> {
+impl WebRenderContext {
+    pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext {
         WebRenderContext {
-            ctx,
+            ctx: ctx.clone(),
             window,
+            text: WebText::new(ctx),
             err: Ok(()),
-            phantom: std::marker::PhantomData,
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct WebText {
+    ctx: CanvasRenderingContext2d,
+}
+
+impl WebText {
+    pub fn new(ctx: CanvasRenderingContext2d) -> WebText {
+        WebText { ctx }
     }
 }
 
@@ -100,11 +112,11 @@ fn convert_line_join(line_join: LineJoin) -> &'static str {
     }
 }
 
-impl<'a> RenderContext for WebRenderContext<'a> {
+impl RenderContext for WebRenderContext {
     /// wasm-bindgen doesn't have a native Point type, so use kurbo's.
     type Brush = Brush;
 
-    type Text = Self;
+    type Text = WebText;
     type TextLayout = WebTextLayout;
 
     type Image = WebImage;
@@ -197,28 +209,17 @@ impl<'a> RenderContext for WebRenderContext<'a> {
     }
 
     fn text(&mut self) -> &mut Self::Text {
-        self
+        &mut self.text
     }
 
-    fn draw_text(
-        &mut self,
-        layout: &Self::TextLayout,
-        pos: impl Into<Point>,
-        brush: &impl IntoBrush<Self>,
-    ) {
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
-        let brush = brush.make_brush(self, || Rect::ZERO);
         self.ctx.set_font(&layout.font.get_font_string());
-        self.set_brush(&*brush, true);
         let pos = pos.into();
         for lm in &layout.line_metrics {
             let draw_line = self
                 .ctx
-                .fill_text(
-                    &layout.text[lm.start_offset..lm.end_offset],
-                    pos.x,
-                    pos.y + lm.cumulative_height - lm.height,
-                )
+                .fill_text(&layout.text[lm.start_offset..lm.end_offset], pos.x, pos.y)
                 .wrap();
 
             if let Err(e) = draw_line {
@@ -383,7 +384,7 @@ fn draw_image(
     }
 }
 
-impl<'a> IntoBrush<WebRenderContext<'a>> for Brush {
+impl IntoBrush<WebRenderContext> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut WebRenderContext,
@@ -417,7 +418,7 @@ fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
     }
 }
 
-impl WebRenderContext<'_> {
+impl WebRenderContext {
     /// Set the source pattern to the brush.
     ///
     /// Web canvas is super stateful, and we're trying to have more retained stuff.

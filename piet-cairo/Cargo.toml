@@ -1,6 +1,6 @@
 [package]
 name = "piet-cairo"
-version = "0.0.12"
+version = "0.2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Cairo backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -10,19 +10,13 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-piet = { version = "0.0.12", path = "../piet" }
+piet = { version = "0.2.0", path = "../piet" }
+
+cairo-rs = { version = "0.8.1", default-features = false } # We don't need glib
 unicode-segmentation = "1.3.0"
 xi-unicode = "0.2.0"
 
-[dependencies.cairo-rs]
-version = "0.8.1"
-# We don't need glib
-default-features = false
-
 [dev-dependencies]
-piet-test = { version = "0.0.12", path = "../piet-test" }
+piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
 
-[dev-dependencies.cairo-rs]
-version = "0.8.1"
-features = ["png"]
-default-features = false
+cairo-rs = { version = "0.8.1", default-features = false, features = ["png"] }

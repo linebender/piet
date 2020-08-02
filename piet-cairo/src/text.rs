@@ -3,15 +3,14 @@
 mod grapheme;
 mod lines;
 
-use std::marker::PhantomData;
+use std::ops::RangeBounds;
 
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
-use piet::kurbo::Point;
-
+use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    Error, Font, FontBuilder, HitTestMetrics, HitTestPoint, HitTestTextPosition, LineMetric,
-    RoundInto, Text, TextLayout, TextLayoutBuilder,
+    util, Color, Error, Font, FontBuilder, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -22,82 +21,78 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 /// access to system font information as a global. This will change.
 // we use a phantom lifetime here to match the API of the d2d backend,
 // and the likely API of something with access to system font information.
-pub struct CairoText<'a>(PhantomData<&'a ()>);
+#[derive(Clone)]
+pub struct CairoText;
 
-pub struct CairoFont(ScaledFont);
+#[derive(Clone)]
+pub struct CairoFont {
+    family: String,
+}
 
 pub struct CairoFontBuilder {
     family: String,
-    weight: FontWeight,
-    slant: FontSlant,
-    size: f64,
 }
 
 #[derive(Clone)]
 pub struct CairoTextLayout {
-    // TODO should these fields be pub(crate)?
-    width: f64,
-    pub font: ScaledFont,
-    pub text: String,
+    // we currently don't handle range attributes, so we stash the default
+    // color here and then just grab it when we draw ourselves.
+    pub(crate) fg_color: Color,
+    size: Size,
+    pub(crate) font: ScaledFont,
+    pub(crate) text: String,
 
     // currently calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
 }
 
-pub struct CairoTextLayoutBuilder(CairoTextLayout);
+pub struct CairoTextLayoutBuilder {
+    text: String,
+    defaults: util::LayoutDefaults<CairoFont>,
+    width_constraint: f64,
+}
 
-impl<'a> CairoText<'a> {
+impl CairoText {
     /// Create a new factory that satisfies the piet `Text` trait.
     ///
     /// No state is needed for now because the current implementation is just
     /// toy text, but that will change when proper text is implemented.
     #[allow(clippy::new_without_default)]
-    pub fn new() -> CairoText<'a> {
-        CairoText(PhantomData)
+    pub fn new() -> CairoText {
+        CairoText
     }
 }
 
-impl<'a> Text for CairoText<'a> {
+impl Text for CairoText {
     type Font = CairoFont;
     type FontBuilder = CairoFontBuilder;
     type TextLayout = CairoTextLayout;
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
-    fn new_font_by_name(&mut self, name: &str, size: f64) -> Self::FontBuilder {
+    fn new_font_by_name(&mut self, name: &str, _size: f64) -> Self::FontBuilder {
         CairoFontBuilder {
             family: name.to_owned(),
-            size: size.round_into(),
-            weight: FontWeight::Normal,
-            slant: FontSlant::Normal,
         }
     }
 
-    fn new_text_layout(
-        &mut self,
-        font: &Self::Font,
-        text: &str,
-        width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
-        // TODO Should probably move the calculations to `build` step
-        let width = width.into().unwrap_or(std::f64::INFINITY);
+    fn system_font(&mut self, _size: f64) -> Self::Font {
+        CairoFontBuilder {
+            family: "sans-serif".into(),
+        }
+        .build()
+        .unwrap()
+    }
 
-        let line_metrics = lines::calculate_line_metrics(text, &font.0, width);
-
-        let widths = line_metrics.iter().map(|lm| {
-            font.0
-                .text_extents(&text[lm.start_offset..lm.end_offset])
-                .x_advance
-        });
-
-        let width = widths.fold(0.0, |a: f64, b| a.max(b));
-
-        let text_layout = CairoTextLayout {
-            width,
-            font: font.0.clone(),
-            text: text.to_owned(),
-            line_metrics,
+    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+        let default_font = CairoFont {
+            family: "sans-serif".into(),
         };
-        CairoTextLayoutBuilder(text_layout)
+
+        CairoTextLayoutBuilder {
+            defaults: util::LayoutDefaults::new(default_font),
+            text: text.to_owned(),
+            width_constraint: f64::INFINITY,
+        }
     }
 }
 
@@ -105,29 +100,107 @@ impl FontBuilder for CairoFontBuilder {
     type Out = CairoFont;
 
     fn build(self) -> Result<Self::Out, Error> {
-        let font_face = FontFace::toy_create(&self.family, self.slant, self.weight);
-        let font_matrix = scale_matrix(self.size);
-        let ctm = scale_matrix(1.0);
-        let options = FontOptions::default();
-        let scaled_font = ScaledFont::new(&font_face, &font_matrix, &ctm, &options);
-        Ok(CairoFont(scaled_font))
+        Ok(CairoFont {
+            family: self.family,
+        })
     }
 }
 
 impl Font for CairoFont {}
 
+impl CairoFont {
+    #[cfg(test)]
+    pub(crate) fn new(family: impl Into<String>) -> Self {
+        CairoFont {
+            family: family.into(),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn resolve_simple(&self, size: f64) -> ScaledFont {
+        self.resolve(size, FontSlant::Normal, FontWeight::Normal)
+    }
+
+    /// Create a ScaledFont for this family.
+    pub(crate) fn resolve(&self, size: f64, slant: FontSlant, weight: FontWeight) -> ScaledFont {
+        let font_face = FontFace::toy_create(&self.family, slant, weight);
+        let font_matrix = scale_matrix(size);
+        let ctm = scale_matrix(1.0);
+        let options = FontOptions::default();
+        ScaledFont::new(&font_face, &font_matrix, &ctm, &options)
+    }
+}
+
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
+    type Font = CairoFont;
+
+    fn max_width(mut self, width: f64) -> Self {
+        self.width_constraint = width;
+        self
+    }
+
+    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
+        eprintln!("TextAlignment not supported by cairo toy text");
+        self
+    }
+
+    fn default_attribute(mut self, attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        self.defaults.set(attribute);
+        self
+    }
+
+    fn range_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
+        self
+    }
 
     fn build(self) -> Result<Self::Out, Error> {
-        Ok(self.0)
+        // set our default font
+        let family = self.defaults.font.as_ref().unwrap();
+        let size = self.defaults.font_size;
+        let weight = if self.defaults.weight.to_raw() <= piet::FontWeight::MEDIUM.to_raw() {
+            FontWeight::Normal
+        } else {
+            FontWeight::Bold
+        };
+        let slant = if self.defaults.italic {
+            FontSlant::Italic
+        } else {
+            FontSlant::Normal
+        };
+
+        let scaled_font = family.resolve(size, slant, weight);
+
+        // invalid until update_width() is called
+        let mut layout = CairoTextLayout {
+            fg_color: self.defaults.fg_color,
+            font: scaled_font,
+            size: Size::ZERO,
+            line_metrics: Vec::new(),
+            text: self.text,
+        };
+
+        layout.update_width(self.width_constraint)?;
+        Ok(layout)
     }
 }
 
 impl TextLayout for CairoTextLayout {
     fn width(&self) -> f64 {
         // calculated by max x_advance, on TextLayout build
-        self.width
+        self.size.width
+    }
+
+    fn size(&self) -> Size {
+        self.size
+    }
+
+    fn image_bounds(&self) -> Rect {
+        self.size.to_rect()
     }
 
     // TODO refactor this to use same code as new_text_layout
@@ -136,13 +209,18 @@ impl TextLayout for CairoTextLayout {
 
         self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
 
-        let widths = self.line_metrics.iter().map(|lm| {
-            self.font
-                .text_extents(&self.text[lm.start_offset..lm.end_offset])
-                .x_advance
-        });
+        let width = self
+            .line_metrics
+            .iter()
+            .map(|lm| self.font.text_extents(&self.text[lm.range()]).x_advance)
+            .fold(0.0, |a: f64, b| a.max(b));
 
-        self.width = widths.fold(0.0, |a: f64, b| a.max(b));
+        let height = self
+            .line_metrics
+            .last()
+            .map(|l| l.y_offset + l.height)
+            .unwrap_or_default();
+        self.size = Size::new(width, height);
 
         Ok(())
     }
@@ -150,7 +228,7 @@ impl TextLayout for CairoTextLayout {
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_metrics
             .get(line_number)
-            .map(|lm| &self.text[lm.start_offset..(lm.end_offset)])
+            .map(|lm| &self.text[lm.range()])
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
@@ -170,51 +248,38 @@ impl TextLayout for CairoTextLayout {
             return HitTestPoint::default();
         }
 
-        // this assumes that all heights/baselines are the same.
-        // Uses line bounding box to do hit testpoint, but with coordinates starting at 0.0 at
-        // first baseline
-        let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
+        let height = self
+            .line_metrics
+            .last()
+            .map(|lm| lm.y_offset + lm.height)
+            .unwrap_or(0.0);
 
-        // check out of bounds above top
-        // out of bounds on bottom during iteration
-        let mut is_y_inside = true;
-        if point.y < -1.0 * first_baseline {
-            is_y_inside = false
+        // determine whether this click is within the y bounds of the layout,
+        // and what line it coorresponds to. (For points above and below the layout,
+        // we hittest the first and last lines respectively.)
+        let (y_inside, lm) = if point.y < 0. {
+            (false, self.line_metrics.first().unwrap())
+        } else if point.y >= height {
+            (false, self.line_metrics.last().unwrap())
+        } else {
+            let line = self
+                .line_metrics
+                .iter()
+                .find(|l| point.y >= l.y_offset && point.y < l.y_offset + l.height)
+                .unwrap();
+            (true, line)
         };
 
-        // get the line metric
-        let mut lm = self
-            .line_metrics
-            .iter()
-            .skip_while(|l| l.cumulative_height - first_baseline < point.y);
-        let lm = lm
-            .next()
-            .or_else(|| {
-                // This means it went over the last line, so return the last line.
-                is_y_inside = false;
-                self.line_metrics.last()
-            })
-            .cloned() // TODO remove this clone?
-            .unwrap_or_else(|| {
-                is_y_inside = false;
-                Default::default()
-            });
-
-        // Then for the line, do hit test point
         // Trailing whitespace is remove for the line
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        let line = &self.text[lm.range()];
 
-        let mut htp = hit_test_line_point(&self.font, line, &point);
-        htp.metrics.text_position += lm.start_offset;
-
-        if !is_y_inside {
-            htp.is_inside = false;
-        }
-
+        let mut htp = hit_test_line_point(&self.font, line, point);
+        htp.idx += lm.start_offset;
+        htp.is_inside &= y_inside;
         htp
     }
 
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
         // first need to find line it's on, and get line start offset
         let lm = self
             .line_metrics
@@ -232,21 +297,19 @@ impl TextLayout for CairoTextLayout {
 
         // In cairo toy text, all baselines and heights are the same.
         // We're counting the first line baseline as 0, and measuring to each line's baseline.
-        let y = if count == 0 {
-            return Some(HitTestTextPosition::default());
-        } else {
-            (count - 1) as f64 * lm.height
-        };
+        if count == 0 {
+            return Some(HitTestPosition::default());
+        }
+        let y = lm.y_offset + lm.baseline;
 
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        let line = &self.text[lm.range()];
         let line_position = text_position - lm.start_offset;
 
         let mut http = hit_test_line_position(&self.font, line, line_position);
         if let Some(h) = http.as_mut() {
             h.point.y = y;
-            h.metrics.text_position += lm.start_offset;
         };
         http
     }
@@ -254,7 +317,7 @@ impl TextLayout for CairoTextLayout {
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_point
 // Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_point(font: &ScaledFont, text: &str, point: &Point) -> HitTestPoint {
+fn hit_test_line_point(font: &ScaledFont, text: &str, point: Point) -> HitTestPoint {
     // null case
     if text.is_empty() {
         return HitTestPoint::default();
@@ -276,9 +339,10 @@ fn hit_test_line_point(font: &ScaledFont, text: &str, point: &Point) -> HitTestP
 
     // first test beyond ends
     if point.x > end_bounds.trailing {
-        let mut res = HitTestPoint::default();
-        res.metrics.text_position = text.len();
-        return res;
+        return HitTestPoint {
+            idx: text.len(),
+            is_inside: false,
+        };
     }
     if point.x <= start_bounds.leading {
         return HitTestPoint::default();
@@ -327,24 +391,18 @@ fn hit_test_line_position(
     font: &ScaledFont,
     text: &str,
     text_position: usize,
-) -> Option<HitTestTextPosition> {
+) -> Option<HitTestPosition> {
     // Using substrings with unicode grapheme awareness
 
     let text_len = text.len();
 
     if text_position == 0 {
-        return Some(HitTestTextPosition::default());
+        return Some(HitTestPosition::default());
     }
 
     if text_position as usize >= text_len {
-        return Some(HitTestTextPosition {
-            point: Point {
-                x: font.text_extents(&text).x_advance,
-                y: 0.0,
-            },
-            metrics: HitTestMetrics {
-                text_position: text_len,
-            },
+        return Some(HitTestPosition {
+            point: Point::new(font.text_extents(&text).x_advance, 0.0),
         });
     }
 
@@ -358,19 +416,15 @@ fn hit_test_line_position(
     if let Some((byte_idx, _s)) = grapheme_indices.last() {
         let point_x = font.text_extents(&text[0..byte_idx]).x_advance;
 
-        Some(HitTestTextPosition {
+        Some(HitTestPosition {
             point: Point { x: point_x, y: 0.0 },
-            metrics: HitTestMetrics { text_position },
         })
     } else {
         // iterated to end boundary
-        Some(HitTestTextPosition {
+        Some(HitTestPosition {
             point: Point {
                 x: font.text_extents(&text).x_advance,
                 y: 0.0,
-            },
-            metrics: HitTestMetrics {
-                text_position: text_len,
             },
         })
     }
@@ -392,14 +446,21 @@ mod test {
     use super::*;
     use piet::TextLayout;
 
-    // - x: calculated value
-    // - target: f64
-    // - tolerance: in f64
-    fn assert_close_to(x: f64, target: f64, tolerance: f64) {
-        let min = target - tolerance;
-        let max = target + tolerance;
-        println!("x: {}, target: {}", x, target);
-        assert!(x <= max && x >= min);
+    macro_rules! assert_close {
+        ($val:expr, $target:expr, $tolerance:expr) => {{
+            let min = $target - $tolerance;
+            let max = $target + $tolerance;
+            if $val < min || $val > max {
+                panic!(
+                    "value {} outside target {} with tolerance {}",
+                    $val, $target, $tolerance
+                );
+            }
+        }};
+
+        ($val:expr, $target:expr, $tolerance:expr,) => {{
+            assert_close!($val, $target, $tolerance)
+        }};
     }
 
     #[test]
@@ -407,90 +468,60 @@ mod test {
         let mut text_layout = CairoText::new();
 
         let input = "piet text!";
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..4], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let piet_width = layout.width();
+        let layout = text_layout.new_text_layout(&input[0..4]).build().unwrap();
+        let piet_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..3], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let pie_width = layout.width();
+        let layout = text_layout.new_text_layout(&input[0..3]).build().unwrap();
+        let pie_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let pi_width = layout.width();
+        let layout = text_layout.new_text_layout(&input[0..2]).build().unwrap();
+        let pi_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..1], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let p_width = layout.width();
+        let layout = text_layout.new_text_layout(&input[0..1]).build().unwrap();
+        let p_width = layout.size().width;
 
-        let layout = text_layout
-            .new_text_layout(&font, "", std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let null_width = layout.width();
+        let layout = text_layout.new_text_layout("").build().unwrap();
+        let null_width = layout.size().width;
 
-        let full_layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let full_width = full_layout.width();
+        let full_layout = text_layout.new_text_layout(input).build().unwrap();
+        let full_width = full_layout.size().width;
 
-        assert_close_to(
-            full_layout.hit_test_text_position(4).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(4).unwrap().point.x,
             piet_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(3).unwrap().point.x,
             pie_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(2).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(2).unwrap().point.x,
             pi_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(1).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(1).unwrap().point.x,
             p_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(0).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(0).unwrap().point.x,
             null_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(10).unwrap().point.x,
             full_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(11).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(11).unwrap().point.x,
             full_width,
             3.0,
         );
-        assert_eq!(
-            full_layout
-                .hit_test_text_position(11)
-                .unwrap()
-                .metrics
-                .text_position,
-            10
-        )
     }
 
     #[test]
@@ -499,19 +530,12 @@ mod test {
         assert_eq!(input.len(), 2);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
 
-        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(
+        assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
+        assert_close!(
             layout.hit_test_text_position(2).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
@@ -519,15 +543,7 @@ mod test {
         // This one panics in d2d because this is not a code unit boundary.
         // But it works here! Harder to deal with this right now, since unicode-segmentation
         // doesn't give code point offsets.
-        assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
-        assert_eq!(
-            layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .metrics
-                .text_position,
-            1
-        );
+        assert_close!(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
 
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
@@ -537,7 +553,7 @@ mod test {
         //let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
-        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.width()));
+        //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.size().width));
         //assert_eq!(input.len(), 17);
 
         let input = "\u{0023}\u{FE0F}\u{20E3}"; // #️⃣
@@ -545,32 +561,17 @@ mod test {
         assert_eq!(input.chars().count(), 3);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
 
-        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(
+        assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
+        assert_close!(
             layout.hit_test_text_position(7).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
         // note code unit not at grapheme boundary
-        assert_close_to(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
-        assert_eq!(
-            layout
-                .hit_test_text_position(1)
-                .unwrap()
-                .metrics
-                .text_position,
-            1
-        );
+        assert_close!(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
     }
 
     #[test]
@@ -584,78 +585,46 @@ mod test {
         assert_eq!(input.len(), 14);
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
 
-        let test_layout_0 = text_layout
-            .new_text_layout(&font, &input[0..2], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let test_layout_1 = text_layout
-            .new_text_layout(&font, &input[0..9], std::f64::INFINITY)
-            .build()
-            .unwrap();
-        let test_layout_2 = text_layout
-            .new_text_layout(&font, &input[0..10], std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let test_layout_0 = text_layout.new_text_layout(&input[0..2]).build().unwrap();
+        let test_layout_1 = text_layout.new_text_layout(&input[0..9]).build().unwrap();
+        let test_layout_2 = text_layout.new_text_layout(&input[0..10]).build().unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_close_to(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
-        assert_close_to(
+        assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
+        assert_close!(
             layout.hit_test_text_position(2).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
-        assert_close_to(
+        assert_close!(
             layout.hit_test_text_position(9).unwrap().point.x,
-            test_layout_1.width(),
+            test_layout_1.size().width,
             3.0,
         );
-        assert_close_to(
+        assert_close!(
             layout.hit_test_text_position(10).unwrap().point.x,
-            test_layout_2.width(),
+            test_layout_2.size().width,
             3.0,
         );
-        assert_close_to(
+        assert_close!(
             layout.hit_test_text_position(14).unwrap().point.x,
-            layout.width(),
+            layout.size().width,
             3.0,
         );
 
         // Code point boundaries, but not grapheme boundaries.
         // Width should stay at the current grapheme boundary.
-        assert_close_to(
+        assert_close!(
             layout.hit_test_text_position(3).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
         );
-        assert_eq!(
-            layout
-                .hit_test_text_position(3)
-                .unwrap()
-                .metrics
-                .text_position,
-            3
-        );
-        assert_close_to(
+        assert_close!(
             layout.hit_test_text_position(6).unwrap().point.x,
-            test_layout_0.width(),
+            test_layout_0.size().width,
             3.0,
-        );
-        assert_eq!(
-            layout
-                .hit_test_text_position(6)
-                .unwrap()
-                .metrics
-                .text_position,
-            6
         );
     }
 
@@ -664,45 +633,38 @@ mod test {
     fn test_hit_test_point_basic_0() {
         let mut text_layout = CairoText::new();
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("piet text!").build().unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 23.0
         println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 27.0
 
         // test hit test point
         // all inside
         let pt = layout.hit_test_point(Point::new(22.5, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(25.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(28.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
 
         // outside
-        println!("layout_width: {:?}", layout.width()); // 56.0
+        println!("layout_width: {:?}", layout.size().width); // 56.0
 
         let pt = layout.hit_test_point(Point::new(56.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, true);
 
         let pt = layout.hit_test_point(Point::new(57.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0); // first text position
+        assert_eq!(pt.idx, 0); // first text position
         assert_eq!(pt.is_inside, false);
     }
 
@@ -711,43 +673,36 @@ mod test {
     fn test_hit_test_point_basic_0() {
         let mut text_layout = CairoText::new();
 
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "piet text!", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("piet text!").build().unwrap();
         println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 19.34765625
         println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 22.681640625
 
         // test hit test point
         // all inside
         let pt = layout.hit_test_point(Point::new(19.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(20.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(21.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 4);
+        assert_eq!(pt.idx, 4);
         let pt = layout.hit_test_point(Point::new(22.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
 
         // outside
-        println!("layout_width: {:?}", layout.width()); //45.357421875
+        println!("layout_width: {:?}", layout.size().width); //45.357421875
 
         let pt = layout.hit_test_point(Point::new(45.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, true);
 
         let pt = layout.hit_test_point(Point::new(46.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10); // last text position
+        assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0); // first text position
+        assert_eq!(pt.idx, 0); // first text position
         assert_eq!(pt.is_inside, false);
     }
 
@@ -758,35 +713,25 @@ mod test {
         let mut text_layout = CairoText::new();
 
         // base condition, one grapheme
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "t", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("t").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
 
         // two graphemes (to check that middle moves)
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
 
-        let layout = text_layout
-            .new_text_layout(&font, "te", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("te").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
 
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 1);
+        assert_eq!(pt.idx, 1);
         let pt = layout.hit_test_point(Point::new(6.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 1);
+        assert_eq!(pt.idx, 1);
         let pt = layout.hit_test_point(Point::new(11.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
     }
 
     #[test]
@@ -796,35 +741,25 @@ mod test {
         let mut text_layout = CairoText::new();
 
         // base condition, one grapheme
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, "t", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("t").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
 
         // two graphemes (to check that middle moves)
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
 
-        let layout = text_layout
-            .new_text_layout(&font, "te", std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout("te").build().unwrap();
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 12.0
 
         let pt = layout.hit_test_point(Point::new(1.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 1);
+        assert_eq!(pt.idx, 1);
         let pt = layout.hit_test_point(Point::new(6.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 1);
+        assert_eq!(pt.idx, 1);
         let pt = layout.hit_test_point(Point::new(11.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
     }
 
     #[test]
@@ -838,45 +773,38 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         //println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.99999999
         //println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 24.0
         //println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 32.0
         //println!("text pos 14: {:?}", layout.hit_test_text_position(14)); // 39.0, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(7.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(10.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(29.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(32.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(35.5, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(38.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(40.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
     }
 
     #[test]
@@ -890,47 +818,40 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 6.673828125
         println!("text pos 9: {:?}", layout.hit_test_text_position(9)); // 28.55859375
         println!("text pos 10: {:?}", layout.hit_test_text_position(10)); // 35.232421875
         println!("text pos 14: {:?}", layout.hit_test_text_position(14)); // 42.8378905, line width
 
         let pt = layout.hit_test_point(Point::new(2.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(4.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(7.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(10.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(14.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 2);
+        assert_eq!(pt.idx, 2);
         let pt = layout.hit_test_point(Point::new(18.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(23.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(29.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 9);
+        assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(32.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(35.5, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(38.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 10);
+        assert_eq!(pt.idx, 10);
         let pt = layout.hit_test_point(Point::new(40.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(43.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 14);
+        assert_eq!(pt.idx, 14);
     }
 
     #[test]
@@ -943,14 +864,7 @@ mod test {
         let input = "tßßypi";
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
@@ -962,7 +876,7 @@ mod test {
         println!("text pos 8: {:?}", layout.hit_test_text_position(8)); // 39.0, end
 
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 6);
+        assert_eq!(pt.idx, 6);
     }
 
     #[test]
@@ -975,14 +889,7 @@ mod test {
         let input = "tßßypi";
 
         let mut text_layout = CairoText::new();
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
-        let layout = text_layout
-            .new_text_layout(&font, input, std::f64::INFINITY)
-            .build()
-            .unwrap();
+        let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
         println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
@@ -994,7 +901,7 @@ mod test {
         println!("text pos 8: {:?}", layout.hit_test_text_position(8)); // 39.0, end
 
         let pt = layout.hit_test_point(Point::new(27.0, 0.0));
-        assert_eq!(pt.metrics.text_position, 6);
+        assert_eq!(pt.idx, 6);
     }
 
     #[test]
@@ -1003,61 +910,61 @@ mod test {
         let mut text_layout = CairoText::new();
 
         let input = "piet  text!";
-        let font = text_layout
-            .new_font_by_name("sans-serif", 12.0)
-            .build()
-            .unwrap();
+
+        let layout = text_layout.new_text_layout(&input[0..3]).build().unwrap();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], 30.0)
+            .new_text_layout(&input[0..4])
+            .max_width(25.0)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 25.0)
+            .new_text_layout(&input[0..5])
+            .max_width(30.)
             .build()
             .unwrap();
-        let piet_width = layout.width();
-
-        let layout = text_layout
-            .new_text_layout(&font, &input[0..5], 30.0)
-            .build()
-            .unwrap();
-        let piet_space_width = layout.width();
+        let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[6..10], 25.0)
+            .new_text_layout(&input[6..10])
+            .max_width(25.0)
             .build()
             .unwrap();
-        let text_width = layout.width();
+        let text_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..9], 25.0)
+            .new_text_layout(&input[6..9])
+            .max_width(25.0)
             .build()
             .unwrap();
-        let tex_width = layout.width();
+        let tex_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..8], 25.0)
+            .new_text_layout(&input[6..8])
+            .max_width(25.0)
             .build()
             .unwrap();
-        let te_width = layout.width();
+        let te_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..7], 25.0)
+            .new_text_layout(&input[6..7])
+            .max_width(25.0)
             .build()
             .unwrap();
-        let t_width = layout.width();
+        let t_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 25.0)
+            .new_text_layout(input)
+            .max_width(25.0)
             .build()
             .unwrap();
 
         println!("lm: {:#?}", full_layout.line_metrics);
-        println!("layout width: {:#?}", full_layout.width());
+        println!("layout width: {:#?}", full_layout.size().width);
 
         println!("'pie': {}", pie_width);
         println!("'piet': {}", piet_width);
@@ -1068,85 +975,91 @@ mod test {
         println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
-        let line_zero_baseline = 0.0;
-        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+        let line_zero_baseline = full_layout
+            .line_metric(0)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
+        let line_one_baseline = full_layout
+            .line_metric(1)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
 
         // these just test the x position of text positions on the second line
-        assert_close_to(
-            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(10).unwrap().point.x,
             text_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(9).unwrap().point.x,
             tex_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(8).unwrap().point.x,
             te_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(7).unwrap().point.x,
             t_width,
             3.0,
         );
         // This should be beginning of second line
-        assert_close_to(
-            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(6).unwrap().point.x,
             0.0,
             3.0,
         );
 
-        assert_close_to(
-            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(3).unwrap().point.x,
             pie_width,
             3.0,
         );
 
         // This tests that trailing whitespace is included in the first line width.
-        assert_close_to(
-            full_layout.hit_test_text_position(5).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(5).unwrap().point.x,
             piet_space_width,
             3.0,
         );
 
         // These test y position of text positions on line 1 (0-index)
-        assert_close_to(
-            full_layout.hit_test_text_position(10).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(10).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(9).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(9).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(8).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(8).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(7).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(7).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(6).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(6).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
 
         // this tests y position of 0 line
-        assert_close_to(
-            full_layout.hit_test_text_position(5).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(5).unwrap().point.y,
             line_zero_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(4).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(4).unwrap().point.y,
             line_zero_baseline,
             3.0,
         );
@@ -1159,60 +1072,76 @@ mod test {
 
         let input = "piet  text!";
         let font = text_layout
-            .new_font_by_name("sans-serif", 15.0) // change this for osx
+            .new_font_by_name("Helvetica", 15.0) // change this for osx
             .build()
             .unwrap();
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..3], 30.0)
+            .new_text_layout(&input[0..3])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
-        let pie_width = layout.width();
+        let pie_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..4], 25.0)
+            .new_text_layout(&input[0..4])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let piet_width = layout.width();
+        let piet_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[0..5], 30.0)
+            .new_text_layout(&input[0..5])
+            .font(font.clone(), 15.0)
+            .max_width(30.0)
             .build()
             .unwrap();
-        let piet_space_width = layout.width();
+        let piet_space_width = layout.size().width;
 
         // "text" should be on second line
         let layout = text_layout
-            .new_text_layout(&font, &input[6..10], 25.0)
+            .new_text_layout(&input[6..10])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let text_width = layout.width();
+        let text_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..9], 25.0)
+            .new_text_layout(&input[6..9])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let tex_width = layout.width();
+        let tex_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..8], 25.0)
+            .new_text_layout(&input[6..8])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let te_width = layout.width();
+        let te_width = layout.size().width;
 
         let layout = text_layout
-            .new_text_layout(&font, &input[6..7], 25.0)
+            .new_text_layout(&input[6..7])
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
-        let t_width = layout.width();
+        let t_width = layout.size().width;
 
         let full_layout = text_layout
-            .new_text_layout(&font, input, 25.0)
+            .new_text_layout(input)
+            .font(font.clone(), 15.0)
+            .max_width(25.0)
             .build()
             .unwrap();
 
         println!("lm: {:#?}", full_layout.line_metrics);
-        println!("layout width: {:#?}", full_layout.width());
+        println!("layout width: {:#?}", full_layout.size().width);
 
         println!("'pie': {}", pie_width);
         println!("'piet': {}", piet_width);
@@ -1223,85 +1152,91 @@ mod test {
         println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
-        let line_zero_baseline = 0.0;
-        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+        let line_zero_baseline = full_layout
+            .line_metric(0)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
+        let line_one_baseline = full_layout
+            .line_metric(1)
+            .map(|l| l.y_offset + l.baseline)
+            .unwrap();
 
         // these just test the x position of text positions on the second line
-        assert_close_to(
-            full_layout.hit_test_text_position(10).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(10).unwrap().point.x,
             text_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(9).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(9).unwrap().point.x,
             tex_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(8).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(8).unwrap().point.x,
             te_width,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(7).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(7).unwrap().point.x,
             t_width,
             3.0,
         );
         // This should be beginning of second line
-        assert_close_to(
-            full_layout.hit_test_text_position(6).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(6).unwrap().point.x,
             0.0,
             3.0,
         );
 
-        assert_close_to(
-            full_layout.hit_test_text_position(3).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(3).unwrap().point.x,
             pie_width,
             3.0,
         );
 
         // This tests that trailing whitespace is included in the first line width.
-        assert_close_to(
-            full_layout.hit_test_text_position(5).unwrap().point.x as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(5).unwrap().point.x,
             piet_space_width,
             3.0,
         );
 
         // These test y position of text positions on line 1 (0-index)
-        assert_close_to(
-            full_layout.hit_test_text_position(10).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(10).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(9).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(9).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(8).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(8).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(7).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(7).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(6).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(6).unwrap().point.y,
             line_one_baseline,
             3.0,
         );
 
         // this tests y position of 0 line
-        assert_close_to(
-            full_layout.hit_test_text_position(5).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(5).unwrap().point.y,
             line_zero_baseline,
             3.0,
         );
-        assert_close_to(
-            full_layout.hit_test_text_position(4).unwrap().point.y as f64,
+        assert_close!(
+            full_layout.hit_test_text_position(4).unwrap().point.y,
             line_zero_baseline,
             3.0,
         );
@@ -1314,62 +1249,56 @@ mod test {
         let input = "piet text most best";
         let mut text = CairoText::new();
 
-        let font = text.new_font_by_name("sans-serif", 12.0).build().unwrap();
         // this should break into four lines
-        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
-        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 13.9999)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 27.9999)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 41.99999)
+        let layout = text.new_text_layout(input).max_width(30.0).build().unwrap();
+        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 12.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 26.0)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 40.0)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 53.99999)
 
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
-        assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_inside, true);
+        assert_eq!(pt.idx, 0);
+        assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
-        assert_eq!(pt.metrics.text_position, 0);
-        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
-        assert_eq!(pt.metrics.text_position, 5);
-        let pt = layout.hit_test_point(Point::new(1.0, 18.0));
-        assert_eq!(pt.metrics.text_position, 10);
-        let pt = layout.hit_test_point(Point::new(1.0, 32.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.idx, 0);
+        assert!(pt.is_inside);
+        let pt = layout.hit_test_point(Point::new(1.0, 14.0));
+        assert_eq!(pt.idx, 5);
+        let pt = layout.hit_test_point(Point::new(1.0, 28.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 44.0));
+        assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
-        let best_layout = text
-            .new_text_layout(&font, "best", std::f64::INFINITY)
-            .build()
-            .unwrap();
-        println!("layout width: {:#?}", best_layout.width()); // 26.0...
+        let best_layout = text.new_text_layout("best").build().unwrap();
+        println!("layout width: {:#?}", best_layout.size().width); // 26.0...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 46.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        let pt = layout.hit_test_point(Point::new(1.0, 56.0));
+        assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(25.0, 46.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        let pt = layout.hit_test_point(Point::new(25.0, 56.0));
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(27.0, 46.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        let pt = layout.hit_test_point(Point::new(27.0, 56.0));
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
         // under
-        let piet_layout = text
-            .new_text_layout(&font, "piet ", std::f64::INFINITY)
-            .build()
-            .unwrap();
-        println!("layout width: {:#?}", piet_layout.width()); // 27.0...
+        let piet_layout = text.new_text_layout("piet ").build().unwrap();
+        println!("layout width: {:#?}", piet_layout.size().width); // 27.0...
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(26.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(28.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
     }
 
@@ -1380,62 +1309,73 @@ mod test {
         let input = "piet text most best";
         let mut text = CairoText::new();
 
-        let font = text.new_font_by_name("sans-serif", 13.0).build().unwrap();
+        let font = text.new_font_by_name("Helvetica", 13.0).build().unwrap();
         // this should break into four lines
-        let layout = text.new_text_layout(&font, input, 30.0).build().unwrap();
+        let layout = text
+            .new_text_layout(input)
+            .font(font.clone(), 13.0)
+            .max_width(30.0)
+            .build()
+            .unwrap();
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 12.0)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 24.0)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 36.0)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 13.0)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 26.0)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 39.0)
 
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
-        assert_eq!(pt.metrics.text_position, 0);
-        assert_eq!(pt.is_inside, true);
+        assert_eq!(pt.idx, 0);
+        assert_eq!(pt.is_inside, false);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
-        assert_eq!(pt.metrics.text_position, 0);
-        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
-        assert_eq!(pt.metrics.text_position, 5);
-        let pt = layout.hit_test_point(Point::new(1.0, 18.0));
-        assert_eq!(pt.metrics.text_position, 10);
-        let pt = layout.hit_test_point(Point::new(1.0, 32.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        assert_eq!(pt.idx, 0);
+        assert!(pt.is_inside);
+        let pt = layout.hit_test_point(Point::new(1.0, 12.));
+        assert_eq!(pt.idx, 0);
+        let pt = layout.hit_test_point(Point::new(1.0, 13.));
+        assert_eq!(pt.idx, 5);
+        let pt = layout.hit_test_point(Point::new(1.0, 26.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 39.0));
+        assert_eq!(pt.idx, 15);
+        assert!(pt.is_inside);
 
         // over on y axis, but x still affects the text position
         let best_layout = text
-            .new_text_layout(&font, "best", std::f64::INFINITY)
+            .new_text_layout("best")
+            .font(font.clone(), 13.0)
             .build()
             .unwrap();
-        println!("layout width: {:#?}", best_layout.width()); // 26.0...
+        println!("layout width: {:#?}", best_layout.size().width); // 26.0...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 46.0));
-        assert_eq!(pt.metrics.text_position, 15);
+        let pt = layout.hit_test_point(Point::new(1.0, 52.0));
+        assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(25.0, 46.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        let pt = layout.hit_test_point(Point::new(25.0, 52.0));
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(27.0, 46.0));
-        assert_eq!(pt.metrics.text_position, 19);
+        let pt = layout.hit_test_point(Point::new(27.0, 52.0));
+        assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
         // under
         let piet_layout = text
-            .new_text_layout(&font, "piet ", std::f64::INFINITY)
+            .new_text_layout("piet ")
+            .font(font.clone(), 13.0)
             .build()
             .unwrap();
-        println!("layout width: {:#?}", piet_layout.width()); // ???
+        println!("layout width: {:#?}", piet_layout.size().width); // ???
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 0);
+        assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(25.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
 
         let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
-        assert_eq!(pt.metrics.text_position, 5);
+        assert_eq!(pt.idx, 5);
         assert_eq!(pt.is_inside, false);
     }
 }

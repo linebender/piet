@@ -37,10 +37,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install cairo
-        run: brew install cairo
-        if: contains(matrix.os, 'mac')
-
       - name: install libgtk-dev
         run: |
           sudo apt update
@@ -55,33 +51,85 @@ jobs:
           profile: minimal
           override: true
 
-      - name: cargo clippy (windows)
+      # Clippy packages in deeper-to-higher dependency order
+      - name: cargo clippy piet
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --workspace --all-targets --exclude piet-cairo -- -D warnings
-        if: contains(matrix.os, 'windows')
+          args: --manifest-path=piet/Cargo.toml --all-targets --all-features -- -D warnings
 
-      - name: cargo clippy (not windows)
+      - name: cargo clippy piet-cairo
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --workspace --all-targets --exclude piet-direct2d -- -D warnings
-        if: contains(matrix.os, 'windows') != true
+          args: --manifest-path=piet-cairo/Cargo.toml --all-targets --all-features -- -D warnings
+        if: contains(matrix.os, 'ubuntu')
 
-      - name: cargo test (windows)
+      - name: cargo clippy piet-coregraphics
         uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --workspace --exclude piet-cairo
+          command: clippy
+          args: --manifest-path=piet-coregraphics/Cargo.toml --all-targets --all-features -- -D warnings
+        if: contains(matrix.os, 'macOS')
+
+      - name: cargo clippy piet-direct2d
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=piet-direct2d/Cargo.toml --all-targets --all-features -- -D warnings
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test (not windows)
+      - name: cargo clippy piet-svg
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=piet-svg/Cargo.toml --all-targets --all-features -- -D warnings
+
+      - name: cargo clippy piet-common
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=piet-common/Cargo.toml --all-targets --features=png -- -D warnings
+
+      # Test packages in deeper-to-higher dependency order
+      - name: cargo test piet
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude piet-direct2d
-        if: contains(matrix.os, 'windows') != true
+          args: --manifest-path=piet/Cargo.toml --all-features
+
+      - name: cargo test piet-cairo
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-cairo/Cargo.toml --all-features
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: cargo test piet-coregraphics
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-coregraphics/Cargo.toml --all-features
+        if: contains(matrix.os, 'macOS')
+
+      - name: cargo test piet-direct2d
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-direct2d/Cargo.toml --all-features
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo test piet-svg
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-svg/Cargo.toml --all-features
+
+      - name: cargo test piet-common
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-common/Cargo.toml --features=png
 
   test-stable-wasm:
     runs-on: ${{ matrix.os }}
@@ -101,17 +149,44 @@ jobs:
           profile: minimal
           override: true
 
-      - name: cargo clippy
+      # Clippy packages in deeper-to-higher dependency order
+      - name: cargo clippy piet
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --workspace --all-targets --exclude piet-cairo --exclude piet-direct2d --target wasm32-unknown-unknown -- -D warnings
+          args: --manifest-path=piet/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
 
-      - name: cargo test compile
+      - name: cargo clippy piet-web
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=piet-web/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
+
+      - name: cargo clippy piet-common
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=piet-common/Cargo.toml --all-targets --features=png --target wasm32-unknown-unknown -- -D warnings
+
+      # Test packages in deeper-to-higher dependency order
+      # TODO: Find a way to make tests work. Until then the tests are merely compiled.
+      - name: cargo test piet
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude piet-cairo --exclude piet-direct2d --no-run --target wasm32-unknown-unknown
+          args: --manifest-path=piet/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
+
+      - name: cargo test piet-web
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-web/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
+
+      - name: cargo test piet-common
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-common/Cargo.toml --features=png --no-run --target wasm32-unknown-unknown
 
   test-nightly:
     runs-on: ${{ matrix.os }}
@@ -122,10 +197,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install cairo
-        run: brew install cairo
-        if: contains(matrix.os, 'mac')
-
       - name: install libgtk-dev
         run: |
           sudo apt update
@@ -139,19 +210,45 @@ jobs:
           profile: minimal
           override: true
 
-      - name: cargo test (windows)
+      # Test packages in deeper-to-higher dependency order
+      - name: cargo test piet
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude piet-cairo
+          args: --manifest-path=piet/Cargo.toml --all-features
+
+      - name: cargo test piet-cairo
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-cairo/Cargo.toml --all-features
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: cargo test piet-coregraphics
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-coregraphics/Cargo.toml --all-features
+        if: contains(matrix.os, 'macOS')
+
+      - name: cargo test piet-direct2d
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-direct2d/Cargo.toml --all-features
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test (not windows)
+      - name: cargo test piet-svg
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --exclude piet-direct2d
-        if: contains(matrix.os, 'windows') != true
+          args: --manifest-path=piet-svg/Cargo.toml --all-features
+
+      - name: cargo test piet-common
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet-common/Cargo.toml --features=png
 
   check-docs:
     name: Docs
@@ -162,25 +259,62 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install cairo
-        run: brew install cairo
-        if: contains(matrix.os, 'mac')
-
       - name: install libgtk-dev
         run: |
           sudo apt update
           sudo apt install libgtk-3-dev
         if: contains(matrix.os, 'ubuntu')
 
-      - name: install nightly toolchain
+      - name: install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
+          target: wasm32-unknown-unknown
           profile: minimal
           override: true
 
-      - name: check docs in piet/
+      # Doc packages in deeper-to-higher dependency order
+      - name: cargo doc piet
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --document-private-items
+          args: --manifest-path=piet/Cargo.toml --all-features --document-private-items
+
+      - name: cargo doc piet-cairo
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=piet-cairo/Cargo.toml --all-features --document-private-items
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: cargo doc piet-coregraphics
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=piet-coregraphics/Cargo.toml --all-features --document-private-items
+        if: contains(matrix.os, 'macOS')
+
+      - name: cargo doc piet-direct2d
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=piet-direct2d/Cargo.toml --all-features --document-private-items
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo doc piet-svg
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=piet-svg/Cargo.toml --all-features --document-private-items
+
+      - name: cargo doc piet-common
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=piet-common/Cargo.toml --features=png --document-private-items
+
+      - name: cargo doc piet-web
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --manifest-path=piet-web/Cargo.toml --all-features --document-private-items --target wasm32-unknown-unknown

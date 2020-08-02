@@ -42,8 +42,6 @@ use winapi::um::d2d1effects::{CLSID_D2D1GaussianBlur, D2D1_GAUSSIANBLUR_PROP_STA
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
 
-use piet::{new_error, ErrorKind};
-
 use crate::dwrite::TextLayout;
 
 pub enum FillRule {
@@ -64,6 +62,12 @@ pub struct D2DFactory(ComPtr<ID2D1Factory1>);
 /// A Direct2D device.
 pub struct D2DDevice(ComPtr<ID2D1Device>);
 
+// Microsoft's API docs suggest that it's safe to access D2D factories, and anything coming out of
+// them, from multiple threads. (In fact, if there's no underlying D3D resources, they're even
+// `Sync`.) https://docs.microsoft.com/en-us/windows/win32/direct2d/multi-threaded-direct2d-apps
+unsafe impl Send for D2DFactory {}
+unsafe impl Send for D2DDevice {}
+
 /// The main context that takes drawing operations.
 ///
 /// This type is a thin wrapper for
@@ -71,6 +75,7 @@ pub struct D2DDevice(ComPtr<ID2D1Device>);
 ///
 /// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
 /// that end-users directly use this struct.
+#[derive(Clone)]
 pub struct DeviceContext(ComPtr<ID2D1DeviceContext>);
 
 pub struct PathGeometry(ComPtr<ID2D1PathGeometry>);
@@ -134,7 +139,7 @@ impl std::error::Error for Error {
 
 impl From<Error> for piet::Error {
     fn from(e: Error) -> piet::Error {
-        new_error(ErrorKind::BackendError(Box::new(e)))
+        piet::Error::BackendError(Box::new(e))
     }
 }
 
@@ -455,6 +460,7 @@ impl DeviceContext {
         }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub(crate) fn create_linear_gradient(
         &mut self,
         props: &D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
@@ -543,6 +549,7 @@ impl DeviceContext {
         }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     pub(crate) fn draw_bitmap(
         &mut self,
         bitmap: &Bitmap,

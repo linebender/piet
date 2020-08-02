@@ -1,0 +1,70 @@
+on: pull_request
+
+jobs:
+ compare-snapshots:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, windows-2019, ubuntu-latest]
+    name: compare snapshots
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+            submodules: 'true'
+
+      - name: install libgtk-dev
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: generate and compare (ubuntu+cairo)
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --out=cairo_samples --compare=./snapshots/cairo
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: upload failures (ubuntu+cairo)
+        uses: actions/upload-artifact@v2
+        with:
+          name: cairo-failure
+          path: cairo_samples
+        if: contains(matrix.os, 'ubuntu') && failure()
+
+      - name: generate and compare (macOS)
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --out=coregraphics_samples --compare=./snapshots/coregraphics
+        if: contains(matrix.os, 'macOS')
+
+      - name: upload failures (macOS)
+        uses: actions/upload-artifact@v2
+        with:
+          name: coregraphics-failure
+          path: coregraphics_samples
+        if: contains(matrix.os, 'macOS') && failure()
+
+      - name: generate and compare (d2d)
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --out=d2d_samples --compare=./snapshots/d2d
+        if: contains(matrix.os, 'windows')
+
+      - name: upload failures (d2d)
+        uses: actions/upload-artifact@v2
+        with:
+          name: d2d-failure
+          path: d2d_samples
+        if: contains(matrix.os, 'windows') && failure()

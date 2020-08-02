@@ -1,13 +1,14 @@
 //! A render context that does nothing.
 
 use std::borrow::Cow;
+use std::ops::RangeBounds;
 
-use kurbo::{Affine, Point, Rect, Shape};
+use kurbo::{Affine, Point, Rect, Shape, Size};
 
 use crate::{
-    Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestTextPosition, ImageFormat,
-    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, FixedGradient, Font, FontBuilder, HitTestPoint, HitTestPosition, ImageFormat,
+    InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 
 /// A render context that doesn't render.
@@ -23,10 +24,12 @@ pub struct NullBrush;
 #[doc(hidden)]
 pub struct NullImage;
 
+#[derive(Clone)]
 #[doc(hidden)]
 pub struct NullText;
 
 #[doc(hidden)]
+#[derive(Clone)]
 pub struct NullFont;
 #[doc(hidden)]
 pub struct NullFontBuilder;
@@ -85,13 +88,7 @@ impl RenderContext for NullRenderContext {
         &mut self.0
     }
 
-    fn draw_text(
-        &mut self,
-        _layout: &Self::TextLayout,
-        _pos: impl Into<Point>,
-        _brush: &impl IntoBrush<Self>,
-    ) {
-    }
+    fn draw_text(&mut self, _layout: &Self::TextLayout, _pos: impl Into<Point>) {}
 
     fn save(&mut self) -> Result<(), Error> {
         Ok(())
@@ -146,12 +143,11 @@ impl Text for NullText {
         NullFontBuilder
     }
 
-    fn new_text_layout(
-        &mut self,
-        _font: &Self::Font,
-        _text: &str,
-        _width: impl Into<Option<f64>>,
-    ) -> Self::TextLayoutBuilder {
+    fn system_font(&mut self, _size: f64) -> Self::Font {
+        NullFont
+    }
+
+    fn new_text_layout(&mut self, _text: &str) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
 }
@@ -168,6 +164,27 @@ impl FontBuilder for NullFontBuilder {
 
 impl TextLayoutBuilder for NullTextLayoutBuilder {
     type Out = NullTextLayout;
+    type Font = NullFont;
+
+    fn max_width(self, _width: f64) -> Self {
+        self
+    }
+
+    fn alignment(self, _alignment: crate::TextAlignment) -> Self {
+        self
+    }
+
+    fn default_attribute(self, _attribute: impl Into<TextAttribute<Self::Font>>) -> Self {
+        self
+    }
+
+    fn range_attribute(
+        self,
+        _range: impl RangeBounds<usize>,
+        _attribute: impl Into<TextAttribute<Self::Font>>,
+    ) -> Self {
+        self
+    }
 
     fn build(self) -> Result<Self::Out, Error> {
         Ok(NullTextLayout)
@@ -177,6 +194,14 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
 impl TextLayout for NullTextLayout {
     fn width(&self) -> f64 {
         42.0
+    }
+
+    fn size(&self) -> Size {
+        Size::ZERO
+    }
+
+    fn image_bounds(&self) -> Rect {
+        Rect::ZERO
     }
 
     fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<(), Error> {
@@ -199,7 +224,7 @@ impl TextLayout for NullTextLayout {
         HitTestPoint::default()
     }
 
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestTextPosition> {
+    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestPosition> {
         None
     }
 }
