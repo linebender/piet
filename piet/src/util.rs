@@ -3,7 +3,7 @@
 use std::ops::{Bound, Range, RangeBounds};
 
 use crate::kurbo::{Rect, Size};
-use crate::{Color, FontFamily, FontWeight, TextAttribute};
+use crate::{Color, FontFamily, FontWeight, LineMetric, TextAttribute};
 
 /// The default point sie for text in piet.
 pub const DEFAULT_FONT_SIZE: f64 = 12.0;
@@ -47,6 +47,18 @@ pub fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<usize> {
     }
 
     None
+}
+
+/// Returns the index of the line containing this utf8 position,
+/// or the last line index if the position is out of bounds.
+///
+/// `lines` must not be empty.
+pub fn line_number_for_position(lines: &[LineMetric], position: usize) -> usize {
+    assert!(!lines.is_empty());
+    match lines.binary_search_by_key(&position, |item| item.start_offset) {
+        Ok(idx) => idx,
+        Err(idx) => idx - 1,
+    }
 }
 
 /// Resolves a `RangeBounds` into a range in the range 0..len.

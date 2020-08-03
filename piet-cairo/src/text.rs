@@ -244,37 +244,18 @@ impl TextLayout for CairoTextLayout {
 
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
         // first need to find line it's on, and get line start offset
-        let lm = self
-            .line_metrics
-            .iter()
-            .take_while(|l| l.start_offset <= text_position)
-            .last()
-            .cloned()
-            .unwrap_or_else(Default::default);
+        let line_num = util::line_number_for_position(&self.line_metrics, text_position);
+        let lm = self.line_metrics.get(line_num).cloned().unwrap();
 
-        let count = self
-            .line_metrics
-            .iter()
-            .take_while(|l| l.start_offset <= text_position)
-            .count();
-
-        // In cairo toy text, all baselines and heights are the same.
-        // We're counting the first line baseline as 0, and measuring to each line's baseline.
-        if count == 0 {
-            return Some(HitTestPosition::default());
-        }
-        let y = lm.y_offset + lm.baseline;
+        let y_pos = lm.y_offset + lm.baseline;
 
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
         let line = &self.text[lm.range()];
         let line_position = text_position - lm.start_offset;
 
-        let mut http = hit_test_line_position(&self.font, line, line_position);
-        if let Some(h) = http.as_mut() {
-            h.point.y = y;
-        };
-        http
+        hit_test_line_position(&self.font, line, line_position)
+            .map(|x_pos| HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
     }
 }
 
@@ -302,10 +283,7 @@ fn hit_test_line_point(font: &ScaledFont, text: &str, point: Point) -> HitTestPo
 
     // first test beyond ends
     if point.x > end_bounds.trailing {
-        return HitTestPoint {
-            idx: text.len(),
-            is_inside: false,
-        };
+        return HitTestPoint::new(text.len(), false);
     }
     if point.x <= start_bounds.leading {
         return HitTestPoint::default();
@@ -350,23 +328,17 @@ fn hit_test_line_point(font: &ScaledFont, text: &str, point: Point) -> HitTestPo
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
 // Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_position(
-    font: &ScaledFont,
-    text: &str,
-    text_position: usize,
-) -> Option<HitTestPosition> {
+fn hit_test_line_position(font: &ScaledFont, text: &str, text_position: usize) -> Option<f64> {
     // Using substrings with unicode grapheme awareness
 
     let text_len = text.len();
 
     if text_position == 0 {
-        return Some(HitTestPosition::default());
+        return Some(0.0);
     }
 
     if text_position as usize >= text_len {
-        return Some(HitTestPosition {
-            point: Point::new(font.text_extents(&text).x_advance, 0.0),
-        });
+        return Some(font.text_extents(&text).x_advance);
     }
 
     // Already checked that text_position > 0 and text_position < count.
@@ -378,18 +350,10 @@ fn hit_test_line_position(
 
     if let Some((byte_idx, _s)) = grapheme_indices.last() {
         let point_x = font.text_extents(&text[0..byte_idx]).x_advance;
-
-        Some(HitTestPosition {
-            point: Point { x: point_x, y: 0.0 },
-        })
+        Some(point_x)
     } else {
         // iterated to end boundary
-        Some(HitTestPosition {
-            point: Point {
-                x: font.text_extents(&text).x_advance,
-                y: 0.0,
-            },
-        })
+        Some(font.text_extents(&text).x_advance)
     }
 }
 

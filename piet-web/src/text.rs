@@ -11,8 +11,8 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
-    Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute, TextLayout,
-    TextLayoutBuilder,
+    util, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -248,38 +248,17 @@ impl TextLayout for WebTextLayout {
 
     fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
         // first need to find line it's on, and get line start offset
-        let lm = self
-            .line_metrics
-            .iter()
-            .take_while(|l| l.start_offset <= text_position)
-            .last()
-            .cloned()
-            .unwrap_or_else(Default::default);
+        let line_num = util::line_number_for_position(&self.line_metrics, text_position);
+        let lm = self.line_metrics.get(line_num).cloned().unwrap();
 
-        let count = self
-            .line_metrics
-            .iter()
-            .take_while(|l| l.start_offset <= text_position)
-            .count();
-
-        // In web toy text, all baselines and heights are the same.
-        // We're counting the first line baseline as 0, and measuring to each line's baseline.
-        let y = if count == 0 {
-            return Some(HitTestPosition::default());
-        } else {
-            (count - 1) as f64 * lm.height
-        };
-
+        let y_pos = lm.y_offset + lm.baseline;
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        let line = &self.text[lm.range()];
         let line_position = text_position - lm.start_offset;
 
-        let mut http = hit_test_line_position(&self.ctx, line, line_position);
-        if let Some(h) = http.as_mut() {
-            h.point.y = y;
-        };
-        http
+        hit_test_line_position(&self.ctx, line, line_position)
+            .map(|x_pos| HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
     }
 }
 
@@ -307,10 +286,7 @@ fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: Point)
 
     // first test beyond ends
     if point.x > end_bounds.trailing {
-        return HitTestPoint {
-            idx: text.len(),
-            is_inside: false,
-        };
+        return HitTestPoint::new(text.len(), false);
     }
 
     if point.x <= start_bounds.leading {
@@ -356,26 +332,22 @@ fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: Point)
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
 // Future: instead of passing ctx, should there be some other line-level text layout?
+/// Returns the x offset of the given text position in this text.
 fn hit_test_line_position(
     ctx: &CanvasRenderingContext2d,
     text: &str,
     text_position: usize,
-) -> Option<HitTestPosition> {
+) -> Option<f64> {
     // Using substrings with unicode grapheme awareness
 
     let text_len = text.len();
 
     if text_position == 0 {
-        return Some(HitTestPosition::default());
+        return Some(0.0);
     }
 
     if text_position as usize >= text_len {
-        return Some(HitTestPosition {
-            point: Point {
-                x: text_width(text, ctx),
-                y: 0.0,
-            },
-        });
+        return Some(text_width(text, ctx));
     }
 
     // Already checked that text_position > 0 and text_position < count.
@@ -388,14 +360,10 @@ fn hit_test_line_position(
     if let Some((byte_idx, _s)) = grapheme_indices.last() {
         let point_x = text_width(&text[0..byte_idx], ctx);
 
-        Some(HitTestPosition {
-            point: Point::new(point_x, 0.),
-        })
+        Some(point_x)
     } else {
         // iterated to end boundary
-        Some(HitTestPosition {
-            point: Point::new(text_width(text, ctx), 0.0),
-        })
+        Some(text_width(text, ctx))
     }
 }
 

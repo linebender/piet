@@ -21,8 +21,8 @@ pub(crate) fn get_grapheme_boundaries(
     let res = GraphemeBoundaries {
         curr_idx: text_position,
         next_idx: next_text_position,
-        leading: curr_edge.point.x,
-        trailing: next_edge.point.x,
+        leading: curr_edge,
+        trailing: next_edge,
     };
 
     Some(res)
@@ -47,7 +47,7 @@ pub(crate) fn point_x_in_grapheme(
         } else {
             curr_idx
         };
-        Some(HitTestPoint { idx, is_inside })
+        Some(HitTestPoint::new(idx, is_inside))
     } else {
         None
     }
@@ -100,14 +100,8 @@ mod test {
             trailing: 14.0,
         };
 
-        let expected_curr = Some(HitTestPoint {
-            idx: 2,
-            is_inside: true,
-        });
-        let expected_next = Some(HitTestPoint {
-            idx: 4,
-            is_inside: true,
-        });
+        let expected_curr = Some(HitTestPoint::new(2, true));
+        let expected_next = Some(HitTestPoint::new(4, true));
 
         assert_eq!(point_x_in_grapheme(10.0, &bounds), expected_curr);
         assert_eq!(point_x_in_grapheme(11.0, &bounds), expected_curr);

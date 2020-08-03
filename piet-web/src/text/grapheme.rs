@@ -26,8 +26,8 @@ pub(crate) fn get_grapheme_boundaries(
     let res = GraphemeBoundaries {
         curr_idx: text_position,
         next_idx: next_text_position,
-        leading: curr_edge.point.x,
-        trailing: next_edge.point.x,
+        leading: curr_edge,
+        trailing: next_edge,
     };
 
     Some(res)
@@ -52,7 +52,7 @@ pub(crate) fn point_x_in_grapheme(
         } else {
             curr_idx
         };
-        Some(HitTestPoint { idx, is_inside })
+        Some(HitTestPoint::new(idx, is_inside))
     } else {
         None
     }
