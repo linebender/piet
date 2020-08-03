@@ -63,7 +63,7 @@ impl Text for CairoText {
     type TextLayout = CairoTextLayout;
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
-    fn font(&mut self, family_name: &str) -> Option<FontFamily> {
+    fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
         Some(FontFamily::new_unchecked(family_name))
     }
 
@@ -88,7 +88,7 @@ impl CairoFont {
 
     /// Create a ScaledFont for this family.
     pub(crate) fn resolve(&self, size: f64, slant: FontSlant, weight: FontWeight) -> ScaledFont {
-        let font_face = FontFace::toy_create(self.family.as_str(), slant, weight);
+        let font_face = FontFace::toy_create(self.family.name(), slant, weight);
         let font_matrix = scale_matrix(size);
         let ctm = scale_matrix(1.0);
         let options = FontOptions::default();
@@ -1035,7 +1035,7 @@ mod test {
 
         let input = "piet  text!";
         let font = text_layout
-            .font("Helvetica") // change this for osx
+            .font_family("Helvetica") // change this for osx
             .unwrap();
 
         let layout = text_layout
@@ -1271,7 +1271,7 @@ mod test {
         let input = "piet text most best";
         let mut text = CairoText::new();
 
-        let font = text.font("Helvetica").unwrap();
+        let font = text.font_family("Helvetica").unwrap();
         // this should break into four lines
         let layout = text
             .new_text_layout(input)

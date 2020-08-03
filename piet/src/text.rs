@@ -1,19 +1,17 @@
 //! Traits for fonts and text handling.
 
 use std::ops::{Range, RangeBounds};
+use std::sync::Arc;
 
 use crate::kurbo::{Point, Rect, Size};
-use crate::util::ArcOrStaticStr;
 use crate::Error;
 
 pub trait Text: Clone {
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
 
-    /// Query the platform for a font with a given name, and return a `FontFamily`
+    /// Query the platform for a font with a given name, and return a [`FontFamily`]
     /// object corresponding to that font, if it is found.
-    ///
-    /// If that font exists, `Some` will be returned,
     ///
     /// # Examples
     ///
@@ -23,13 +21,13 @@ pub trait Text: Clone {
     /// # use piet::*;
     /// # let mut ctx = NullRenderContext::new();
     /// # let text = ctx.text();
-    /// let text_font = text.font("Charter")
-    ///     .or_else(|| text.font("Garamond"))
+    /// let text_font = text.font_family("Charter")
+    ///     .or_else(|| text.font_family("Garamond"))
     ///     .unwrap_or(FontFamily::SERIF);
     /// ```
     ///
-    /// [`Font`]: trait.Font.html
-    fn font(&mut self, family_name: &str) -> Option<FontFamily>;
+    /// [`FontFamily`]: struct.FontFamily.html
+    fn font_family(&mut self, family_name: &str) -> Option<FontFamily>;
 
     /// Create a new layout object to display the provided `text`.
     ///
@@ -53,44 +51,53 @@ pub trait Text: Clone {
 ///
 /// [`Text::font`]: trait.Text.html#tymethod.font
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FontFamily {
-    inner: ArcOrStaticStr,
+pub struct FontFamily(FontFamilyInner);
+
+/// The inner representation of a font family.
+///
+/// This is not public API for users of piet; it is exposed for backends only.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[doc(hidden)]
+#[non_exhaustive]
+pub enum FontFamilyInner {
+    Serif,
+    SansSerif,
+    Monospace,
+    SystemUi,
+    Named(Arc<str>),
 }
 
 impl FontFamily {
     /// A san-serif font, such as Arial or Helvetica.
-    pub const SANS_SERIF: FontFamily = FontFamily::new_const("sans-serif");
+    pub const SANS_SERIF: FontFamily = FontFamily(FontFamilyInner::SansSerif);
     /// A serif font, such as Times New Roman or Charter.
-    pub const SERIF: FontFamily = FontFamily::new_const("serif");
+    pub const SERIF: FontFamily = FontFamily(FontFamilyInner::Serif);
     /// The platform's preferred UI font; San Francisco on macOS, and Segoe UI
     /// on recent Windows.
-    pub const SYSTEM_UI: FontFamily = FontFamily::new_const("system-ui");
+    pub const SYSTEM_UI: FontFamily = FontFamily(FontFamilyInner::SystemUi);
     /// A monospace font.
-    pub const MONOSPACE: FontFamily = FontFamily::new_const("monospace");
-
-    const fn new_const(s: &'static str) -> Self {
-        FontFamily {
-            inner: ArcOrStaticStr::new_const(s),
-        }
-    }
+    pub const MONOSPACE: FontFamily = FontFamily(FontFamilyInner::Monospace);
 
     /// TODO: document me: this should generally not be used, instead get your
     /// font from the text system, or use one of the consts.
-    pub fn new_unchecked(s: &str) -> Self {
-        FontFamily {
-            inner: ArcOrStaticStr::new_arc(s.into()),
+    pub fn new_unchecked(s: impl Into<Arc<str>>) -> Self {
+        FontFamily(FontFamilyInner::Named(s.into()))
+    }
+
+    pub fn name(&self) -> &str {
+        match &self.0 {
+            FontFamilyInner::Serif => "serif",
+            FontFamilyInner::SansSerif => "sans-serif",
+            FontFamilyInner::SystemUi => "system-ui",
+            FontFamilyInner::Monospace => "monospace",
+            FontFamilyInner::Named(s) => &s,
         }
     }
 
-    pub fn as_str(&self) -> &str {
-        self.inner.as_ref()
-    }
-
-    pub fn is_generic_family(&self) -> bool {
-        self == &FontFamily::SYSTEM_UI
-            || self == &FontFamily::SERIF
-            || self == &FontFamily::SANS_SERIF
-            || self == &FontFamily::MONOSPACE
+    /// Backend-only API; access the inner `FontFamilyInner` enum.
+    #[doc(hidden)]
+    pub fn inner(&self) -> &FontFamilyInner {
+        &self.0
     }
 }
 
@@ -191,7 +198,7 @@ pub trait TextLayoutBuilder: Sized {
     /// # let mut ctx = NullRenderContext::new();
     /// # let mut text = ctx.text();
     ///
-    /// let times = text.font("Times New Roman").unwrap();
+    /// let times = text.font_family("Times New Roman").unwrap();
     ///
     /// // the following are equivalent
     /// let layout_one = text.new_text_layout("hello everyone!")
@@ -202,7 +209,6 @@ pub trait TextLayoutBuilder: Sized {
     ///     .default_attribute(TextAttribute::Font(times.clone()))
     ///     .default_attribute(TextAttribute::Size(12.0))
     ///     .build();
-    ///
     /// ```
     fn font(self, font: FontFamily, font_size: f64) -> Self {
         self.default_attribute(TextAttribute::Font(font))
@@ -252,7 +258,7 @@ pub trait TextLayoutBuilder: Sized {
     /// # let mut ctx = NullRenderContext::new();
     /// # let mut text = ctx.text();
     ///
-    /// let times = text.font("Times New Roman").unwrap();
+    /// let times = text.font_family("Times New Roman").unwrap();
     /// let layout = text.new_text_layout("This API is okay, I guess?")
     ///     .font(FontFamily::MONOSPACE, 12.0)
     ///     .default_attribute(TextAttribute::Italic(true))

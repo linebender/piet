@@ -69,7 +69,7 @@ impl Text for D2DText {
     type TextLayoutBuilder = D2DTextLayoutBuilder;
     type TextLayout = D2DTextLayout;
 
-    fn font(&mut self, family_name: &str) -> Option<FontFamily> {
+    fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
         self.dwrite
             .system_font_collection()
             .ok()
@@ -301,7 +301,7 @@ fn resolve_family_name(family: &FontFamily) -> &str {
         f if f == &FontFamily::SYSTEM_UI || f == &FontFamily::SANS_SERIF => "Segoe UI",
         f if f == &FontFamily::SERIF => "Times New Roman",
         f if f == &FontFamily::MONOSPACE => "Consolas",
-        other => other.as_str(),
+        other => other.name(),
     }
 }
 
@@ -331,7 +331,7 @@ mod test {
         let mut text_layout = D2DText::new_for_test();
 
         let input = "piet text!";
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
 
         let layout = text_layout
             .new_text_layout(&input[0..4])
@@ -414,7 +414,7 @@ mod test {
         let input = "é";
         assert_eq!(input.len(), 2);
 
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -445,7 +445,7 @@ mod test {
 
         let mut text_layout = D2DText::new_for_test();
 
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -475,7 +475,7 @@ mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
         assert_eq!(input.len(), 14);
 
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -527,7 +527,7 @@ mod test {
     fn test_hit_test_point_basic() {
         let mut text_layout = D2DText::new_for_test();
 
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout("piet text!")
             .font(font, 12.0)
@@ -572,7 +572,7 @@ mod test {
         // 14 utf-8 code units (2/1/3/3/1/4)
         // 4 graphemes
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -613,7 +613,7 @@ mod test {
         let width_small = 30.0;
 
         let mut text_layout = D2DText::new_for_test();
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .max_width(width_small)
@@ -637,7 +637,7 @@ mod test {
         let width_large = 1000.0;
 
         let mut text_layout = D2DText::new_for_test();
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
         let mut layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -663,7 +663,7 @@ mod test {
         let mut text_layout = D2DText::new_for_test();
 
         let input = "piet  text!";
-        let font = text_layout.font("Segoe UI").unwrap();
+        let font = text_layout.font_family("Segoe UI").unwrap();
 
         let layout = text_layout
             .new_text_layout(&input[0..4])
@@ -822,7 +822,7 @@ mod test {
 
         let mut text = D2DText::new_for_test();
 
-        let font = text.font("Segoe UI").unwrap();
+        let font = text.font_family("Segoe UI").unwrap();
         // this should break into four lines
         let layout = text
             .new_text_layout(input)
@@ -888,6 +888,6 @@ mod test {
     #[test]
     fn missing_font_is_missing() {
         let mut text = D2DText::new_for_test();
-        assert!(text.font("A Quite Unlikely Font Ñame").is_none());
+        assert!(text.font_family("A Quite Unlikely Font Ñame").is_none());
     }
 }

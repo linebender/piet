@@ -59,7 +59,7 @@ impl Text for WebText {
     type TextLayout = WebTextLayout;
     type TextLayoutBuilder = WebTextLayoutBuilder;
 
-    fn font(&mut self, family_name: &str) -> Option<FontFamily> {
+    fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
         Some(FontFamily::new_unchecked(family_name))
     }
 
@@ -98,7 +98,7 @@ impl WebFont {
             style_str,
             self.weight,
             self.size,
-            self.family.as_str()
+            self.family.name()
         )
     }
 }
@@ -459,7 +459,7 @@ pub(crate) mod test {
         let mut text_layout = WebText::new(context);
 
         let input = "piet text!";
-        let font = text_layout.font("sans-serif").unwrap();
+        let font = text_layout.font_family("sans-serif").unwrap();
 
         let layout = text_layout
             .new_text_layout(&input[0..4])
@@ -548,7 +548,7 @@ pub(crate) mod test {
         let input = "é";
         assert_eq!(input.len(), 2);
 
-        let font = text_layout.font("sans-serif").unwrap();
+        let font = text_layout.font_family("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -583,7 +583,7 @@ pub(crate) mod test {
         assert_eq!(input.len(), 7);
         assert_eq!(input.chars().count(), 3);
 
-        let font = text_layout.font("sans-serif").unwrap();
+        let font = text_layout.font_family("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 12.0)
@@ -614,7 +614,7 @@ pub(crate) mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
         assert_eq!(input.len(), 14);
 
-        let font = text_layout.font("sans-serif").unwrap();
+        let font = text_layout.font_family("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font.clone(), 12.0)
@@ -681,7 +681,7 @@ pub(crate) mod test {
         let (_window, context) = setup_ctx();
         let mut text_layout = WebText::new(context);
 
-        let font = text_layout.font("sans-serif").unwrap();
+        let font = text_layout.font_family("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout("piet text!")
             .font(font, 16.0)
@@ -728,7 +728,7 @@ pub(crate) mod test {
         let mut text_layout = WebText::new(context);
 
         // base condition, one grapheme
-        let font = text_layout.font("sans-serif").unwrap();
+        let font = text_layout.font_family("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout("t")
             .font(font.clone(), 16.0)
@@ -772,7 +772,7 @@ pub(crate) mod test {
         let input = "é\u{0023}\u{FE0F}\u{20E3}1\u{1D407}"; // #️⃣,, 𝐇
 
         let font = text_layout
-            .font("sans-serif") // font size hacked to fit test
+            .font_family("sans-serif") // font size hacked to fit test
             .unwrap();
         let layout = text_layout
             .new_text_layout(input)
@@ -824,7 +824,7 @@ pub(crate) mod test {
         // This corresponds to the char 'y' in the input.
         let input = "tßßypi";
 
-        let font = text_layout.font("sans-serif").unwrap();
+        let font = text_layout.font_family("sans-serif").unwrap();
         let layout = text_layout
             .new_text_layout(input)
             .font(font, 14.0)
@@ -851,7 +851,7 @@ pub(crate) mod test {
 
         let input = "piet  text!";
         let font = text_layout
-            .font("sans-serif") // change this for osx
+            .font_family("sans-serif") // change this for osx
             .unwrap();
 
         let layout = text_layout
@@ -1022,7 +1022,7 @@ pub(crate) mod test {
         let (_window, context) = setup_ctx();
         let mut text = WebText::new(context);
 
-        let font = text.font("sans-serif").unwrap();
+        let font = text.font_family("sans-serif").unwrap();
         // this should break into four lines
         // Had to shift font in order to break at 4 lines (larger font than cairo, wider lines)
         let layout = text

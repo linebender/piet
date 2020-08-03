@@ -135,7 +135,7 @@ impl Text for NullText {
         NullTextLayoutBuilder
     }
 
-    fn font(&mut self, _family_name: &str) -> Option<FontFamily> {
+    fn font_family(&mut self, _family_name: &str) -> Option<FontFamily> {
         Some(FontFamily::default())
     }
 }

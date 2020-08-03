@@ -22,7 +22,7 @@ impl piet::Text for Text {
     type TextLayout = TextLayout;
     type TextLayoutBuilder = TextLayoutBuilder;
 
-    fn font(&mut self, _family_name: &str) -> Option<FontFamily> {
+    fn font_family(&mut self, _family_name: &str) -> Option<FontFamily> {
         Some(FontFamily::default())
     }
 

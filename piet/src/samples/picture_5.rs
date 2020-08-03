@@ -16,7 +16,9 @@ const BLUE: Color = Color::rgb8(0, 0, 255);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     let text = rc.text();
-    let courier = text.font("Courier New").unwrap_or(FontFamily::MONOSPACE);
+    let courier = text
+        .font_family("Courier New")
+        .unwrap_or(FontFamily::MONOSPACE);
     let layout = text
         .new_text_layout(TEXT)
         .max_width(200.0)

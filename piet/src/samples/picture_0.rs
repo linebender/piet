@@ -18,7 +18,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &BLUE, 1.0);
 
-    let georgia = rc.text().font("Georgia").ok_or(Error::MissingFont)?;
+    let georgia = rc.text().font_family("Georgia").ok_or(Error::MissingFont)?;
 
     let path = arc1();
     rc.stroke(path, &GREEN, 1.0);

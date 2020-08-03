@@ -1,7 +1,6 @@
 //! Code useful for multiple backends
 
 use std::ops::{Bound, Range, RangeBounds};
-use std::sync::Arc;
 
 use crate::kurbo::{Rect, Size};
 use crate::{Color, FontFamily, FontWeight, TextAttribute};
@@ -151,53 +150,6 @@ impl Default for LayoutDefaults {
             italic: false,
             underline: false,
         }
-    }
-}
-
-/// Kind of like a Cow, but dumber and simpler.
-///
-/// The main rationale for this type is that we can have a `const` constructor,
-/// which we can't have for `Arc<str>` on its own.
-#[derive(Debug, Clone)]
-pub(crate) enum ArcOrStaticStr {
-    Arc(Arc<str>),
-    Static(&'static str),
-}
-
-impl ArcOrStaticStr {
-    pub(crate) const fn new_const(s: &'static str) -> Self {
-        ArcOrStaticStr::Static(s)
-    }
-
-    pub(crate) fn new_arc(s: Arc<str>) -> Self {
-        ArcOrStaticStr::Arc(s)
-    }
-
-    pub(crate) fn as_str(&self) -> &str {
-        match self {
-            ArcOrStaticStr::Arc(s) => &s,
-            ArcOrStaticStr::Static(s) => s,
-        }
-    }
-}
-
-impl AsRef<str> for ArcOrStaticStr {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-impl PartialEq for ArcOrStaticStr {
-    fn eq(&self, other: &ArcOrStaticStr) -> bool {
-        self.as_str() == other.as_str()
-    }
-}
-
-impl Eq for ArcOrStaticStr {}
-
-impl std::hash::Hash for ArcOrStaticStr {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.as_str().hash(state);
     }
 }
 
