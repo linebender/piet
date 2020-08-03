@@ -368,7 +368,7 @@ impl Text for CoreGraphicsText {
     type TextLayout = CoreGraphicsTextLayout;
     type TextLayoutBuilder = CoreGraphicsTextLayoutBuilder;
 
-    fn font(&mut self, family_name: &str) -> Option<FontFamily> {
+    fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
         self.shared.get_font(family_name)
     }
 
@@ -861,7 +861,7 @@ mod tests {
     #[test]
     fn missing_font_is_missing() {
         assert!(CoreGraphicsText::new_with_unique_state()
-            .font("Segoe UI")
+            .font_family("Segoe UI")
             .is_none());
     }
 }

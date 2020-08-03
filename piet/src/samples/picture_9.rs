@@ -25,7 +25,9 @@ const GREEN: Color = Color::rgb8(105, 255, 0);
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(LIGHT_GREY);
     let text = rc.text();
-    let courier = text.font("Courier New").unwrap_or(FontFamily::MONOSPACE);
+    let courier = text
+        .font_family("Courier New")
+        .unwrap_or(FontFamily::MONOSPACE);
     let layout = text
         .new_text_layout(SAMPLE_EN)
         .max_width(200.0)

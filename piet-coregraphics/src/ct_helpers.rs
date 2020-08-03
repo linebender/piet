@@ -38,7 +38,7 @@ use core_text::{
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
 use piet::kurbo::Rect;
-use piet::{Color, FontFamily, TextAlignment};
+use piet::{Color, FontFamily, FontFamilyInner, TextAlignment};
 
 #[derive(Clone)]
 pub(crate) struct AttributedString {
@@ -275,34 +275,34 @@ impl<'a> From<CTLine> for Line<'a> {
 /// The apple system fonts can resolve to different concrete families at
 /// different point sizes (SF Text vs. SF Displaykj,w)
 pub(crate) fn ct_family_name(family: &FontFamily, size: f64) -> CFString {
-    if family.is_generic_family() {
-        let font = system_font(family, size);
-        unsafe {
-            let name = CTFontCopyName(font.as_concrete_TypeRef(), kCTFontFamilyNameKey);
-            CFString::wrap_under_create_rule(name)
-        }
-    } else {
-        CFString::new(family.as_str())
+    match &family.inner() {
+        FontFamilyInner::Named(name) => CFString::new(name),
+        other => system_font_family_name(other, size),
     }
 }
 
 /// Create a generic system font.
-fn system_font(family: &FontFamily, size: f64) -> CTFont {
-    system_font_impl(family, size).unwrap_or_else(create_font_comma_never_fail_period)
+fn system_font_family_name(family: &FontFamilyInner, size: f64) -> CFString {
+    let font = system_font_impl(family, size).unwrap_or_else(create_font_comma_never_fail_period);
+    unsafe {
+        let name = CTFontCopyName(font.as_concrete_TypeRef(), kCTFontFamilyNameKey);
+        CFString::wrap_under_create_rule(name)
+    }
 }
 
-fn system_font_impl(family: &FontFamily, size: f64) -> Option<CTFont> {
+fn system_font_impl(family: &FontFamilyInner, size: f64) -> Option<CTFont> {
     match family {
-        f if f == &FontFamily::SANS_SERIF || f == &FontFamily::SYSTEM_UI => {
+        FontFamilyInner::SansSerif | FontFamilyInner::SystemUi => {
             create_system_font(kCTFontSystemFontType, size)
         }
         //TODO: on 10.15 + we should be using new york here
-        f if f == &FontFamily::SERIF => font::new_from_name("Charter", size)
+        //FIXME: font::new_from_name actually never fails
+        FontFamilyInner::Serif => font::new_from_name("Charter", size)
             .or_else(|_| font::new_from_name("Times", size))
             .or_else(|_| font::new_from_name("Times New Roman", size))
             .ok(),
         //TODO: on 10.15 we should be using SF-Mono here
-        f if f == &FontFamily::MONOSPACE => font::new_from_name("Menlo", size)
+        FontFamilyInner::Monospace => font::new_from_name("Menlo", size)
             .ok()
             .or_else(|| create_system_font(kCTFontUserFixedPitchFontType, size)),
         _ => panic!("system fontz only"),
@@ -362,7 +362,7 @@ impl FontCollection {
                 let array = CFArray::<CTFontDescriptor>::wrap_under_create_rule(array);
                 array
                     .get(0)
-                    .map(|desc| FontFamily::new_unchecked(&desc.family_name()))
+                    .map(|desc| FontFamily::new_unchecked(desc.family_name()))
             }
         }
     }

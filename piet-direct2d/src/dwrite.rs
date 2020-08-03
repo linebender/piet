@@ -229,7 +229,7 @@ impl FontFamily {
                     .into_string()
                     .unwrap_or_else(|err| err.to_string_lossy().into_owned());
 
-                Ok(PietFontFamily::new_unchecked(&name))
+                Ok(PietFontFamily::new_unchecked(name))
             } else {
                 Err(hr.into())
             }
