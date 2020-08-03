@@ -204,6 +204,10 @@ impl TextLayout for NullTextLayout {
     fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestPosition> {
         None
     }
+
+    fn text(&self) -> &str {
+        ""
+    }
 }
 
 impl IntoBrush<NullRenderContext> for NullBrush {

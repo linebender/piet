@@ -161,6 +161,10 @@ impl TextLayout for WebTextLayout {
         self.size.to_rect()
     }
 
+    fn text(&self) -> &str {
+        &self.text
+    }
+
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 

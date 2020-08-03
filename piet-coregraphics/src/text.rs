@@ -466,6 +466,10 @@ impl TextLayout for CoreGraphicsTextLayout {
         self.image_bounds
     }
 
+    fn text(&self) -> &str {
+        &self.string
+    }
+
     #[allow(clippy::float_cmp)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let width = new_width.into().unwrap_or(f64::INFINITY);
@@ -615,6 +619,35 @@ impl TextLayout for CoreGraphicsTextLayout {
         let y_pos = self.line_y_positions[line_num];
         Some(HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
     }
+
+    fn rects_for_range(&self, range: impl RangeBounds<usize>) -> Vec<Rect> {
+        let range = util::resolve_range(range, self.string.len());
+        let first_line = self.line_number_for_utf8_offset(range.start);
+        let last_line = self.line_number_for_utf8_offset(range.end);
+
+        let mut result = Vec::new();
+
+        for line in first_line..=last_line {
+            let metrics = self.line_metric(line).unwrap();
+            let y0 = metrics.y_offset;
+            let y1 = y0 + metrics.height;
+            let line_range_start = if line == first_line {
+                range.start
+            } else {
+                metrics.start_offset
+            };
+
+            let line_range_end = if line == last_line {
+                range.end
+            } else {
+                metrics.end_offset - metrics.trailing_whitespace
+            };
+            let start_point = self.hit_test_text_position(line_range_start).unwrap();
+            let end_point = self.hit_test_text_position(line_range_end).unwrap();
+            result.push(Rect::new(start_point.point.x, y0, end_point.point.x, y1));
+        }
+        result
+    }
 }
 
 impl CoreGraphicsTextLayout {
@@ -697,6 +730,25 @@ impl CoreGraphicsTextLayout {
             Some((start, end))
         } else {
             None
+        }
+    }
+
+    #[allow(dead_code)]
+    fn debug_print_lines(&self) {
+        for i in 0..self.line_y_positions.len() {
+            let start = self.line_offsets[i];
+            let end = self
+                .line_offsets
+                .get(i + 1)
+                .copied()
+                .unwrap_or_else(|| self.string.len());
+            println!(
+                "L{} ({}..{}): '{}'",
+                i,
+                start,
+                end,
+                &self.string[start..end].escape_debug()
+            );
         }
     }
 }

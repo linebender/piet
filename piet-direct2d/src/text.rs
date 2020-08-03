@@ -207,6 +207,10 @@ impl TextLayout for D2DTextLayout {
         self.size.to_rect() + self.inking_insets
     }
 
+    fn text(&self) -> &str {
+        &self.text
+    }
+
     /// given a new max width, update width of text layout to fit within the max width
     // TODO add this doc to trait method? or is this windows specific?
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
