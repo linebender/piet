@@ -357,6 +357,9 @@ pub trait TextLayout: Clone {
     /// This is sometimes called the bounding box or the inking rect.
     fn image_bounds(&self) -> Rect;
 
+    /// The text used to create this layout.
+    fn text(&self) -> &str;
+
     /// Change the width of this `TextLayout`.
     ///
     /// This may be an `f64`, or `None` if this layout is not constrained;
@@ -426,6 +429,50 @@ pub trait TextLayout: Clone {
     //case would be when trimming has caused an index to not be included in the
     //layout's text?`
     fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition>;
+
+    /// Returns a vector of `Rect`s that cover the region of the text indicated
+    /// by `range`.
+    ///
+    /// The returned rectangles are suitable for things like drawing selection
+    /// regions or highlights.
+    ///
+    /// `range` will be clamped to the length of the text if necessary.
+    ///
+    /// Note: this implementation is not currently BiDi aware; it will be updated
+    /// when BiDi support is added.
+    fn rects_for_range(&self, range: impl RangeBounds<usize>) -> Vec<Rect> {
+        let text_len = self.text().len();
+        let mut range = crate::util::resolve_range(range, text_len);
+        range.start = range.start.min(text_len);
+        range.end = range.end.min(text_len);
+
+        let first_line = self.hit_test_text_position(range.start).unwrap().line;
+        let last_line = self.hit_test_text_position(range.end).unwrap().line;
+
+        let mut result = Vec::new();
+
+        for line in first_line..=last_line {
+            let metrics = self.line_metric(line).unwrap();
+            let y0 = metrics.y_offset;
+            let y1 = y0 + metrics.height;
+            let line_range_start = if line == first_line {
+                range.start
+            } else {
+                metrics.start_offset
+            };
+
+            let line_range_end = if line == last_line {
+                range.end
+            } else {
+                metrics.end_offset - metrics.trailing_whitespace
+            };
+            let start_point = self.hit_test_text_position(line_range_start).unwrap();
+            let end_point = self.hit_test_text_position(line_range_end).unwrap();
+            result.push(Rect::new(start_point.point.x, y0, end_point.point.x, y1));
+        }
+
+        result
+    }
 }
 
 /// Metadata about each line in a text layout.
