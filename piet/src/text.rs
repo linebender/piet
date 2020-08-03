@@ -491,6 +491,7 @@ impl LineMetric {
 /// [`TextLayout`]: ../piet/trait.TextLayout.html
 /// [`TextLayout::hit_test_point`]: ../piet/trait.TextLayout.html#tymethod.hit_test_point
 #[derive(Debug, Default, PartialEq)]
+#[non_exhaustive]
 pub struct HitTestPoint {
     /// The index representing the grapheme boundary closest to the `Point`.
     pub idx: usize,
@@ -510,6 +511,7 @@ pub struct HitTestPoint {
 /// [`TextLayout`]: ../piet/trait.TextLayout.html
 /// [`TextLayout::hit_test_text_position`]: ../piet/trait.TextLayout.html#tymethod.hit_test_text_position
 #[derive(Debug, Default)]
+#[non_exhaustive]
 pub struct HitTestPosition {
     /// the `point`'s `x` value is the position of the leading edge of the
     /// grapheme cluster containing the text position. The `y` value corresponds
@@ -518,6 +520,30 @@ pub struct HitTestPosition {
     //instead of returning an x/y point, we could return the x offset, the line's y_offset,
     //and the line height (everything tou would need to draw a cursor)
     pub point: Point,
+    /// The number of the line containing this position.
+    ///
+    /// This value can be used to retrieve the [`LineMetric`] for this line,
+    /// via the [`TextLayout::line_metric`] method.
+    ///
+    /// [`LineMetric`]: struct.LineMetric.html
+    /// [`TextLayout::line_metric`]: trait.TextLayout.html#tymethod.line_metric
+    pub line: usize,
+}
+
+impl HitTestPoint {
+    /// Only for use by backends
+    #[doc(hidden)]
+    pub fn new(idx: usize, is_inside: bool) -> HitTestPoint {
+        HitTestPoint { idx, is_inside }
+    }
+}
+
+impl HitTestPosition {
+    /// Only for use by backends
+    #[doc(hidden)]
+    pub fn new(point: Point, line: usize) -> HitTestPosition {
+        HitTestPosition { point, line }
+    }
 }
 
 impl From<FontFamily> for TextAttribute {

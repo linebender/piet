@@ -263,10 +263,7 @@ impl TextLayout for D2DTextLayout {
         let text_position = util::count_until_utf16(&self.text, text_position_16)
             .unwrap_or_else(|| self.text.len());
 
-        HitTestPoint {
-            idx: text_position,
-            is_inside: htp.is_inside,
-        }
+        HitTestPoint::new(text_position, htp.is_inside)
     }
 
     // Can panic if text position is not at a code point boundary, or if it's out of bounds.
@@ -279,7 +276,7 @@ impl TextLayout for D2DTextLayout {
         // Now convert the utf8 index to utf16.
         // This can panic;
         let idx_16 = util::count_utf16(&self.text[0..text_position]);
-
+        let line = util::line_number_for_position(&self.line_metrics, text_position);
         // panic or Result are also fine options for dealing with overflow. Using Option here
         // because it's already present and convenient.
         // TODO this should probably go before convertin to utf16, since that's relatively slow
@@ -289,8 +286,8 @@ impl TextLayout for D2DTextLayout {
 
         self.layout
             .hit_test_text_position(idx_16, trailing)
-            .map(|http| HitTestPosition {
-                point: Point::new(http.point_x as f64, http.point_y as f64),
+            .map(|hit| {
+                HitTestPosition::new(Point::new(hit.point_x as f64, hit.point_y as f64), line)
             })
     }
 }

@@ -550,10 +550,7 @@ impl TextLayout for CoreGraphicsTextLayout {
     // given a point on the screen, return an offset in the text, basically
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         if self.line_y_positions.is_empty() {
-            return HitTestPoint {
-                idx: 0,
-                is_inside: false,
-            };
+            return HitTestPoint::default();
         }
 
         let mut line_num = self
@@ -600,11 +597,9 @@ impl TextLayout for CoreGraphicsTextLayout {
         let typo_bounds = line.get_typographic_bounds();
         let is_inside_y = point.y >= 0. && point.y <= self.frame_size.height;
         let is_inside_x = point.x >= 0. && point.x <= typo_bounds.width;
+        let is_inside = is_inside_x && is_inside_y;
 
-        HitTestPoint {
-            idx: offset,
-            is_inside: is_inside_x && is_inside_y,
-        }
+        HitTestPoint::new(offset, is_inside)
     }
 
     fn hit_test_text_position(&self, offset: usize) -> Option<HitTestPosition> {
@@ -618,9 +613,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         let char_idx = line_range.location + off16 as isize;
         let x_pos = line.get_offset_for_string_index(char_idx);
         let y_pos = self.line_y_positions[line_num];
-        Some(HitTestPosition {
-            point: Point::new(x_pos, y_pos),
-        })
+        Some(HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
     }
 }
 
