@@ -312,7 +312,6 @@ pub enum TextAlignment {
 /// - line trailing whitespace (in UTF-8 code units)
 /// - line's baseline, distance of the baseline from the top of the line
 /// - line height
-/// - cumulative line height (includes previous line heights)
 ///
 /// The trailing whitespace distinction is important. Lines are broken at the grapheme boundary after
 /// whitespace, but that whitepace is not necessarily rendered since it's just the trailing
@@ -461,10 +460,6 @@ pub struct LineMetric {
     /// that `y_offset + height` for line `n` is equal to the `y_offset` of
     /// line `n + 1`, this is not strictly enforced, and should not be counted on.
     pub height: f64,
-
-    /// Cumulative line height (includes previous line heights)
-    #[deprecated(since = "0.2.0", note = "use y_offset instead")]
-    pub cumulative_height: f64,
 
     /// The y position of the top of this line, relative to the top of the layout.
     ///
