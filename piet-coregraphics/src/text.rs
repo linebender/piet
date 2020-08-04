@@ -505,7 +505,6 @@ impl TextLayout for CoreGraphicsTextLayout {
         let leading = (typo_bounds.leading + 0.5).floor();
         let height = ascent + descent + leading;
         let y_offset = self.line_y_positions[line_number] - ascent;
-        let cumulative_height = self.line_y_positions[line_number] + descent + leading;
         #[allow(deprecated)]
         Some(LineMetric {
             start_offset,
@@ -513,7 +512,6 @@ impl TextLayout for CoreGraphicsTextLayout {
             trailing_whitespace,
             baseline: typo_bounds.ascent,
             height,
-            cumulative_height,
             y_offset,
         })
     }

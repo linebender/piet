@@ -33,7 +33,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
     let mut line_metrics = Vec::new();
     let mut line_start = 0;
     let mut prev_break = 0;
-    let mut cumulative_height = 0.0;
+    let mut y_offset = 0.0;
 
     // vertical measures constant across all lines for now (cairo toy text)
     let height = font.extents().height;
@@ -66,7 +66,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
                     prev_break,
                     baseline,
                     height,
-                    &mut cumulative_height,
+                    &mut y_offset,
                     &mut line_metrics,
                 );
 
@@ -86,7 +86,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
                         line_break,
                         baseline,
                         height,
-                        &mut cumulative_height,
+                        &mut y_offset,
                         &mut line_metrics,
                     );
 
@@ -123,7 +123,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
                         prev_break,
                         baseline,
                         height,
-                        &mut cumulative_height,
+                        &mut y_offset,
                         &mut line_metrics,
                     );
 
@@ -138,7 +138,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
                 line_break,
                 baseline,
                 height,
-                &mut cumulative_height,
+                &mut y_offset,
                 &mut line_metrics,
             );
             line_start = line_break;
@@ -155,12 +155,9 @@ fn add_line_metric(
     end_offset: usize,
     baseline: f64,
     height: f64,
-    cumulative_height: &mut f64,
+    y_offset: &mut f64,
     line_metrics: &mut Vec<LineMetric>,
 ) {
-    let y_offset = *cumulative_height;
-    *cumulative_height += height;
-
     let line = &text[start_offset..end_offset];
     let trailing_whitespace = count_trailing_whitespace(line);
 
@@ -171,10 +168,10 @@ fn add_line_metric(
         trailing_whitespace,
         baseline,
         height,
-        y_offset,
-        cumulative_height: *cumulative_height,
+        y_offset: *y_offset,
     };
     line_metrics.push(line_metric);
+    *y_offset += height;
 }
 
 // TODO: is non-breaking space trailing whitespace? Check with dwrite and
@@ -328,7 +325,6 @@ mod test {
                 end_offset: 5,
                 trailing_whitespace: 1,
                 y_offset: 0.,
-                cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -337,7 +333,6 @@ mod test {
                 end_offset: 10,
                 trailing_whitespace: 1,
                 y_offset: 14.0,
-                cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -346,7 +341,6 @@ mod test {
                 end_offset: 15,
                 trailing_whitespace: 1,
                 y_offset: 28.0,
-                cumulative_height: 42.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -355,7 +349,6 @@ mod test {
                 end_offset: 19,
                 trailing_whitespace: 0,
                 y_offset: 42.0,
-                cumulative_height: 56.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -368,7 +361,6 @@ mod test {
                 end_offset: 10,
                 trailing_whitespace: 1,
                 y_offset: 0.0,
-                cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -377,7 +369,6 @@ mod test {
                 end_offset: 19,
                 trailing_whitespace: 0,
                 y_offset: 14.0,
-                cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -389,7 +380,6 @@ mod test {
             end_offset: 19,
             trailing_whitespace: 0,
             y_offset: 0.0,
-            cumulative_height: 14.0,
             baseline: 12.0,
             height: 14.0,
         }];
@@ -400,7 +390,6 @@ mod test {
             end_offset: 0,
             trailing_whitespace: 0,
             y_offset: 0.0,
-            cumulative_height: 14.0,
             baseline: 12.0,
             height: 14.0,
         }];
@@ -448,7 +437,6 @@ mod test {
                 end_offset: 5,
                 trailing_whitespace: 1,
                 y_offset: 0.0,
-                cumulative_height: 14.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -457,7 +445,6 @@ mod test {
                 end_offset: 10,
                 trailing_whitespace: 1,
                 y_offset: 14.0,
-                cumulative_height: 28.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -466,7 +453,6 @@ mod test {
                 end_offset: 15,
                 trailing_whitespace: 1,
                 y_offset: 28.0,
-                cumulative_height: 42.0,
                 baseline: 12.0,
                 height: 14.0,
             },
@@ -475,7 +461,6 @@ mod test {
                 end_offset: 19,
                 trailing_whitespace: 0,
                 y_offset: 42.0,
-                cumulative_height: 56.0,
                 baseline: 12.0,
                 height: 14.0,
             },

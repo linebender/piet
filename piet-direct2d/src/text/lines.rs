@@ -6,7 +6,7 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
     layout.get_line_metrics(&mut raw_line_metrics);
 
     let mut offset_utf8 = 0;
-    let mut cumulative_height = 0.0;
+    let mut y_offset = 0.0;
 
     let mut out = Vec::with_capacity(raw_line_metrics.len());
 
@@ -19,8 +19,6 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
         );
 
         let end_offset = offset_utf8 + non_ws_len_8 + ws_len_8;
-        let y_offset = cumulative_height;
-        cumulative_height += raw_metric.height as f64;
 
         #[allow(deprecated)]
         let metric = LineMetric {
@@ -29,10 +27,10 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
             trailing_whitespace: ws_len_8,
             height: raw_metric.height as f64,
             y_offset,
-            cumulative_height,
             baseline: raw_metric.baseline as f64,
         };
 
+        y_offset += metric.height;
         offset_utf8 = end_offset;
         out.push(metric);
     }
@@ -98,7 +96,6 @@ mod test {
                 end_offset: 5,
                 trailing_whitespace: 1,
                 y_offset: 0.0,
-                cumulative_height: 15.960_937_5,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
             },
@@ -107,7 +104,6 @@ mod test {
                 end_offset: 10,
                 trailing_whitespace: 1,
                 y_offset: 15.960_937_5,
-                cumulative_height: 31.921_875,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
             },
@@ -116,7 +112,6 @@ mod test {
                 end_offset: 15,
                 trailing_whitespace: 1,
                 y_offset: 31.921_875,
-                cumulative_height: 47.882_812_5,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
             },
@@ -125,7 +120,6 @@ mod test {
                 end_offset: 19,
                 trailing_whitespace: 0,
                 y_offset: 47.882_812_5,
-                cumulative_height: 63.843_75,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
             },
@@ -138,7 +132,6 @@ mod test {
                 end_offset: 10,
                 trailing_whitespace: 1,
                 y_offset: 0.0,
-                cumulative_height: 15.960_937_5,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
             },
@@ -147,7 +140,6 @@ mod test {
                 end_offset: 19,
                 trailing_whitespace: 0,
                 y_offset: 15.960_937_5,
-                cumulative_height: 31.921_875,
                 baseline: 12.949_218_75,
                 height: 15.960_937_5,
             },
@@ -159,7 +151,6 @@ mod test {
             end_offset: 19,
             trailing_whitespace: 0,
             y_offset: 0.0,
-            cumulative_height: 15.960_937_5,
             baseline: 12.949_218_75,
             height: 15.960_937_5,
         }];
@@ -170,7 +161,6 @@ mod test {
             end_offset: 0,
             trailing_whitespace: 0,
             y_offset: 0.0,
-            cumulative_height: 15.960_937_5,
             baseline: 12.949_218_75,
             height: 15.960_937_5,
         }];

@@ -47,7 +47,7 @@ pub(crate) fn calculate_line_metrics(
     let mut line_metrics = Vec::new();
     let mut line_start = 0;
     let mut prev_break = 0;
-    let mut cumulative_height = 0.0;
+    let mut y_offset = 0.0;
 
     // Vertical measures constant across all lines for now (web text)
     // We use heuristics because we don't have access to web apis through web-sys yet.
@@ -81,7 +81,7 @@ pub(crate) fn calculate_line_metrics(
                     prev_break,
                     baseline,
                     height,
-                    &mut cumulative_height,
+                    &mut y_offset,
                     &mut line_metrics,
                 );
 
@@ -101,7 +101,7 @@ pub(crate) fn calculate_line_metrics(
                         line_break,
                         baseline,
                         height,
-                        &mut cumulative_height,
+                        &mut y_offset,
                         &mut line_metrics,
                     );
 
@@ -138,7 +138,7 @@ pub(crate) fn calculate_line_metrics(
                         prev_break,
                         baseline,
                         height,
-                        &mut cumulative_height,
+                        &mut y_offset,
                         &mut line_metrics,
                     );
 
@@ -153,7 +153,7 @@ pub(crate) fn calculate_line_metrics(
                 line_break,
                 baseline,
                 height,
-                &mut cumulative_height,
+                &mut y_offset,
                 &mut line_metrics,
             );
             line_start = line_break;
@@ -170,12 +170,9 @@ fn add_line_metric(
     end_offset: usize,
     baseline: f64,
     height: f64,
-    cumulative_height: &mut f64,
+    y_offset: &mut f64,
     line_metrics: &mut Vec<LineMetric>,
 ) {
-    let y_offset = *cumulative_height;
-    *cumulative_height += height;
-
     let line = &text[start_offset..end_offset];
     let trailing_whitespace = count_trailing_whitespace(line);
 
@@ -186,10 +183,10 @@ fn add_line_metric(
         trailing_whitespace,
         baseline,
         height,
-        cumulative_height: *cumulative_height,
-        y_offset,
+        y_offset: *y_offset,
     };
     line_metrics.push(line_metric);
+    *y_offset += height;
 }
 
 // TODO: is non-breaking space trailing whitespace? Check with dwrite and
