@@ -12,6 +12,7 @@ pub enum Error {
     BackendError(Box<dyn std::error::Error>),
     MissingFeature,
     MissingFont,
+    FontLoadingFailed,
     #[cfg(feature = "samples")]
     InvalidSampleArgs,
 }
@@ -23,6 +24,7 @@ impl fmt::Display for Error {
             Error::NotSupported => write!(f, "Option not supported"),
             Error::StackUnbalance => write!(f, "Stack unbalanced"),
             Error::MissingFont => write!(f, "A font could not be found"),
+            Error::FontLoadingFailed => write!(f, "A font could not be loaded"),
             Error::MissingFeature => write!(f, "A feature is not implemented on this backend"),
             Error::BackendError(e) => {
                 write!(f, "Backend error: ")?;

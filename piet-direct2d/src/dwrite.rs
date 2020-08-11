@@ -10,6 +10,7 @@ use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 use std::sync::Arc;
 
+use dwrote::FontCollection as DWFontCollection;
 use winapi::shared::minwindef::{FALSE, TRUE};
 use winapi::shared::ntdef::LOCALE_NAME_MAX_LENGTH;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED, S_OK};
@@ -333,6 +334,18 @@ impl TextLayout {
         let wide_name = family.to_wide_null();
         unsafe {
             self.0.SetFontFamilyName(wide_name.as_ptr(), range);
+        }
+    }
+
+    pub(crate) fn set_font_collection(
+        &mut self,
+        start: usize,
+        len: usize,
+        collection: &DWFontCollection,
+    ) {
+        let range = make_text_range(start, len);
+        unsafe {
+            self.0.SetFontCollection(collection.as_ptr(), range);
         }
     }
 

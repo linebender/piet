@@ -2,11 +2,15 @@
 
 mod lines;
 
+use std::cell::RefCell;
 use std::convert::TryInto;
 use std::ops::{Range, RangeBounds};
+use std::rc::Rc;
+use std::sync::Arc;
 
 pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
+use dwrote::{CustomFontCollectionLoaderImpl, FontCollection, FontFile};
 use wio::wide::ToWide;
 
 use piet::kurbo::{Insets, Point, Rect, Size};
@@ -24,6 +28,17 @@ use crate::dwrite::{self, TextFormat};
 pub struct D2DText {
     dwrite: DwriteFactory,
     device: d2d::DeviceContext,
+    loaded_fonts: Rc<RefCell<LoadedFonts>>,
+}
+
+#[derive(Default)]
+struct LoadedFonts {
+    files: Vec<FontFile>,
+    // - multiple files can have the same family name, so we don't want this to be a set.
+    // - we assume a small number of custom fonts will be loaded; if that isn't true we
+    // should use a set or something.
+    names: Vec<FontFamily>,
+    collection: Option<FontCollection>,
 }
 
 #[derive(Clone)]
@@ -42,13 +57,18 @@ pub struct D2DTextLayoutBuilder {
     layout: Result<dwrite::TextLayout, Error>,
     len_utf16: usize,
     device: d2d::DeviceContext,
+    loaded_fonts: Rc<RefCell<LoadedFonts>>,
 }
 
 impl D2DText {
     /// Create a new factory that satisfies the piet `Text` trait given
     /// the (platform-specific) dwrite factory.
     pub fn new(dwrite: DwriteFactory, device: d2d::DeviceContext) -> D2DText {
-        D2DText { dwrite, device }
+        D2DText {
+            dwrite,
+            device,
+            loaded_fonts: Default::default(),
+        }
     }
 
     #[cfg(test)]
@@ -61,7 +81,7 @@ impl D2DText {
         // Create the D2D Device and Context
         let mut device = unsafe { d2d.create_device(d3d.as_dxgi().unwrap().as_raw()).unwrap() };
         let device = device.create_device_context().unwrap();
-        D2DText { dwrite, device }
+        D2DText::new(dwrite, device)
     }
 }
 
@@ -76,9 +96,8 @@ impl Text for D2DText {
             .and_then(|fonts| fonts.font_family(family_name))
     }
 
-    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
-        Err(Error::MissingFeature)
-        
+    fn load_font(&mut self, data: &[u8]) -> Result<FontFamily, Error> {
+        self.loaded_fonts.borrow_mut().add(data)
     }
 
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
@@ -93,6 +112,7 @@ impl Text for D2DText {
             text: text.to_owned(),
             len_utf16: wide_str.len(),
             device: self.device.clone(),
+            loaded_fonts: self.loaded_fonts.clone(),
         }
     }
 }
@@ -181,6 +201,15 @@ impl D2DTextLayoutBuilder {
 
             match attr {
                 TextAttribute::Font(font) => {
+                    let is_custom = self.loaded_fonts.borrow().contains(&font);
+                    if is_custom {
+                        let mut loaded = self.loaded_fonts.borrow_mut();
+                        layout.set_font_collection(start, len, loaded.collection());
+                    } else if !self.loaded_fonts.borrow().is_empty() {
+                        // if we are using custom fonts we also need to set the collection
+                        // back to the system collection explicity as needed
+                        layout.set_font_collection(start, len, &FontCollection::system());
+                    }
                     let family_name = resolve_family_name(&font);
                     layout.set_font_family(start, len, family_name);
                 }
@@ -308,6 +337,46 @@ fn resolve_family_name(family: &FontFamily) -> &str {
         f if f == &FontFamily::SERIF => "Times New Roman",
         f if f == &FontFamily::MONOSPACE => "Consolas",
         other => other.name(),
+    }
+}
+
+impl LoadedFonts {
+    fn add(&mut self, font_data: &[u8]) -> Result<FontFamily, Error> {
+        let font_data: Arc<Vec<u8>> = Arc::new(font_data.to_owned());
+        let font_file = FontFile::new_from_data(font_data).ok_or(Error::FontLoadingFailed)?;
+        let collection_loader = CustomFontCollectionLoaderImpl::new(&[font_file.clone()]);
+        let collection = FontCollection::from_loader(collection_loader);
+        let mut families = collection.families_iter();
+        let first_fam_name = families
+            .next()
+            .map(|f| f.name())
+            .ok_or(Error::FontLoadingFailed)?;
+        // just being defensive:
+        if families.any(|f| f.name() != first_fam_name) {
+            eprintln!("loaded font contains multiple family names");
+        }
+
+        let fam_name = FontFamily::new_unchecked(first_fam_name);
+        self.files.push(font_file);
+        self.names.push(fam_name.clone());
+        Ok(fam_name)
+    }
+
+    fn contains(&self, family: &FontFamily) -> bool {
+        self.names.contains(family)
+    }
+
+    fn is_empty(&self) -> bool {
+        self.files.is_empty()
+    }
+
+    fn collection(&mut self) -> &FontCollection {
+        if self.collection.is_none() {
+            let loader = CustomFontCollectionLoaderImpl::new(self.files.as_slice());
+            let collection = FontCollection::from_loader(loader);
+            self.collection = Some(collection);
+        }
+        self.collection.as_ref().unwrap()
     }
 }
 
