@@ -6,6 +6,10 @@ use std::sync::Arc;
 use crate::kurbo::{Point, Rect, Size};
 use crate::Error;
 
+/// The piet text API.
+///
+/// This trait is the interface for text-related functionality, such as font
+/// management and text layout.
 pub trait Text: Clone {
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
@@ -33,6 +37,8 @@ pub trait Text: Clone {
     ///
     /// The returned object is a [`TextLayoutBuilder`]; methods on that type
     /// can be used to customize the layout.
+    ///
+    /// [`TextLayoutBuilder`]: trait.TextLayoutBuilder.html
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder;
 }
 
@@ -172,6 +178,7 @@ pub enum TextAttribute {
     Underline(bool),
 }
 
+/// A trait for laying out text.
 pub trait TextLayoutBuilder: Sized {
     type Out: TextLayout;
 
@@ -294,7 +301,7 @@ pub enum TextAlignment {
     Justified,
 }
 
-/// # Text Layout
+/// A drawable text object.
 ///
 /// ## Line Breaks
 ///
