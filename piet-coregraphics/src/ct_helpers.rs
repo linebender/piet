@@ -19,6 +19,8 @@ use core_foundation_sys::base::CFRange;
 use core_graphics::{
     base::CGFloat,
     color::CGColor,
+    data_provider::CGDataProvider,
+    font::CGFont,
     geometry::{CGPoint, CGRect, CGSize},
     path::CGPathRef,
 };
@@ -34,7 +36,7 @@ use core_text::{
     line::{CTLine, CTLineRef, TypographicBounds},
     string_attributes,
 };
-
+use foreign_types::ForeignType;
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
 use piet::kurbo::Rect;
@@ -326,6 +328,20 @@ fn create_font_comma_never_fail_period() -> CTFont {
     font::new_from_descriptor(&descriptor, 0.0)
 }
 
+pub(crate) fn add_font(font_data: &[u8]) -> Result<String, ()> {
+    unsafe {
+        let data = CGDataProvider::from_slice(font_data);
+        let font_ref = CGFont::from_data_provider(data)?;
+        let success = CTFontManagerRegisterGraphicsFont(font_ref.as_ptr(), std::ptr::null_mut());
+        if success {
+            let ct_font = font::new_from_CGFont(&font_ref, 0.0);
+            Ok(ct_font.family_name())
+        } else {
+            Err(())
+        }
+    }
+}
+
 //TODO: this will probably be shared at some point?
 /// A heurstic for text direction; returns `true` if, while enumerating characters
 /// in this string, a character in the 'R' (strong right-to-left) category is
@@ -390,4 +406,8 @@ extern "C" {
         option: CFDictionaryRef,
     ) -> CFArrayRef;
     fn CTFontCopyName(font: CTFontRef, nameKey: CFStringRef) -> CFStringRef;
+    fn CTFontManagerRegisterGraphicsFont(
+        font: core_graphics::sys::CGFontRef,
+        error: *mut c_void,
+    ) -> bool;
 }

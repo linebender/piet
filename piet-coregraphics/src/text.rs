@@ -376,8 +376,10 @@ impl Text for CoreGraphicsText {
         CoreGraphicsTextLayoutBuilder::new(text)
     }
 
-    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
-        Err(Error::MissingFeature)
+    fn load_font(&mut self, data: &[u8]) -> Result<FontFamily, Error> {
+        ct_helpers::add_font(data)
+            .map(FontFamily::new_unchecked)
+            .map_err(|_| Error::MissingFont)
     }
 }
 
