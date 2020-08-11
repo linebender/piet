@@ -14,12 +14,9 @@ piet = { version = "0.2.0", path = "../piet" }
 utf16_lit = "1.0"
 
 wio = "0.2.2"
-
-[dependencies.winapi]
-version = "0.3.8"
-features = ["d2d1", "d2d1_1", "d2d1effects", "d3d11", "dxgi", "winnls"]
+winapi = { version = "0.3.8", features = ["d2d1", "d2d1_1", "d2d1effects", "d3d11", "dxgi", "winnls"] }
+dwrote = { version = "0.11.0", default_features = false }
 
 [dev-dependencies]
 piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
-
 image = "0.23.2"
