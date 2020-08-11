@@ -11,6 +11,7 @@ categories = ["rendering::graphics-api"]
 [dependencies]
 piet = { version = "0.2.0", path = "../piet" }
 
+foreign-types = "0.3.2"
 core-graphics = "0.21.0"
 core-text = "18.0.1"
 core-foundation = "0.9"
