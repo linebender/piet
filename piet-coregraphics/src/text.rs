@@ -220,6 +220,10 @@ impl CoreGraphicsTextLayoutBuilder {
     fn current_font(&self) -> CTFont {
         //TODO: this is where caching would happen, if we were implementing caching;
         //store a tuple of attributes resolved to a generated CTFont.
+
+        // 'wght' as an int
+        const WEIGHT_AXIS_ID: i32 = 2003265652;
+
         unsafe {
             let family_key =
                 CFString::wrap_under_create_rule(font_descriptor::kCTFontFamilyNameAttribute);
@@ -243,6 +247,35 @@ impl CoreGraphicsTextLayoutBuilder {
                 (traits_key, traits.as_CFType()),
             ]);
             let descriptor = font_descriptor::new_from_attributes(&attributes);
+            let font = font::new_from_descriptor(&descriptor, self.attrs.size());
+
+            // if this font supports variations, use them for weight
+            let variation_axes = match font.get_variation_axes() {
+                None => return font,
+                Some(axes) => axes
+                    .iter()
+                    .flat_map(|dict| {
+                        // for debugging, this is how you get the name for the axis
+                        //let name = dict.find(ct_helpers::kCTFontVariationAxisNameKey).and_then(|v| v.downcast::<CFString>());
+                        dict.find(ct_helpers::kCTFontVariationAxisIdentifierKey)
+                            .and_then(|v| v.downcast::<CFNumber>().and_then(|num| num.to_i32()))
+                    })
+                    .collect::<Vec<_>>(),
+            };
+
+            // only set weight axis if it exists
+            if !variation_axes.contains(&WEIGHT_AXIS_ID) {
+                return font;
+            }
+
+            let weight_axis_id: CFNumber = WEIGHT_AXIS_ID.into();
+            let descriptor = font_descriptor::CTFontDescriptorCreateCopyWithVariation(
+                descriptor.as_concrete_TypeRef(),
+                weight_axis_id.as_concrete_TypeRef(),
+                self.attrs.weight().to_raw() as _,
+            );
+            let descriptor = font_descriptor::CTFontDescriptor::wrap_under_create_rule(descriptor);
+
             font::new_from_descriptor(&descriptor, self.attrs.size())
         }
     }
