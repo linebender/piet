@@ -76,6 +76,11 @@ impl Text for D2DText {
             .and_then(|fonts| fonts.font_family(family_name))
     }
 
+    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
+        Err(Error::MissingFeature)
+        
+    }
+
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
         let width = f32::INFINITY;
         let wide_str = text.to_wide();

@@ -10,6 +10,8 @@ jobs:
     name: cargo fmt
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
 
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -36,6 +38,8 @@ jobs:
     name: cargo clippy+test
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
 
       - name: install libgtk-dev
         run: |
@@ -139,6 +143,8 @@ jobs:
     name: cargo clippy+test (wasm32)
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
 
       - name: install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -196,6 +202,8 @@ jobs:
     name: cargo test nightly
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
 
       - name: install libgtk-dev
         run: |
@@ -258,6 +266,8 @@ jobs:
         os: [macOS-latest, windows-2019, ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: 'true'
 
       - name: install libgtk-dev
         run: |

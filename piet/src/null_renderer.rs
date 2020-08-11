@@ -131,6 +131,10 @@ impl Text for NullText {
     type TextLayout = NullTextLayout;
     type TextLayoutBuilder = NullTextLayoutBuilder;
 
+    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
+        Ok(FontFamily::default())
+    }
+
     fn new_text_layout(&mut self, _text: &str) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
