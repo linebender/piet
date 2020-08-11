@@ -388,6 +388,12 @@ impl FontCollection {
 extern "C" {
     static kCTFontFamilyNameKey: CFStringRef;
 
+    pub static kCTFontVariationAxisIdentifierKey: CFStringRef;
+    //static kCTFontVariationAxisMinimumValueKey: CFStringRef;
+    //static kCTFontVariationAxisMaximumValueKey: CFStringRef;
+    //static kCTFontVariationAxisDefaultValueKey: CFStringRef;
+    //pub static kCTFontVariationAxisNameKey: CFStringRef;
+
     fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
     fn CTFontCreateUIFontForLanguage(
         font_type: CTFontUIFontType,
