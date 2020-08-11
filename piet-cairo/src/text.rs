@@ -67,6 +67,10 @@ impl Text for CairoText {
         Some(FontFamily::new_unchecked(family_name))
     }
 
+    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
+        Err(Error::NotSupported)
+    }
+
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
         CairoTextLayoutBuilder {
             defaults: util::LayoutDefaults::default(),

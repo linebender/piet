@@ -375,6 +375,10 @@ impl Text for CoreGraphicsText {
     fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
         CoreGraphicsTextLayoutBuilder::new(text)
     }
+
+    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
+        Err(Error::MissingFeature)
+    }
 }
 
 impl SharedTextState {

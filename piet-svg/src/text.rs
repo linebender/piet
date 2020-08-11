@@ -26,6 +26,10 @@ impl piet::Text for Text {
         Some(FontFamily::default())
     }
 
+    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily> {
+        Ok(FontFamily::default())
+    }
+
     fn new_text_layout(&mut self, _text: &str) -> TextLayoutBuilder {
         TextLayoutBuilder
     }

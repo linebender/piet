@@ -13,7 +13,6 @@ use crate::Error;
 pub trait Text: Clone {
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
     type TextLayout: TextLayout;
-
     /// Query the platform for a font with a given name, and return a [`FontFamily`]
     /// object corresponding to that font, if it is found.
     ///
@@ -32,6 +31,59 @@ pub trait Text: Clone {
     ///
     /// [`FontFamily`]: struct.FontFamily.html
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily>;
+
+    /// Load the provided font data and make it available for use.
+    ///
+    /// This method takes font data (such as the contents of a file on disk) and
+    /// attempts to load it, making it subsequently available for use.
+    ///
+    /// If loading is successful, this method will return a [`FontFamily`] handle
+    /// that can be used to select this font when constructing a [`TextLayout`].
+    ///
+    /// # Notes
+    ///
+    /// ## font familes and styles:
+    ///
+    /// If you wish to use multiple fonts in a given family, you will need to
+    /// load them individually. This method will return the same handle for
+    /// each font in the same family; the handle **does not refer to a specific
+    /// font**. This means that if you load bold and regular fonts from the
+    /// same family, to *use* the bold version you must, when constructing your
+    /// [`TextLayout`], pass the family as well as the correct weight.
+    ///
+    /// *If you wish to use custom fonts, load each concrete instance of the
+    /// font-family that you wish to use; that is, if you are using regular,
+    /// bold, italic, and bold-italic, you should be loading four distinct fonts.*
+    ///
+    /// ## family name masking
+    ///
+    /// If you load a custom font, the family name of your custom font will take
+    /// precedence over system familes of the same name; so your 'Helvetica' will
+    /// potentially interfere with the use of the platform 'Helvetica'.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use piet::*;
+    /// # let mut ctx = NullRenderContext::new();
+    /// # let text = ctx.text();
+    /// # fn get_font_data(name: &str) -> Vec<u8> { Vec::new() }
+    /// let helvetica_regular = get_font_data("Helvetica-Regular");
+    /// let helvetica_bold = get_font_data("Helvetica-Bold");
+    ///
+    /// let regular = text.load_font(&helvetica_regular).unwrap();
+    /// let bold = text.load_font(&helvetica_bold).unwrap();
+    /// assert_eq!(regular, bold);
+    ///
+    /// let layout = text.new_text_layout("Custom Fonts")
+    ///     .font(regular, 12.0)
+    ///     .range_attribute(6.., FontWeight::BOLD);
+    ///
+    /// ```
+    ///
+    /// [`TextLayout`]: trait.TextLayout.html
+    /// [`FontFamily`]: struct.FontFamily.html
+    fn load_font(&mut self, data: &[u8]) -> Result<FontFamily, Error>;
 
     /// Create a new layout object to display the provided `text`.
     ///
