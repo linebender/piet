@@ -13,9 +13,14 @@ use core_graphics::base::CGFloat;
 use core_graphics::context::CGContextRef;
 use core_graphics::geometry::{CGPoint, CGRect, CGSize};
 use core_graphics::path::CGPath;
-use core_text::{font, font::CTFont, font_descriptor, string_attributes};
+use core_text::{
+    font,
+    font::CTFont,
+    font_descriptor::{self, SymbolicTraitAccessors},
+    string_attributes,
+};
 
-use piet::kurbo::{Point, Rect, Size};
+use piet::kurbo::{Affine, Point, Rect, Size};
 use piet::{
     util, Error, FontFamily, FontWeight, HitTestPoint, HitTestPosition, LineMetric, Text,
     TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
@@ -217,6 +222,9 @@ impl CoreGraphicsTextLayoutBuilder {
 
         // 'wght' as an int
         const WEIGHT_AXIS_TAG: i32 = make_opentype_tag("wght") as i32;
+        // taken from android:
+        // https://api.skia.org/classSkFont.html#aa85258b584e9c693d54a8624e0fe1a15
+        const SLANT_TANGENT: f64 = 0.25;
 
         unsafe {
             let family_key =
@@ -243,37 +251,48 @@ impl CoreGraphicsTextLayoutBuilder {
             let descriptor = font_descriptor::new_from_attributes(&attributes);
             let font = font::new_from_descriptor(&descriptor, self.attrs.size());
 
-            // if this font supports variations, use them for weight, unless it's a system font
-            // (then things get weird)
-            let variation_axes = match font.get_variation_axes() {
-                None => return font,
-                // skip system fonts
-                Some(_) if self.attrs.font().is_generic() => return font,
-                Some(axes) => axes
-                    .iter()
-                    .flat_map(|dict| {
-                        // for debugging, this is how you get the name for the axis
-                        //let name = dict.find(ct_helpers::kCTFontVariationAxisNameKey).and_then(|v| v.downcast::<CFString>());
-                        dict.find(ct_helpers::kCTFontVariationAxisIdentifierKey)
-                            .and_then(|v| v.downcast::<CFNumber>().and_then(|num| num.to_i32()))
-                    })
-                    .collect::<Vec<_>>(),
-            };
+            let needs_synthetic_ital = self.attrs.italic() && !font.symbolic_traits().is_italic();
+            let has_var_axes = font.get_variation_axes().is_some();
 
-            // only set weight axis if it exists
-            if !variation_axes.contains(&WEIGHT_AXIS_TAG) {
+            if !(needs_synthetic_ital | has_var_axes) {
                 return font;
             }
 
-            let weight_axis_id: CFNumber = WEIGHT_AXIS_TAG.into();
-            let descriptor = font_descriptor::CTFontDescriptorCreateCopyWithVariation(
-                descriptor.as_concrete_TypeRef(),
-                weight_axis_id.as_concrete_TypeRef(),
-                self.attrs.weight().to_raw() as _,
-            );
-            let descriptor = font_descriptor::CTFontDescriptor::wrap_under_create_rule(descriptor);
+            let affine = if needs_synthetic_ital {
+                Affine::new([1.0, 0.0, SLANT_TANGENT, 1.0, 0., 0.])
+            } else {
+                Affine::default()
+            };
 
-            font::new_from_descriptor(&descriptor, self.attrs.size())
+            let variation_axes = font
+                .get_variation_axes()
+                .map(|axes| {
+                    axes.iter()
+                        .flat_map(|dict| {
+                            // for debugging, this is how you get the name for the axis
+                            //let name = dict.find(ct_helpers::kCTFontVariationAxisNameKey).and_then(|v| v.downcast::<CFString>());
+                            dict.find(ct_helpers::kCTFontVariationAxisIdentifierKey)
+                                .and_then(|v| v.downcast::<CFNumber>().and_then(|num| num.to_i32()))
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+
+            // only set weight axis if it exists, and we're not a system font (things get weird)
+            let descriptor =
+                if variation_axes.contains(&WEIGHT_AXIS_TAG) && !self.attrs.font().is_generic() {
+                    let weight_axis_id: CFNumber = WEIGHT_AXIS_TAG.into();
+                    let descriptor = font_descriptor::CTFontDescriptorCreateCopyWithVariation(
+                        descriptor.as_concrete_TypeRef(),
+                        weight_axis_id.as_concrete_TypeRef(),
+                        self.attrs.weight().to_raw() as _,
+                    );
+                    font_descriptor::CTFontDescriptor::wrap_under_create_rule(descriptor)
+                } else {
+                    descriptor
+                };
+
+            ct_helpers::make_font(&descriptor, self.attrs.size(), affine)
         }
     }
 
