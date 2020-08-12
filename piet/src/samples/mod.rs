@@ -91,12 +91,14 @@ pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> 
     }
 
     if let Some(compare_dir) = args.compare_dir.as_ref() {
-        let info_one = read_os_info(compare_dir)?;
-        let info_two = read_os_info(&args.out_dir)?;
         let results = compare_snapshots(compare_dir, &args.out_dir, prefix)?;
-        println!("Compared {} snapshots", results.len());
-        print!("base: {}", info_one);
-        println!("rev : {}", info_two);
+        if args.all {
+            let info_one = read_os_info(compare_dir)?;
+            let info_two = read_os_info(&args.out_dir)?;
+            println!("Compared {} snapshots", results.len());
+            print!("base: {}", info_one);
+            println!("rev : {}", info_two);
+        }
 
         for (number, result) in results.iter() {
             print!("Image {:02}: ", number);
