@@ -152,6 +152,11 @@ impl FontFamily {
         }
     }
 
+    /// Returns `true` if this is a generic font family.
+    pub fn is_generic(&self) -> bool {
+        !matches!(self.0, FontFamilyInner::Named(_))
+    }
+
     /// Backend-only API; access the inner `FontFamilyInner` enum.
     #[doc(hidden)]
     pub fn inner(&self) -> &FontFamilyInner {

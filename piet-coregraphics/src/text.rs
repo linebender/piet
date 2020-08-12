@@ -249,9 +249,12 @@ impl CoreGraphicsTextLayoutBuilder {
             let descriptor = font_descriptor::new_from_attributes(&attributes);
             let font = font::new_from_descriptor(&descriptor, self.attrs.size());
 
-            // if this font supports variations, use them for weight
+            // if this font supports variations, use them for weight, unless it's a system font
+            // (then things get weird)
             let variation_axes = match font.get_variation_axes() {
                 None => return font,
+                // skip system fonts
+                Some(_) if self.attrs.font().is_generic() => return font,
                 Some(axes) => axes
                     .iter()
                     .flat_map(|dict| {
