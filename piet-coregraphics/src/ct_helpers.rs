@@ -21,7 +21,7 @@ use core_graphics::{
     color::CGColor,
     data_provider::CGDataProvider,
     font::CGFont,
-    geometry::{CGPoint, CGRect, CGSize},
+    geometry::{CGAffineTransform, CGPoint, CGRect, CGSize},
     path::CGPathRef,
 };
 use core_text::{
@@ -30,7 +30,7 @@ use core_text::{
         CTFontUIFontType,
     },
     font_collection::{self, CTFontCollection, CTFontCollectionRef},
-    font_descriptor::{self, CTFontDescriptor},
+    font_descriptor::{self, CTFontDescriptor, CTFontDescriptorRef},
     frame::{CTFrame, CTFrameRef},
     framesetter::CTFramesetter,
     line::{CTLine, CTLineRef, TypographicBounds},
@@ -39,7 +39,7 @@ use core_text::{
 use foreign_types::ForeignType;
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
-use piet::kurbo::Rect;
+use piet::kurbo::{Affine, Rect};
 use piet::{Color, FontFamily, FontFamilyInner, TextAlignment};
 
 #[derive(Clone)]
@@ -384,6 +384,23 @@ impl FontCollection {
     }
 }
 
+// the version of this in the coretext crate doesn't let you supply an affine
+#[allow(clippy::many_single_char_names)]
+pub(crate) fn make_font(desc: &CTFontDescriptor, pt_size: f64, affine: Affine) -> CTFont {
+    let [a, b, c, d, e, f] = affine.as_coeffs();
+    let affine = CGAffineTransform::new(a, b, c, d, e, f);
+    unsafe {
+        let font_ref = CTFontCreateWithFontDescriptor(
+            desc.as_concrete_TypeRef(),
+            pt_size as CGFloat,
+            // ownership here isn't documented, which I presume to mean it is copied,
+            // and we can pass a stack pointer.
+            &affine as *const _,
+        );
+        CTFont::wrap_under_create_rule(font_ref)
+    }
+}
+
 #[link(name = "CoreText", kind = "framework")]
 extern "C" {
     static kCTFontFamilyNameKey: CFStringRef;
@@ -412,6 +429,11 @@ extern "C" {
         option: CFDictionaryRef,
     ) -> CFArrayRef;
     fn CTFontCopyName(font: CTFontRef, nameKey: CFStringRef) -> CFStringRef;
+    fn CTFontCreateWithFontDescriptor(
+        descriptor: CTFontDescriptorRef,
+        size: CGFloat,
+        matrix: *const CGAffineTransform,
+    ) -> CTFontRef;
     fn CTFontManagerRegisterGraphicsFont(
         font: core_graphics::sys::CGFontRef,
         error: *mut c_void,
