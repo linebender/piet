@@ -30,7 +30,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         while x < SIZE.width / 2.0 {
             let point = Point::new(x, y);
             let test_point = layout.hit_test_point(point - text_pos);
-            let test_pos = layout.hit_test_text_position(test_point.idx).unwrap();
+            let test_pos = layout.hit_test_text_position(test_point.idx);
             let hit_point = test_pos.point + text_pos;
 
             let color = if test_point.is_inside { &RED } else { &BLUE };

@@ -475,18 +475,15 @@ pub trait TextLayout: Clone {
     /// return a [`HitTestPosition`] object describing the location of that boundary
     /// within the layout.
     ///
+    /// For more on text positions, see docs for the [`TextLayout`] trait.
+    ///
     /// ## Panics:
     ///
     /// This method will panic if the text position is not a character boundary,
     ///
-    /// For more on text positions, see docs for the [`TextLayout`] trait.
-    ///
     /// [`HitTestPosition`]: struct.HitTestPosition.html
     /// [`TextLayout`]: ../piet/trait.TextLayout.html
-    //FIXME: under what circumstances should this return `None`? A reasonable
-    //case would be when trimming has caused an index to not be included in the
-    //layout's text?`
-    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition>;
+    fn hit_test_text_position(&self, idx: usize) -> HitTestPosition;
 
     /// Returns a vector of `Rect`s that cover the region of the text indicated
     /// by `range`.
@@ -504,8 +501,8 @@ pub trait TextLayout: Clone {
         range.start = range.start.min(text_len);
         range.end = range.end.min(text_len);
 
-        let first_line = self.hit_test_text_position(range.start).unwrap().line;
-        let last_line = self.hit_test_text_position(range.end).unwrap().line;
+        let first_line = self.hit_test_text_position(range.start).line;
+        let last_line = self.hit_test_text_position(range.end).line;
 
         let mut result = Vec::new();
 
@@ -524,8 +521,8 @@ pub trait TextLayout: Clone {
             } else {
                 metrics.end_offset - metrics.trailing_whitespace
             };
-            let start_point = self.hit_test_text_position(line_range_start).unwrap();
-            let end_point = self.hit_test_text_position(line_range_end).unwrap();
+            let start_point = self.hit_test_text_position(line_range_start);
+            let end_point = self.hit_test_text_position(line_range_end);
             result.push(Rect::new(start_point.point.x, y0, end_point.point.x, y1));
         }
 
