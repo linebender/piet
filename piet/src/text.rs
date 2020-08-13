@@ -472,23 +472,12 @@ pub trait TextLayout: Clone {
     fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
     /// Given a grapheme boundary in the string used to create this [`TextLayout`],
-    /// return information about the location of that boundary within the layout
-    /// object.
-    ///
-    ///
-    /// ## Return value:
-    /// Returns a [`HitTestPosition`][] struct describing the results of the test.
-    ///
-    /// The [`HitTestPosition`][] field `point` is a `Point`, on the baseline
-    /// of the line containing this grapheme cluster, of the grapheme's leading edge,
-    /// relative to the origin of the layout object.
+    /// return a [`HitTestPosition`] object describing the location of that boundary
+    /// within the layout.
     ///
     /// ## Panics:
     ///
-    // FIXME: behaviour currently differs between backends, but some backends panic.
-    // decide whether this panics or not, and standardize backend behaviour.
-    /// This method may panic if the text position is not a codepoint boundary,
-    /// or if it is greater than the length of the text.
+    /// This method will panic if the text position is not a character boundary,
     ///
     /// For more on text positions, see docs for the [`TextLayout`] trait.
     ///

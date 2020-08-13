@@ -15,8 +15,8 @@ pub(crate) fn get_grapheme_boundaries(
     let (text_position, _) = graphemes.nth(grapheme_position)?;
     let (next_text_position, _) = graphemes.next().unwrap_or_else(|| (text.len(), ""));
 
-    let curr_edge = hit_test_line_position(font, text, text_position)?;
-    let next_edge = hit_test_line_position(font, text, next_text_position)?;
+    let curr_edge = hit_test_line_position(font, text, text_position);
+    let next_edge = hit_test_line_position(font, text, next_text_position);
 
     let res = GraphemeBoundaries {
         curr_idx: text_position,

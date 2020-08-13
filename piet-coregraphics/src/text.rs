@@ -49,7 +49,7 @@ struct TextState {
 
 #[derive(Clone)]
 pub struct CoreGraphicsTextLayout {
-    string: String,
+    text: String,
     attr_string: AttributedString,
     framesetter: Framesetter,
     pub(crate) frame: Option<Frame>,
@@ -522,7 +522,7 @@ impl TextLayout for CoreGraphicsTextLayout {
     }
 
     fn text(&self) -> &str {
-        &self.string
+        &self.text
     }
 
     #[allow(clippy::float_cmp)]
@@ -562,7 +562,7 @@ impl TextLayout for CoreGraphicsTextLayout {
 
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_range(line_number)
-            .map(|(start, end)| unsafe { self.string.get_unchecked(start..end) })
+            .map(|(start, end)| unsafe { self.text.get_unchecked(start..end) })
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
@@ -637,7 +637,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         let offset_utf16 = line.get_string_index_for_position(point_in_string_space);
         let offset = match offset_utf16 {
             // this is 'kCFNotFound'.
-            -1 => self.string.len(),
+            -1 => self.text.len(),
             n if n >= 0 => {
                 let utf16_range = line.get_string_range();
                 let utf8_range = self.line_range(line_num).unwrap();
@@ -659,12 +659,15 @@ impl TextLayout for CoreGraphicsTextLayout {
         HitTestPoint::new(offset, is_inside)
     }
 
-    fn hit_test_text_position(&self, offset: usize) -> Option<HitTestPosition> {
-        let line_num = self.line_number_for_utf8_offset(offset);
-        let line: Line = self.unwrap_frame().get_line(line_num)?.into();
-        let text = self.line_text(line_num)?;
+    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition> {
+        let idx = idx.min(self.text.len());
+        assert!(self.text.is_char_boundary(idx));
 
-        let offset_remainder = offset - self.line_offsets.get(line_num)?;
+        let line_num = self.line_number_for_utf8_offset(idx);
+        let line: Line = self.unwrap_frame().get_line(line_num).unwrap().into();
+        let text = self.line_text(line_num).unwrap();
+
+        let offset_remainder = idx - self.line_offsets[line_num];
         let off16: usize = util::count_utf16(&text[..offset_remainder]);
         let line_range = line.get_string_range();
         let char_idx = line_range.location + off16 as isize;
@@ -674,7 +677,7 @@ impl TextLayout for CoreGraphicsTextLayout {
     }
 
     fn rects_for_range(&self, range: impl RangeBounds<usize>) -> Vec<Rect> {
-        let range = util::resolve_range(range, self.string.len());
+        let range = util::resolve_range(range, self.text.len());
         let first_line = self.line_number_for_utf8_offset(range.start);
         let last_line = self.line_number_for_utf8_offset(range.end);
 
@@ -708,7 +711,7 @@ impl CoreGraphicsTextLayout {
         let framesetter = Framesetter::new(&attr_string);
 
         let mut layout = CoreGraphicsTextLayout {
-            string: text,
+            text,
             attr_string,
             framesetter,
             // all of this is correctly set in `update_width` below
@@ -751,7 +754,7 @@ impl CoreGraphicsTextLayout {
             range.location as usize
         });
 
-        let mut chars = self.string.chars();
+        let mut chars = self.text.chars();
         let mut cur_16 = 0;
         let mut cur_8 = 0;
 
@@ -776,7 +779,7 @@ impl CoreGraphicsTextLayout {
         if line <= self.line_count() {
             let start = self.line_offsets[line];
             let end = if line == self.line_count() - 1 {
-                self.string.len()
+                self.text.len()
             } else {
                 self.line_offsets[line + 1]
             };
@@ -794,13 +797,13 @@ impl CoreGraphicsTextLayout {
                 .line_offsets
                 .get(i + 1)
                 .copied()
-                .unwrap_or_else(|| self.string.len());
+                .unwrap_or_else(|| self.text.len());
             println!(
                 "L{} ({}..{}): '{}'",
                 i,
                 start,
                 end,
-                &self.string[start..end].escape_debug()
+                &self.text[start..end].escape_debug()
             );
         }
     }
