@@ -106,7 +106,7 @@ impl piet::TextLayout for TextLayout {
         unimplemented!()
     }
 
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestPosition> {
+    fn hit_test_text_position(&self, _text_position: usize) -> HitTestPosition {
         unimplemented!()
     }
 

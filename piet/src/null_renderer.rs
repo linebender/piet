@@ -205,8 +205,8 @@ impl TextLayout for NullTextLayout {
         HitTestPoint::default()
     }
 
-    fn hit_test_text_position(&self, _text_position: usize) -> Option<HitTestPosition> {
-        None
+    fn hit_test_text_position(&self, _text_position: usize) -> HitTestPosition {
+        HitTestPosition::default()
     }
 
     fn text(&self) -> &str {

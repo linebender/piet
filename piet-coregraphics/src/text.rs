@@ -659,7 +659,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         HitTestPoint::new(offset, is_inside)
     }
 
-    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition> {
+    fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
 
@@ -673,7 +673,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         let char_idx = line_range.location + off16 as isize;
         let x_pos = line.get_offset_for_string_index(char_idx);
         let y_pos = self.line_y_positions[line_num];
-        Some(HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
+        HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
     }
 
     fn rects_for_range(&self, range: impl RangeBounds<usize>) -> Vec<Rect> {
@@ -698,8 +698,8 @@ impl TextLayout for CoreGraphicsTextLayout {
             } else {
                 metrics.end_offset - metrics.trailing_whitespace
             };
-            let start_point = self.hit_test_text_position(line_range_start).unwrap();
-            let end_point = self.hit_test_text_position(line_range_end).unwrap();
+            let start_point = self.hit_test_text_position(line_range_start);
+            let end_point = self.hit_test_text_position(line_range_end);
             result.push(Rect::new(start_point.point.x, y0, end_point.point.x, y1));
         }
         result
@@ -943,10 +943,10 @@ mod tests {
             .font(a_font, 16.0)
             .build()
             .unwrap();
-        let p1 = layout.hit_test_text_position(0).unwrap();
+        let p1 = layout.hit_test_text_position(0);
         assert_eq!(p1.point, Point::new(0.0, 16.0));
 
-        let p1 = layout.hit_test_text_position(7).unwrap();
+        let p1 = layout.hit_test_text_position(7);
         assert_eq!(p1.point.y, 36.0);
         // just the general idea that this is the second character
         assert!(p1.point.x > 5.0 && p1.point.x < 15.0);
@@ -960,9 +960,9 @@ mod tests {
             .font(a_font, 16.0)
             .build()
             .unwrap();
-        let p0 = layout.hit_test_text_position(4).unwrap();
-        let p1 = layout.hit_test_text_position(8).unwrap();
-        let p2 = layout.hit_test_text_position(13).unwrap();
+        let p0 = layout.hit_test_text_position(4);
+        let p1 = layout.hit_test_text_position(8);
+        let p2 = layout.hit_test_text_position(13);
 
         assert!(p1.point.x > p0.point.x);
         assert!(p1.point.y == p0.point.y);

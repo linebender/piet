@@ -305,7 +305,7 @@ impl TextLayout for D2DTextLayout {
     }
 
     // Can panic if text position is not at a code point boundary, or if it's out of bounds.
-    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition> {
+    fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
         // Note: Directwrite will just return the line width if text position is
@@ -319,11 +319,13 @@ impl TextLayout for D2DTextLayout {
         // max string length on windows is 32bits; nothing we can do here.
         let idx_16: u32 = idx_16.try_into().unwrap();
 
-        self.layout
+        let hit_point = self
+            .layout
             .hit_test_text_position(idx_16, trailing)
-            .map(|hit| {
-                HitTestPosition::new(Point::new(hit.point_x as f64, hit.point_y as f64), line)
-            })
+            .map(|hit| Point::new(hit.point_x as f64, hit.point_y as f64))
+            // if dwrite fails we just return 0, 0
+            .unwrap_or_default();
+        HitTestPosition::new(hit_point, line)
     }
 }
 
@@ -448,32 +450,24 @@ mod test {
         let full_width = full_layout.size().width;
 
         assert_close!(
-            full_layout.hit_test_text_position(4).unwrap().point.x,
+            full_layout.hit_test_text_position(4).point.x,
             piet_width,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(3).unwrap().point.x,
+            full_layout.hit_test_text_position(3).point.x,
             pie_width,
             3.0,
         );
+        assert_close!(full_layout.hit_test_text_position(2).point.x, pi_width, 3.0,);
+        assert_close!(full_layout.hit_test_text_position(1).point.x, p_width, 3.0,);
         assert_close!(
-            full_layout.hit_test_text_position(2).unwrap().point.x,
-            pi_width,
-            3.0,
-        );
-        assert_close!(
-            full_layout.hit_test_text_position(1).unwrap().point.x,
-            p_width,
-            3.0,
-        );
-        assert_close!(
-            full_layout.hit_test_text_position(0).unwrap().point.x,
+            full_layout.hit_test_text_position(0).point.x,
             null_width,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(10).unwrap().point.x,
+            full_layout.hit_test_text_position(10).point.x,
             full_width,
             3.0,
         );
@@ -493,9 +487,9 @@ mod test {
             .build()
             .unwrap();
 
-        assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
+        assert_close!(layout.hit_test_text_position(0).point.x, 0.0, 3.0);
         assert_close!(
-            layout.hit_test_text_position(2).unwrap().point.x,
+            layout.hit_test_text_position(2).point.x,
             layout.size().width,
             3.0,
         );
@@ -504,8 +498,8 @@ mod test {
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
 
         //let mut text_layout = D2DText::new();
-        //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
-        //let layout = text_layout.new_text_layout(&font, input, None).build().unwrap();
+        //let font = text_layout.new_font_by_name("sans-serif", 12.0).build();
+        //let layout = text_layout.new_text_layout(&font, input, None).build();
 
         //assert_eq!(input.graphemes(true).count(), 1);
         //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x), Some(layout.size().width));
@@ -524,15 +518,15 @@ mod test {
             .build()
             .unwrap();
 
-        assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
+        assert_close!(layout.hit_test_text_position(0).point.x, 0.0, 3.0);
         assert_close!(
-            layout.hit_test_text_position(7).unwrap().point.x,
+            layout.hit_test_text_position(7).point.x,
             layout.size().width,
             3.0,
         );
 
         // note code unit not at grapheme boundary
-        assert_close!(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
+        assert_close!(layout.hit_test_text_position(1).point.x, 0.0, 3.0);
     }
 
     #[test]
@@ -559,24 +553,24 @@ mod test {
         let test_layout_2 = text_layout.new_text_layout(&input[0..10]).build().unwrap();
 
         // Note: text position is in terms of utf8 code units
-        assert_close!(layout.hit_test_text_position(0).unwrap().point.x, 0.0, 3.0);
+        assert_close!(layout.hit_test_text_position(0).point.x, 0.0, 3.0);
         assert_close!(
-            layout.hit_test_text_position(2).unwrap().point.x,
+            layout.hit_test_text_position(2).point.x,
             test_layout_0.size().width,
             3.0,
         );
         assert_close!(
-            layout.hit_test_text_position(9).unwrap().point.x,
+            layout.hit_test_text_position(9).point.x,
             test_layout_1.size().width,
             3.0,
         );
         assert_close!(
-            layout.hit_test_text_position(10).unwrap().point.x,
+            layout.hit_test_text_position(10).point.x,
             test_layout_2.size().width,
             3.0,
         );
         assert_close!(
-            layout.hit_test_text_position(14).unwrap().point.x,
+            layout.hit_test_text_position(14).point.x,
             layout.size().width,
             3.0,
         );
@@ -584,12 +578,12 @@ mod test {
         // Code point boundaries, but not grapheme boundaries.
         // Width should stay at the current grapheme boundary.
         assert_close!(
-            layout.hit_test_text_position(3).unwrap().point.x,
+            layout.hit_test_text_position(3).point.x,
             test_layout_0.size().width,
             3.0,
         );
         assert_close!(
-            layout.hit_test_text_position(6).unwrap().point.x,
+            layout.hit_test_text_position(6).point.x,
             test_layout_0.size().width,
             3.0,
         );
@@ -811,77 +805,65 @@ mod test {
 
         // these just test the x position of text positions on the second line
         assert_close!(
-            full_layout.hit_test_text_position(10).unwrap().point.x,
+            full_layout.hit_test_text_position(10).point.x,
             text_width,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(9).unwrap().point.x,
+            full_layout.hit_test_text_position(9).point.x,
             tex_width,
             3.0,
         );
-        assert_close!(
-            full_layout.hit_test_text_position(8).unwrap().point.x,
-            te_width,
-            3.0,
-        );
-        assert_close!(
-            full_layout.hit_test_text_position(7).unwrap().point.x,
-            t_width,
-            3.0,
-        );
+        assert_close!(full_layout.hit_test_text_position(8).point.x, te_width, 3.0,);
+        assert_close!(full_layout.hit_test_text_position(7).point.x, t_width, 3.0,);
         // This should be beginning of second line
-        assert_close!(
-            full_layout.hit_test_text_position(6).unwrap().point.x,
-            0.0,
-            3.0,
-        );
+        assert_close!(full_layout.hit_test_text_position(6).point.x, 0.0, 3.0,);
 
         assert_close!(
-            full_layout.hit_test_text_position(3).unwrap().point.x,
+            full_layout.hit_test_text_position(3).point.x,
             pie_width,
             3.0,
         );
 
         // This tests that hit-testing trailing whitespace can return points
         // outside of the layout's reported width.
-        assert!(full_layout.hit_test_text_position(5).unwrap().point.x > piet_space_width + 3.0,);
+        assert!(full_layout.hit_test_text_position(5).point.x > piet_space_width + 3.0,);
 
         // These test y position of text positions on line 1 (0-index)
         assert_close!(
-            full_layout.hit_test_text_position(10).unwrap().point.y,
+            full_layout.hit_test_text_position(10).point.y,
             line_one_baseline,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(9).unwrap().point.y,
+            full_layout.hit_test_text_position(9).point.y,
             line_one_baseline,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(8).unwrap().point.y,
+            full_layout.hit_test_text_position(8).point.y,
             line_one_baseline,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(7).unwrap().point.y,
+            full_layout.hit_test_text_position(7).point.y,
             line_one_baseline,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(6).unwrap().point.y,
+            full_layout.hit_test_text_position(6).point.y,
             line_one_baseline,
             3.0,
         );
 
         // this tests y position of 0 line
         assert_close!(
-            full_layout.hit_test_text_position(5).unwrap().point.y,
+            full_layout.hit_test_text_position(5).point.y,
             line_zero_baseline,
             3.0,
         );
         assert_close!(
-            full_layout.hit_test_text_position(4).unwrap().point.y,
+            full_layout.hit_test_text_position(4).point.y,
             line_zero_baseline,
             3.0,
         );
