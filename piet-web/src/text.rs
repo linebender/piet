@@ -254,19 +254,21 @@ impl TextLayout for WebTextLayout {
         htp
     }
 
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
+    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition> {
+        let idx = idx.min(self.text.len());
+        assert!(self.text.is_char_boundary(idx));
         // first need to find line it's on, and get line start offset
-        let line_num = util::line_number_for_position(&self.line_metrics, text_position);
+        let line_num = util::line_number_for_position(&self.line_metrics, idx);
         let lm = self.line_metrics.get(line_num).cloned().unwrap();
 
         let y_pos = lm.y_offset + lm.baseline;
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
         let line = &self.text[lm.range()];
-        let line_position = text_position - lm.start_offset;
+        let line_position = idx - lm.start_offset;
 
-        hit_test_line_position(&self.ctx, line, line_position)
-            .map(|x_pos| HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
+        let x_pos = hit_test_line_position(&self.ctx, line, line_position);
+        Some(HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
     }
 }
 
@@ -341,21 +343,17 @@ fn hit_test_line_point(ctx: &CanvasRenderingContext2d, text: &str, point: Point)
 // NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
 // Future: instead of passing ctx, should there be some other line-level text layout?
 /// Returns the x offset of the given text position in this text.
-fn hit_test_line_position(
-    ctx: &CanvasRenderingContext2d,
-    text: &str,
-    text_position: usize,
-) -> Option<f64> {
+fn hit_test_line_position(ctx: &CanvasRenderingContext2d, text: &str, idx: usize) -> f64 {
     // Using substrings with unicode grapheme awareness
 
     let text_len = text.len();
 
-    if text_position == 0 {
-        return Some(0.0);
+    if idx == 0 {
+        return 0.0;
     }
 
-    if text_position as usize >= text_len {
-        return Some(text_width(text, ctx));
+    if idx as usize >= text_len {
+        return text_width(text, ctx);
     }
 
     // Already checked that text_position > 0 and text_position < count.
@@ -363,16 +361,13 @@ fn hit_test_line_position(
     // grapheme cluster. But return the original text position
     // Use the indices (byte offset, which for our purposes = utf8 code units).
     let grapheme_indices = UnicodeSegmentation::grapheme_indices(text, true)
-        .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
+        .take_while(|(byte_idx, _s)| idx >= *byte_idx);
 
-    if let Some((byte_idx, _s)) = grapheme_indices.last() {
-        let point_x = text_width(&text[0..byte_idx], ctx);
-
-        Some(point_x)
-    } else {
-        // iterated to end boundary
-        Some(text_width(text, ctx))
-    }
+    let text_end = grapheme_indices
+        .last()
+        .map(|(idx, _)| idx)
+        .unwrap_or(text_len);
+    text_width(&text[..text_end], ctx)
 }
 
 pub(crate) fn text_width(text: &str, ctx: &CanvasRenderingContext2d) -> f64 {

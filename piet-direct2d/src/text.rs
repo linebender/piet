@@ -305,22 +305,19 @@ impl TextLayout for D2DTextLayout {
     }
 
     // Can panic if text position is not at a code point boundary, or if it's out of bounds.
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
+    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition> {
+        let idx = idx.min(self.text.len());
+        assert!(self.text.is_char_boundary(idx));
         // Note: Directwrite will just return the line width if text position is
         // out of bounds. This is what want for piet; return line width for the last text position
         // (equal to line.len()). This is basically returning line width for the last cursor
         // position.
 
-        // Now convert the utf8 index to utf16.
-        // This can panic;
-        let idx_16 = util::count_utf16(&self.text[0..text_position]);
-        let line = util::line_number_for_position(&self.line_metrics, text_position);
-        // panic or Result are also fine options for dealing with overflow. Using Option here
-        // because it's already present and convenient.
-        // TODO this should probably go before convertin to utf16, since that's relatively slow
-        let idx_16 = idx_16.try_into().ok()?;
-
         let trailing = false;
+        let idx_16 = util::count_utf16(&self.text[..idx]);
+        let line = util::line_number_for_position(&self.line_metrics, idx);
+        // max string length on windows is 32bits; nothing we can do here.
+        let idx_16: u32 = idx_16.try_into().unwrap();
 
         self.layout
             .hit_test_text_position(idx_16, trailing)

@@ -250,9 +250,12 @@ impl TextLayout for CairoTextLayout {
         htp
     }
 
-    fn hit_test_text_position(&self, text_position: usize) -> Option<HitTestPosition> {
+    fn hit_test_text_position(&self, idx: usize) -> Option<HitTestPosition> {
+        let idx = idx.min(self.text.len());
+        assert!(self.text.is_char_boundary(idx));
+
         // first need to find line it's on, and get line start offset
-        let line_num = util::line_number_for_position(&self.line_metrics, text_position);
+        let line_num = util::line_number_for_position(&self.line_metrics, idx);
         let lm = self.line_metrics.get(line_num).cloned().unwrap();
 
         let y_pos = lm.y_offset + lm.baseline;
@@ -260,10 +263,10 @@ impl TextLayout for CairoTextLayout {
         // Then for the line, do text position
         // Trailing whitespace is removed for the line
         let line = &self.text[lm.range()];
-        let line_position = text_position - lm.start_offset;
+        let line_position = idx - lm.start_offset;
 
-        hit_test_line_position(&self.font, line, line_position)
-            .map(|x_pos| HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
+        let x_pos = hit_test_line_position(&self.font, line, line_position);
+        Some(HitTestPosition::new(Point::new(x_pos, y_pos), line_num))
     }
 }
 
@@ -336,17 +339,17 @@ fn hit_test_line_point(font: &ScaledFont, text: &str, point: Point) -> HitTestPo
 
 // NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
 // Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_position(font: &ScaledFont, text: &str, text_position: usize) -> Option<f64> {
+fn hit_test_line_position(font: &ScaledFont, text: &str, text_position: usize) -> f64 {
     // Using substrings with unicode grapheme awareness
 
     let text_len = text.len();
 
     if text_position == 0 {
-        return Some(0.0);
+        return 0.0;
     }
 
     if text_position as usize >= text_len {
-        return Some(font.text_extents(&text).x_advance);
+        return font.text_extents(&text).x_advance;
     }
 
     // Already checked that text_position > 0 and text_position < count.
@@ -356,13 +359,10 @@ fn hit_test_line_position(font: &ScaledFont, text: &str, text_position: usize) -
     let grapheme_indices = UnicodeSegmentation::grapheme_indices(text, true)
         .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
 
-    if let Some((byte_idx, _s)) = grapheme_indices.last() {
-        let point_x = font.text_extents(&text[0..byte_idx]).x_advance;
-        Some(point_x)
-    } else {
-        // iterated to end boundary
-        Some(font.text_extents(&text).x_advance)
-    }
+    grapheme_indices
+        .last()
+        .map(|(idx, _)| font.text_extents(&text[..idx]).x_advance)
+        .unwrap_or_else(|| font.text_extents(&text).x_advance)
 }
 
 fn scale_matrix(scale: f64) -> Matrix {
@@ -474,12 +474,6 @@ mod test {
             3.0,
         );
 
-        // note code unit not at grapheme boundary
-        // This one panics in d2d because this is not a code unit boundary.
-        // But it works here! Harder to deal with this right now, since unicode-segmentation
-        // doesn't give code point offsets.
-        assert_close!(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
-
         // unicode segmentation is wrong on this one for now.
         //let input = "🤦\u{1f3fc}\u{200d}\u{2642}\u{fe0f}";
 
@@ -504,9 +498,6 @@ mod test {
             layout.size().width,
             3.0,
         );
-
-        // note code unit not at grapheme boundary
-        assert_close!(layout.hit_test_text_position(1).unwrap().point.x, 0.0, 3.0);
     }
 
     #[test]
@@ -802,9 +793,7 @@ mod test {
         let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
-        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
         println!("text pos 3: {:?}", layout.hit_test_text_position(3)); // 13.0
-        println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 13.0
         println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 21.0
         println!("text pos 6: {:?}", layout.hit_test_text_position(6)); // 28.0
         println!("text pos 7: {:?}", layout.hit_test_text_position(7)); // 36.0
@@ -827,9 +816,7 @@ mod test {
         let layout = text_layout.new_text_layout(input).build().unwrap();
         println!("text pos 0: {:?}", layout.hit_test_text_position(0)); // 0.0
         println!("text pos 1: {:?}", layout.hit_test_text_position(1)); // 5.0
-        println!("text pos 2: {:?}", layout.hit_test_text_position(2)); // 5.0
         println!("text pos 3: {:?}", layout.hit_test_text_position(3)); // 13.0
-        println!("text pos 4: {:?}", layout.hit_test_text_position(4)); // 13.0
         println!("text pos 5: {:?}", layout.hit_test_text_position(5)); // 21.0
         println!("text pos 6: {:?}", layout.hit_test_text_position(6)); // 28.0
         println!("text pos 7: {:?}", layout.hit_test_text_position(7)); // 36.0
