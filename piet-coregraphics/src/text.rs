@@ -42,12 +42,6 @@ struct TextState {
     family_cache: HashMap<String, Option<FontFamily>>,
 }
 
-//TODO: this should be a CTFontDescriptor maybe?
-#[derive(Debug, Clone)]
-pub struct CoreGraphicsFont(CTFont);
-
-pub struct CoreGraphicsFontBuilder(Option<CTFont>);
-
 #[derive(Clone)]
 pub struct CoreGraphicsTextLayout {
     string: String,

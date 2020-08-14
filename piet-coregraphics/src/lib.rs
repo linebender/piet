@@ -26,10 +26,7 @@ use piet::{
     RenderContext, RoundInto, StrokeStyle,
 };
 
-pub use crate::text::{
-    CoreGraphicsFont, CoreGraphicsFontBuilder, CoreGraphicsText, CoreGraphicsTextLayout,
-    CoreGraphicsTextLayoutBuilder,
-};
+pub use crate::text::{CoreGraphicsText, CoreGraphicsTextLayout, CoreGraphicsTextLayoutBuilder};
 
 use gradient::Gradient;
 

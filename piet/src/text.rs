@@ -136,8 +136,13 @@ impl FontFamily {
     /// A monospace font.
     pub const MONOSPACE: FontFamily = FontFamily(FontFamilyInner::Monospace);
 
-    /// TODO: document me: this should generally not be used, instead get your
-    /// font from the text system, or use one of the consts.
+    /// Create a new font family with a given name, without verifying that it exists.
+    ///
+    /// This should generally not be used; instead you should create a `FontFamily`
+    /// by calling the [`Text::font_family`] method, which verifies that the
+    /// family name exists.
+    ///
+    /// [`Text::font_family`]: trait.Text.html#tymethod.font_family
     pub fn new_unchecked(s: impl Into<Arc<str>>) -> Self {
         FontFamily(FontFamilyInner::Named(s.into()))
     }
