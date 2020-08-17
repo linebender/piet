@@ -100,7 +100,7 @@ impl<'a> BitmapTarget<'a> {
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> CoreGraphicsContext {
-        CoreGraphicsContext::new_y_up(&mut self.ctx, self.height)
+        CoreGraphicsContext::new_y_up(&mut self.ctx, self.height, None)
     }
 
     /// Get raw RGBA pixels from the bitmap.

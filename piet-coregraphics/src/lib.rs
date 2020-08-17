@@ -55,27 +55,45 @@ impl<'a> CoreGraphicsContext<'a> {
     /// This is not the default for CoreGraphics; but it is the defualt for piet.
     /// To map between the two coordinate spaces you must also pass an explicit
     /// height argument.
-    pub fn new_y_up(ctx: &mut CGContextRef, height: f64) -> CoreGraphicsContext {
-        Self::new_impl(ctx, Some(height))
+    ///
+    /// The optional `text` argument can be a reuseable `CoreGraphicsText` struct;
+    /// a new one will be constructed if `None` is passed.
+    pub fn new_y_up(
+        ctx: &mut CGContextRef,
+        height: f64,
+        text: Option<CoreGraphicsText>,
+    ) -> CoreGraphicsContext {
+        Self::new_impl(ctx, Some(height), text)
     }
 
     /// Create a new context with the y-origin at the bottom right corner.
     ///
     /// This is the default for core graphics, but not for piet.
-    pub fn new_y_down(ctx: &mut CGContextRef) -> CoreGraphicsContext {
-        Self::new_impl(ctx, None)
+    ///
+    /// The optional `text` argument can be a reuseable `CoreGraphicsText` struct;
+    /// a new one will be constructed if `None` is passed.
+    pub fn new_y_down(
+        ctx: &mut CGContextRef,
+        text: Option<CoreGraphicsText>,
+    ) -> CoreGraphicsContext {
+        Self::new_impl(ctx, None, text)
     }
 
-    fn new_impl(ctx: &mut CGContextRef, height: Option<f64>) -> CoreGraphicsContext {
+    fn new_impl(
+        ctx: &mut CGContextRef,
+        height: Option<f64>,
+        text: Option<CoreGraphicsText>,
+    ) -> CoreGraphicsContext {
         ctx.save();
         if let Some(height) = height {
             let xform = Affine::FLIP_Y * Affine::translate((0.0, -height));
             ctx.concat_ctm(to_cgaffine(xform));
         }
+        let text = text.unwrap_or_else(CoreGraphicsText::new_with_unique_state);
 
         CoreGraphicsContext {
             ctx,
-            text: CoreGraphicsText::new_with_unique_state(),
+            text,
             transform_stack: Vec::new(),
         }
     }
@@ -532,7 +550,7 @@ mod tests {
     #[test]
     fn get_affine_y_up() {
         let mut ctx = make_context((400.0, 400.0));
-        let mut piet = CoreGraphicsContext::new_y_up(&mut ctx, 400.0);
+        let mut piet = CoreGraphicsContext::new_y_up(&mut ctx, 400.0, None);
         let affine = piet.current_transform();
         assert_affine_eq!(affine, Affine::default());
 
