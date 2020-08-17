@@ -26,7 +26,8 @@ fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Err
     let path = base_dir.join(file_name);
 
     let mut cg_ctx = make_cg_ctx(size);
-    let mut piet_context = CoreGraphicsContext::new_y_up(&mut cg_ctx, size.height * SCALE.recip());
+    let mut piet_context =
+        CoreGraphicsContext::new_y_up(&mut cg_ctx, size.height * SCALE.recip(), None);
 
     sample.draw(&mut piet_context)?;
 

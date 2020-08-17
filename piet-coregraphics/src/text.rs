@@ -400,8 +400,7 @@ impl CoreGraphicsText {
     /// it will not share a cache with any other objects created with this method.
     ///
     /// In general this should be created once and then cloned and passed around.
-    #[allow(clippy::new_without_default)]
-    pub(crate) fn new_with_unique_state() -> CoreGraphicsText {
+    pub fn new_with_unique_state() -> CoreGraphicsText {
         let collection = FontCollection::new_with_all_fonts();
         let inner = Arc::new(Mutex::new(TextState {
             collection,
