@@ -216,7 +216,7 @@ impl CoreGraphicsTextLayoutBuilder {
         //store a tuple of attributes resolved to a generated CTFont.
 
         // 'wght' as an int
-        const WEIGHT_AXIS_ID: i32 = 2003265652;
+        const WEIGHT_AXIS_TAG: i32 = make_opentype_tag("wght") as i32;
 
         unsafe {
             let family_key =
@@ -261,11 +261,11 @@ impl CoreGraphicsTextLayoutBuilder {
             };
 
             // only set weight axis if it exists
-            if !variation_axes.contains(&WEIGHT_AXIS_ID) {
+            if !variation_axes.contains(&WEIGHT_AXIS_TAG) {
                 return font;
             }
 
-            let weight_axis_id: CFNumber = WEIGHT_AXIS_ID.into();
+            let weight_axis_id: CFNumber = WEIGHT_AXIS_TAG.into();
             let descriptor = font_descriptor::CTFontDescriptorCreateCopyWithVariation(
                 descriptor.as_concrete_TypeRef(),
                 weight_axis_id.as_concrete_TypeRef(),
@@ -785,6 +785,16 @@ impl CoreGraphicsTextLayout {
             );
         }
     }
+}
+
+/// Generate an opentype tag. The string should be exactly 4 bytes long.
+///
+/// ```no_compile
+/// const WEIGHT_AXIS = make_opentype_tag("wght");
+/// ```
+const fn make_opentype_tag(raw: &str) -> u32 {
+    let b = raw.as_bytes();
+    ((b[0] as u32) << 24) | ((b[1] as u32) << 16) | ((b[2] as u32) << 8) | (b[3] as u32)
 }
 
 #[cfg(test)]
