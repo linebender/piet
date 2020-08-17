@@ -131,10 +131,7 @@ impl<'a> BitmapTarget<'a> {
             let data_len = height.saturating_sub(1) * stride + width * 4;
             let data = {
                 let data_ptr = cairo_sys::cairo_image_surface_get_data(self.surface.to_raw_none());
-                if data_ptr.is_null() {
-                    let err = cairo::BorrowError::from(cairo::Status::SurfaceFinished);
-                    return Err((Box::new(err) as Box<dyn std::error::Error>).into());
-                }
+                assert!(!data_ptr.is_null(), "surface is finished");
                 std::slice::from_raw_parts(data_ptr, data_len)
             };
 

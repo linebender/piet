@@ -5,12 +5,10 @@
 mod text;
 
 use std::borrow::Cow;
-use std::fmt;
 
-use cairo::{BorrowError, Context, Filter, Format, ImageSurface, Matrix, Status, SurfacePattern};
+use cairo::{Context, Filter, Format, ImageSurface, Matrix, SurfacePattern};
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
-
 use piet::{
     Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
     RenderContext, StrokeStyle, TextLayout,
@@ -52,41 +50,6 @@ pub enum Brush {
     Radial(cairo::RadialGradient),
 }
 
-#[derive(Debug)]
-struct WrappedStatus(Status);
-
-impl fmt::Display for WrappedStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Cairo error: {:?}", self.0)
-    }
-}
-
-impl std::error::Error for WrappedStatus {}
-
-trait WrapError<T> {
-    fn wrap(self) -> Result<T, Error>;
-}
-
-// Discussion question: a blanket impl here should be pretty doable.
-
-impl<T> WrapError<T> for Result<T, BorrowError> {
-    fn wrap(self) -> Result<T, Error> {
-        self.map_err(|e| {
-            let e: Box<dyn std::error::Error> = Box::new(e);
-            e.into()
-        })
-    }
-}
-
-impl<T> WrapError<T> for Result<T, Status> {
-    fn wrap(self) -> Result<T, Error> {
-        self.map_err(|e| {
-            let e: Box<dyn std::error::Error> = Box::new(WrappedStatus(e));
-            e.into()
-        })
-    }
-}
-
 // we call this with different types of gradient that have `add_color_stop_rgba` fns,
 // and there's no trait for this behaviour so we use a macro. ¯\_(ツ)_/¯
 macro_rules! set_gradient_stops {
@@ -113,13 +76,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Image = ImageSurface;
 
     fn status(&mut self) -> Result<(), Error> {
-        let status = self.ctx.status();
-        if status == Status::Success {
-            Ok(())
-        } else {
-            let e: Box<dyn std::error::Error> = Box::new(WrappedStatus(status));
-            Err(e.into())
-        }
+        Ok(())
     }
 
     fn clear(&mut self, color: Color) {
@@ -267,13 +224,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             ImageFormat::RgbaSeparate | ImageFormat::RgbaPremul => Format::ARgb32,
             _ => return Err(Error::NotSupported),
         };
-        let mut image = ImageSurface::create(cairo_fmt, width as i32, height as i32).wrap()?;
+        let mut image = ImageSurface::create(cairo_fmt, width as i32, height as i32)
+            .map_err(|e| Error::BackendError(Box::new(e)))?;
         // Confident no borrow errors because we just created it.
         let bytes_per_pixel = format.bytes_per_pixel();
         let bytes_per_row = width * bytes_per_pixel;
         let stride = image.get_stride() as usize;
         {
-            let mut data = image.get_data().wrap()?;
+            let mut data = image
+                .get_data()
+                .map_err(|e| Error::BackendError(Box::new(e)))?;
             for y in 0..height {
                 let src_off = y * bytes_per_row;
                 let dst_off = y * stride;
