@@ -34,9 +34,9 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .alignment(TextAlignment::Start)
         .font(FontFamily::SYSTEM_UI, 24.0)
         .range_attribute(23..35, courier.clone())
-        .range_attribute(23..35, TextAttribute::Size(18.0))
+        .range_attribute(23..35, TextAttribute::FontSize(18.0))
         .range_attribute(47..52, courier)
-        .range_attribute(47..52, TextAttribute::Size(36.0))
+        .range_attribute(47..52, TextAttribute::FontSize(36.0))
         .build()?;
 
     let text_pos = Vec2::new(0.0, 50.0);

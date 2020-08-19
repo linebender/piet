@@ -19,7 +19,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .max_width(200.0)
         .default_attribute(FontFamily::SYSTEM_UI)
         .alignment(TextAlignment::Start)
-        .range_attribute(10..80, TextAttribute::Size(8.0))
+        .range_attribute(10..80, TextAttribute::FontSize(8.0))
         .range_attribute(20..120, FontFamily::SERIF)
         .range_attribute(40..60, FontWeight::BOLD)
         .range_attribute(60..140, FontWeight::THIN)
@@ -37,7 +37,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
             TextAttribute::ForegroundColor(Color::rgb(0., 0., 0.6)),
         )
         .range_attribute(200.., FontWeight::EXTRA_BLACK)
-        .range_attribute(220.., TextAttribute::Size(18.0))
+        .range_attribute(220.., TextAttribute::FontSize(18.0))
         .range_attribute(240.., TextAttribute::Italic(true))
         .range_attribute(280.., TextAttribute::Underline(true))
         .build()?;

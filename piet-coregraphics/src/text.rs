@@ -319,9 +319,9 @@ impl CoreGraphicsTextLayoutBuilder {
 impl Attributes {
     fn add(&mut self, range: Range<usize>, attr: TextAttribute) {
         match attr {
-            TextAttribute::Font(font) => self.font = Some(Span::new(font, range)),
+            TextAttribute::FontFamily(font) => self.font = Some(Span::new(font, range)),
             TextAttribute::Weight(w) => self.weight = Some(Span::new(w, range)),
-            TextAttribute::Size(s) => self.size = Some(Span::new(s, range)),
+            TextAttribute::FontSize(s) => self.size = Some(Span::new(s, range)),
             TextAttribute::Italic(b) => self.italic = Some(Span::new(b, range)),
             _ => unreachable!(),
         }

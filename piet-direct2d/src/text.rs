@@ -149,8 +149,8 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
         let attribute = attribute.into();
         match &attribute {
-            TextAttribute::Font(font) => self.default_font = font.clone(),
-            TextAttribute::Size(size) => self.default_font_size = *size,
+            TextAttribute::FontFamily(font) => self.default_font = font.clone(),
+            TextAttribute::FontSize(size) => self.default_font_size = *size,
             _ => (),
         }
         self.add_attribute_shared(attribute, None);
@@ -217,7 +217,7 @@ impl D2DTextLayoutBuilder {
             };
 
             match attr {
-                TextAttribute::Font(font) => {
+                TextAttribute::FontFamily(font) => {
                     let is_custom = self.loaded_fonts.borrow().contains(&font);
                     if is_custom {
                         let mut loaded = self.loaded_fonts.borrow_mut();
@@ -230,7 +230,7 @@ impl D2DTextLayoutBuilder {
                     let family_name = resolve_family_name(&font);
                     layout.set_font_family(start, len, family_name);
                 }
-                TextAttribute::Size(size) => layout.set_size(start, len, size as f32),
+                TextAttribute::FontSize(size) => layout.set_size(start, len, size as f32),
                 TextAttribute::Weight(weight) => layout.set_weight(start, len, weight),
                 TextAttribute::Italic(flag) => layout.set_italic(start, len, flag),
                 TextAttribute::Underline(flag) => layout.set_underline(start, len, flag),

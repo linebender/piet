@@ -142,8 +142,8 @@ impl LayoutDefaults {
     /// Set the default value for a given `TextAttribute`.
     pub fn set(&mut self, val: impl Into<TextAttribute>) {
         match val.into() {
-            TextAttribute::Font(t) => self.font = t,
-            TextAttribute::Size(size) => self.font_size = size,
+            TextAttribute::FontFamily(t) => self.font = t,
+            TextAttribute::FontSize(size) => self.font_size = size,
             TextAttribute::Weight(weight) => self.weight = weight,
             TextAttribute::Italic(flag) => self.italic = flag,
             TextAttribute::Underline(flag) => self.underline = flag,

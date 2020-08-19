@@ -18,56 +18,56 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .new_text_layout(SAMPLE_EN)
         .alignment(TextAlignment::Start)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     let en_trailing = text
         .new_text_layout(SAMPLE_EN)
         .alignment(TextAlignment::End)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     let en_center = text
         .new_text_layout(SAMPLE_EN)
         .alignment(TextAlignment::Center)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     let en_justify = text
         .new_text_layout(SAMPLE_EN)
         .alignment(TextAlignment::Justified)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     let ar_leading = text
         .new_text_layout(SAMPLE_AR)
         .alignment(TextAlignment::Start)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     let ar_trailing = text
         .new_text_layout(SAMPLE_AR)
         .alignment(TextAlignment::End)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     let ar_center = text
         .new_text_layout(SAMPLE_AR)
         .alignment(TextAlignment::Center)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     let ar_justify = text
         .new_text_layout(SAMPLE_AR)
         .alignment(TextAlignment::Justified)
         .max_width(100.0)
-        .default_attribute(TextAttribute::Size(8.0))
+        .default_attribute(TextAttribute::FontSize(8.0))
         .build()?;
 
     for pt in &[(0f64, 0f64), (200.0, 0.), (100., 200.), (300., 200.)] {
