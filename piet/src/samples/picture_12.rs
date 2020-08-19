@@ -21,7 +21,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .max_width(200.0)
         .font(FontFamily::SYSTEM_UI, 12.0)
         .range_attribute(280.., font2)
-        .range_attribute(280.., TextAttribute::Size(18.0))
+        .range_attribute(280.., TextAttribute::FontSize(18.0))
         .build()?;
 
     let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);

@@ -226,9 +226,9 @@ impl FontWeight {
 /// Attributes that can be applied to text.
 pub enum TextAttribute {
     /// The font family.
-    Font(FontFamily),
+    FontFamily(FontFamily),
     /// The font size, in points.
-    Size(f64),
+    FontSize(f64),
     /// The [`FontWeight`](struct.FontWeight.html).
     Weight(FontWeight),
     /// The foreground color of the text.
@@ -275,13 +275,13 @@ pub trait TextLayoutBuilder: Sized {
     ///     .build();
     ///
     /// let layout_two = text.new_text_layout("hello everyone!")
-    ///     .default_attribute(TextAttribute::Font(times.clone()))
-    ///     .default_attribute(TextAttribute::Size(12.0))
+    ///     .default_attribute(TextAttribute::FontFamily(times.clone()))
+    ///     .default_attribute(TextAttribute::FontSize(12.0))
     ///     .build();
     /// ```
     fn font(self, font: FontFamily, font_size: f64) -> Self {
-        self.default_attribute(TextAttribute::Font(font))
-            .default_attribute(TextAttribute::Size(font_size))
+        self.default_attribute(TextAttribute::FontFamily(font))
+            .default_attribute(TextAttribute::FontSize(font_size))
     }
 
     /// Add a default [`TextAttribute`] for this layout.
@@ -654,7 +654,7 @@ impl HitTestPosition {
 
 impl From<FontFamily> for TextAttribute {
     fn from(t: FontFamily) -> TextAttribute {
-        TextAttribute::Font(t)
+        TextAttribute::FontFamily(t)
     }
 }
 
