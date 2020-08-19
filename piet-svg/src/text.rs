@@ -70,10 +70,6 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
 pub struct TextLayout;
 
 impl piet::TextLayout for TextLayout {
-    fn width(&self) -> f64 {
-        unimplemented!()
-    }
-
     fn size(&self) -> Size {
         unimplemented!()
     }

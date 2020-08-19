@@ -161,7 +161,6 @@ fn add_line_metric(
     let line = &text[start_offset..end_offset];
     let trailing_whitespace = count_trailing_whitespace(line);
 
-    #[allow(deprecated)]
     let line_metric = LineMetric {
         start_offset,
         end_offset,
@@ -307,7 +306,6 @@ mod test {
     // - large is no split.
     //
     // Also test empty string input
-    #[allow(deprecated)]
     #[test]
     fn test_basic_calculate_line_metrics() {
         // Setup input, width, and expected
@@ -417,7 +415,6 @@ mod test {
     }
 
     #[test]
-    #[allow(deprecated)]
     #[cfg(target_os = "linux")]
     // TODO determine if we need to test macos too for this. I don't think it's a big deal right
     // now, just wanted to make sure hard breaks work.

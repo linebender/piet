@@ -171,12 +171,6 @@ impl Color {
         }
     }
 
-    #[doc(hidden)]
-    #[deprecated(since = "0.0.13", note = "renamed to Color::as_rgba8")]
-    pub fn as_rgba_u8(&self) -> (u8, u8, u8, u8) {
-        self.as_rgba8()
-    }
-
     /// Convert a color value to four 8-bit rgba values.
     pub fn as_rgba8(&self) -> (u8, u8, u8, u8) {
         let rgba = self.as_rgba_u32();

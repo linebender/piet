@@ -158,11 +158,6 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 }
 
 impl TextLayout for CairoTextLayout {
-    fn width(&self) -> f64 {
-        // calculated by max x_advance, in update_width
-        self.size.width
-    }
-
     fn size(&self) -> Size {
         self.size
     }
