@@ -173,10 +173,6 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
 }
 
 impl TextLayout for NullTextLayout {
-    fn width(&self) -> f64 {
-        42.0
-    }
-
     fn size(&self) -> Size {
         Size::ZERO
     }

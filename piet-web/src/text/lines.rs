@@ -176,7 +176,6 @@ fn add_line_metric(
     let line = &text[start_offset..end_offset];
     let trailing_whitespace = count_trailing_whitespace(line);
 
-    #[allow(deprecated)]
     let line_metric = LineMetric {
         start_offset,
         end_offset,

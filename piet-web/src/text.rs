@@ -151,11 +151,6 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
 }
 
 impl TextLayout for WebTextLayout {
-    fn width(&self) -> f64 {
-        // precalculated on textlayout build
-        self.size.width
-    }
-
     fn size(&self) -> Size {
         self.size
     }

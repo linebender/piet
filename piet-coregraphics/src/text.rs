@@ -522,10 +522,6 @@ impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
 }
 
 impl TextLayout for CoreGraphicsTextLayout {
-    fn width(&self) -> f64 {
-        self.frame_size.width
-    }
-
     fn size(&self) -> Size {
         self.frame_size
     }

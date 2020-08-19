@@ -20,7 +20,6 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
 
         let end_offset = offset_utf8 + non_ws_len_8 + ws_len_8;
 
-        #[allow(deprecated)]
         let metric = LineMetric {
             start_offset: offset_utf8,
             end_offset,
@@ -84,7 +83,6 @@ mod test {
     //
     // TODO figure out how to deal with height floats
     #[test]
-    #[allow(deprecated)]
     fn test_fetch_line_metrics() {
         // Setup input, width, and expected
         let input = "piet text most best";

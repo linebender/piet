@@ -279,10 +279,6 @@ impl D2DTextLayoutBuilder {
 }
 
 impl TextLayout for D2DTextLayout {
-    fn width(&self) -> f64 {
-        self.size.width
-    }
-
     fn size(&self) -> Size {
         self.size
     }
