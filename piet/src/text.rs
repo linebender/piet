@@ -4,7 +4,7 @@ use std::ops::{Range, RangeBounds};
 use std::sync::Arc;
 
 use crate::kurbo::{Point, Rect, Size};
-use crate::Error;
+use crate::{Color, Error};
 
 /// The piet text API.
 ///
@@ -233,7 +233,6 @@ pub enum TextAttribute {
     Weight(FontWeight),
     /// The foreground color of the text.
     ForegroundColor(crate::Color),
-    //BackgroundColor(crate::Color),
     /// Italics.
     Italic(bool),
     /// Underline.
@@ -282,6 +281,14 @@ pub trait TextLayoutBuilder: Sized {
     fn font(self, font: FontFamily, font_size: f64) -> Self {
         self.default_attribute(TextAttribute::FontFamily(font))
             .default_attribute(TextAttribute::FontSize(font_size))
+    }
+
+    /// A convenience method for setting the default text color.
+    ///
+    /// This is equivalent to passing `TextAttribute::ForegroundColor` to the
+    /// `default_attribute` method.
+    fn text_color(self, color: Color) -> Self {
+        self.default_attribute(TextAttribute::ForegroundColor(color))
     }
 
     /// Add a default [`TextAttribute`] for this layout.
