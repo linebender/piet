@@ -60,6 +60,9 @@ pub struct CoreGraphicsTextLayout {
     pub(crate) frame_size: Size,
     image_bounds: Rect,
     width_constraint: f64,
+    // these two are stored values we use to determine cursor extents when the layout is empty.
+    default_baseline: f64,
+    default_line_height: f64,
 }
 
 /// Building text layouts for `CoreGraphics`.
@@ -75,6 +78,8 @@ pub struct CoreGraphicsTextLayoutBuilder {
     /// this happens either when the first range attribute is added, or when
     /// we build the string.
     has_set_default_attrs: bool,
+    default_baseline: f64,
+    default_line_height: f64,
     attrs: Attributes,
 }
 
@@ -149,6 +154,11 @@ impl CoreGraphicsTextLayoutBuilder {
         self.has_set_default_attrs = true;
         let whole_range = self.attr_string.range();
         let font = self.current_font();
+        let ascent = (font.ascent() + 0.5).floor();
+        let descent = (font.descent() + 0.5).floor();
+        let leading = (font.leading() + 0.5).floor();
+        self.default_line_height = ascent + descent + leading;
+        self.default_baseline = ascent;
         self.attr_string.set_font(whole_range, &font);
         self.attr_string
             .set_fg_color(whole_range, &self.attrs.defaults.fg_color);
@@ -462,6 +472,8 @@ impl CoreGraphicsTextLayoutBuilder {
             last_resolved_utf16: 0,
             attr_string,
             has_set_default_attrs: false,
+            default_baseline: 0.0,
+            default_line_height: 0.0,
         }
     }
 }
@@ -503,6 +515,8 @@ impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
             self.text,
             self.attr_string,
             self.width,
+            self.default_baseline,
+            self.default_line_height,
         ))
     }
 }
@@ -565,6 +579,15 @@ impl TextLayout for CoreGraphicsTextLayout {
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
+        // special case for when we have no text
+        if line_number == 0 && self.text.is_empty() {
+            return Some(LineMetric {
+                baseline: self.default_baseline,
+                height: self.default_line_height,
+                ..Default::default()
+            });
+        }
+
         let lines = self.unwrap_frame().get_lines();
         let line = lines.get(line_number.min(isize::max_value() as usize) as isize)?;
         let line = Line::new(&line);
@@ -588,7 +611,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         let leading = (typo_bounds.leading + 0.5).floor();
         let height = ascent + descent + leading;
         let y_offset = self.line_y_positions[line_number] - ascent;
-        #[allow(deprecated)]
+
         Some(LineMetric {
             start_offset,
             end_offset,
@@ -662,6 +685,10 @@ impl TextLayout for CoreGraphicsTextLayout {
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
 
+        if self.text.is_empty() {
+            return HitTestPosition::new(Point::new(0.0, self.default_baseline), 0);
+        }
+
         let line_num = self.line_number_for_utf8_offset(idx);
         let line: Line = self.unwrap_frame().get_line(line_num).unwrap().into();
         let text = self.line_text(line_num).unwrap();
@@ -706,7 +733,13 @@ impl TextLayout for CoreGraphicsTextLayout {
 }
 
 impl CoreGraphicsTextLayout {
-    fn new(text: String, attr_string: AttributedString, width_constraint: f64) -> Self {
+    fn new(
+        text: String,
+        attr_string: AttributedString,
+        width_constraint: f64,
+        default_baseline: f64,
+        default_line_height: f64,
+    ) -> Self {
         let framesetter = Framesetter::new(&attr_string);
 
         let mut layout = CoreGraphicsTextLayout {
@@ -721,6 +754,8 @@ impl CoreGraphicsTextLayout {
             // NaN to ensure we always execute code in update_width
             width_constraint: f64::NAN,
             line_offsets: Vec::new(),
+            default_baseline,
+            default_line_height,
         };
         layout.update_width(width_constraint).unwrap();
         layout
@@ -823,6 +858,23 @@ const fn make_opentype_tag(raw: &str) -> u32 {
 mod tests {
     use super::*;
 
+    macro_rules! assert_close {
+        ($val:expr, $target:expr, $tolerance:expr) => {{
+            let min = $target - $tolerance;
+            let max = $target + $tolerance;
+            if $val < min || $val > max {
+                panic!(
+                    "value {} outside target {} with tolerance {}",
+                    $val, $target, $tolerance
+                );
+            }
+        }};
+
+        ($val:expr, $target:expr, $tolerance:expr,) => {{
+            assert_close!($val, $target, $tolerance)
+        }};
+    }
+
     #[test]
     fn line_offsets() {
         let text = "hi\ni'm\n😀 four\nlines";
@@ -923,15 +975,19 @@ mod tests {
     }
 
     #[test]
-    fn hit_test_point_empty_string() {
-        let text = "";
+    fn hit_test_empty_string() {
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new(text)
-            .font(a_font, 16.0)
+        let layout = CoreGraphicsTextLayoutBuilder::new("")
+            .font(a_font, 12.0)
             .build()
             .unwrap();
         let pt = layout.hit_test_point(Point::new(0.0, 0.0));
         assert_eq!(pt.idx, 0);
+        let pos = layout.hit_test_text_position(0);
+        assert_eq!(pos.point.x, 0.0);
+        assert_close!(pos.point.y, 10.0, 3.0);
+        let line = layout.line_metric(0).unwrap();
+        assert_close!(line.height, 12.0, 3.0);
     }
 
     #[test]
