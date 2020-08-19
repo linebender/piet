@@ -50,6 +50,10 @@ pub struct D2DTextLayout {
     /// insets that, when applied to our layout rect, generates our inking/image rect.
     inking_insets: Insets,
     pub layout: dwrite::TextLayout,
+    // these two are used when the layout is empty, so we can still correctly
+    // draw the cursor
+    default_line_height: f64,
+    default_baseline: f64,
 }
 
 pub struct D2DTextLayoutBuilder {
@@ -58,6 +62,8 @@ pub struct D2DTextLayoutBuilder {
     len_utf16: usize,
     device: d2d::DeviceContext,
     loaded_fonts: Rc<RefCell<LoadedFonts>>,
+    default_font: FontFamily,
+    default_font_size: f64,
 }
 
 impl D2DText {
@@ -113,6 +119,8 @@ impl Text for D2DText {
             len_utf16: wide_str.len(),
             device: self.device.clone(),
             loaded_fonts: self.loaded_fonts.clone(),
+            default_font: FontFamily::default(),
+            default_font_size: piet::util::DEFAULT_FONT_SIZE,
         }
     }
 }
@@ -139,7 +147,13 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     }
 
     fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
-        self.add_attribute_shared(attribute.into(), None);
+        let attribute = attribute.into();
+        match &attribute {
+            TextAttribute::Font(font) => self.default_font = font.clone(),
+            TextAttribute::Size(size) => self.default_font_size = *size,
+            _ => (),
+        }
+        self.add_attribute_shared(attribute, None);
         self
     }
 
@@ -156,6 +170,7 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     }
 
     fn build(self) -> Result<Self::Out, Error> {
+        let (default_line_height, default_baseline) = self.get_default_line_height_and_baseline();
         let layout = self.layout?;
         let line_metrics = lines::fetch_line_metrics(&self.text, &layout);
         let text_metrics = layout.get_metrics();
@@ -178,6 +193,8 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
             layout,
             size,
             inking_insets,
+            default_line_height,
+            default_baseline,
         })
     }
 }
@@ -226,6 +243,39 @@ impl D2DTextLayoutBuilder {
             }
         }
     }
+
+    fn get_default_line_height_and_baseline(&self) -> (f64, f64) {
+        let family_name = resolve_family_name(&self.default_font);
+        let is_custom = self.loaded_fonts.borrow().contains(&self.default_font);
+        let family = if is_custom {
+            let mut loaded = self.loaded_fonts.borrow_mut();
+            loaded.collection().get_font_family_by_name(&family_name)
+        } else {
+            FontCollection::system().get_font_family_by_name(&family_name)
+        };
+
+        let family = match family {
+            Some(family) => family,
+            // absolute fallback; use font size as line height
+            None => return (self.default_font_size, self.default_font_size * 0.8),
+        };
+
+        let font = family.get_first_matching_font(
+            dwrote::FontWeight::Regular,
+            dwrote::FontStretch::Normal,
+            dwrote::FontStyle::Normal,
+        );
+        let metrics = font.metrics().metrics0();
+        let ascent = metrics.ascent as f64;
+        let vert_metrics = ascent + metrics.descent as f64 + metrics.lineGap as f64;
+        let vert_fraction = vert_metrics / metrics.designUnitsPerEm as f64;
+        let ascent_fraction = ascent / metrics.designUnitsPerEm as f64;
+
+        let line_height = self.default_font_size * vert_fraction;
+        let baseline = self.default_font_size * ascent_fraction;
+
+        (line_height, baseline)
+    }
 }
 
 impl TextLayout for D2DTextLayout {
@@ -263,7 +313,15 @@ impl TextLayout for D2DTextLayout {
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        self.line_metrics.get(line_number).cloned()
+        if line_number == 0 && self.text.is_empty() {
+            Some(LineMetric {
+                baseline: self.default_baseline,
+                height: self.default_line_height,
+                ..Default::default()
+            })
+        } else {
+            self.line_metrics.get(line_number).cloned()
+        }
     }
 
     fn line_count(&self) -> usize {
@@ -308,6 +366,10 @@ impl TextLayout for D2DTextLayout {
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
+
+        if self.text.is_empty() {
+            return HitTestPosition::new(Point::new(0., self.default_baseline), 0);
+        }
         // Note: Directwrite will just return the line width if text position is
         // out of bounds. This is what want for piet; return line width for the last text position
         // (equal to line.len()). This is basically returning line width for the last cursor
@@ -398,6 +460,24 @@ mod test {
         ($val:expr, $target:expr, $tolerance:expr,) => {{
             assert_close!($val, $target, $tolerance)
         }};
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn hit_test_empty_string() {
+        let a_font = FontFamily::new_unchecked("Segoe UI");
+        let layout = D2DText::new_for_test()
+            .new_text_layout("")
+            .font(a_font, 12.0)
+            .build()
+            .unwrap();
+        let pt = layout.hit_test_point(Point::new(0.0, 0.0));
+        assert_eq!(pt.idx, 0);
+        let pos = layout.hit_test_text_position(0);
+        assert_eq!(pos.point.x, 0.0);
+        assert_close!(pos.point.y, 10.0, 3.0);
+        let line = layout.line_metric(0).unwrap();
+        assert_close!(line.height, 14.0, 3.0);
     }
 
     #[test]

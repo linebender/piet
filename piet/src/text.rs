@@ -438,7 +438,14 @@ pub trait TextLayout: Clone {
     /// Given a line number, return a reference to that line's underlying string.
     fn line_text(&self, line_number: usize) -> Option<&str>;
 
-    /// Given a line number, return a reference to that line's metrics.
+    /// Given a line number, return a reference to that line's metrics, if the line exists.
+    ///
+    /// If this layout's text is the empty string, calling this method with `0`
+    /// returns some [`LineMetric`]; this will use the layout's default font to
+    /// determine what the expected height of the first line would be, which is
+    /// necessary for things like cursor drawing.
+    ///
+    /// [`LineMetric`]: struct.LineMetric.html
     fn line_metric(&self, line_number: usize) -> Option<LineMetric>;
 
     /// Returns total number of lines in the text layout.

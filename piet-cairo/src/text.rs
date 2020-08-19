@@ -203,7 +203,15 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        self.line_metrics.get(line_number).cloned()
+        if line_number == 0 && self.text.is_empty() {
+            Some(LineMetric {
+                baseline: self.font.extents().ascent,
+                height: self.font.extents().height,
+                ..Default::default()
+            })
+        } else {
+            self.line_metrics.get(line_number).cloned()
+        }
     }
 
     fn line_count(&self) -> usize {
@@ -253,6 +261,10 @@ impl TextLayout for CairoTextLayout {
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
+
+        if idx == 0 && self.text.is_empty() {
+            return HitTestPosition::new(Point::new(0., self.font.extents().ascent), 0);
+        }
 
         // first need to find line it's on, and get line start offset
         let line_num = util::line_number_for_position(&self.line_metrics, idx);
@@ -396,6 +408,19 @@ mod test {
         ($val:expr, $target:expr, $tolerance:expr,) => {{
             assert_close!($val, $target, $tolerance)
         }};
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn hit_test_empty_string() {
+        let layout = CairoText::new().new_text_layout("").build().unwrap();
+        let pt = layout.hit_test_point(Point::new(0.0, 0.0));
+        assert_eq!(pt.idx, 0);
+        let pos = layout.hit_test_text_position(0);
+        assert_eq!(pos.point.x, 0.0);
+        assert_close!(pos.point.y, 10.0, 3.0);
+        let line = layout.line_metric(0).unwrap();
+        assert_close!(line.height, 12.0, 3.0);
     }
 
     #[test]
