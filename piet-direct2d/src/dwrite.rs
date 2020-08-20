@@ -71,6 +71,13 @@ pub struct FontCollection(ComPtr<IDWriteFontCollection>);
 #[derive(Clone)]
 pub struct TextLayout(ComPtr<IDWriteTextLayout>);
 
+/// A range in a windows string, represented as a start position and a length.
+#[derive(Debug, Clone, Copy)]
+pub struct Utf16Range {
+    pub start: usize,
+    pub len: usize,
+}
+
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {
         Error::WinapiError(hr)
@@ -270,10 +277,19 @@ impl TextFormat {
 #[allow(clippy::unreadable_literal)]
 const E_NOT_SUFFICIENT_BUFFER: HRESULT = 0x8007007A;
 
-fn make_text_range(start: usize, len: usize) -> DWRITE_TEXT_RANGE {
-    DWRITE_TEXT_RANGE {
-        startPosition: start.try_into().unwrap(),
-        length: len.try_into().unwrap(),
+impl Utf16Range {
+    pub fn new(start: usize, len: usize) -> Self {
+        Utf16Range { start, len }
+    }
+}
+
+impl From<Utf16Range> for DWRITE_TEXT_RANGE {
+    fn from(src: Utf16Range) -> DWRITE_TEXT_RANGE {
+        let Utf16Range { start, len } = src;
+        DWRITE_TEXT_RANGE {
+            startPosition: start.try_into().unwrap(),
+            length: len.try_into().unwrap(),
+        }
     }
 }
 
@@ -321,66 +337,54 @@ impl TextLayout {
     }
 
     /// Set the weight for a range of this layout. `start` and `len` are in utf16.
-    pub(crate) fn set_weight(&mut self, start: usize, len: usize, weight: FontWeight) {
-        let range = make_text_range(start, len);
+    pub(crate) fn set_weight(&mut self, range: Utf16Range, weight: FontWeight) {
         let weight = weight.to_raw() as DWRITE_FONT_WEIGHT;
         unsafe {
-            self.0.SetFontWeight(weight, range);
+            self.0.SetFontWeight(weight, range.into());
         }
     }
 
-    pub(crate) fn set_font_family(&mut self, start: usize, len: usize, family: &str) {
-        let range = make_text_range(start, len);
+    pub(crate) fn set_font_family(&mut self, range: Utf16Range, family: &str) {
         let wide_name = family.to_wide_null();
         unsafe {
-            self.0.SetFontFamilyName(wide_name.as_ptr(), range);
+            self.0.SetFontFamilyName(wide_name.as_ptr(), range.into());
         }
     }
 
-    pub(crate) fn set_font_collection(
-        &mut self,
-        start: usize,
-        len: usize,
-        collection: &DWFontCollection,
-    ) {
-        let range = make_text_range(start, len);
+    pub(crate) fn set_font_collection(&mut self, range: Utf16Range, collection: &DWFontCollection) {
         unsafe {
-            self.0.SetFontCollection(collection.as_ptr(), range);
+            self.0.SetFontCollection(collection.as_ptr(), range.into());
         }
     }
 
-    pub(crate) fn set_italic(&mut self, start: usize, len: usize, ital: bool) {
-        let range = make_text_range(start, len);
+    pub(crate) fn set_italic(&mut self, range: Utf16Range, ital: bool) {
         let val = if ital {
             DWRITE_FONT_STYLE_ITALIC
         } else {
             DWRITE_FONT_STYLE_NORMAL
         };
         unsafe {
-            self.0.SetFontStyle(val, range);
+            self.0.SetFontStyle(val, range.into());
         }
     }
 
-    pub(crate) fn set_underline(&mut self, start: usize, len: usize, flag: bool) {
-        let range = make_text_range(start, len);
+    pub(crate) fn set_underline(&mut self, range: Utf16Range, flag: bool) {
         let flag = if flag { TRUE } else { FALSE };
         unsafe {
-            self.0.SetUnderline(flag, range);
+            self.0.SetUnderline(flag, range.into());
         }
     }
 
-    pub(crate) fn set_size(&mut self, start: usize, len: usize, size: f32) {
-        let range = make_text_range(start, len);
+    pub(crate) fn set_size(&mut self, range: Utf16Range, size: f32) {
         unsafe {
-            self.0.SetFontSize(size, range);
+            self.0.SetFontSize(size, range.into());
         }
     }
 
-    pub(crate) fn set_foregound_brush(&mut self, start: usize, len: usize, brush: Brush) {
-        let range = make_text_range(start, len);
+    pub(crate) fn set_foregound_brush(&mut self, range: Utf16Range, brush: Brush) {
         unsafe {
             self.0
-                .SetDrawingEffect(brush.as_raw() as *mut IUnknown, range);
+                .SetDrawingEffect(brush.as_raw() as *mut IUnknown, range.into());
         }
     }
 

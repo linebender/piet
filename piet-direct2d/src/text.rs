@@ -2,7 +2,7 @@
 
 mod lines;
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::convert::TryInto;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
@@ -11,23 +11,23 @@ use std::sync::Arc;
 pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
 use dwrote::{CustomFontCollectionLoaderImpl, FontCollection, FontFile};
+use winapi::um::d2d1::D2D1_DRAW_TEXT_OPTIONS_NONE;
 use wio::wide::ToWide;
 
 use piet::kurbo::{Insets, Point, Rect, Size};
 use piet::util;
 use piet::{
-    Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAlignment,
+    Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAlignment,
     TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::conv;
 use crate::d2d;
-use crate::dwrite::{self, TextFormat};
+use crate::dwrite::{self, TextFormat, Utf16Range};
 
 #[derive(Clone)]
 pub struct D2DText {
     dwrite: DwriteFactory,
-    device: d2d::DeviceContext,
     loaded_fonts: Rc<RefCell<LoadedFonts>>,
 }
 
@@ -43,51 +43,48 @@ struct LoadedFonts {
 
 #[derive(Clone)]
 pub struct D2DTextLayout {
-    pub text: String,
+    text: String,
     // currently calculated on build
     line_metrics: Vec<LineMetric>,
     size: Size,
     /// insets that, when applied to our layout rect, generates our inking/image rect.
     inking_insets: Insets,
-    pub layout: dwrite::TextLayout,
+    // this is in a refcell because we need to mutate it to set colors on first draw
+    layout: Rc<RefCell<dwrite::TextLayout>>,
     // these two are used when the layout is empty, so we can still correctly
     // draw the cursor
     default_line_height: f64,
     default_baseline: f64,
+    // colors are only added to the layout lazily, because we need access to d2d::DeviceContext
+    // in order to generate the brushes.
+    colors: Vec<(Utf16Range, Color)>,
+    needs_to_set_colors: Cell<bool>,
 }
 
 pub struct D2DTextLayoutBuilder {
     text: String,
     layout: Result<dwrite::TextLayout, Error>,
     len_utf16: usize,
-    device: d2d::DeviceContext,
     loaded_fonts: Rc<RefCell<LoadedFonts>>,
     default_font: FontFamily,
     default_font_size: f64,
+    colors: Vec<(Utf16Range, Color)>,
 }
 
 impl D2DText {
     /// Create a new factory that satisfies the piet `Text` trait given
     /// the (platform-specific) dwrite factory.
-    pub fn new(dwrite: DwriteFactory, device: d2d::DeviceContext) -> D2DText {
+    pub fn new(dwrite: DwriteFactory) -> D2DText {
         D2DText {
             dwrite,
-            device,
             loaded_fonts: Default::default(),
         }
     }
 
     #[cfg(test)]
     pub fn new_for_test() -> D2DText {
-        let d2d = d2d::D2DFactory::new().unwrap();
         let dwrite = DwriteFactory::new().unwrap();
-        // Initialize a D3D Device
-        let (d3d, _d3d_ctx) = crate::d3d::D3D11Device::create().unwrap();
-
-        // Create the D2D Device and Context
-        let mut device = unsafe { d2d.create_device(d3d.as_dxgi().unwrap().as_raw()).unwrap() };
-        let device = device.create_device_context().unwrap();
-        D2DText::new(dwrite, device)
+        D2DText::new(dwrite)
     }
 }
 
@@ -117,7 +114,7 @@ impl Text for D2DText {
             layout,
             text: text.to_owned(),
             len_utf16: wide_str.len(),
-            device: self.device.clone(),
+            colors: Vec::new(),
             loaded_fonts: self.loaded_fonts.clone(),
             default_font: FontFamily::default(),
             default_font_size: piet::util::DEFAULT_FONT_SIZE,
@@ -189,8 +186,10 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
 
         Ok(D2DTextLayout {
             text: self.text,
+            colors: self.colors,
+            needs_to_set_colors: Cell::new(true),
             line_metrics,
-            layout,
+            layout: Rc::new(RefCell::new(layout)),
             size,
             inking_insets,
             default_line_height,
@@ -203,7 +202,7 @@ impl D2DTextLayoutBuilder {
     /// used for both range and default attributes
     fn add_attribute_shared(&mut self, attr: TextAttribute, range: Option<Range<usize>>) {
         if let Ok(layout) = self.layout.as_mut() {
-            let (start, len) = match range {
+            let utf16_range = match range {
                 Some(range) => {
                     let start = util::count_utf16(&self.text[..range.start]);
                     let len = if range.end == self.text.len() {
@@ -211,9 +210,9 @@ impl D2DTextLayoutBuilder {
                     } else {
                         util::count_utf16(&self.text[range])
                     };
-                    (start, len)
+                    Utf16Range::new(start, len)
                 }
-                None => (0, self.len_utf16),
+                None => Utf16Range::new(0, self.len_utf16),
             };
 
             match attr {
@@ -221,25 +220,20 @@ impl D2DTextLayoutBuilder {
                     let is_custom = self.loaded_fonts.borrow().contains(&font);
                     if is_custom {
                         let mut loaded = self.loaded_fonts.borrow_mut();
-                        layout.set_font_collection(start, len, loaded.collection());
+                        layout.set_font_collection(utf16_range, loaded.collection());
                     } else if !self.loaded_fonts.borrow().is_empty() {
                         // if we are using custom fonts we also need to set the collection
                         // back to the system collection explicity as needed
-                        layout.set_font_collection(start, len, &FontCollection::system());
+                        layout.set_font_collection(utf16_range, &FontCollection::system());
                     }
                     let family_name = resolve_family_name(&font);
-                    layout.set_font_family(start, len, family_name);
+                    layout.set_font_family(utf16_range, family_name);
                 }
-                TextAttribute::FontSize(size) => layout.set_size(start, len, size as f32),
-                TextAttribute::Weight(weight) => layout.set_weight(start, len, weight),
-                TextAttribute::Italic(flag) => layout.set_italic(start, len, flag),
-                TextAttribute::Underline(flag) => layout.set_underline(start, len, flag),
-                TextAttribute::ForegroundColor(color) => {
-                    if let Ok(brush) = self.device.create_solid_color(conv::color_to_colorf(color))
-                    {
-                        layout.set_foregound_brush(start, len, brush)
-                    }
-                }
+                TextAttribute::FontSize(size) => layout.set_size(utf16_range, size as f32),
+                TextAttribute::Weight(weight) => layout.set_weight(utf16_range, weight),
+                TextAttribute::Italic(flag) => layout.set_italic(utf16_range, flag),
+                TextAttribute::Underline(flag) => layout.set_underline(utf16_range, flag),
+                TextAttribute::ForegroundColor(color) => self.colors.push((utf16_range, color)),
             }
         }
     }
@@ -296,8 +290,8 @@ impl TextLayout for D2DTextLayout {
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
-        self.layout.set_max_width(new_width)?;
-        self.line_metrics = lines::fetch_line_metrics(&self.text, &self.layout);
+        self.layout.borrow_mut().set_max_width(new_width)?;
+        self.line_metrics = lines::fetch_line_metrics(&self.text, &self.layout.borrow());
 
         Ok(())
     }
@@ -335,7 +329,10 @@ impl TextLayout for D2DTextLayout {
         let y = point.y + first_baseline;
 
         // lossy from f64 to f32, but shouldn't have too much impact
-        let htp = self.layout.hit_test_point(point.x as f32, y as f32);
+        let htp = self
+            .layout
+            .borrow()
+            .hit_test_point(point.x as f32, y as f32);
 
         // Round up to next grapheme cluster boundary if directwrite
         // reports a trailing hit.
@@ -379,11 +376,36 @@ impl TextLayout for D2DTextLayout {
 
         let hit_point = self
             .layout
+            .borrow()
             .hit_test_text_position(idx_16, trailing)
             .map(|hit| Point::new(hit.point_x as f64, hit.point_y as f64))
             // if dwrite fails we just return 0, 0
             .unwrap_or_default();
         HitTestPosition::new(hit_point, line)
+    }
+}
+
+impl D2DTextLayout {
+    pub fn draw(&self, pos: Point, ctx: &mut D2DDeviceContext) {
+        if !self.text.is_empty() {
+            self.resolve_colors_if_needed(ctx);
+            let pos = conv::to_point2f(pos);
+            let black_brush = ctx
+                .create_solid_color(conv::color_to_colorf(Color::BLACK))
+                .unwrap();
+            let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
+            ctx.draw_text_layout(pos, &self.layout.borrow(), &black_brush, text_options);
+        }
+    }
+
+    fn resolve_colors_if_needed(&self, ctx: &mut D2DDeviceContext) {
+        if self.needs_to_set_colors.replace(false) {
+            for (range, color) in &self.colors {
+                if let Ok(brush) = ctx.create_solid_color(conv::color_to_colorf(color.clone())) {
+                    self.layout.borrow_mut().set_foregound_brush(*range, brush)
+                }
+            }
+        }
     }
 }
 

@@ -65,10 +65,9 @@ mod test {
             .font(font.clone(), font_size)
             .build()
             .unwrap();
-        let line_metrics = fetch_line_metrics(input, &layout.layout);
 
         println!("{:#?}", layout.line_metrics);
-        assert_eq!(line_metrics, expected);
+        assert_eq!(layout.line_metrics, expected);
     }
 
     // Test at three different widths: small, medium, large.

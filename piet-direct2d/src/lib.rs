@@ -16,8 +16,7 @@ use std::ops::Deref;
 
 use winapi::um::d2d1::{
     D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-    D2D1_DRAW_TEXT_OPTIONS_NONE, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
-    D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
+    D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
 };
 use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
@@ -69,7 +68,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         dwrite: DwriteFactory,
         rt: &'b mut DeviceContext,
     ) -> D2DRenderContext<'b> {
-        let inner_text = D2DText::new(dwrite, rt.clone());
+        let inner_text = D2DText::new(dwrite);
         D2DRenderContext {
             factory,
             inner_text,
@@ -276,21 +275,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
-        let mut line_metrics = Vec::with_capacity(1);
-        layout.layout.get_line_metrics(&mut line_metrics);
-        if line_metrics.is_empty() {
-            // Layout is empty, don't bother drawing.
-            return;
-        }
-
-        let pos = to_point2f(pos.into());
-        let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
-        // this is used for regions that don't have other colors set;
-        // we could be doing this elsewhere but here seems fine
-        let black_brush = self.solid_brush(Color::BLACK);
-
-        self.rt
-            .draw_text_layout(pos, &layout.layout, &black_brush, text_options);
+        layout.draw(pos.into(), self.rt);
     }
 
     fn save(&mut self) -> Result<(), Error> {
