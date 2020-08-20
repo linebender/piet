@@ -17,7 +17,7 @@ use piet::ImageFormat;
 #[doc(hidden)]
 pub use piet_web::*;
 
-pub type Piet<'a> = WebRenderContext;
+pub type Piet<'a> = WebRenderContext<'a>;
 
 /// The associated brush type for this backend.
 ///

@@ -55,7 +55,6 @@ pub use backend::*;
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::marker::PhantomData;
 
     use static_assertions as sa;
 
@@ -68,7 +67,6 @@ mod test {
         piet_text_layout: PietTextLayout,
         piet_text_layout_builder: PietTextLayoutBuilder,
         image: Image,
-        _phantom: PhantomData<&'a ()>,
     }
 
     sa::assert_impl_all!(Device: Send);
