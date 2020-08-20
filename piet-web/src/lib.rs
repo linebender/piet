@@ -8,6 +8,7 @@ mod text;
 
 use std::borrow::Cow;
 use std::fmt;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 use js_sys::{Float64Array, Reflect};
@@ -26,21 +27,23 @@ use piet::{
 
 pub use text::{WebFont, WebTextLayout, WebTextLayoutBuilder};
 
-pub struct WebRenderContext {
+pub struct WebRenderContext<'a> {
     ctx: CanvasRenderingContext2d,
     /// Used for creating image bitmaps and possibly other resources.
     window: Window,
     text: WebText,
     err: Result<(), Error>,
+    _phantom: PhantomData<&'a ()>,
 }
 
-impl WebRenderContext {
-    pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext {
+impl WebRenderContext<'_> {
+    pub fn new(ctx: CanvasRenderingContext2d, window: Window) -> WebRenderContext<'static> {
         WebRenderContext {
             ctx: ctx.clone(),
             window,
             text: WebText::new(ctx),
             err: Ok(()),
+            _phantom: PhantomData,
         }
     }
 }
@@ -112,7 +115,7 @@ fn convert_line_join(line_join: LineJoin) -> &'static str {
     }
 }
 
-impl RenderContext for WebRenderContext {
+impl RenderContext for WebRenderContext<'_> {
     /// wasm-bindgen doesn't have a native Point type, so use kurbo's.
     type Brush = Brush;
 
@@ -384,7 +387,7 @@ fn draw_image(
     }
 }
 
-impl IntoBrush<WebRenderContext> for Brush {
+impl IntoBrush<WebRenderContext<'_>> for Brush {
     fn make_brush<'b>(
         &'b self,
         _piet: &mut WebRenderContext,
@@ -418,7 +421,7 @@ fn set_gradient_stops(dst: &mut CanvasGradient, src: &[GradientStop]) {
     }
 }
 
-impl WebRenderContext {
+impl WebRenderContext<'_> {
     /// Set the source pattern to the brush.
     ///
     /// Web canvas is super stateful, and we're trying to have more retained stuff.
