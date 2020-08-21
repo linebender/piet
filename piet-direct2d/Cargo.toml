@@ -1,6 +1,6 @@
 [package]
 name = "piet-direct2d"
-version = "0.2.0"
+version = "0.2.0-pre1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Direct2D backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -10,7 +10,7 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-piet = { version = "0.2.0", path = "../piet" }
+piet = { version = "0.2.0-pre1", path = "../piet" }
 utf16_lit = "1.0"
 
 wio = "0.2.2"
@@ -18,5 +18,5 @@ winapi = { version = "0.3.8", features = ["d2d1", "d2d1_1", "d2d1effects", "d3d1
 dwrote = { version = "0.11.0", default_features = false }
 
 [dev-dependencies]
-piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
+piet = { version = "0.2.0-pre1", path = "../piet", features = ["samples"] }
 image = "0.23.2"
