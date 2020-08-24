@@ -492,6 +492,10 @@ impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
     }
 
     fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
+        debug_assert!(
+            !self.has_set_default_attrs,
+            "default attributes mut be added before range attributes"
+        );
         let attribute = attribute.into();
         self.attrs.defaults.set(attribute);
         self

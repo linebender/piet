@@ -69,6 +69,8 @@ pub struct D2DTextLayoutBuilder {
     default_font: FontFamily,
     default_font_size: f64,
     colors: Vec<(Utf16Range, Color)>,
+    // just used to assert api is used as expected
+    last_range_start_pos: usize,
 }
 
 impl D2DText {
@@ -118,6 +120,7 @@ impl Text for D2DText {
             loaded_fonts: self.loaded_fonts.clone(),
             default_font: FontFamily::default(),
             default_font_size: piet::util::DEFAULT_FONT_SIZE,
+            last_range_start_pos: 0,
         }
     }
 }
@@ -144,6 +147,10 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     }
 
     fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
+        debug_assert!(
+            self.last_range_start_pos == 0,
+            "default attributes must be added before range attributes"
+        );
         let attribute = attribute.into();
         match &attribute {
             TextAttribute::FontFamily(font) => self.default_font = font.clone(),
@@ -162,6 +169,11 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
         let range = util::resolve_range(range, self.text.len());
         let attribute = attribute.into();
 
+        debug_assert!(
+            range.start >= self.last_range_start_pos,
+            "attributes must be added in non-decreasing start order"
+        );
+        self.last_range_start_pos = range.start;
         self.add_attribute_shared(attribute, Some(range));
         self
     }
