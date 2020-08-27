@@ -15,9 +15,19 @@ If your patch changes the behaviour of these snapshots, they will need to be
 regenerated. The easiest way to do this is to open a draft PR; this will trigger
 a 'snapshots' CI run. On failure, this will upload an artifact containing the
 generated snapshots (see [persisting workflow data using artifacts] for
-information on artifacts). You can download these, copy them into the snapshots
-submodule, push your changes, and then commit the new submodule revision as part
-of your PR.
+information on artifacts).
+
+In order to update the snapshots, you will need to open a companion PR in
+the [`piet-snapshots`] repo. This PR should include all of the new or changed
+images expected by your main PR.
+
+**note**: your PR in [`piet-snapshots`] should be opened from a branch in that
+repo, **not in a fork**; if you do not have write access to that repo ask @cmyr
+or @raphlinus (or another administrator) to set it up for you.
+
+**note**: When your PR is merged, you should merge (**not rebase**) your PR in
+`piet-snapshots`. Rebasing would cause the revision to be rewritten, which would
+mean that the commit referenced by the submodule would no longer exist.
 
 [`samples`]: https://github.com/linebender/piet/tree/master/piet/src/samples
 [`piet-snapshots`]: https://github.com/linebender/piet-snapshots
