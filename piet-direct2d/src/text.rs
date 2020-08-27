@@ -899,8 +899,10 @@ mod test {
         println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
-        let line_zero_baseline = 0.0;
-        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+        let line_zero_metric = full_layout.line_metric(0).unwrap();
+        let line_one_metric = full_layout.line_metric(1).unwrap();
+        let line_zero_baseline = line_zero_metric.y_offset + line_zero_metric.baseline;
+        let line_one_baseline = line_one_metric.y_offset + line_one_metric.baseline;
 
         // these just test the x position of text positions on the second line
         assert_close!(
@@ -984,40 +986,39 @@ mod test {
             .build()
             .unwrap();
         println!("{}", layout.line_metric(0).unwrap().baseline); // 12.94...
-        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 15.96...)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 31.92...)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 47.88...)
+        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 12.94)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 28.91...)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 44.87...)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 60.83...)
 
         let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
         assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, false);
-        let pt = layout.hit_test_point(Point::new(1.0, -1.0));
-        println!("{:?}", pt);
+        let pt = layout.hit_test_point(Point::new(1.0, 1.0));
         assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, true);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
         assert_eq!(pt.idx, 0);
-        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
-        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(1.0, 20.0));
-        assert_eq!(pt.idx, 10);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(1.0, 36.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 54.0));
         assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
         let best_layout = text.new_text_layout("best").build().unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 22.48...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 52.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 68.0));
         assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(22.0, 52.0));
+        let pt = layout.hit_test_point(Point::new(22.0, 68.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(24.0, 52.0));
+        let pt = layout.hit_test_point(Point::new(24.0, 68.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
