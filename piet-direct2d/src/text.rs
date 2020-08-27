@@ -331,22 +331,13 @@ impl TextLayout for D2DTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        // Before hit testing, need to convert point.y to have 0.0 at upper left corner (dwrite
-        // style) instead of at first line baseline.
-        let first_baseline = self
-            .line_metrics
-            .get(0)
-            .map(|lm| lm.baseline)
-            .unwrap_or(0.0);
-        let y = point.y + first_baseline;
-
         // lossy from f64 to f32, but shouldn't have too much impact
         let htp = self
             .layout
             .borrow()
-            .hit_test_point(point.x as f32, y as f32);
+            .hit_test_point(point.x as f32, point.y as f32);
 
-        // Round up to next grapheme cluster boundary if directwrite
+        // Round up to next grapheme cluster boundary if DirectWrite
         // reports a trailing hit.
         let text_position_16 = if htp.is_trailing_hit {
             htp.metrics.text_position + htp.metrics.length
@@ -354,13 +345,7 @@ impl TextLayout for D2DTextLayout {
             htp.metrics.text_position
         } as usize;
 
-        // Convert text position from utf-16 code units to
-        // utf-8 code units.
-        // Strategy: count up in utf16 and utf8 simultaneously, stop when
-        // utf-16 text position reached.
-        //
-        // TODO ask about text_position, it looks like windows returns last index;
-        // can't use the text_position of last index from directwrite, it has an extra code unit.
+        // Convert text position from utf-16 code units to utf-8 code units.
         let text_position = util::count_until_utf16(&self.text, text_position_16)
             .unwrap_or_else(|| self.text.len());
 
@@ -375,7 +360,7 @@ impl TextLayout for D2DTextLayout {
         if self.text.is_empty() {
             return HitTestPosition::new(Point::new(0., self.default_baseline), 0);
         }
-        // Note: Directwrite will just return the line width if text position is
+        // Note: DirectWrite will just return the line width if text position is
         // out of bounds. This is what want for piet; return line width for the last text position
         // (equal to line.len()). This is basically returning line width for the last cursor
         // position.
@@ -383,16 +368,20 @@ impl TextLayout for D2DTextLayout {
         let trailing = false;
         let idx_16 = util::count_utf16(&self.text[..idx]);
         let line = util::line_number_for_position(&self.line_metrics, idx);
-        // max string length on windows is 32bits; nothing we can do here.
+        // Maximum string length on Windows is 32bits; nothing we can do here.
         let idx_16: u32 = idx_16.try_into().unwrap();
 
-        let hit_point = self
+        let mut hit_point = self
             .layout
             .borrow()
             .hit_test_text_position(idx_16, trailing)
             .map(|hit| Point::new(hit.point_x as f64, hit.point_y as f64))
-            // if dwrite fails we just return 0, 0
+            // if DWrite fails we just return 0, 0
             .unwrap_or_default();
+        // Raw reported point is top of glyph run box; move to baseline.
+        if let Some(metric) = self.line_metrics.get(line) {
+            hit_point.y = metric.y_offset + metric.baseline;
+        }
         HitTestPosition::new(hit_point, line)
     }
 }
