@@ -6,13 +6,21 @@ use std::sync::Arc;
 use crate::kurbo::{Point, Rect, Size};
 use crate::{Color, Error};
 
-/// The piet text API.
+/// The Piet text API.
 ///
 /// This trait is the interface for text-related functionality, such as font
 /// management and text layout.
 pub trait Text: Clone {
+    /// A concrete type that implements the [`TextLayoutBuilder`] trait.
+    ///
+    /// [`TextLayoutBuilder`]: trait.TextLayoutBuilder.html
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
+
+    /// A concrete type that implements the [`TextLayout`] trait.
+    ///
+    /// [`TextLayout`]: trait.TextLayout.html
     type TextLayout: TextLayout;
+
     /// Query the platform for a font with a given name, and return a [`FontFamily`]
     /// object corresponding to that font, if it is found.
     ///
@@ -42,7 +50,7 @@ pub trait Text: Clone {
     ///
     /// # Notes
     ///
-    /// ## font familes and styles:
+    /// ## font families and styles:
     ///
     /// If you wish to use multiple fonts in a given family, you will need to
     /// load them individually. This method will return the same handle for
@@ -58,7 +66,7 @@ pub trait Text: Clone {
     /// ## family name masking
     ///
     /// If you load a custom font, the family name of your custom font will take
-    /// precedence over system familes of the same name; so your 'Helvetica' will
+    /// precedence over system families of the same name; so your 'Helvetica' will
     /// potentially interfere with the use of the platform 'Helvetica'.
     ///
     /// # Examples
@@ -374,29 +382,18 @@ pub enum TextAlignment {
 ///
 /// ## Line Breaks
 ///
-/// A text layout may be broken into multiple lines in order to fit within a given width. Line breaking is generally done
-/// between words (whitespace-separated).
+/// A text layout may be broken into multiple lines in order to fit within a given width.
+/// Line breaking is generally done between words (whitespace-separated).
 ///
-/// When resizing the width of the text layout, calling [`update_width`][] on the text layout will
-/// recalculate line breaks and modify in-place.
+/// When resizing the width of the text layout, calling [`update_width`][]
+/// on the text layout will recalculate line breaks and modify in-place.
 ///
-/// A line's text and [`LineMetric`][]s can be accessed line-by-line by 0-indexed line number.
-///
-/// Fields on ['LineMetric`] include:
-/// - line start offset from text layout beginning (in UTF-8 code units)
-/// - line end offset from text layout beginning (in UTF-8 code units)
-/// - line trailing whitespace (in UTF-8 code units)
-/// - line's baseline, distance of the baseline from the top of the line
-/// - line height
-///
-/// The trailing whitespace distinction is important. Lines are broken at the grapheme boundary after
-/// whitespace, but that whitepace is not necessarily rendered since it's just the trailing
-/// whitepace at the end of a line. Keeping the trailing whitespace data available allows API
-/// consumers to determine their own trailing whitespace strategy.
+/// A line's text and [`LineMetric`][]s can be accessed by 0-indexed line number.
 ///
 /// ## Text Position
 ///
-/// A text position is the offset in the underlying string, defined in utf-8 code units, as is standard for Rust strings.
+/// A text position is the offset in the underlying string, defined in utf-8
+/// code units, as is standard for Rust strings.
 ///
 /// However, text position is also related to valid cursor positions. Therefore:
 /// - The beginning of a line has text position `0`.
@@ -432,7 +429,9 @@ pub trait TextLayout: Clone {
     /// Returns a `Rect` representing the bounding box of the glyphs in this layout,
     /// relative to the top-left of the layout object.
     ///
-    /// This is sometimes called the bounding box or the inking rect.
+    /// This is sometimes called the bounding box or the inking rect, and is
+    /// used to determine when the layout has become visible (for instance,
+    /// during scrolling) and thus needs to be drawn.
     fn image_bounds(&self) -> Rect;
 
     /// The text used to create this layout.
@@ -441,7 +440,7 @@ pub trait TextLayout: Clone {
     /// Change the width of this `TextLayout`.
     ///
     /// This may be an `f64`, or `None` if this layout is not constrained;
-    /// `None` is equivalent to `std::f64::INFINITY`.
+    /// `None` is equivalent to `f64::INFINITY`.
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error>;
 
     /// Given a line number, return a reference to that line's underlying string.
@@ -460,21 +459,12 @@ pub trait TextLayout: Clone {
     /// Returns total number of lines in the text layout.
     fn line_count(&self) -> usize;
 
-    /// Given a `Point`, determine the corresponding text position.
+    /// Given a `Point`, return a [`HitTestPoint`] describing the corresponding
+    /// text position.
     ///
     /// This is used for things like mapping a mouse click to a cursor position.
     ///
     /// The point should be in the coordinate space of the layout object.
-    ///
-    /// ## Return value:
-    /// Returns a [`HitTestPoint`][] describing the results of the test.
-    ///
-    /// The [`HitTestPoint`][] field `is_inside` is true if the tested point
-    /// falls within the bounds of the text, `false` otherwise.
-    ///
-    /// The [`HitTestPoint`][] field `idx` is the index, in the string used to
-    /// create this [`TextLayout`][], of the start of the grapheme cluster
-    /// closest to the tested point.
     ///
     /// ## Notes:
     ///
@@ -565,7 +555,13 @@ pub struct LineMetric {
     /// [`TextLayout`]: trait.TextLayout.html
     pub end_offset: usize,
 
-    /// The length of the trailing whitespace at the end of this line, in utf-8 code units.
+    /// The length of the trailing whitespace at the end of this line, in utf-8
+    /// code units.
+    ///
+    /// When lines are broken on whitespace (as is common), the whitespace
+    /// is assigned to the end of the preceding line. Reporting the size of
+    /// the trailing whitespace section lets an API consumer measure and render
+    /// only the trimmed line up to the whitespace.
     pub trailing_whitespace: usize,
 
     /// The distance from the top of the line (`y_offset`) to the baseline.
