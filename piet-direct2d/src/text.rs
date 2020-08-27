@@ -331,22 +331,13 @@ impl TextLayout for D2DTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        // Before hit testing, need to convert point.y to have 0.0 at upper left corner (dwrite
-        // style) instead of at first line baseline.
-        let first_baseline = self
-            .line_metrics
-            .get(0)
-            .map(|lm| lm.baseline)
-            .unwrap_or(0.0);
-        let y = point.y + first_baseline;
-
         // lossy from f64 to f32, but shouldn't have too much impact
         let htp = self
             .layout
             .borrow()
-            .hit_test_point(point.x as f32, y as f32);
+            .hit_test_point(point.x as f32, point.y as f32);
 
-        // Round up to next grapheme cluster boundary if directwrite
+        // Round up to next grapheme cluster boundary if DirectWrite
         // reports a trailing hit.
         let text_position_16 = if htp.is_trailing_hit {
             htp.metrics.text_position + htp.metrics.length
@@ -354,13 +345,7 @@ impl TextLayout for D2DTextLayout {
             htp.metrics.text_position
         } as usize;
 
-        // Convert text position from utf-16 code units to
-        // utf-8 code units.
-        // Strategy: count up in utf16 and utf8 simultaneously, stop when
-        // utf-16 text position reached.
-        //
-        // TODO ask about text_position, it looks like windows returns last index;
-        // can't use the text_position of last index from directwrite, it has an extra code unit.
+        // Convert text position from utf-16 code units to utf-8 code units.
         let text_position = util::count_until_utf16(&self.text, text_position_16)
             .unwrap_or_else(|| self.text.len());
 
@@ -375,7 +360,7 @@ impl TextLayout for D2DTextLayout {
         if self.text.is_empty() {
             return HitTestPosition::new(Point::new(0., self.default_baseline), 0);
         }
-        // Note: Directwrite will just return the line width if text position is
+        // Note: DirectWrite will just return the line width if text position is
         // out of bounds. This is what want for piet; return line width for the last text position
         // (equal to line.len()). This is basically returning line width for the last cursor
         // position.
@@ -383,16 +368,20 @@ impl TextLayout for D2DTextLayout {
         let trailing = false;
         let idx_16 = util::count_utf16(&self.text[..idx]);
         let line = util::line_number_for_position(&self.line_metrics, idx);
-        // max string length on windows is 32bits; nothing we can do here.
+        // Maximum string length on Windows is 32bits; nothing we can do here.
         let idx_16: u32 = idx_16.try_into().unwrap();
 
-        let hit_point = self
+        let mut hit_point = self
             .layout
             .borrow()
             .hit_test_text_position(idx_16, trailing)
             .map(|hit| Point::new(hit.point_x as f64, hit.point_y as f64))
-            // if dwrite fails we just return 0, 0
+            // if DWrite fails we just return 0, 0
             .unwrap_or_default();
+        // Raw reported point is top of glyph run box; move to baseline.
+        if let Some(metric) = self.line_metrics.get(line) {
+            hit_point.y = metric.y_offset + metric.baseline;
+        }
         HitTestPosition::new(hit_point, line)
     }
 }
@@ -910,8 +899,10 @@ mod test {
         println!("'t': {}", t_width);
 
         // NOTE these heights are representative of baseline-to-baseline measures
-        let line_zero_baseline = 0.0;
-        let line_one_baseline = full_layout.line_metric(1).unwrap().height;
+        let line_zero_metric = full_layout.line_metric(0).unwrap();
+        let line_one_metric = full_layout.line_metric(1).unwrap();
+        let line_zero_baseline = line_zero_metric.y_offset + line_zero_metric.baseline;
+        let line_one_baseline = line_one_metric.y_offset + line_one_metric.baseline;
 
         // these just test the x position of text positions on the second line
         assert_close!(
@@ -995,40 +986,39 @@ mod test {
             .build()
             .unwrap();
         println!("{}", layout.line_metric(0).unwrap().baseline); // 12.94...
-        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 0.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 15.96...)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 31.92...)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 47.88...)
+        println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 12.94)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 28.91...)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 44.87...)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 60.83...)
 
         let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
         assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, false);
-        let pt = layout.hit_test_point(Point::new(1.0, -1.0));
-        println!("{:?}", pt);
+        let pt = layout.hit_test_point(Point::new(1.0, 1.0));
         assert_eq!(pt.idx, 0);
         assert_eq!(pt.is_inside, true);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
         assert_eq!(pt.idx, 0);
-        let pt = layout.hit_test_point(Point::new(1.0, 04.0));
-        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(1.0, 20.0));
-        assert_eq!(pt.idx, 10);
+        assert_eq!(pt.idx, 5);
         let pt = layout.hit_test_point(Point::new(1.0, 36.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(1.0, 54.0));
         assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
         let best_layout = text.new_text_layout("best").build().unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 22.48...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 52.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 68.0));
         assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(22.0, 52.0));
+        let pt = layout.hit_test_point(Point::new(22.0, 68.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(24.0, 52.0));
+        let pt = layout.hit_test_point(Point::new(24.0, 68.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
