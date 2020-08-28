@@ -55,6 +55,22 @@ pub enum FontStyle {
     Italic,
 }
 
+/// A collection of attributes that describe a font.
+///
+/// This is provided as a convenience; library consumers may wish to have
+/// a single type that represents a specific font face at a specific size.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FontDescriptor {
+    /// The font's [`FontFamily`](struct.FontFamily.html).
+    pub family: FontFamily,
+    /// The font's size.
+    pub size: f64,
+    /// The font's [`FontWeight`](struct.FontWeight.html).
+    pub weight: FontWeight,
+    /// The font's [`FontStyle`](struct.FontStyle.html).
+    pub style: FontStyle,
+}
+
 impl FontFamily {
     /// A san-serif font, such as Arial or Helvetica.
     pub const SANS_SERIF: FontFamily = FontFamily(FontFamilyInner::SansSerif);
@@ -77,6 +93,7 @@ impl FontFamily {
         FontFamily(FontFamilyInner::Named(s.into()))
     }
 
+    /// The name of this font family, as a `&str`.
     pub fn name(&self) -> &str {
         match &self.0 {
             FontFamilyInner::Serif => "serif",
@@ -85,6 +102,28 @@ impl FontFamily {
             FontFamilyInner::Monospace => "monospace",
             FontFamilyInner::Named(s) => &s,
         }
+    }
+
+    /// Create a new [`FontDescriptor`] with this `FontFamily`, with other
+    /// attributes set to their default.
+    ///
+    /// # Examples
+    ///
+    /// You can call builder methods on the returned [`FontDescriptor`] to set
+    /// other font attributes:
+    ///
+    /// ```
+    /// # use piet::*;
+    /// let descriptor = FontFamily::SERIF.to_descriptor()
+    ///     .with_size(16.0)
+    ///     .with_weight(FontWeight::THIN)
+    ///     .with_style(FontStyle::Italic);
+    ///
+    /// ```
+    ///
+    /// [`FontDescriptor`]: struct.FontDescriptor.html
+    pub fn to_descriptor(&self) -> FontDescriptor {
+        FontDescriptor::new(self.clone())
     }
 
     /// Returns `true` if this is a generic font family.
@@ -134,6 +173,51 @@ impl FontWeight {
     /// Return the raw value as a u16.
     pub const fn to_raw(self) -> u16 {
         self.0
+    }
+}
+
+impl FontDescriptor {
+    /// Create a new descriptor with the provided [`FontFamily`].
+    ///
+    /// [`FontFamily`]: struct.FontFamily.html
+    pub fn new(family: FontFamily) -> Self {
+        FontDescriptor {
+            family,
+            ..Default::default()
+        }
+    }
+
+    /// Buider-style method to set the descriptor's font size.
+    pub fn with_size(mut self, size: f64) -> Self {
+        self.size = size;
+        self
+    }
+
+    /// Buider-style method to set the descriptor's [`FontWeight`].
+    ///
+    /// [`FontWeight`]: struct.FontWeight.html
+    pub fn with_weight(mut self, weight: FontWeight) -> Self {
+        self.weight = weight;
+        self
+    }
+
+    /// Buider-style method to set the descriptor's [`FontStyle`].
+    ///
+    /// [`FontStyle`]: enum.FontStyle.html
+    pub fn with_style(mut self, style: FontStyle) -> Self {
+        self.style = style;
+        self
+    }
+}
+
+impl Default for FontDescriptor {
+    fn default() -> Self {
+        FontDescriptor {
+            family: Default::default(),
+            weight: Default::default(),
+            style: Default::default(),
+            size: crate::util::DEFAULT_FONT_SIZE,
+        }
     }
 }
 
