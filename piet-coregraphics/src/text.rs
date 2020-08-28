@@ -22,8 +22,8 @@ use core_text::{
 
 use piet::kurbo::{Affine, Point, Rect, Size};
 use piet::{
-    util, Error, FontFamily, FontWeight, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
+    util, Error, FontFamily, FontStyle, FontWeight, HitTestPoint, HitTestPosition, LineMetric,
+    Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::ct_helpers::{self, AttributedString, FontCollection, Frame, Framesetter, Line};
@@ -90,7 +90,7 @@ struct Attributes {
     font: Option<Span<FontFamily>>,
     size: Option<Span<f64>>,
     weight: Option<Span<FontWeight>>,
-    italic: Option<Span<bool>>,
+    style: Option<Span<FontStyle>>,
 }
 
 /// during construction, `Span`s represent font attributes that have been applied
@@ -322,7 +322,7 @@ impl Attributes {
             TextAttribute::FontFamily(font) => self.font = Some(Span::new(font, range)),
             TextAttribute::Weight(w) => self.weight = Some(Span::new(w, range)),
             TextAttribute::FontSize(s) => self.size = Some(Span::new(s, range)),
-            TextAttribute::Italic(b) => self.italic = Some(Span::new(b, range)),
+            TextAttribute::Style(s) => self.style = Some(Span::new(s, range)),
             _ => unreachable!(),
         }
     }
@@ -342,10 +342,13 @@ impl Attributes {
     }
 
     fn italic(&self) -> bool {
-        self.italic
-            .as_ref()
-            .map(|t| t.payload)
-            .unwrap_or(self.defaults.italic)
+        matches!(
+            self.style
+                .as_ref()
+                .map(|t| t.payload)
+                .unwrap_or(self.defaults.style),
+            FontStyle::Italic
+        )
     }
 
     fn font(&self) -> &FontFamily {
@@ -362,7 +365,7 @@ impl Attributes {
             .unwrap_or(max)
             .min(self.size.as_ref().map(Span::range_end).unwrap_or(max))
             .min(self.weight.as_ref().map(Span::range_end).unwrap_or(max))
-            .min(self.italic.as_ref().map(Span::range_end).unwrap_or(max))
+            .min(self.style.as_ref().map(Span::range_end).unwrap_or(max))
             .min(max)
     }
 
@@ -374,8 +377,8 @@ impl Attributes {
         if self.weight.as_ref().map(Span::range_end) == Some(last_pos) {
             self.weight = None;
         }
-        if self.italic.as_ref().map(Span::range_end) == Some(last_pos) {
-            self.italic = None;
+        if self.style.as_ref().map(Span::range_end) == Some(last_pos) {
+            self.style = None;
         }
         if self.size.as_ref().map(Span::range_end) == Some(last_pos) {
             self.size = None;

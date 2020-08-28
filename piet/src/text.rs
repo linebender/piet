@@ -3,7 +3,7 @@
 use std::ops::{Range, RangeBounds};
 
 use crate::kurbo::{Point, Rect, Size};
-use crate::{Color, Error, FontFamily, FontWeight};
+use crate::{Color, Error, FontFamily, FontStyle, FontWeight};
 
 /// The Piet text API.
 ///
@@ -111,8 +111,10 @@ pub enum TextAttribute {
     Weight(FontWeight),
     /// The foreground color of the text.
     ForegroundColor(crate::Color),
-    /// Italics.
-    Italic(bool),
+    /// The [`FontStyle`]; either regular or italic.
+    ///
+    /// [`FontStyle`]: enum.FontStyle.html
+    Style(FontStyle),
     /// Underline.
     Underline(bool),
 }
@@ -215,7 +217,7 @@ pub trait TextLayoutBuilder: Sized {
     /// let times = text.font_family("Times New Roman").unwrap();
     /// let layout = text.new_text_layout("This API is okay, I guess?")
     ///     .font(FontFamily::MONOSPACE, 12.0)
-    ///     .default_attribute(TextAttribute::Italic(true))
+    ///     .default_attribute(FontStyle::Italic)
     ///     .range_attribute(..5, FontWeight::BOLD)
     ///     .range_attribute(5..14, times)
     ///     .range_attribute(20.., TextAttribute::ForegroundColor(Color::rgb(1.0, 0., 0.,)))
@@ -534,6 +536,12 @@ impl From<FontFamily> for TextAttribute {
 impl From<FontWeight> for TextAttribute {
     fn from(src: FontWeight) -> TextAttribute {
         TextAttribute::Weight(src)
+    }
+}
+
+impl From<FontStyle> for TextAttribute {
+    fn from(src: FontStyle) -> TextAttribute {
+        TextAttribute::Style(src)
     }
 }
 

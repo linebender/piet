@@ -2,7 +2,7 @@
 
 use crate::kurbo::{Size, Vec2};
 use crate::{
-    Color, Error, FontFamily, FontWeight, RenderContext, Text, TextAttribute, TextLayout,
+    Color, Error, FontFamily, FontStyle, FontWeight, RenderContext, Text, TextLayout,
     TextLayoutBuilder,
 };
 
@@ -32,7 +32,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(100..150, FontWeight::EXTRA_BLACK)
         .range_attribute(150..250, FontWeight::BOLD)
         // italic does not exist. should be synthetic italic?
-        .range_attribute(200..300, TextAttribute::Italic(true))
+        .range_attribute(200..300, FontStyle::Italic)
         // weight does not exist; should resolve to regular
         .range_attribute(250..320, FontWeight::EXTRA_LIGHT)
         .build()?;

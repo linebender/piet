@@ -243,7 +243,7 @@ impl D2DTextLayoutBuilder {
                 }
                 TextAttribute::FontSize(size) => layout.set_size(utf16_range, size as f32),
                 TextAttribute::Weight(weight) => layout.set_weight(utf16_range, weight),
-                TextAttribute::Italic(flag) => layout.set_italic(utf16_range, flag),
+                TextAttribute::Style(style) => layout.set_style(utf16_range, style),
                 TextAttribute::Underline(flag) => layout.set_underline(utf16_range, flag),
                 TextAttribute::ForegroundColor(color) => self.colors.push((utf16_range, color)),
             }

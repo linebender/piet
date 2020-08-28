@@ -9,8 +9,8 @@ use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder,
+    util, Color, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -135,10 +135,9 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         } else {
             FontWeight::Bold
         };
-        let slant = if self.defaults.italic {
-            FontSlant::Italic
-        } else {
-            FontSlant::Normal
+        let slant = match self.defaults.style {
+            FontStyle::Italic => FontSlant::Italic,
+            FontStyle::Regular => FontSlant::Normal,
         };
 
         let scaled_font = font.resolve(size, slant, weight);

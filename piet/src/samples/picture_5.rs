@@ -2,8 +2,8 @@
 
 use crate::kurbo::{Size, Vec2};
 use crate::{
-    Color, Error, FontFamily, FontWeight, RenderContext, Text, TextAttribute, TextLayout,
-    TextLayoutBuilder,
+    Color, Error, FontFamily, FontStyle, FontWeight, RenderContext, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder,
 };
 
 pub const SIZE: Size = Size::new(480., 560.);
@@ -24,13 +24,13 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .max_width(200.0)
         .default_attribute(courier)
         .default_attribute(TextAttribute::Underline(true))
-        .default_attribute(TextAttribute::Italic(true))
+        .default_attribute(FontStyle::Italic)
         .default_attribute(TextAttribute::ForegroundColor(RED))
         .default_attribute(FontWeight::BOLD)
         .range_attribute(..200, TextAttribute::ForegroundColor(BLUE))
         .range_attribute(10..100, FontWeight::NORMAL)
         .range_attribute(40..300, TextAttribute::Underline(false))
-        .range_attribute(60..160, TextAttribute::Italic(false))
+        .range_attribute(60..160, FontStyle::Regular)
         .range_attribute(140..220, FontWeight::NORMAL)
         .range_attribute(240.., FontFamily::SYSTEM_UI)
         .build()?;

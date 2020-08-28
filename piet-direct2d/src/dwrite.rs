@@ -31,7 +31,7 @@ use wio::com::ComPtr;
 use wio::wide::{FromWide, ToWide};
 
 use piet::kurbo::Insets;
-use piet::{FontFamily as PietFontFamily, FontWeight, TextAlignment};
+use piet::{FontFamily as PietFontFamily, FontStyle, FontWeight, TextAlignment};
 
 use crate::Brush;
 
@@ -357,11 +357,10 @@ impl TextLayout {
         }
     }
 
-    pub(crate) fn set_italic(&mut self, range: Utf16Range, ital: bool) {
-        let val = if ital {
-            DWRITE_FONT_STYLE_ITALIC
-        } else {
-            DWRITE_FONT_STYLE_NORMAL
+    pub(crate) fn set_style(&mut self, range: Utf16Range, style: FontStyle) {
+        let val = match style {
+            FontStyle::Italic => DWRITE_FONT_STYLE_ITALIC,
+            FontStyle::Regular => DWRITE_FONT_STYLE_NORMAL,
         };
         unsafe {
             self.0.SetFontStyle(val, range.into());

@@ -3,7 +3,7 @@
 use std::ops::{Bound, Range, RangeBounds};
 
 use crate::kurbo::{Rect, Size};
-use crate::{Color, FontFamily, FontWeight, LineMetric, TextAttribute};
+use crate::{Color, FontFamily, FontStyle, FontWeight, LineMetric, TextAttribute};
 
 /// The default point sie for text in piet.
 pub const DEFAULT_FONT_SIZE: f64 = 12.0;
@@ -134,7 +134,7 @@ pub struct LayoutDefaults {
     pub font_size: f64,
     pub weight: FontWeight,
     pub fg_color: Color,
-    pub italic: bool,
+    pub style: FontStyle,
     pub underline: bool,
 }
 
@@ -145,7 +145,7 @@ impl LayoutDefaults {
             TextAttribute::FontFamily(t) => self.font = t,
             TextAttribute::FontSize(size) => self.font_size = size,
             TextAttribute::Weight(weight) => self.weight = weight,
-            TextAttribute::Italic(flag) => self.italic = flag,
+            TextAttribute::Style(style) => self.style = style,
             TextAttribute::Underline(flag) => self.underline = flag,
             TextAttribute::ForegroundColor(color) => self.fg_color = color,
         }
@@ -159,7 +159,7 @@ impl Default for LayoutDefaults {
             font_size: DEFAULT_FONT_SIZE,
             weight: FontWeight::default(),
             fg_color: DEFAULT_TEXT_COLOR,
-            italic: false,
+            style: FontStyle::default(),
             underline: false,
         }
     }
