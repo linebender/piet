@@ -2,8 +2,8 @@
 
 use crate::kurbo::Size;
 use crate::{
-    Color, Error, FontFamily, FontWeight, RenderContext, Text, TextAlignment, TextAttribute,
-    TextLayoutBuilder,
+    Color, Error, FontFamily, FontStyle, FontWeight, RenderContext, Text, TextAlignment,
+    TextAttribute, TextLayoutBuilder,
 };
 
 pub const SIZE: Size = Size::new(400., 800.);
@@ -38,7 +38,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         )
         .range_attribute(200.., FontWeight::EXTRA_BLACK)
         .range_attribute(220.., TextAttribute::FontSize(18.0))
-        .range_attribute(240.., TextAttribute::Italic(true))
+        .range_attribute(240.., FontStyle::Italic)
         .range_attribute(280.., TextAttribute::Underline(true))
         .build()?;
 

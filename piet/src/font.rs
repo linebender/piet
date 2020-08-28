@@ -40,8 +40,20 @@ pub enum FontFamilyInner {
 /// `FontWeight::BOLD`.
 ///
 /// [CSS `font-weight`]: https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FontWeight(u16);
+
+/// A font style, which may be italic or regular.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FontStyle {
+    /// Prefer the regular style for the current font family, if available.
+    Regular,
+    /// Prefer the italic style for the current font family, if available.
+    ///
+    /// If italic is not available and oblique is, we will use that; if neither
+    /// is available we will apply synthetic italics to the regular style.
+    Italic,
+}
 
 impl FontFamily {
     /// A san-serif font, such as Arial or Helvetica.
@@ -134,5 +146,11 @@ impl Default for FontFamily {
 impl Default for FontWeight {
     fn default() -> Self {
         FontWeight::REGULAR
+    }
+}
+
+impl Default for FontStyle {
+    fn default() -> Self {
+        FontStyle::Regular
     }
 }
