@@ -16,7 +16,7 @@ use std::sync::Arc;
 /// [`Text::font`] API.
 ///
 /// [`Text::font`]: trait.Text.html#tymethod.font
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FontFamily(FontFamilyInner);
 
 /// The inner representation of a font family.
