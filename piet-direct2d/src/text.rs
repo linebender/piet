@@ -1,5 +1,6 @@
 //! Text functionality for Piet direct2d backend
 
+mod glyph_iter;
 mod lines;
 
 use std::cell::{Cell, RefCell};
@@ -396,6 +397,15 @@ impl D2DTextLayout {
                 .unwrap();
             let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
             ctx.draw_text_layout(pos, &self.layout.borrow(), &black_brush, text_options);
+            let renderer = crate::text::glyph_iter::CustomRenderer::new().into_comptr();
+            unsafe {
+                (*self.layout.borrow_mut().get_raw()).Draw(
+                    std::ptr::null_mut(),
+                    renderer.as_raw(),
+                    0.0,
+                    0.0,
+                );
+            }
         }
     }
 
@@ -403,7 +413,7 @@ impl D2DTextLayout {
         if self.needs_to_set_colors.replace(false) {
             for (range, color) in &self.colors {
                 if let Ok(brush) = ctx.create_solid_color(conv::color_to_colorf(color.clone())) {
-                    self.layout.borrow_mut().set_foregound_brush(*range, brush)
+                    self.layout.borrow_mut().set_foregound_brush(*range, brush);
                 }
             }
         }
