@@ -1,6 +1,6 @@
 [package]
 name = "piet"
-version = "0.2.0-pre2"
+version = "0.2.0-pre3"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "An abstraction for 2D graphics."
 license = "MIT/Apache-2.0"
@@ -10,7 +10,7 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-kurbo = "0.6.2"
+kurbo = "0.6.3"
 pico-args =  { version = "0.3.3", optional = true }
 png = {version = "0.16.2", optional = true }
 os_info = { version = "2.0.7", optional = true, default-features = false }
