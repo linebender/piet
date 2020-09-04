@@ -184,7 +184,7 @@ impl TextLayout for CairoTextLayout {
             .line_metrics
             .last()
             .map(|l| l.y_offset + l.height)
-            .unwrap_or_default();
+            .unwrap_or_else(|| self.font.extents().height);
         self.size = Size::new(width, height);
 
         Ok(())

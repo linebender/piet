@@ -181,32 +181,20 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     fn build(self) -> Result<Self::Out, Error> {
         let (default_line_height, default_baseline) = self.get_default_line_height_and_baseline();
         let layout = self.layout?;
-        let line_metrics = lines::fetch_line_metrics(&self.text, &layout);
-        let text_metrics = layout.get_metrics();
-        let overhang = layout.get_overhang_metrics();
 
-        let size = Size::new(text_metrics.width as f64, text_metrics.height as f64);
-        let overhang_width = text_metrics.layoutWidth as f64 + overhang.x1;
-        let overhang_height = text_metrics.layoutHeight as f64 + overhang.y1;
-
-        let inking_insets = Insets::new(
-            overhang.x0,
-            overhang.y0,
-            overhang_width - size.width,
-            overhang_height - size.height,
-        );
-
-        Ok(D2DTextLayout {
+        let mut layout = D2DTextLayout {
             text: self.text,
             colors: self.colors,
             needs_to_set_colors: Cell::new(true),
-            line_metrics,
+            line_metrics: Default::default(),
             layout: Rc::new(RefCell::new(layout)),
-            size,
-            inking_insets,
+            size: Size::ZERO,
+            inking_insets: Insets::ZERO,
             default_line_height,
             default_baseline,
-        })
+        };
+        layout.rebuild_metrics();
+        Ok(layout)
     }
 }
 
@@ -298,13 +286,10 @@ impl TextLayout for D2DTextLayout {
     }
 
     /// given a new max width, update width of text layout to fit within the max width
-    // TODO add this doc to trait method? or is this windows specific?
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
-
         self.layout.borrow_mut().set_max_width(new_width)?;
-        self.line_metrics = lines::fetch_line_metrics(&self.text, &self.layout.borrow());
-
+        self.rebuild_metrics();
         Ok(())
     }
 
@@ -387,6 +372,28 @@ impl TextLayout for D2DTextLayout {
 }
 
 impl D2DTextLayout {
+    // must be called after build and after updating the width
+    fn rebuild_metrics(&mut self) {
+        let line_metrics = lines::fetch_line_metrics(&self.text, &self.layout.borrow());
+        let text_metrics = self.layout.borrow().get_metrics();
+        let overhang = self.layout.borrow().get_overhang_metrics();
+
+        let size = Size::new(text_metrics.width as f64, text_metrics.height as f64);
+        let overhang_width = text_metrics.layoutWidth as f64 + overhang.x1;
+        let overhang_height = text_metrics.layoutHeight as f64 + overhang.y1;
+
+        let inking_insets = Insets::new(
+            overhang.x0,
+            overhang.y0,
+            overhang_width - size.width,
+            overhang_height - size.height,
+        );
+
+        self.size = size;
+        self.line_metrics = line_metrics;
+        self.inking_insets = inking_insets;
+    }
+
     pub fn draw(&self, pos: Point, ctx: &mut D2DDeviceContext) {
         if !self.text.is_empty() {
             self.resolve_colors_if_needed(ctx);
