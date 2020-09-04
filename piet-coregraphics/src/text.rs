@@ -562,6 +562,10 @@ impl TextLayout for CoreGraphicsTextLayout {
             self.frame = Some(frame);
             self.frame_size = Size::new(frame_size.width, frame_size.height);
 
+            if self.text.is_empty() {
+                self.frame_size.height = self.default_line_height;
+            }
+
             let mut line_bounds = lines
                 .iter()
                 .map(|l| Line::new(&l).get_image_bounds())
