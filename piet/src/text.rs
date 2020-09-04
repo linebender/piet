@@ -1,6 +1,7 @@
 //! Traits for fonts and text handling.
 
 use std::ops::{Range, RangeBounds};
+use std::sync::Arc;
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::{Color, Error, FontFamily, FontStyle, FontWeight};
@@ -97,8 +98,13 @@ pub trait Text: Clone {
     /// The returned object is a [`TextLayoutBuilder`]; methods on that type
     /// can be used to customize the layout.
     ///
+    /// The text is a type that impls `Into<Arc<str>>`. This is an optimization;
+    /// because the layout object needs to retain the text, if the caller wants
+    /// to avoid duplicate data they can use an `Arc`. If this doesn't matter,
+    /// they can pass a `&str`, which the layout will retain.
+    ///
     /// [`TextLayoutBuilder`]: trait.TextLayoutBuilder.html
-    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder;
+    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder;
 }
 
 /// Attributes that can be applied to text.

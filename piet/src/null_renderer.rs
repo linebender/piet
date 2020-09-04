@@ -2,6 +2,7 @@
 
 use std::borrow::Cow;
 use std::ops::RangeBounds;
+use std::sync::Arc;
 
 use kurbo::{Affine, Point, Rect, Shape, Size};
 
@@ -135,7 +136,7 @@ impl Text for NullText {
         Ok(FontFamily::default())
     }
 
-    fn new_text_layout(&mut self, _text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, _text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
 
