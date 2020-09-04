@@ -4,6 +4,7 @@ mod grapheme;
 mod lines;
 
 use std::ops::RangeBounds;
+use std::sync::Arc;
 
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
@@ -36,14 +37,14 @@ pub struct CairoTextLayout {
     pub(crate) fg_color: Color,
     size: Size,
     pub(crate) font: ScaledFont,
-    pub(crate) text: String,
+    pub(crate) text: Arc<str>,
 
     // currently calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
 }
 
 pub struct CairoTextLayoutBuilder {
-    text: String,
+    text: Arc<str>,
     defaults: util::LayoutDefaults,
     width_constraint: f64,
 }
@@ -71,10 +72,10 @@ impl Text for CairoText {
         Err(Error::NotSupported)
     }
 
-    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
         CairoTextLayoutBuilder {
             defaults: util::LayoutDefaults::default(),
-            text: text.to_owned(),
+            text: text.into(),
             width_constraint: f64::INFINITY,
         }
     }

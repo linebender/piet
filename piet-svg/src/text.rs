@@ -1,6 +1,7 @@
 //! Text functionality for Piet svg backend
 
 use std::ops::RangeBounds;
+use std::sync::Arc;
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, TextAttribute};
@@ -30,7 +31,7 @@ impl piet::Text for Text {
         Ok(FontFamily::default())
     }
 
-    fn new_text_layout(&mut self, _text: &str) -> TextLayoutBuilder {
+    fn new_text_layout(&mut self, _text: impl Into<Arc<str>>) -> TextLayoutBuilder {
         TextLayoutBuilder
     }
 }

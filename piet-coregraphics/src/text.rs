@@ -49,7 +49,7 @@ struct TextState {
 
 #[derive(Clone)]
 pub struct CoreGraphicsTextLayout {
-    text: String,
+    text: Arc<str>,
     attr_string: AttributedString,
     framesetter: Framesetter,
     pub(crate) frame: Option<Frame>,
@@ -69,7 +69,7 @@ pub struct CoreGraphicsTextLayout {
 pub struct CoreGraphicsTextLayoutBuilder {
     width: f64,
     alignment: TextAlignment,
-    text: String,
+    text: Arc<str>,
     /// the end bound up to which we have already added attrs to our AttributedString
     last_resolved_pos: usize,
     last_resolved_utf16: usize,
@@ -433,7 +433,7 @@ impl Text for CoreGraphicsText {
         self.shared.get_font(family_name)
     }
 
-    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
         CoreGraphicsTextLayoutBuilder::new(text)
     }
 
@@ -464,13 +464,14 @@ impl SharedTextState {
 }
 
 impl CoreGraphicsTextLayoutBuilder {
-    fn new(text: &str) -> Self {
-        let attr_string = AttributedString::new(text);
+    fn new(text: impl Into<Arc<str>>) -> Self {
+        let text = text.into();
+        let attr_string = AttributedString::new(&text);
         CoreGraphicsTextLayoutBuilder {
             width: f64::INFINITY,
             alignment: TextAlignment::default(),
             attrs: Default::default(),
-            text: text.to_string(),
+            text,
             last_resolved_pos: 0,
             last_resolved_utf16: 0,
             attr_string,
@@ -741,7 +742,7 @@ impl TextLayout for CoreGraphicsTextLayout {
 
 impl CoreGraphicsTextLayout {
     fn new(
-        text: String,
+        text: Arc<str>,
         attr_string: AttributedString,
         width_constraint: f64,
         default_baseline: f64,

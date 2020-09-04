@@ -5,6 +5,7 @@ mod lines;
 
 use std::borrow::Cow;
 use std::ops::RangeBounds;
+use std::sync::Arc;
 
 use web_sys::CanvasRenderingContext2d;
 
@@ -32,7 +33,7 @@ pub struct WebTextLayout {
     ctx: CanvasRenderingContext2d,
     // TODO like cairo, should this be pub(crate)?
     pub font: WebFont,
-    pub text: String,
+    pub text: Arc<str>,
 
     // Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
@@ -42,7 +43,7 @@ pub struct WebTextLayout {
 pub struct WebTextLayoutBuilder {
     ctx: CanvasRenderingContext2d,
     font: WebFont,
-    text: String,
+    text: Arc<str>,
     width: f64,
 }
 
@@ -67,13 +68,13 @@ impl Text for WebText {
         Err(Error::MissingFeature)
     }
 
-    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
             font: WebFont::new(FontFamily::default()),
-            text: text.to_owned(),
+            text: text.into(),
             width: f64::INFINITY,
         }
     }

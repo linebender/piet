@@ -43,7 +43,7 @@ struct LoadedFonts {
 
 #[derive(Clone)]
 pub struct D2DTextLayout {
-    text: String,
+    text: Arc<str>,
     // currently calculated on build
     line_metrics: Vec<LineMetric>,
     size: Size,
@@ -62,7 +62,7 @@ pub struct D2DTextLayout {
 }
 
 pub struct D2DTextLayoutBuilder {
-    text: String,
+    text: Arc<str>,
     layout: Result<dwrite::TextLayout, Error>,
     len_utf16: usize,
     loaded_fonts: Rc<RefCell<LoadedFonts>>,
@@ -105,16 +105,17 @@ impl Text for D2DText {
         self.loaded_fonts.borrow_mut().add(data)
     }
 
-    fn new_text_layout(&mut self, text: &str) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
+        let text = text.into();
         let width = f32::INFINITY;
-        let wide_str = text.to_wide();
+        let wide_str = ToWide::to_wide(&text.as_ref());
         let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32)
             .and_then(|format| dwrite::TextLayout::new(&self.dwrite, format, width, &wide_str))
             .map_err(Into::into);
 
         D2DTextLayoutBuilder {
             layout,
-            text: text.to_owned(),
+            text,
             len_utf16: wide_str.len(),
             colors: Vec::new(),
             loaded_fonts: self.loaded_fonts.clone(),
