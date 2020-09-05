@@ -135,8 +135,7 @@ impl CoreGraphicsTextLayoutBuilder {
         }
         // Some attributes are 'standalone' and can just be added to the attributed string
         // immediately.
-        if matches!(&attr, TextAttribute::ForegroundColor(_) | TextAttribute::Underline(_) | TextAttribute::Strikethrough(_))
-        {
+        if matches!(&attr, TextAttribute::ForegroundColor(_) | TextAttribute::Underline(_)) {
             return self.add_immediately(attr, range);
         }
 
@@ -165,8 +164,6 @@ impl CoreGraphicsTextLayoutBuilder {
             .set_fg_color(whole_range, &self.attrs.defaults.fg_color);
         self.attr_string
             .set_underline(whole_range, self.attrs.defaults.underline);
-        self.attr_string
-            .set_strikethrough(whole_range, self.attrs.defaults.strikethrough);
     }
 
     fn add_immediately(&mut self, attr: TextAttribute, range: Range<usize>) {
@@ -178,7 +175,6 @@ impl CoreGraphicsTextLayoutBuilder {
                 self.attr_string.set_fg_color(range, &color);
             }
             TextAttribute::Underline(flag) => self.attr_string.set_underline(range, flag),
-            TextAttribute::Strikethrough(flag) => self.attr_string.set_strikethrough(range, flag),
             _ => unreachable!(),
         }
     }
