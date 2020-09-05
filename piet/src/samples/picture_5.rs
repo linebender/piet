@@ -29,6 +29,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .default_attribute(FontWeight::BOLD)
         .range_attribute(..200, TextAttribute::ForegroundColor(BLUE))
         .range_attribute(10..100, FontWeight::NORMAL)
+        .range_attribute(20..50, TextAttribute::Strikethrough(true))
         .range_attribute(40..300, TextAttribute::Underline(false))
         .range_attribute(60..160, FontStyle::Regular)
         .range_attribute(140..220, FontWeight::NORMAL)

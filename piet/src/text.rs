@@ -123,6 +123,8 @@ pub enum TextAttribute {
     Style(FontStyle),
     /// Underline.
     Underline(bool),
+    /// Strikethrough
+    Strikethrough(bool),
 }
 
 /// A trait for laying out text.

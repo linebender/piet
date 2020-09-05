@@ -171,6 +171,26 @@ impl AttributedString {
         }
     }
 
+    #[allow(non_upper_case_globals)]
+    pub(crate) fn set_strikethrough(&mut self, range: CFRange, strikethrough: bool) {
+        // UnderlineStyle constants are also used for strikethrough styles
+        const kCTUnderlineStyleNone: i32 = 0x00;
+        const kCTUnderlineStyleSingle: i32 = 0x01;
+
+        let value = if strikethrough {
+            kCTUnderlineStyleSingle
+        } else {
+            kCTUnderlineStyleNone
+        };
+        unsafe {
+            self.inner.set_attribute(
+                range,
+                string_attributes::kCTStrikethroughStyleAttributeName,
+                &CFNumber::from(value).as_CFType(),
+            )
+        }
+    }
+
     pub(crate) fn set_fg_color(&mut self, range: CFRange, color: &Color) {
         let (r, g, b, a) = color.as_rgba();
         let color = CGColor::rgb(r, g, b, a);

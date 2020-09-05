@@ -374,6 +374,13 @@ impl TextLayout {
         }
     }
 
+    pub(crate) fn set_strikethrough(&mut self, range: Utf16Range, flag: bool) {
+        let flag = if flag { TRUE } else { FALSE };
+        unsafe {
+            self.0.SetStrikethrough(flag, range.into());
+        }
+    }
+
     pub(crate) fn set_size(&mut self, range: Utf16Range, size: f32) {
         unsafe {
             self.0.SetFontSize(size, range.into());
