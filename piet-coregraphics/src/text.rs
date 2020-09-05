@@ -323,6 +323,8 @@ impl Attributes {
             TextAttribute::Weight(w) => self.weight = Some(Span::new(w, range)),
             TextAttribute::FontSize(s) => self.size = Some(Span::new(s, range)),
             TextAttribute::Style(s) => self.style = Some(Span::new(s, range)),
+            TextAttribute::Strikethrough(_) => { /* Unimplemented for now as coregraphics doesn't have native strikethrough support. */
+            }
             _ => unreachable!(),
         }
     }
