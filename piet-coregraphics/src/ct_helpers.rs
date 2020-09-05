@@ -97,6 +97,11 @@ struct CTParagraphStyleSetting {
     value: *const c_void,
 }
 
+#[allow(non_upper_case_globals)]
+// UnderlineStyle constants are also used for strikethrough styles
+const kCTUnderlineStyleNone: i32 = 0x00;
+const kCTUnderlineStyleSingle: i32 = 0x01;
+
 impl CTParagraphStyleSetting {
     fn alignment(alignment: TextAlignment, is_rtl: bool) -> Self {
         static LEFT: CTTextAlignment = CTTextAlignment::Left;
@@ -154,9 +159,6 @@ impl AttributedString {
 
     #[allow(non_upper_case_globals)]
     pub(crate) fn set_underline(&mut self, range: CFRange, underline: bool) {
-        const kCTUnderlineStyleNone: i32 = 0x00;
-        const kCTUnderlineStyleSingle: i32 = 0x01;
-
         let value = if underline {
             kCTUnderlineStyleSingle
         } else {
@@ -171,12 +173,7 @@ impl AttributedString {
         }
     }
 
-    #[allow(non_upper_case_globals)]
     pub(crate) fn set_strikethrough(&mut self, range: CFRange, strikethrough: bool) {
-        // UnderlineStyle constants are also used for strikethrough styles
-        const kCTUnderlineStyleNone: i32 = 0x00;
-        const kCTUnderlineStyleSingle: i32 = 0x01;
-
         let value = if strikethrough {
             kCTUnderlineStyleSingle
         } else {
