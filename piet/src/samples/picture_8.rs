@@ -40,6 +40,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(220.., TextAttribute::FontSize(18.0))
         .range_attribute(240.., FontStyle::Italic)
         .range_attribute(280.., TextAttribute::Underline(true))
+        .range_attribute(320.., TextAttribute::Strikethrough(true))
         .build()?;
 
     rc.draw_text(&en_leading, (0., 0.));
