@@ -123,7 +123,7 @@ pub enum TextAttribute {
     Style(FontStyle),
     /// Underline.
     Underline(bool),
-    /// Strikethrough
+    /// Strikethrough.
     Strikethrough(bool),
 }
 
