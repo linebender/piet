@@ -193,9 +193,52 @@ impl Color {
         )
     }
 
+    /// Interpolate between the two colors in each of the r, g, b, and a channels.
+    ///
+    /// `t` is a number between 0 and 1 where '0' means only the first color and '1' means only the
+    /// second. Values outside this range will be clamped.
+    ///
+    /// # Panics
+    ///
+    /// if `t` is `NaN` then the function will panic.
+    pub fn rgba_lerp(&self, other: &Color, t: f64) -> Color {
+        assert!(!t.is_nan(), "passed t=NAN to `rgba_lerp`");
+        let t = t.max(0.).min(1.);
+        let (r1, g1, b1, a1) = self.as_rgba();
+        let (r2, g2, b2, a2) = other.as_rgba();
+        let mt = 1. - t;
+        Color::rgba(
+            r1 * mt + r2 * t,
+            g1 * mt + g2 * t,
+            b1 * mt + b2 * t,
+            a1 * mt + a2 * t,
+        )
+    }
+
     /// Opaque white.
     pub const WHITE: Color = Color::rgb8(0xff, 0xff, 0xff);
 
     /// Opaque black.
     pub const BLACK: Color = Color::rgb8(0, 0, 0);
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn rgba_lerp() {
+        use super::Color;
+        assert_eq!(
+            Color::BLACK.rgba_lerp(&Color::WHITE, 0.0),
+            Color::rgba(0.0, 0.0, 0.0, 1.0)
+        );
+        assert_eq!(
+            Color::BLACK.rgba_lerp(&Color::WHITE, 0.5),
+            Color::rgba(0.5, 0.5, 0.5, 1.0)
+        );
+        assert_eq!(
+            Color::BLACK.rgba_lerp(&Color::WHITE, 1.0),
+            Color::rgba(1.0, 1.0, 1.0, 1.0)
+        );
+    }
 }
