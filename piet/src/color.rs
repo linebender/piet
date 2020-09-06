@@ -229,15 +229,15 @@ mod tests {
     fn rgba_lerp() {
         use super::Color;
         assert_eq!(
-            Color::BLACK.rgba_lerp(&Color::WHITE, 0.0),
+            Color::rgba_lerp(&Color::BLACK, &Color::WHITE, 0.0),
             Color::rgba(0.0, 0.0, 0.0, 1.0)
         );
         assert_eq!(
-            Color::BLACK.rgba_lerp(&Color::WHITE, 0.5),
+            Color::rgba_lerp(&Color::BLACK, &Color::WHITE, 0.5),
             Color::rgba(0.5, 0.5, 0.5, 1.0)
         );
         assert_eq!(
-            Color::BLACK.rgba_lerp(&Color::WHITE, 1.0),
+            Color::rgba_lerp(&Color::BLACK, &Color::WHITE, 1.0),
             Color::rgba(1.0, 1.0, 1.0, 1.0)
         );
     }
