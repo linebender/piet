@@ -45,7 +45,7 @@ struct LoadedFonts {
 pub struct D2DTextLayout {
     text: Arc<str>,
     // currently calculated on build
-    line_metrics: Vec<LineMetric>,
+    line_metrics: Rc<[LineMetric]>,
     size: Size,
     /// insets that, when applied to our layout rect, generates our inking/image rect.
     inking_insets: Insets,
@@ -57,7 +57,7 @@ pub struct D2DTextLayout {
     default_baseline: f64,
     // colors are only added to the layout lazily, because we need access to d2d::DeviceContext
     // in order to generate the brushes.
-    colors: Vec<(Utf16Range, Color)>,
+    colors: Rc<[(Utf16Range, Color)]>,
     needs_to_set_colors: Cell<bool>,
 }
 
@@ -185,9 +185,9 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
 
         let mut layout = D2DTextLayout {
             text: self.text,
-            colors: self.colors,
+            colors: self.colors.into(),
             needs_to_set_colors: Cell::new(true),
-            line_metrics: Default::default(),
+            line_metrics: Rc::new([]),
             layout: Rc::new(RefCell::new(layout)),
             size: Size::ZERO,
             inking_insets: Insets::ZERO,
@@ -392,7 +392,7 @@ impl D2DTextLayout {
         );
 
         self.size = size;
-        self.line_metrics = line_metrics;
+        self.line_metrics = line_metrics.into();
         self.inking_insets = inking_insets;
     }
 
@@ -410,7 +410,7 @@ impl D2DTextLayout {
 
     fn resolve_colors_if_needed(&self, ctx: &mut D2DDeviceContext) {
         if self.needs_to_set_colors.replace(false) {
-            for (range, color) in &self.colors {
+            for (range, color) in self.colors.as_ref() {
                 if let Ok(brush) = ctx.create_solid_color(conv::color_to_colorf(color.clone())) {
                     self.layout.borrow_mut().set_foregound_brush(*range, brush)
                 }

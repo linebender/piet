@@ -67,7 +67,7 @@ mod test {
             .unwrap();
 
         println!("{:#?}", layout.line_metrics);
-        assert_eq!(layout.line_metrics, expected);
+        assert_eq!(layout.line_metrics.as_ref(), expected.as_slice());
     }
 
     // Test at three different widths: small, medium, large.
