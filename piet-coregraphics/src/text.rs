@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::ops::{Range, RangeBounds};
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use core_foundation::base::TCFType;
@@ -54,9 +55,9 @@ pub struct CoreGraphicsTextLayout {
     framesetter: Framesetter,
     pub(crate) frame: Option<Frame>,
     // distance from the top of the frame to the baseline of each line
-    pub(crate) line_y_positions: Vec<f64>,
+    pub(crate) line_y_positions: Rc<[f64]>,
     /// offsets in utf8 of lines
-    line_offsets: Vec<usize>,
+    line_offsets: Rc<[usize]>,
     pub(crate) frame_size: Size,
     image_bounds: Rect,
     width_constraint: f64,
@@ -760,10 +761,10 @@ impl CoreGraphicsTextLayout {
             frame: None,
             frame_size: Size::ZERO,
             image_bounds: Rect::ZERO,
-            line_y_positions: Vec::new(),
+            line_y_positions: Rc::new([]),
             // NaN to ensure we always execute code in update_width
             width_constraint: f64::NAN,
-            line_offsets: Vec::new(),
+            line_offsets: Rc::new([]),
             default_baseline,
             default_line_height,
         };
@@ -816,7 +817,7 @@ impl CoreGraphicsTextLayout {
                 }
                 panic!("error calculating utf8 offsets");
             })
-            .collect::<Vec<_>>();
+            .collect();
     }
 
     fn line_range(&self, line: usize) -> Option<(usize, usize)> {
