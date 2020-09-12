@@ -182,10 +182,6 @@ impl TextLayout for NullTextLayout {
         Rect::ZERO
     }
 
-    fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<(), Error> {
-        Ok(())
-    }
-
     fn line_text(&self, _line_number: usize) -> Option<&str> {
         None
     }

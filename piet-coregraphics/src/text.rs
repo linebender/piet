@@ -545,45 +545,6 @@ impl TextLayout for CoreGraphicsTextLayout {
         &self.text
     }
 
-    #[allow(clippy::float_cmp)]
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
-        let width = new_width.into().unwrap_or(f64::INFINITY);
-        if width.ceil() != self.width_constraint.ceil() {
-            let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
-            let char_range = self.attr_string.range();
-            let (frame_size, _) = self.framesetter.suggest_frame_size(char_range, constraints);
-            let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
-            let path = CGPath::from_rect(rect, None);
-            self.width_constraint = width;
-            let frame = self.framesetter.create_frame(char_range, &path);
-            let lines = frame.get_lines();
-            let line_count = lines.len();
-            let line_origins = frame.get_line_origins(CFRange::init(0, line_count));
-            self.line_y_positions = line_origins
-                .iter()
-                .map(|l| frame_size.height - l.y)
-                .collect();
-            self.frame = Some(frame);
-            self.frame_size = Size::new(frame_size.width, frame_size.height);
-
-            if self.text.is_empty() {
-                self.frame_size.height = self.default_line_height;
-            }
-
-            let mut line_bounds = lines
-                .iter()
-                .map(|l| Line::new(&l).get_image_bounds())
-                .zip(self.line_y_positions.iter())
-                .map(|(rect, y_pos)| Rect::new(rect.x0, y_pos - rect.y1, rect.x1, y_pos - rect.y0));
-
-            let first_line_bounds = line_bounds.next().unwrap_or_default();
-            self.image_bounds = line_bounds.fold(first_line_bounds, |acc, el| acc.union(el));
-
-            self.rebuild_line_offsets();
-        }
-        Ok(())
-    }
-
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_range(line_number)
             .map(|(start, end)| unsafe { self.text.get_unchecked(start..end) })
@@ -770,6 +731,46 @@ impl CoreGraphicsTextLayout {
         };
         layout.update_width(width_constraint).unwrap();
         layout
+    }
+
+    // this used to be part of the TextLayout trait; see https://github.com/linebender/piet/issues/298
+    #[allow(clippy::float_cmp)]
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        let width = new_width.into().unwrap_or(f64::INFINITY);
+        if width.ceil() != self.width_constraint.ceil() {
+            let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
+            let char_range = self.attr_string.range();
+            let (frame_size, _) = self.framesetter.suggest_frame_size(char_range, constraints);
+            let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
+            let path = CGPath::from_rect(rect, None);
+            self.width_constraint = width;
+            let frame = self.framesetter.create_frame(char_range, &path);
+            let lines = frame.get_lines();
+            let line_count = lines.len();
+            let line_origins = frame.get_line_origins(CFRange::init(0, line_count));
+            self.line_y_positions = line_origins
+                .iter()
+                .map(|l| frame_size.height - l.y)
+                .collect();
+            self.frame = Some(frame);
+            self.frame_size = Size::new(frame_size.width, frame_size.height);
+
+            if self.text.is_empty() {
+                self.frame_size.height = self.default_line_height;
+            }
+
+            let mut line_bounds = lines
+                .iter()
+                .map(|l| Line::new(&l).get_image_bounds())
+                .zip(self.line_y_positions.iter())
+                .map(|(rect, y_pos)| Rect::new(rect.x0, y_pos - rect.y1, rect.x1, y_pos - rect.y0));
+
+            let first_line_bounds = line_bounds.next().unwrap_or_default();
+            self.image_bounds = line_bounds.fold(first_line_bounds, |acc, el| acc.union(el));
+
+            self.rebuild_line_offsets();
+        }
+        Ok(())
     }
 
     pub(crate) fn draw(&self, ctx: &mut CGContextRef) {

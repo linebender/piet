@@ -165,25 +165,6 @@ impl TextLayout for WebTextLayout {
         &self.text
     }
 
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
-        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
-
-        let line_metrics =
-            lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
-
-        let max_width = line_metrics
-            .iter()
-            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx))
-            .fold(0., f64::max);
-        let height = line_metrics
-            .last()
-            .map(|l| l.y_offset + l.height)
-            .unwrap_or_default();
-        self.line_metrics = line_metrics;
-        self.size = Size::new(max_width, height);
-        Ok(())
-    }
-
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_metrics
             .get(line_number)
@@ -265,6 +246,27 @@ impl TextLayout for WebTextLayout {
 
         let x_pos = hit_test_line_position(&self.ctx, line, line_position);
         HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
+    }
+}
+
+impl WebTextLayout {
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+
+        let line_metrics =
+            lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
+
+        let max_width = line_metrics
+            .iter()
+            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx))
+            .fold(0., f64::max);
+        let height = line_metrics
+            .last()
+            .map(|l| l.y_offset + l.height)
+            .unwrap_or_default();
+        self.line_metrics = line_metrics;
+        self.size = Size::new(max_width, height);
+        Ok(())
     }
 }
 
