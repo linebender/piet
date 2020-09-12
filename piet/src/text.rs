@@ -265,9 +265,6 @@ pub enum TextAlignment {
 /// A text layout may be broken into multiple lines in order to fit within a given width.
 /// Line breaking is generally done between words (whitespace-separated).
 ///
-/// When resizing the width of the text layout, calling [`update_width`][]
-/// on the text layout will recalculate line breaks and modify in-place.
-///
 /// A line's text and [`LineMetric`][]s can be accessed by 0-indexed line number.
 ///
 /// ## Text Position
@@ -281,9 +278,7 @@ pub enum TextAlignment {
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
 ///
-/// [`update_width`]: trait.TextLayout.html#tymethod.update_width
 /// [`LineMetric`]: struct.LineMetric.html
-///
 pub trait TextLayout: Clone {
     /// Measure the advance width of the text.
     #[deprecated(since = "0.2.0", note = "Use size().width insead")]
@@ -316,12 +311,6 @@ pub trait TextLayout: Clone {
 
     /// The text used to create this layout.
     fn text(&self) -> &str;
-
-    /// Change the width of this `TextLayout`.
-    ///
-    /// This may be an `f64`, or `None` if this layout is not constrained;
-    /// `None` is equivalent to `f64::INFINITY`.
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error>;
 
     /// Given a line number, return a reference to that line's underlying string.
     fn line_text(&self, line_number: usize) -> Option<&str>;

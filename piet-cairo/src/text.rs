@@ -170,27 +170,6 @@ impl TextLayout for CairoTextLayout {
         &self.text
     }
 
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
-        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
-
-        self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
-
-        let width = self
-            .line_metrics
-            .iter()
-            .map(|lm| self.font.text_extents(&self.text[lm.range()]).x_advance)
-            .fold(0.0, |a: f64, b| a.max(b));
-
-        let height = self
-            .line_metrics
-            .last()
-            .map(|l| l.y_offset + l.height)
-            .unwrap_or_else(|| self.font.extents().height);
-        self.size = Size::new(width, height);
-
-        Ok(())
-    }
-
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_metrics
             .get(line_number)
@@ -274,6 +253,29 @@ impl TextLayout for CairoTextLayout {
 
         let x_pos = hit_test_line_position(&self.font, line, line_position);
         HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
+    }
+}
+
+impl CairoTextLayout {
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+
+        self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
+
+        let width = self
+            .line_metrics
+            .iter()
+            .map(|lm| self.font.text_extents(&self.text[lm.range()]).x_advance)
+            .fold(0.0, |a: f64, b| a.max(b));
+
+        let height = self
+            .line_metrics
+            .last()
+            .map(|l| l.y_offset + l.height)
+            .unwrap_or_else(|| self.font.extents().height);
+        self.size = Size::new(width, height);
+
+        Ok(())
     }
 }
 

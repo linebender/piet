@@ -80,11 +80,6 @@ impl piet::TextLayout for TextLayout {
     }
 
     #[allow(clippy::unimplemented)]
-    fn update_width(&mut self, _new_width: impl Into<Option<f64>>) -> Result<()> {
-        unimplemented!();
-    }
-
-    #[allow(clippy::unimplemented)]
     fn line_text(&self, _line_number: usize) -> Option<&str> {
         unimplemented!();
     }

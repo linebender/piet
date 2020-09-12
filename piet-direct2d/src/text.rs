@@ -288,14 +288,6 @@ impl TextLayout for D2DTextLayout {
         &self.text
     }
 
-    /// given a new max width, update width of text layout to fit within the max width
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
-        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
-        self.layout.borrow_mut().set_max_width(new_width)?;
-        self.rebuild_metrics();
-        Ok(())
-    }
-
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_metrics
             .get(line_number)
@@ -800,34 +792,6 @@ mod test {
         assert_eq!(layout.line_text(2), Some("most"));
         assert_eq!(layout.line_text(3), Some("best"));
         assert_eq!(layout.line_text(4), None);
-    }
-
-    #[test]
-    fn test_change_width() {
-        let input = "piet text most best";
-        let width_small = 30.0;
-        let width_medium = 60.0;
-        let width_large = 1000.0;
-
-        let mut text_layout = D2DText::new_for_test();
-        let font = text_layout.font_family("Segoe UI").unwrap();
-        let mut layout = text_layout
-            .new_text_layout(input)
-            .font(font, 12.0)
-            .max_width(width_small)
-            .build()
-            .unwrap();
-
-        assert_eq!(layout.line_count(), 4);
-        assert_eq!(layout.line_text(0), Some("piet"));
-
-        layout.update_width(width_medium).unwrap();
-        assert_eq!(layout.line_count(), 2);
-        assert_eq!(layout.line_text(0), Some("piet text"));
-
-        layout.update_width(width_large).unwrap();
-        assert_eq!(layout.line_count(), 1);
-        assert_eq!(layout.line_text(0), Some("piet text most best"));
     }
 
     // NOTE be careful, windows will break lines at the sub-word level!
