@@ -17,13 +17,14 @@ use wio::wide::ToWide;
 use piet::kurbo::{Insets, Point, Rect, Size};
 use piet::util;
 use piet::{
-    Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAlignment,
-    TextAttribute, TextLayout, TextLayoutBuilder,
+    Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, RenderContext, Text,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
 use crate::conv;
 use crate::d2d;
 use crate::dwrite::{self, TextFormat, Utf16Range};
+use crate::D2DRenderContext;
 
 #[derive(Clone)]
 pub struct D2DText {
@@ -396,24 +397,22 @@ impl D2DTextLayout {
         self.inking_insets = inking_insets;
     }
 
-    pub fn draw(&self, pos: Point, ctx: &mut D2DDeviceContext) {
+    pub fn draw(&self, pos: Point, ctx: &mut D2DRenderContext) {
         if !self.text.is_empty() {
             self.resolve_colors_if_needed(ctx);
             let pos = conv::to_point2f(pos);
-            let black_brush = ctx
-                .create_solid_color(conv::color_to_colorf(Color::BLACK))
-                .unwrap();
+            let black_brush = ctx.solid_brush(Color::BLACK);
             let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
-            ctx.draw_text_layout(pos, &self.layout.borrow(), &black_brush, text_options);
+            ctx.rt
+                .draw_text_layout(pos, &self.layout.borrow(), &black_brush, text_options);
         }
     }
 
-    fn resolve_colors_if_needed(&self, ctx: &mut D2DDeviceContext) {
+    fn resolve_colors_if_needed(&self, ctx: &mut D2DRenderContext) {
         if self.needs_to_set_colors.replace(false) {
             for (range, color) in self.colors.as_ref() {
-                if let Ok(brush) = ctx.create_solid_color(conv::color_to_colorf(color.clone())) {
-                    self.layout.borrow_mut().set_foregound_brush(*range, brush)
-                }
+                let brush = ctx.solid_brush(color.clone());
+                self.layout.borrow_mut().set_foregound_brush(*range, brush)
             }
         }
     }
