@@ -12,6 +12,8 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::{null, null_mut};
 
+use associative_cache::{AssociativeCache, Capacity64, HashDirectMapped, RoundRobinReplacement};
+
 use wio::com::ComPtr;
 
 use winapi::shared::dxgi::{IDXGIDevice, IDXGISurface};
@@ -49,6 +51,7 @@ pub enum FillRule {
     NonZero,
 }
 
+#[derive(Clone)]
 pub enum Error {
     WinapiError(HRESULT),
 }
@@ -75,8 +78,16 @@ unsafe impl Send for D2DDevice {}
 ///
 /// This struct is public only to use for system integration in piet_common and druid-shell. It is not intended
 /// that end-users directly use this struct.
-#[derive(Clone)]
-pub struct DeviceContext(ComPtr<ID2D1DeviceContext>);
+pub struct DeviceContext(
+    ComPtr<ID2D1DeviceContext>,
+    AssociativeCache<
+        ColorWrapper,
+        Result<Brush, Error>,
+        Capacity64,
+        HashDirectMapped,
+        RoundRobinReplacement,
+    >,
+);
 
 pub struct PathGeometry(ComPtr<ID2D1PathGeometry>);
 
@@ -108,6 +119,10 @@ pub struct Effect(ComPtr<ID2D1Effect>);
 // Note: there may be an opportunity here to combine with the version in
 // piet-common direct2d_back, but the use cases are somewhat different.
 pub struct BitmapRenderTarget(ComPtr<ID2D1BitmapRenderTarget>);
+
+// A wrapper that exists solely to implement Hash and PartialEq over
+// color values so we can cache brushes.
+struct ColorWrapper(D2D1_COLOR_F);
 
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {
@@ -240,7 +255,7 @@ impl D2DDevice {
             let mut ptr = null_mut();
             let options = D2D1_DEVICE_CONTEXT_OPTIONS_NONE;
             let hr = self.0.CreateDeviceContext(options, &mut ptr);
-            wrap(hr, ptr, DeviceContext)
+            wrap(hr, ptr, |c| DeviceContext::new(c))
         }
     }
 }
@@ -263,7 +278,7 @@ impl DeviceContext {
     /// # Safety
     /// TODO
     pub unsafe fn new(ptr: ComPtr<ID2D1DeviceContext>) -> DeviceContext {
-        DeviceContext(ptr)
+        DeviceContext(ptr, Default::default())
     }
 
     /// Get the raw pointer
@@ -429,13 +444,20 @@ impl DeviceContext {
     }
 
     pub(crate) fn create_solid_color(&mut self, color: D2D1_COLOR_F) -> Result<Brush, Error> {
-        unsafe {
-            let mut ptr = null_mut();
-            let hr = self
-                .0
-                .CreateSolidColorBrush(&color, &DEFAULT_BRUSH_PROPERTIES, &mut ptr);
-            wrap(hr, ptr, |p| Brush(p.up()))
-        }
+        let key = ColorWrapper(color);
+        let com_ptr = &self.0;
+        self.1
+            .entry(&key)
+            .or_insert_with(
+                || key,
+                || unsafe {
+                    let mut ptr = null_mut();
+                    let hr =
+                        com_ptr.CreateSolidColorBrush(&color, &DEFAULT_BRUSH_PROPERTIES, &mut ptr);
+                    wrap(hr, ptr, |p| Brush(p.up()))
+                },
+            )
+            .clone()
     }
 
     pub(crate) fn create_gradient_stops(
@@ -777,6 +799,24 @@ impl Brush {
     // render target).
     pub(crate) fn as_raw(&self) -> *mut ID2D1Brush {
         self.0.as_raw()
+    }
+}
+
+impl PartialEq for ColorWrapper {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.r == other.0.r
+            && self.0.g == other.0.g
+            && self.0.b == other.0.b
+            && self.0.a == other.0.a
+    }
+}
+
+impl std::hash::Hash for ColorWrapper {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write_u32(self.0.r.to_bits());
+        state.write_u32(self.0.g.to_bits());
+        state.write_u32(self.0.b.to_bits());
+        state.write_u32(self.0.a.to_bits());
     }
 }
 
