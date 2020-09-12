@@ -12,7 +12,7 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::{null, null_mut};
 
-use associative_cache::{AssociativeCache, Capacity64, HashDirectMapped, RoundRobinReplacement};
+use associative_cache::{AssociativeCache, Capacity1024, HashDirectMapped, RoundRobinReplacement};
 
 use wio::com::ComPtr;
 
@@ -83,7 +83,7 @@ pub struct DeviceContext(
     AssociativeCache<
         ColorWrapper,
         Result<Brush, Error>,
-        Capacity64,
+        Capacity1024,
         HashDirectMapped,
         RoundRobinReplacement,
     >,
