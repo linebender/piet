@@ -219,17 +219,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64) {
-        let brush = brush.make_brush(self, || shape.bounding_box());
-        // TODO: various special-case shapes, for efficiency
-        let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
-            Ok(path) => path,
-            Err(e) => {
-                self.err = Err(e);
-                return;
-            }
-        };
-        let width = width as f32;
-        self.rt.draw_geometry(&path, &*brush, width, None);
+        self.stroke_impl(shape, brush, width, None)
     }
 
     fn stroke_styled(
@@ -239,19 +229,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         width: f64,
         style: &StrokeStyle,
     ) {
-        let brush = brush.make_brush(self, || shape.bounding_box());
-        // TODO: various special-case shapes, for efficiency
-        let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
-            Ok(path) => path,
-            Err(e) => {
-                self.err = Err(e);
-                return;
-            }
-        };
-        let width = width as f32;
-        let style = convert_stroke_style(self.factory, style, width)
+        let style = convert_stroke_style(self.factory, style, width as f32)
             .expect("stroke style conversion failed");
-        self.rt.draw_geometry(&path, &*brush, width, Some(&style));
+        self.stroke_impl(shape, brush, width, Some(&style));
     }
 
     fn clip(&mut self, shape: impl Shape) {
@@ -423,6 +403,37 @@ impl<'a> D2DRenderContext<'a> {
                 Ok(path) => self.rt.fill_geometry(&path, &brush, None),
                 Err(e) => self.err = Err(e),
             }
+        }
+    }
+
+    fn stroke_impl(
+        &mut self,
+        shape: impl Shape,
+        brush: &impl IntoBrush<Self>,
+        width: f64,
+        style: Option<&crate::d2d::StrokeStyle>,
+    ) {
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        let width = width as f32;
+
+        if let Some(line) = shape.as_line() {
+            self.rt.draw_line(line, &brush, width, style)
+        } else if let Some(rect) = shape.as_rect() {
+            self.rt.draw_rect(rect, &brush, width, style)
+        } else if let Some(round_rect) = shape.as_rounded_rect() {
+            self.rt.draw_rounded_rect(round_rect, &brush, width, style)
+        } else if let Some(circle) = shape.as_circle() {
+            self.rt.draw_circle(circle, &brush, width, style)
+        } else {
+            let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+                Ok(path) => path,
+                Err(e) => {
+                    self.err = Err(e);
+                    return;
+                }
+            };
+            let width = width;
+            self.rt.draw_geometry(&path, &*brush, width, style);
         }
     }
 

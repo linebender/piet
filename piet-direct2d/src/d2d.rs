@@ -170,6 +170,10 @@ fn optional<T>(val: &Option<T>) -> *const T {
     val.as_ref().map(|x| x as *const T).unwrap_or(null())
 }
 
+fn stroke_style_to_d2d(style: Option<&StrokeStyle>) -> *mut ID2D1StrokeStyle {
+    style.map(|ss| ss.0.as_raw()).unwrap_or(null_mut())
+}
+
 impl D2DFactory {
     /// Create a new Direct2D factory.
     ///
@@ -396,14 +400,71 @@ impl DeviceContext {
         }
     }
 
-    pub(crate) fn draw_line(&self, line: Line, brush: &Brush) {
+    pub(crate) fn draw_line(
+        &self,
+        line: Line,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
         unsafe {
             self.0.DrawLine(
                 to_point2f(line.p0),
                 to_point2f(line.p1),
                 brush.as_raw(),
-                1.0,
-                null_mut(),
+                width,
+                stroke_style_to_d2d(style),
+            );
+        }
+    }
+
+    pub(crate) fn draw_rect(
+        &self,
+        rect: Rect,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
+        unsafe {
+            self.0.DrawRectangle(
+                &rect_to_rectf(rect),
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
+            );
+        }
+    }
+
+    pub(crate) fn draw_rounded_rect(
+        &self,
+        rect: RoundedRect,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
+        unsafe {
+            self.0.DrawRoundedRectangle(
+                &rounded_rect_to_d2d(rect),
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
+            );
+        }
+    }
+
+    pub(crate) fn draw_circle(
+        &self,
+        circle: Circle,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
+        unsafe {
+            self.0.DrawEllipse(
+                &circle_to_d2d(circle),
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
             );
         }
     }
