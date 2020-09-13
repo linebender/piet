@@ -229,7 +229,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         width: f64,
         style: &StrokeStyle,
     ) {
-        let style = convert_stroke_style(self.factory, style, width as f32)
+        let style = convert_stroke_style(self.factory, style, width)
             .expect("stroke style conversion failed");
         self.stroke_impl(shape, brush, width, Some(&style));
     }

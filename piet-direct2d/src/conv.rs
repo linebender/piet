@@ -156,7 +156,7 @@ fn convert_line_join(line_join: LineJoin) -> D2D1_LINE_JOIN {
 pub(crate) fn convert_stroke_style(
     factory: &D2DFactory,
     stroke_style: &StrokeStyle,
-    width: f32,
+    width: f64,
 ) -> Result<crate::d2d::StrokeStyle, Error> {
     #[allow(unused)]
     let cap = convert_line_cap(stroke_style.line_cap.unwrap_or(LineCap::Butt));
@@ -169,7 +169,7 @@ pub(crate) fn convert_stroke_style(
                 Some(
                     dashes
                         .iter()
-                        .map(|x| *x as f32 * width_recip)
+                        .map(|x| (*x * width_recip) as f32)
                         .collect::<Vec<f32>>(),
                 ),
                 D2D1_DASH_STYLE_CUSTOM,
