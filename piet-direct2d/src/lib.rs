@@ -211,11 +211,21 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
-        // TODO: various special-case shapes, for efficiency
         let brush = brush.make_brush(self, || shape.bounding_box());
-        match path_from_shape(self.factory, true, shape, FillRule::NonZero) {
-            Ok(path) => self.rt.fill_geometry(&path, &brush, None),
-            Err(e) => self.err = Err(e),
+
+        if let Some(line) = shape.as_line() {
+            self.rt.draw_line(line, &brush)
+        } else if let Some(rect) = shape.as_rect() {
+            self.rt.fill_rect(rect, &brush)
+        } else if let Some(round_rect) = shape.as_rounded_rect() {
+            self.rt.fill_rounded_rect(round_rect, &brush)
+        } else if let Some(circle) = shape.as_circle() {
+            self.rt.fill_circle(circle, &brush)
+        } else {
+            match path_from_shape(self.factory, true, shape, FillRule::NonZero) {
+                Ok(path) => self.rt.fill_geometry(&path, &brush, None),
+                Err(e) => self.err = Err(e),
+            }
         }
     }
 

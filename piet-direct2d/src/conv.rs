@@ -2,12 +2,12 @@
 
 use winapi::um::d2d1::{
     D2D1_CAP_STYLE, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_SQUARE, D2D1_COLOR_F,
-    D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_GRADIENT_STOP, D2D1_LINE_JOIN,
-    D2D1_LINE_JOIN_BEVEL, D2D1_LINE_JOIN_MITER, D2D1_LINE_JOIN_ROUND, D2D1_MATRIX_3X2_F,
-    D2D1_POINT_2F, D2D1_RECT_F, D2D1_STROKE_STYLE_PROPERTIES,
+    D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_ELLIPSE, D2D1_GRADIENT_STOP,
+    D2D1_LINE_JOIN, D2D1_LINE_JOIN_BEVEL, D2D1_LINE_JOIN_MITER, D2D1_LINE_JOIN_ROUND,
+    D2D1_MATRIX_3X2_F, D2D1_POINT_2F, D2D1_RECT_F, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
 };
 
-use piet::kurbo::{Affine, Point, Rect, Vec2};
+use piet::kurbo::{Affine, Circle, Point, Rect, RoundedRect, Vec2};
 
 use piet::{Color, Error, GradientStop, LineCap, LineJoin, RoundFrom, RoundInto, StrokeStyle};
 
@@ -95,6 +95,22 @@ pub(crate) fn rect_to_rectf(rect: Rect) -> D2D1_RECT_F {
         top: rect.y0 as f32,
         right: rect.x1 as f32,
         bottom: rect.y1 as f32,
+    }
+}
+
+pub(crate) fn rounded_rect_to_d2d(round_rect: RoundedRect) -> D2D1_ROUNDED_RECT {
+    D2D1_ROUNDED_RECT {
+        rect: rect_to_rectf(round_rect.rect()),
+        radiusX: round_rect.radius() as f32,
+        radiusY: round_rect.radius() as f32,
+    }
+}
+
+pub(crate) fn circle_to_d2d(circle: Circle) -> D2D1_ELLIPSE {
+    D2D1_ELLIPSE {
+        point: to_point2f(circle.center),
+        radiusX: circle.radius as f32,
+        radiusY: circle.radius as f32,
     }
 }
 
