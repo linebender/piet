@@ -14,6 +14,8 @@ mod text;
 use std::borrow::Cow;
 use std::ops::Deref;
 
+use associative_cache::{AssociativeCache, Capacity1024, HashFourWay, RoundRobinReplacement};
+
 use winapi::um::d2d1::{
     D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
     D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
@@ -48,6 +50,8 @@ pub struct D2DRenderContext<'a> {
     ctx_stack: Vec<CtxState>,
 
     err: Result<(), Error>,
+
+    brush_cache: AssociativeCache<u32, Brush, Capacity1024, HashFourWay, RoundRobinReplacement>,
 }
 
 #[derive(Default)]
@@ -75,6 +79,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
             rt,
             ctx_stack: vec![CtxState::default()],
             err: Ok(()),
+            brush_cache: Default::default(),
         }
     }
 
@@ -163,9 +168,19 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
-        self.rt
-            .create_solid_color(color_to_colorf(color))
-            .expect("error creating solid brush")
+        let device_context = &mut self.rt;
+        let key = color.as_rgba_u32();
+        self.brush_cache
+            .entry(&key)
+            .or_insert_with(
+                || key,
+                || {
+                    device_context
+                        .create_solid_color(color_to_colorf(color))
+                        .expect("error creating solid brush")
+                },
+            )
+            .clone()
     }
 
     fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
@@ -275,7 +290,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
-        layout.draw(pos.into(), self.rt);
+        layout.draw(pos.into(), self);
     }
 
     fn save(&mut self) -> Result<(), Error> {

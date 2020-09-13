@@ -428,6 +428,8 @@ impl DeviceContext {
         }
     }
 
+    /// This method should not be called directly. Callers should instead call
+    /// D2DRenderContext::solid_brush so values can be cached.
     pub(crate) fn create_solid_color(&mut self, color: D2D1_COLOR_F) -> Result<Brush, Error> {
         unsafe {
             let mut ptr = null_mut();
