@@ -123,40 +123,49 @@ fn geometry_from_shape(
     } else if let Some(circle) = shape.as_circle() {
         Ok(d2d.create_circle_geometry(circle)?.into())
     } else {
-        let mut path = d2d.create_path_geometry()?;
-        let mut sink = path.open()?;
-        sink.set_fill_mode(fill_rule);
-        let mut need_close = false;
-        for el in shape.to_bez_path(BEZ_TOLERANCE) {
-            match el {
-                PathEl::MoveTo(p) => {
-                    if need_close {
-                        sink.end_figure(false);
-                    }
-                    sink.begin_figure(to_point2f(p), is_filled);
-                    need_close = true;
+        path_from_shape(d2d, is_filled, shape, fill_rule)
+    }
+}
+
+fn path_from_shape(
+    d2d: &D2DFactory,
+    is_filled: bool,
+    shape: impl Shape,
+    fill_rule: FillRule,
+) -> Result<Geometry, Error> {
+    let mut path = d2d.create_path_geometry()?;
+    let mut sink = path.open()?;
+    sink.set_fill_mode(fill_rule);
+    let mut need_close = false;
+    for el in shape.to_bez_path(BEZ_TOLERANCE) {
+        match el {
+            PathEl::MoveTo(p) => {
+                if need_close {
+                    sink.end_figure(false);
                 }
-                PathEl::LineTo(p) => {
-                    sink.add_line(to_point2f(p));
-                }
-                PathEl::QuadTo(p1, p2) => {
-                    sink.add_quadratic_bezier(to_point2f(p1), to_point2f(p2));
-                }
-                PathEl::CurveTo(p1, p2, p3) => {
-                    sink.add_bezier(to_point2f(p1), to_point2f(p2), to_point2f(p3));
-                }
-                PathEl::ClosePath => {
-                    sink.end_figure(true);
-                    need_close = false;
-                }
+                sink.begin_figure(to_point2f(p), is_filled);
+                need_close = true;
+            }
+            PathEl::LineTo(p) => {
+                sink.add_line(to_point2f(p));
+            }
+            PathEl::QuadTo(p1, p2) => {
+                sink.add_quadratic_bezier(to_point2f(p1), to_point2f(p2));
+            }
+            PathEl::CurveTo(p1, p2, p3) => {
+                sink.add_bezier(to_point2f(p1), to_point2f(p2), to_point2f(p3));
+            }
+            PathEl::ClosePath => {
+                sink.end_figure(true);
+                need_close = false;
             }
         }
-        if need_close {
-            sink.end_figure(false);
-        }
-        sink.close()?;
-        Ok(path.into())
     }
+    if need_close {
+        sink.end_figure(false);
+    }
+    sink.close()?;
+    Ok(path.into())
 }
 
 impl<'a> RenderContext for D2DRenderContext<'a> {
@@ -408,7 +417,7 @@ impl<'a> D2DRenderContext<'a> {
         } else if let Some(circle) = shape.as_circle() {
             self.rt.fill_circle(circle, &brush)
         } else {
-            match geometry_from_shape(self.factory, true, shape, fill_rule) {
+            match path_from_shape(self.factory, true, shape, fill_rule) {
                 Ok(geom) => self.rt.fill_geometry(&geom, &brush, None),
                 Err(e) => self.err = Err(e),
             }
@@ -434,7 +443,7 @@ impl<'a> D2DRenderContext<'a> {
         } else if let Some(circle) = shape.as_circle() {
             self.rt.draw_circle(circle, &brush, width, style)
         } else {
-            let geom = match geometry_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+            let geom = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
                 Ok(geom) => geom,
                 Err(e) => {
                     self.err = Err(e);
