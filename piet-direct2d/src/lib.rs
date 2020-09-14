@@ -39,7 +39,7 @@ use crate::conv::{
     affine_to_matrix3x2f, color_to_colorf, convert_stroke_style, gradient_stop_to_d2d,
     rect_to_rectf, to_point2f,
 };
-use crate::d2d::{Bitmap, Brush, DeviceContext, FillRule, PathGeometry};
+use crate::d2d::{Bitmap, Brush, DeviceContext, FillRule, Geometry};
 
 pub struct D2DRenderContext<'a> {
     factory: &'a D2DFactory,
@@ -109,45 +109,54 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
 // empirical study of both quality and performance.
 const BEZ_TOLERANCE: f64 = 1e-3;
 
-fn path_from_shape(
+fn geometry_from_shape(
     d2d: &D2DFactory,
     is_filled: bool,
     shape: impl Shape,
     fill_rule: FillRule,
-) -> Result<PathGeometry, Error> {
-    let mut path = d2d.create_path_geometry()?;
-    let mut sink = path.open()?;
-    sink.set_fill_mode(fill_rule);
-    let mut need_close = false;
-    for el in shape.to_bez_path(BEZ_TOLERANCE) {
-        match el {
-            PathEl::MoveTo(p) => {
-                if need_close {
-                    sink.end_figure(false);
+) -> Result<Geometry, Error> {
+    // TODO: Do something special for line?
+    if let Some(rect) = shape.as_rect() {
+        Ok(d2d.create_rect_geometry(rect)?.into())
+    } else if let Some(round_rect) = shape.as_rounded_rect() {
+        Ok(d2d.create_round_rect_geometry(round_rect)?.into())
+    } else if let Some(circle) = shape.as_circle() {
+        Ok(d2d.create_circle_geometry(circle)?.into())
+    } else {
+        let mut path = d2d.create_path_geometry()?;
+        let mut sink = path.open()?;
+        sink.set_fill_mode(fill_rule);
+        let mut need_close = false;
+        for el in shape.to_bez_path(BEZ_TOLERANCE) {
+            match el {
+                PathEl::MoveTo(p) => {
+                    if need_close {
+                        sink.end_figure(false);
+                    }
+                    sink.begin_figure(to_point2f(p), is_filled);
+                    need_close = true;
                 }
-                sink.begin_figure(to_point2f(p), is_filled);
-                need_close = true;
-            }
-            PathEl::LineTo(p) => {
-                sink.add_line(to_point2f(p));
-            }
-            PathEl::QuadTo(p1, p2) => {
-                sink.add_quadratic_bezier(to_point2f(p1), to_point2f(p2));
-            }
-            PathEl::CurveTo(p1, p2, p3) => {
-                sink.add_bezier(to_point2f(p1), to_point2f(p2), to_point2f(p3));
-            }
-            PathEl::ClosePath => {
-                sink.end_figure(true);
-                need_close = false;
+                PathEl::LineTo(p) => {
+                    sink.add_line(to_point2f(p));
+                }
+                PathEl::QuadTo(p1, p2) => {
+                    sink.add_quadratic_bezier(to_point2f(p1), to_point2f(p2));
+                }
+                PathEl::CurveTo(p1, p2, p3) => {
+                    sink.add_bezier(to_point2f(p1), to_point2f(p2), to_point2f(p3));
+                }
+                PathEl::ClosePath => {
+                    sink.end_figure(true);
+                    need_close = false;
+                }
             }
         }
+        if need_close {
+            sink.end_figure(false);
+        }
+        sink.close()?;
+        Ok(path.into())
     }
-    if need_close {
-        sink.end_figure(false);
-    }
-    sink.close()?;
-    Ok(path)
 }
 
 impl<'a> RenderContext for D2DRenderContext<'a> {
@@ -243,14 +252,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 return;
             }
         };
-        let path = match path_from_shape(self.factory, true, shape, FillRule::NonZero) {
-            Ok(path) => path,
+        let geom = match geometry_from_shape(self.factory, true, shape, FillRule::NonZero) {
+            Ok(geom) => geom,
             Err(e) => {
                 self.err = Err(e);
                 return;
             }
         };
-        self.rt.push_layer_mask(&path, &layer);
+        self.rt.push_layer_mask(&geom, &layer);
         self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
     }
 
@@ -399,8 +408,8 @@ impl<'a> D2DRenderContext<'a> {
         } else if let Some(circle) = shape.as_circle() {
             self.rt.fill_circle(circle, &brush)
         } else {
-            match path_from_shape(self.factory, true, shape, fill_rule) {
-                Ok(path) => self.rt.fill_geometry(&path, &brush, None),
+            match geometry_from_shape(self.factory, true, shape, fill_rule) {
+                Ok(geom) => self.rt.fill_geometry(&geom, &brush, None),
                 Err(e) => self.err = Err(e),
             }
         }
@@ -425,15 +434,15 @@ impl<'a> D2DRenderContext<'a> {
         } else if let Some(circle) = shape.as_circle() {
             self.rt.draw_circle(circle, &brush, width, style)
         } else {
-            let path = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
-                Ok(path) => path,
+            let geom = match geometry_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+                Ok(geom) => geom,
                 Err(e) => {
                     self.err = Err(e);
                     return;
                 }
             };
             let width = width;
-            self.rt.draw_geometry(&path, &*brush, width, style);
+            self.rt.draw_geometry(&geom, &*brush, width, style);
         }
     }
 
