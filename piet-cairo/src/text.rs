@@ -110,7 +110,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
-        eprintln!("TextAlignment not supported by cairo toy text");
+        // TextAlignment is not supported by cairo toy text.
         self
     }
 
