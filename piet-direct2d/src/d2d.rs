@@ -21,9 +21,10 @@ use winapi::shared::dxgiformat::DXGI_FORMAT_R8G8B8A8_UNORM;
 use winapi::shared::minwindef::TRUE;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::d2d1::{
-    D2D1CreateFactory, ID2D1Bitmap, ID2D1BitmapRenderTarget, ID2D1Brush, ID2D1Geometry,
-    ID2D1GeometrySink, ID2D1GradientStopCollection, ID2D1Image, ID2D1Layer, ID2D1PathGeometry,
-    ID2D1SolidColorBrush, ID2D1StrokeStyle, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BEZIER_SEGMENT,
+    D2D1CreateFactory, ID2D1Bitmap, ID2D1BitmapRenderTarget, ID2D1Brush, ID2D1EllipseGeometry,
+    ID2D1Geometry, ID2D1GeometrySink, ID2D1GradientStopCollection, ID2D1Image, ID2D1Layer,
+    ID2D1PathGeometry, ID2D1RectangleGeometry, ID2D1RoundedRectangleGeometry, ID2D1SolidColorBrush,
+    ID2D1StrokeStyle, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BEZIER_SEGMENT,
     D2D1_BITMAP_INTERPOLATION_MODE, D2D1_BRUSH_PROPERTIES, D2D1_COLOR_F,
     D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DEBUG_LEVEL_WARNING, D2D1_DRAW_TEXT_OPTIONS,
     D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS, D2D1_FACTORY_TYPE_MULTI_THREADED,
@@ -82,6 +83,14 @@ unsafe impl Send for D2DDevice {}
 pub struct DeviceContext(ComPtr<ID2D1DeviceContext>);
 
 pub struct PathGeometry(ComPtr<ID2D1PathGeometry>);
+
+pub struct RectangleGeometry(ComPtr<ID2D1RectangleGeometry>);
+
+pub struct RoundedRectangleGeometry(ComPtr<ID2D1RoundedRectangleGeometry>);
+
+pub struct EllipseGeometry(ComPtr<ID2D1EllipseGeometry>);
+
+pub struct Geometry(ComPtr<ID2D1Geometry>);
 
 pub struct GeometrySink<'a> {
     ptr: ComPtr<ID2D1GeometrySink>,
@@ -143,6 +152,30 @@ impl std::error::Error for Error {
 impl From<Error> for piet::Error {
     fn from(e: Error) -> piet::Error {
         piet::Error::BackendError(Box::new(e))
+    }
+}
+
+impl From<PathGeometry> for Geometry {
+    fn from(pg: PathGeometry) -> Self {
+        Geometry(pg.0.up())
+    }
+}
+
+impl From<RectangleGeometry> for Geometry {
+    fn from(pg: RectangleGeometry) -> Self {
+        Geometry(pg.0.up())
+    }
+}
+
+impl From<RoundedRectangleGeometry> for Geometry {
+    fn from(pg: RoundedRectangleGeometry) -> Self {
+        Geometry(pg.0.up())
+    }
+}
+
+impl From<EllipseGeometry> for Geometry {
+    fn from(pg: EllipseGeometry) -> Self {
+        Geometry(pg.0.up())
     }
 }
 
@@ -214,6 +247,45 @@ impl D2DFactory {
             let mut ptr = null_mut();
             let hr = self.0.deref().deref().CreatePathGeometry(&mut ptr);
             wrap(hr, ptr, PathGeometry)
+        }
+    }
+
+    pub fn create_rect_geometry(&self, rect: Rect) -> Result<RectangleGeometry, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self
+                .0
+                .deref()
+                .deref()
+                .CreateRectangleGeometry(&rect_to_rectf(rect), &mut ptr);
+            wrap(hr, ptr, RectangleGeometry)
+        }
+    }
+
+    pub fn create_round_rect_geometry(
+        &self,
+        rect: RoundedRect,
+    ) -> Result<RoundedRectangleGeometry, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self
+                .0
+                .deref()
+                .deref()
+                .CreateRoundedRectangleGeometry(&rounded_rect_to_d2d(rect), &mut ptr);
+            wrap(hr, ptr, RoundedRectangleGeometry)
+        }
+    }
+
+    pub fn create_circle_geometry(&self, circle: Circle) -> Result<EllipseGeometry, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self
+                .0
+                .deref()
+                .deref()
+                .CreateEllipseGeometry(&circle_to_d2d(circle), &mut ptr);
+            wrap(hr, ptr, EllipseGeometry)
         }
     }
 
@@ -370,13 +442,13 @@ impl DeviceContext {
 
     pub(crate) fn fill_geometry(
         &mut self,
-        geom: &PathGeometry,
+        geom: &Geometry,
         brush: &Brush,
         opacity_brush: Option<&Brush>,
     ) {
         unsafe {
             self.0.FillGeometry(
-                geom.0.as_raw() as *mut ID2D1Geometry,
+                geom.0.as_raw(),
                 brush.as_raw(),
                 opacity_brush.map(|b| b.as_raw()).unwrap_or(null_mut()),
             );
@@ -385,14 +457,14 @@ impl DeviceContext {
 
     pub(crate) fn draw_geometry(
         &mut self,
-        geom: &PathGeometry,
+        geom: &Geometry,
         brush: &Brush,
         width: f32,
         style: Option<&StrokeStyle>,
     ) {
         unsafe {
             self.0.DrawGeometry(
-                geom.0.as_raw() as *mut ID2D1Geometry,
+                geom.0.as_raw(),
                 brush.as_raw(),
                 width,
                 style.map(|ss| ss.0.as_raw()).unwrap_or(null_mut()),
@@ -497,7 +569,7 @@ impl DeviceContext {
     }
 
     // Should be &mut layer?
-    pub(crate) fn push_layer_mask(&mut self, mask: &PathGeometry, layer: &Layer) {
+    pub(crate) fn push_layer_mask(&mut self, mask: &Geometry, layer: &Layer) {
         unsafe {
             let params = D2D1_LAYER_PARAMETERS {
                 contentBounds: D2D1_RECT_F {
@@ -506,7 +578,7 @@ impl DeviceContext {
                     right: std::f32::INFINITY,
                     bottom: std::f32::INFINITY,
                 },
-                geometricMask: mask.0.as_raw() as *mut ID2D1Geometry,
+                geometricMask: mask.0.as_raw(),
                 maskAntialiasMode: D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
                 maskTransform: IDENTITY_MATRIX_3X2_F,
                 opacity: 1.0,
