@@ -2,12 +2,12 @@
 
 use winapi::um::d2d1::{
     D2D1_CAP_STYLE, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_SQUARE, D2D1_COLOR_F,
-    D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_GRADIENT_STOP, D2D1_LINE_JOIN,
-    D2D1_LINE_JOIN_BEVEL, D2D1_LINE_JOIN_MITER, D2D1_LINE_JOIN_ROUND, D2D1_MATRIX_3X2_F,
-    D2D1_POINT_2F, D2D1_RECT_F, D2D1_STROKE_STYLE_PROPERTIES,
+    D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_ELLIPSE, D2D1_GRADIENT_STOP,
+    D2D1_LINE_JOIN, D2D1_LINE_JOIN_BEVEL, D2D1_LINE_JOIN_MITER, D2D1_LINE_JOIN_ROUND,
+    D2D1_MATRIX_3X2_F, D2D1_POINT_2F, D2D1_RECT_F, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
 };
 
-use piet::kurbo::{Affine, Point, Rect, Vec2};
+use piet::kurbo::{Affine, Circle, Point, Rect, RoundedRect, Vec2};
 
 use piet::{Color, Error, GradientStop, LineCap, LineJoin, RoundFrom, RoundInto, StrokeStyle};
 
@@ -98,6 +98,22 @@ pub(crate) fn rect_to_rectf(rect: Rect) -> D2D1_RECT_F {
     }
 }
 
+pub(crate) fn rounded_rect_to_d2d(round_rect: RoundedRect) -> D2D1_ROUNDED_RECT {
+    D2D1_ROUNDED_RECT {
+        rect: rect_to_rectf(round_rect.rect()),
+        radiusX: round_rect.radius() as f32,
+        radiusY: round_rect.radius() as f32,
+    }
+}
+
+pub(crate) fn circle_to_d2d(circle: Circle) -> D2D1_ELLIPSE {
+    D2D1_ELLIPSE {
+        point: to_point2f(circle.center),
+        radiusX: circle.radius as f32,
+        radiusY: circle.radius as f32,
+    }
+}
+
 pub(crate) fn color_to_colorf(color: Color) -> D2D1_COLOR_F {
     let rgba = color.as_rgba_u32();
     D2D1_COLOR_F {
@@ -140,7 +156,7 @@ fn convert_line_join(line_join: LineJoin) -> D2D1_LINE_JOIN {
 pub(crate) fn convert_stroke_style(
     factory: &D2DFactory,
     stroke_style: &StrokeStyle,
-    width: f32,
+    width: f64,
 ) -> Result<crate::d2d::StrokeStyle, Error> {
     #[allow(unused)]
     let cap = convert_line_cap(stroke_style.line_cap.unwrap_or(LineCap::Butt));
@@ -153,7 +169,7 @@ pub(crate) fn convert_stroke_style(
                 Some(
                     dashes
                         .iter()
-                        .map(|x| *x as f32 * width_recip)
+                        .map(|x| (*x * width_recip) as f32)
                         .collect::<Vec<f32>>(),
                 ),
                 D2D1_DASH_STYLE_CUSTOM,

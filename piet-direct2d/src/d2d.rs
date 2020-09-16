@@ -12,6 +12,8 @@ use std::marker::PhantomData;
 use std::ops::Deref;
 use std::ptr::{null, null_mut};
 
+use piet::kurbo::{Circle, Line, Rect, RoundedRect};
+
 use wio::com::ComPtr;
 
 use winapi::shared::dxgi::{IDXGIDevice, IDXGISurface};
@@ -42,6 +44,7 @@ use winapi::um::d2d1effects::{CLSID_D2D1GaussianBlur, D2D1_GAUSSIANBLUR_PROP_STA
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
 
+use crate::conv::{circle_to_d2d, rect_to_rectf, rounded_rect_to_d2d, to_point2f};
 use crate::dwrite::TextLayout;
 
 pub enum FillRule {
@@ -165,6 +168,10 @@ pub(crate) fn wrap_unit(hr: HRESULT) -> Result<(), Error> {
 
 fn optional<T>(val: &Option<T>) -> *const T {
     val.as_ref().map(|x| x as *const T).unwrap_or(null())
+}
+
+fn stroke_style_to_d2d(style: Option<&StrokeStyle>) -> *mut ID2D1StrokeStyle {
+    style.map(|ss| ss.0.as_raw()).unwrap_or(null_mut())
 }
 
 impl D2DFactory {
@@ -390,6 +397,94 @@ impl DeviceContext {
                 width,
                 style.map(|ss| ss.0.as_raw()).unwrap_or(null_mut()),
             );
+        }
+    }
+
+    pub(crate) fn draw_line(
+        &self,
+        line: Line,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
+        unsafe {
+            self.0.DrawLine(
+                to_point2f(line.p0),
+                to_point2f(line.p1),
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
+            );
+        }
+    }
+
+    pub(crate) fn draw_rect(
+        &self,
+        rect: Rect,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
+        unsafe {
+            self.0.DrawRectangle(
+                &rect_to_rectf(rect),
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
+            );
+        }
+    }
+
+    pub(crate) fn draw_rounded_rect(
+        &self,
+        rect: RoundedRect,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
+        unsafe {
+            self.0.DrawRoundedRectangle(
+                &rounded_rect_to_d2d(rect),
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
+            );
+        }
+    }
+
+    pub(crate) fn draw_circle(
+        &self,
+        circle: Circle,
+        brush: &Brush,
+        width: f32,
+        style: Option<&StrokeStyle>,
+    ) {
+        unsafe {
+            self.0.DrawEllipse(
+                &circle_to_d2d(circle),
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
+            );
+        }
+    }
+
+    pub(crate) fn fill_rect(&self, rect: Rect, brush: &Brush) {
+        unsafe {
+            self.0.FillRectangle(&rect_to_rectf(rect), brush.as_raw());
+        }
+    }
+
+    pub(crate) fn fill_rounded_rect(&self, rect: RoundedRect, brush: &Brush) {
+        unsafe {
+            self.0
+                .FillRoundedRectangle(&rounded_rect_to_d2d(rect), brush.as_raw());
+        }
+    }
+
+    pub(crate) fn fill_circle(&self, circle: Circle, brush: &Brush) {
+        unsafe {
+            self.0.FillEllipse(&circle_to_d2d(circle), brush.as_raw());
         }
     }
 
