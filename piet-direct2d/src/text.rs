@@ -18,7 +18,7 @@ use piet::kurbo::{Insets, Point, Rect, Size};
 use piet::util;
 use piet::{
     Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, RenderContext, Text,
-    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 
 use crate::conv;
@@ -44,7 +44,7 @@ struct LoadedFonts {
 
 #[derive(Clone)]
 pub struct D2DTextLayout {
-    text: Arc<str>,
+    text: Rc<dyn TextStorage>,
     // currently calculated on build
     line_metrics: Rc<[LineMetric]>,
     size: Size,
@@ -63,7 +63,7 @@ pub struct D2DTextLayout {
 }
 
 pub struct D2DTextLayoutBuilder {
-    text: Arc<str>,
+    text: Rc<dyn TextStorage>,
     layout: Result<dwrite::TextLayout, Error>,
     len_utf16: usize,
     loaded_fonts: Rc<RefCell<LoadedFonts>>,
@@ -106,10 +106,10 @@ impl Text for D2DText {
         self.loaded_fonts.borrow_mut().add(data)
     }
 
-    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
-        let text = text.into();
+    fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
+        let text = Rc::new(text);
         let width = f32::INFINITY;
-        let wide_str = ToWide::to_wide(&text.as_ref());
+        let wide_str = ToWide::to_wide(&text.as_str());
         let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32)
             .and_then(|format| dwrite::TextLayout::new(&self.dwrite, format, width, &wide_str))
             .map_err(Into::into);

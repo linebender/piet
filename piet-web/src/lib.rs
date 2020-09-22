@@ -220,10 +220,8 @@ impl RenderContext for WebRenderContext<'_> {
         self.ctx.set_font(&layout.font.get_font_string());
         let pos = pos.into();
         for lm in &layout.line_metrics {
-            let draw_line = self
-                .ctx
-                .fill_text(&layout.text[lm.start_offset..lm.end_offset], pos.x, pos.y)
-                .wrap();
+            let line_text = &layout.text[lm.range()];
+            let draw_line = self.ctx.fill_text(line_text, pos.x, pos.y).wrap();
 
             if let Err(e) = draw_line {
                 self.err = Err(e);
