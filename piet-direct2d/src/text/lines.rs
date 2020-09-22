@@ -54,7 +54,7 @@ mod test {
     fn test_metrics_with_width(
         width: f64,
         expected: Vec<LineMetric>,
-        input: &str,
+        input: impl TextStorage,
         text_layout: &mut D2DText,
         font: &FontFamily,
         font_size: f64,

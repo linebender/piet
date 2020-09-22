@@ -2,14 +2,13 @@
 
 use std::borrow::Cow;
 use std::ops::RangeBounds;
-use std::sync::Arc;
 
 use kurbo::{Affine, Point, Rect, Shape, Size};
 
 use crate::{
     Color, Error, FixedGradient, FontFamily, HitTestPoint, HitTestPosition, ImageFormat,
     InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder,
+    TextLayout, TextLayoutBuilder, TextStorage,
 };
 
 /// A render context that doesn't render.
@@ -136,7 +135,7 @@ impl Text for NullText {
         Ok(FontFamily::default())
     }
 
-    fn new_text_layout(&mut self, _text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, _text: impl TextStorage) -> Self::TextLayoutBuilder {
         NullTextLayoutBuilder
     }
 

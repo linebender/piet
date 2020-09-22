@@ -4,14 +4,14 @@ mod grapheme;
 mod lines;
 
 use std::ops::RangeBounds;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
     util, Color, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAttribute, TextLayout, TextLayoutBuilder,
+    TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -37,14 +37,14 @@ pub struct CairoTextLayout {
     pub(crate) fg_color: Color,
     size: Size,
     pub(crate) font: ScaledFont,
-    pub(crate) text: Arc<str>,
+    pub(crate) text: Rc<dyn TextStorage>,
 
     // currently calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
 }
 
 pub struct CairoTextLayoutBuilder {
-    text: Arc<str>,
+    text: Rc<dyn TextStorage>,
     defaults: util::LayoutDefaults,
     width_constraint: f64,
 }
@@ -72,10 +72,10 @@ impl Text for CairoText {
         Err(Error::NotSupported)
     }
 
-    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
         CairoTextLayoutBuilder {
             defaults: util::LayoutDefaults::default(),
-            text: text.into(),
+            text: Rc::new(text),
             width_constraint: f64::INFINITY,
         }
     }

@@ -5,7 +5,7 @@ mod lines;
 
 use std::borrow::Cow;
 use std::ops::RangeBounds;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use web_sys::CanvasRenderingContext2d;
 
@@ -13,7 +13,7 @@ use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
     util, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder,
+    TextLayout, TextLayoutBuilder, TextStorage,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -33,7 +33,7 @@ pub struct WebTextLayout {
     ctx: CanvasRenderingContext2d,
     // TODO like cairo, should this be pub(crate)?
     pub font: WebFont,
-    pub text: Arc<str>,
+    pub text: Rc<dyn TextStorage>,
 
     // Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
@@ -43,7 +43,7 @@ pub struct WebTextLayout {
 pub struct WebTextLayoutBuilder {
     ctx: CanvasRenderingContext2d,
     font: WebFont,
-    text: Arc<str>,
+    text: Rc<dyn TextStorage>,
     width: f64,
 }
 
@@ -68,13 +68,13 @@ impl Text for WebText {
         Err(Error::MissingFeature)
     }
 
-    fn new_text_layout(&mut self, text: impl Into<Arc<str>>) -> Self::TextLayoutBuilder {
+    fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
         WebTextLayoutBuilder {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
             font: WebFont::new(FontFamily::default()),
-            text: text.into(),
+            text: Rc::new(text),
             width: f64::INFINITY,
         }
     }
