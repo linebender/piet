@@ -37,7 +37,7 @@ pub type PietTextLayout = CoreGraphicsTextLayout;
 /// The associated text layout builder for this backend.
 ///
 /// This type matches `RenderContext::Text::TextLayoutBuilder`
-pub type PietTextLayoutBuilder = CoreGraphicsTextLayout;
+pub type PietTextLayoutBuilder = CoreGraphicsTextLayoutBuilder;
 
 /// The associated image type for this backend.
 ///
