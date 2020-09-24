@@ -333,9 +333,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // TODO: this method _really_ needs error checking, so much can go wrong...
         let alpha_mode = match format {
             ImageFormat::Rgb => D2D1_ALPHA_MODE_IGNORE,
-            ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => D2D1_ALPHA_MODE_PREMULTIPLIED,
+            ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate | ImageFormat::GrayScale => {
+                D2D1_ALPHA_MODE_PREMULTIPLIED
+            }
             _ => return Err(Error::NotSupported),
         };
+
+        let is_grayscale = matches!(format, ImageFormat::Grayscale);
+
         let buf = match format {
             ImageFormat::Rgb => {
                 let mut new_buf = vec![255; width * height * 4];
@@ -362,11 +367,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 }
                 Cow::from(new_buf)
             }
-            ImageFormat::RgbaPremul => Cow::from(buf),
+            ImageFormat::RgbaPremul | ImageFormat::Grayscale => Cow::from(buf),
             // This should be unreachable, we caught it above.
             _ => return Err(Error::NotSupported),
         };
-        let bitmap = self.rt.create_bitmap(width, height, &buf, alpha_mode)?;
+
+        let bitmap = self
+            .rt
+            .create_bitmap(width, height, is_grayscale, &buf, alpha_mode)?;
         Ok(bitmap)
     }
 
