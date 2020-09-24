@@ -272,7 +272,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                     }
                     ImageFormat::GrayScale => {
                         for x in 0..width {
-                            data[dst_off + x] = buf[src_off + x];
+                            data[dst_off + x] = 255 - buf[src_off + x];
                         }
                     }
                     _ => return Err(Error::NotSupported),
