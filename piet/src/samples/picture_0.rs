@@ -36,7 +36,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         .text()
         .new_text_layout("Hello piet!")
         .font(FontFamily::SYSTEM_UI, 12.0)
-        .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))
+        .default_attribute(TextAttribute::TextColor(RED_ALPHA))
         .build()?;
 
     let w: f64 = layout.size().width;
@@ -84,7 +84,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
         .text()
         .new_text_layout("CLIPPED")
         .font(georgia, 8.0)
-        .default_attribute(TextAttribute::ForegroundColor(RED_ALPHA))
+        .default_attribute(TextAttribute::TextColor(RED_ALPHA))
         .build()?;
     rc.draw_text(&layout, (80.0, 50.0));
 

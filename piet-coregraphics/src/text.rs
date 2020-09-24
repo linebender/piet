@@ -136,7 +136,7 @@ impl CoreGraphicsTextLayoutBuilder {
         }
         // Some attributes are 'standalone' and can just be added to the attributed string
         // immediately.
-        if matches!(&attr, TextAttribute::ForegroundColor(_) | TextAttribute::Underline(_)) {
+        if matches!(&attr, TextAttribute::TextColor(_) | TextAttribute::Underline(_)) {
             return self.add_immediately(attr, range);
         }
 
@@ -172,7 +172,7 @@ impl CoreGraphicsTextLayoutBuilder {
         let utf16_len = util::count_utf16(&self.text[range]);
         let range = CFRange::init(utf16_start as isize, utf16_len as isize);
         match attr {
-            TextAttribute::ForegroundColor(color) => {
+            TextAttribute::TextColor(color) => {
                 self.attr_string.set_fg_color(range, &color);
             }
             TextAttribute::Underline(flag) => self.attr_string.set_underline(range, flag),

@@ -236,7 +236,7 @@ impl D2DTextLayoutBuilder {
                 TextAttribute::Style(style) => layout.set_style(utf16_range, style),
                 TextAttribute::Underline(flag) => layout.set_underline(utf16_range, flag),
                 TextAttribute::Strikethrough(flag) => layout.set_strikethrough(utf16_range, flag),
-                TextAttribute::ForegroundColor(color) => self.colors.push((utf16_range, color)),
+                TextAttribute::TextColor(color) => self.colors.push((utf16_range, color)),
             }
         }
     }
