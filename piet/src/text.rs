@@ -116,7 +116,7 @@ pub enum TextAttribute {
     /// The [`FontWeight`](struct.FontWeight.html).
     Weight(FontWeight),
     /// The foreground color of the text.
-    ForegroundColor(crate::Color),
+    TextColor(crate::Color),
     /// The [`FontStyle`]; either regular or italic.
     ///
     /// [`FontStyle`]: enum.FontStyle.html
@@ -173,10 +173,10 @@ pub trait TextLayoutBuilder: Sized {
 
     /// A convenience method for setting the default text color.
     ///
-    /// This is equivalent to passing `TextAttribute::ForegroundColor` to the
+    /// This is equivalent to passing `TextAttribute::TextColor` to the
     /// `default_attribute` method.
     fn text_color(self, color: Color) -> Self {
-        self.default_attribute(TextAttribute::ForegroundColor(color))
+        self.default_attribute(TextAttribute::TextColor(color))
     }
 
     /// Add a default [`TextAttribute`] for this layout.
@@ -228,7 +228,7 @@ pub trait TextLayoutBuilder: Sized {
     ///     .default_attribute(FontStyle::Italic)
     ///     .range_attribute(..5, FontWeight::BOLD)
     ///     .range_attribute(5..14, times)
-    ///     .range_attribute(20.., TextAttribute::ForegroundColor(Color::rgb(1.0, 0., 0.,)))
+    ///     .range_attribute(20.., TextAttribute::TextColor(Color::rgb(1.0, 0., 0.,)))
     ///     .build();
     /// ```
     ///

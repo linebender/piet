@@ -148,7 +148,7 @@ impl LayoutDefaults {
             TextAttribute::Weight(weight) => self.weight = weight,
             TextAttribute::Style(style) => self.style = style,
             TextAttribute::Underline(flag) => self.underline = flag,
-            TextAttribute::ForegroundColor(color) => self.fg_color = color,
+            TextAttribute::TextColor(color) => self.fg_color = color,
             TextAttribute::Strikethrough(flag) => self.strikethrough = flag,
         }
     }

@@ -24,18 +24,9 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(40..60, FontWeight::BOLD)
         .range_attribute(60..140, FontWeight::THIN)
         .range_attribute(90..300, FontFamily::MONOSPACE)
-        .range_attribute(
-            120..150,
-            TextAttribute::ForegroundColor(Color::rgb(0.6, 0., 0.)),
-        )
-        .range_attribute(
-            160..190,
-            TextAttribute::ForegroundColor(Color::rgb(0., 0.6, 0.)),
-        )
-        .range_attribute(
-            200..240,
-            TextAttribute::ForegroundColor(Color::rgb(0., 0., 0.6)),
-        )
+        .range_attribute(120..150, TextAttribute::TextColor(Color::rgb(0.6, 0., 0.)))
+        .range_attribute(160..190, TextAttribute::TextColor(Color::rgb(0., 0.6, 0.)))
+        .range_attribute(200..240, TextAttribute::TextColor(Color::rgb(0., 0., 0.6)))
         .range_attribute(200.., FontWeight::EXTRA_BLACK)
         .range_attribute(220.., TextAttribute::FontSize(18.0))
         .range_attribute(240.., FontStyle::Italic)
