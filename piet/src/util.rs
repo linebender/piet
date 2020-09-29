@@ -168,6 +168,17 @@ impl Default for LayoutDefaults {
     }
 }
 
+/// If `x` is a single (non-alpha) channel of a premultiplied color and `a` is the alpha channel,
+/// returns the corresponding channel of the unpremultiplied version of the color.
+pub fn unpremul(x: u8, a: u8) -> u8 {
+    if a == 0 {
+        0
+    } else {
+        let y = (x as u32 * 255 + (a as u32 / 2)) / (a as u32);
+        y.min(255) as u8
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
