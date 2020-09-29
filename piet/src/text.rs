@@ -594,6 +594,18 @@ impl TextStorage for String {
     }
 }
 
+impl TextStorage for std::sync::Arc<String> {
+    fn as_str(&self) -> &str {
+        self
+    }
+}
+
+impl TextStorage for std::rc::Rc<String> {
+    fn as_str(&self) -> &str {
+        self
+    }
+}
+
 impl TextStorage for &'static str {
     fn as_str(&self) -> &str {
         self
