@@ -13,7 +13,7 @@ use std::io::BufWriter;
 use std::marker::PhantomData;
 use std::path::Path;
 
-use piet::ImageFormat;
+use piet::{ImageBuf, ImageFormat};
 #[doc(hidden)]
 pub use piet_cairo::*;
 
@@ -163,8 +163,18 @@ impl<'a> BitmapTarget<'a> {
         Ok(size)
     }
 
+    /// Get an in-memory pixel buffer from the bitmap.
+    pub fn make_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
+        let width = self.surface.get_width() as usize;
+        let height = self.surface.get_height() as usize;
+        let mut buf = vec![0; width * height * 4];
+        self.copy_raw_pixels(fmt, &mut buf)?;
+        Ok(ImageBuf::from_raw(buf, fmt, width, height))
+    }
+
     /// Get raw RGBA pixels from the bitmap.
-    pub fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    #[deprecated(since = "0.2.0", note = "use make_image_buf")]
+    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         let width = self.surface.get_width() as usize;
         let height = self.surface.get_height() as usize;
         let mut buf = vec![0; width * height * 4];
@@ -172,25 +182,19 @@ impl<'a> BitmapTarget<'a> {
         Ok(buf)
     }
 
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use raw_pixels")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.raw_pixels(fmt)
-    }
-
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let height = self.surface.get_height();
         let width = self.surface.get_width();
-        let image = self.raw_pixels(ImageFormat::RgbaPremul)?;
+        let image = self.make_image_buf(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
         encoder
             .write_header()
             .map_err(Into::<Box<_>>::into)?
-            .write_image_data(&image)
+            .write_image_data(image.raw_pixels())
             .map_err(Into::<Box<_>>::into)?;
         Ok(())
     }

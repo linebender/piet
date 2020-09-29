@@ -10,7 +10,7 @@ use std::path::Path;
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
-use piet::ImageFormat;
+use piet::{ImageBuf, ImageFormat};
 use piet_direct2d::d2d::{Bitmap, Brush as D2DBrush};
 use piet_direct2d::d3d::{
     D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
@@ -145,16 +145,18 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to__pixels")]
+    #[deprecated(since = "0.2.0", note = "use make_image_buf")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.raw_pixels(fmt)
-    }
-
-    /// Get raw RGBA pixels from the bitmap.
-    pub fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         let mut buf = vec![0; self.width * self.height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(buf)
+    }
+
+    /// Get an in-memory pixel buffer from the bitmap.
+    pub fn make_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
+        let mut buf = vec![0; self.width * self.height * 4];
+        self.copy_raw_pixels(fmt, &mut buf)?;
+        Ok(ImageBuf::from_raw(buf, fmt, self.width, self.height))
     }
 
     /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
@@ -208,14 +210,14 @@ impl<'a> BitmapTarget<'a> {
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let height = self.height;
         let width = self.width;
-        let image = self.raw_pixels(ImageFormat::RgbaPremul)?;
+        let image = self.make_image_buf(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
         encoder
             .write_header()
             .map_err(Into::<Box<_>>::into)?
-            .write_image_data(&image)
+            .write_image_data(image.raw_pixels())
             .map_err(Into::<Box<_>>::into)?;
         Ok(())
     }
@@ -247,13 +249,13 @@ mod tests {
     }
 
     #[test]
-    fn raw_pixels() {
+    fn make_image_buf() {
         let mut device = Device::new().unwrap();
         let mut target = device.bitmap_target(640, 480, 1.0).unwrap();
         let mut piet = target.render_context();
         piet.clip(Rect::ZERO);
         piet.finish().unwrap();
         std::mem::drop(piet);
-        target.raw_pixels(ImageFormat::RgbaPremul).unwrap();
+        target.make_image_buf(ImageFormat::RgbaPremul).unwrap();
     }
 }
