@@ -21,6 +21,7 @@ use core_graphics::image::CGImage;
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
+use piet::util::unpremul;
 use piet::{
     Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
     RenderContext, RoundInto, StrokeStyle,
@@ -499,10 +500,9 @@ pub fn unpremultiply_rgba(data: &mut [u8]) {
     for i in (0..data.len()).step_by(4) {
         let a = data[i + 3];
         if a != 0 {
-            let scale = 255.0 / (a as f64);
-            data[i] = (scale * (data[i] as f64)).round() as u8;
-            data[i + 1] = (scale * (data[i + 1] as f64)).round() as u8;
-            data[i + 2] = (scale * (data[i + 2] as f64)).round() as u8;
+            for x in &mut data[i..(i + 3)] {
+                *x = unpremul(*x, a);
+            }
         }
     }
 }

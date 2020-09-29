@@ -20,6 +20,7 @@ use web_sys::{
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
+use piet::util::unpremul;
 use piet::{
     Color, Error, FixedGradient, GradientStop, ImageFormat, InterpolationMode, IntoBrush, LineCap,
     LineJoin, RenderContext, StrokeStyle,
@@ -270,14 +271,6 @@ impl RenderContext for WebRenderContext<'_> {
             // also resolve the need to clone.
             ImageFormat::RgbaSeparate => buf.to_vec(),
             ImageFormat::RgbaPremul => {
-                fn unpremul(x: u8, a: u8) -> u8 {
-                    if a == 0 {
-                        0
-                    } else {
-                        let y = (x as u32 * 255 + (a as u32 / 2)) / (a as u32);
-                        y.min(255) as u8
-                    }
-                }
                 let mut new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     let a = buf[i * 4 + 3];
