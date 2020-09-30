@@ -822,16 +822,20 @@ impl CoreGraphicsTextLayout {
     }
 
     fn line_range(&self, line: usize) -> Option<(usize, usize)> {
-        if line <= self.line_count() {
-            let start = self.line_offsets[line];
-            let end = if line == self.line_count() - 1 {
-                self.text.len()
-            } else {
-                self.line_offsets[line + 1]
-            };
-            Some((start, end))
-        } else {
+        // no lines: we return the empty string
+        if self.line_count() == 0 {
+            Some((0, 0))
+        // out of bounds, we return none
+        } else if line >= self.line_count() {
             None
+        } else {
+            let start = self.line_offsets[line];
+            let end = self
+                .line_offsets
+                .get(line + 1)
+                .copied()
+                .unwrap_or_else(|| self.text.len());
+            Some((start, end))
         }
     }
 
@@ -1041,5 +1045,11 @@ mod tests {
         assert!(CoreGraphicsText::new_with_unique_state()
             .font_family("Segoe UI")
             .is_none());
+    }
+
+    #[test]
+    fn line_text_empty_string() {
+        let layout = CoreGraphicsTextLayoutBuilder::new("").build().unwrap();
+        assert_eq!(layout.line_text(0), Some(""));
     }
 }
