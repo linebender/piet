@@ -1,9 +1,7 @@
 //! Wrappers around CF/CT types, with nice interfaces.
 
-use std::borrow::Cow;
-use std::convert::TryInto;
 use std::ffi::c_void;
-use std::ops::Deref;
+use std::rc::Rc;
 
 use core_foundation::{
     array::{CFArray, CFArrayRef, CFIndex},
@@ -19,6 +17,7 @@ use core_foundation_sys::base::CFRange;
 use core_graphics::{
     base::CGFloat,
     color::CGColor,
+    context::CGContextRef,
     data_provider::CGDataProvider,
     font::CGFont,
     geometry::{CGAffineTransform, CGPoint, CGRect, CGSize},
@@ -31,7 +30,7 @@ use core_text::{
     },
     font_collection::{self, CTFontCollection, CTFontCollectionRef},
     font_descriptor::{self, CTFontDescriptor, CTFontDescriptorRef},
-    frame::{CTFrame, CTFrameRef},
+    frame::CTFrame,
     framesetter::CTFramesetter,
     line::{CTLine, CTLineRef, TypographicBounds},
     string_attributes,
@@ -52,9 +51,12 @@ pub(crate) struct AttributedString {
 #[derive(Debug, Clone)]
 pub(crate) struct Framesetter(CTFramesetter);
 #[derive(Debug, Clone)]
-pub(crate) struct Frame(pub(crate) CTFrame);
+pub(crate) struct Frame {
+    frame: CTFrame,
+    lines: Rc<[Line]>,
+}
 #[derive(Debug, Clone)]
-pub(crate) struct Line<'a>(pub(crate) Cow<'a, CTLine>);
+pub(crate) struct Line(CTLine);
 
 #[derive(Debug, Clone)]
 pub(crate) struct FontCollection(CTFontCollection);
@@ -206,37 +208,34 @@ impl Framesetter {
     }
 
     pub(crate) fn create_frame(&self, range: CFRange, path: &CGPathRef) -> Frame {
-        Frame(self.0.create_frame(range, path))
+        let frame = self.0.create_frame(range, path);
+        let lines = frame.get_lines().into_iter().map(Line);
+        Frame {
+            frame,
+            lines: lines.collect(),
+        }
     }
 }
 
 impl Frame {
-    pub(crate) fn get_lines(&self) -> CFArray<CTLine> {
-        // we could just hold on to a Vec<CTLine> if we wanted?
-        // this was written like this before we upstreamed changes to the core-text crate,
-        // but those changes are more defensive, and do an extra allocation.
-        // It might be simpler that way, though.
-        unsafe { TCFType::wrap_under_get_rule(CTFrameGetLines(self.0.as_concrete_TypeRef())) }
+    pub(crate) fn lines(&self) -> &[Line] {
+        &self.lines
     }
 
-    pub(crate) fn get_line(&self, line_number: usize) -> Option<CTLine> {
-        let idx: CFIndex = line_number.try_into().ok()?;
-        let lines = self.get_lines();
-        lines
-            .get(idx)
-            .map(|l| unsafe { TCFType::wrap_under_get_rule(l.as_concrete_TypeRef()) })
+    pub(crate) fn get_line(&self, line_number: usize) -> Option<Line> {
+        self.lines.get(line_number).cloned()
     }
 
     pub(crate) fn get_line_origins(&self, range: CFRange) -> Vec<CGPoint> {
-        self.0.get_line_origins(range)
+        self.frame.get_line_origins(range)
+    }
+
+    pub(crate) fn draw(&self, ctx: &mut CGContextRef) {
+        self.frame.draw(ctx)
     }
 }
 
-impl<'a> Line<'a> {
-    pub(crate) fn new(inner: &'a impl Deref<Target = CTLine>) -> Line<'a> {
-        Line(Cow::Borrowed(inner.deref()))
-    }
-
+impl Line {
     pub(crate) fn get_string_range(&self) -> CFRange {
         self.0.get_string_range()
     }
@@ -265,12 +264,6 @@ impl<'a> Line<'a> {
     /// https://developer.apple.com/documentation/coretext/1509629-ctlinegetoffsetforstringindex
     pub(crate) fn get_offset_for_string_index(&self, index: CFIndex) -> CGFloat {
         self.0.get_string_offset_for_string_index(index)
-    }
-}
-
-impl<'a> From<CTLine> for Line<'a> {
-    fn from(src: CTLine) -> Line<'a> {
-        Line(Cow::Owned(src))
     }
 }
 
@@ -411,7 +404,6 @@ extern "C" {
     //static kCTFontVariationAxisDefaultValueKey: CFStringRef;
     //pub static kCTFontVariationAxisNameKey: CFStringRef;
 
-    fn CTFrameGetLines(frame: CTFrameRef) -> CFArrayRef;
     fn CTFontCreateUIFontForLanguage(
         font_type: CTFontUIFontType,
         size: CGFloat,
