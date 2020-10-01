@@ -54,7 +54,12 @@ pub struct CoreGraphicsTextLayout {
     attr_string: AttributedString,
     framesetter: Framesetter,
     pub(crate) frame: Option<Frame>,
+    /// The size of our layout as understood by coretext
     pub(crate) frame_size: Size,
+    /// Extra height that is not part of our coretext frame. This can be from
+    /// one of two things: either the height of an empty layout, or the height
+    /// of the implied extra line when the layout ends in a newline.
+    bonus_height: f64,
     image_bounds: Rect,
     width_constraint: f64,
     // these two are stored values we use to determine cursor extents when the layout is empty.
@@ -531,7 +536,10 @@ impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
 
 impl TextLayout for CoreGraphicsTextLayout {
     fn size(&self) -> Size {
-        self.frame_size
+        Size::new(
+            self.frame_size.width,
+            self.frame_size.height + self.bonus_height,
+        )
     }
 
     fn image_bounds(&self) -> Rect {
@@ -567,8 +575,10 @@ impl TextLayout for CoreGraphicsTextLayout {
         let line = match self.unwrap_frame().get_line(line_num) {
             Some(line) => line,
             None => {
-                assert!(self.text.is_empty());
-                return HitTestPoint::default();
+                // if we can't find a line we're either an empty string or we're
+                // at the newline at eof
+                assert!(self.text.is_empty() || self.text.as_bytes().last() == Some(&b'\n'));
+                return HitTestPoint::new(self.text.len(), false);
             }
         };
         let metric = &self.line_metrics[line_num];
@@ -605,12 +615,17 @@ impl TextLayout for CoreGraphicsTextLayout {
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
 
-        if self.text.is_empty() {
-            return HitTestPosition::new(Point::new(0.0, self.default_baseline), 0);
-        }
-
         let line_num = self.line_number_for_utf8_offset(idx);
-        let line: Line = self.unwrap_frame().get_line(line_num).unwrap();
+        let line = match self.unwrap_frame().get_line(line_num) {
+            Some(line) => line,
+            None => {
+                assert!(self.text.is_empty() || self.text.as_bytes().last() == Some(&b'\n'));
+                let lm = &self.line_metrics[line_num];
+                let y_pos = lm.y_offset + lm.baseline;
+                return HitTestPosition::new(Point::new(0., y_pos), line_num);
+            }
+        };
+
         let text = self.line_text(line_num).unwrap();
         let metric = &self.line_metrics[line_num];
 
@@ -670,6 +685,7 @@ impl CoreGraphicsTextLayout {
             // all of this is correctly set in `update_width` below
             frame: None,
             frame_size: Size::ZERO,
+            bonus_height: 0.0,
             image_bounds: Rect::ZERO,
             // NaN to ensure we always execute code in update_width
             width_constraint: f64::NAN,
@@ -707,10 +723,13 @@ impl CoreGraphicsTextLayout {
         .into();
         assert!(self.line_metrics.len() > 0);
 
+        self.bonus_height = if self.text.is_empty() || self.text.as_bytes().last() == Some(&b'\n') {
+            self.line_metrics.last().unwrap().height
+        } else {
+            0.0
+        };
+
         self.frame_size = Size::new(frame_size.width, frame_size.height);
-        if self.text.is_empty() {
-            self.frame_size.height = self.default_line_height;
-        }
 
         let mut line_bounds = frame
             .lines()
@@ -838,6 +857,26 @@ fn build_line_metrics(
             baseline: default_baseline,
             ..Default::default()
         });
+    // newline at EOF is treated as an additional empty line
+    } else if text.as_bytes().last() == Some(&b'\n') {
+        let newline_eof = result
+            .last()
+            .map(|lm| {
+                LineMetric {
+                    start_offset: text.len(),
+                    end_offset: text.len(),
+                    // use height and baseline of preceding line; more likely
+                    // to be correct than the default.
+                    // FIXME: for this to be actually correct we would need the metrics
+                    // of the font used in the line's last run
+                    height: lm.height,
+                    baseline: lm.baseline,
+                    y_offset: lm.y_offset + lm.height,
+                    trailing_whitespace: 0,
+                }
+            })
+            .unwrap();
+        result.push(newline_eof);
     }
     result
 }

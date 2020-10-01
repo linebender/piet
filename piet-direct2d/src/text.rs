@@ -291,7 +291,7 @@ impl TextLayout for D2DTextLayout {
     fn line_text(&self, line_number: usize) -> Option<&str> {
         self.line_metrics
             .get(line_number)
-            .map(|lm| &self.text[lm.start_offset..(lm.end_offset - lm.trailing_whitespace)])
+            .map(|lm| &self.text[lm.range()])
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
@@ -497,6 +497,17 @@ mod test {
         assert_close!(pos.point.y, 10.0, 3.0);
         let line = layout.line_metric(0).unwrap();
         assert_close!(line.height, 14.0, 3.0);
+    }
+
+    #[test]
+    fn newline_text() {
+        let layout = D2DText::new_for_test()
+            .new_text_layout("A\nB")
+            .build()
+            .unwrap();
+        assert_eq!(layout.line_count(), 2);
+        assert_eq!(layout.line_text(0), Some("A\n"));
+        assert_eq!(layout.line_text(1), Some("B"));
     }
 
     #[test]
@@ -787,9 +798,9 @@ mod test {
             .unwrap();
 
         assert_eq!(layout.line_count(), 4);
-        assert_eq!(layout.line_text(0), Some("piet"));
-        assert_eq!(layout.line_text(1), Some("text"));
-        assert_eq!(layout.line_text(2), Some("most"));
+        assert_eq!(layout.line_text(0), Some("piet "));
+        assert_eq!(layout.line_text(1), Some("text "));
+        assert_eq!(layout.line_text(2), Some("most "));
         assert_eq!(layout.line_text(3), Some("best"));
         assert_eq!(layout.line_text(4), None);
     }

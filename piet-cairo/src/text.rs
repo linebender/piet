@@ -253,12 +253,26 @@ impl CairoTextLayout {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
         self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
-        if self.line_metrics.is_empty() {
+        if self.text.is_empty() {
             self.line_metrics.push(LineMetric {
                 baseline: self.font.extents().ascent,
                 height: self.font.extents().height,
                 ..Default::default()
             })
+        } else if self.text.as_bytes().last() == Some(&b'\n') {
+            let newline_eof = self
+                .line_metrics
+                .last()
+                .map(|lm| LineMetric {
+                    start_offset: self.text.len(),
+                    end_offset: self.text.len(),
+                    height: lm.height,
+                    baseline: lm.baseline,
+                    y_offset: lm.y_offset + lm.height,
+                    trailing_whitespace: 0,
+                })
+                .unwrap();
+            self.line_metrics.push(newline_eof);
         }
 
         let width = self

@@ -345,6 +345,8 @@ pub trait TextLayout: Clone {
     fn text(&self) -> &str;
 
     /// Given a line number, return a reference to that line's underlying string.
+    ///
+    /// This will include any trailing whitespace.
     fn line_text(&self, line_number: usize) -> Option<&str>;
 
     /// Given a line number, return a reference to that line's metrics, if the line exists.
