@@ -622,35 +622,6 @@ impl TextLayout for CoreGraphicsTextLayout {
         let y_pos = metric.y_offset + metric.baseline;
         HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
     }
-
-    fn rects_for_range(&self, range: impl RangeBounds<usize>) -> Vec<Rect> {
-        let range = util::resolve_range(range, self.text.len());
-        let first_line = self.line_number_for_utf8_offset(range.start);
-        let last_line = self.line_number_for_utf8_offset(range.end);
-
-        let mut result = Vec::new();
-
-        for line in first_line..=last_line {
-            let metrics = self.line_metric(line).unwrap();
-            let y0 = metrics.y_offset;
-            let y1 = y0 + metrics.height;
-            let line_range_start = if line == first_line {
-                range.start
-            } else {
-                metrics.start_offset
-            };
-
-            let line_range_end = if line == last_line {
-                range.end
-            } else {
-                metrics.end_offset - metrics.trailing_whitespace
-            };
-            let start_point = self.hit_test_text_position(line_range_start);
-            let end_point = self.hit_test_text_position(line_range_end);
-            result.push(Rect::new(start_point.point.x, y0, end_point.point.x, y1));
-        }
-        result
-    }
 }
 
 impl CoreGraphicsTextLayout {

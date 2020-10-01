@@ -411,6 +411,10 @@ pub trait TextLayout: Clone {
         range.start = range.start.min(text_len);
         range.end = range.end.min(text_len);
 
+        if range.start >= range.end {
+            return Vec::new();
+        }
+
         let first_line = self.hit_test_text_position(range.start).line;
         let last_line = self.hit_test_text_position(range.end).line;
 

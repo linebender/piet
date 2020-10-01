@@ -52,6 +52,14 @@ fn ws_only_layout() {
 }
 
 #[test]
+fn rects_for_empty_range() {
+    let mut factory = make_factory();
+    let text = "";
+    let layout = factory.new_text_layout(text).build().unwrap();
+    assert!(layout.rects_for_range(0..0).is_empty());
+}
+
+#[test]
 fn empty_layout_size() {
     let mut factory = make_factory();
     let empty_layout = factory.new_text_layout("").build().unwrap();
