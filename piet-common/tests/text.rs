@@ -42,6 +42,16 @@ fn empty_layout() {
 }
 
 #[test]
+fn ws_only_layout() {
+    let mut factory = make_factory();
+    let text = " ";
+    let layout = factory.new_text_layout(text).build().unwrap();
+    assert_eq!(layout.line_count(), 1);
+    assert!(layout.line_metric(0).is_some());
+    assert!(layout.line_text(0).is_some());
+}
+
+#[test]
 fn empty_layout_size() {
     let mut factory = make_factory();
     let empty_layout = factory.new_text_layout("").build().unwrap();
