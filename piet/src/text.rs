@@ -319,6 +319,10 @@ pub trait TextLayout: Clone {
     /// This is the size required to draw this `TextLayout`, as provided by the
     /// platform text system.
     ///
+    /// If the layout is empty (the text is the empty string) the returned
+    /// `Size` will have the height required to draw a cursor in the layout's
+    /// default font.
+    ///
     /// # Note
     ///
     /// This is not currently defined very rigorously; in particular we do not
@@ -354,6 +358,9 @@ pub trait TextLayout: Clone {
     fn line_metric(&self, line_number: usize) -> Option<LineMetric>;
 
     /// Returns total number of lines in the text layout.
+    ///
+    /// The return value will always be greater than 0; a layout of the empty
+    /// string is considered to have a single line.
     fn line_count(&self) -> usize;
 
     /// Given a `Point`, return a [`HitTestPoint`] describing the corresponding
