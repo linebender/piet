@@ -548,15 +548,6 @@ impl TextLayout for CoreGraphicsTextLayout {
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        // special case for when we have no text
-        //FIXME: just include this in line_metrics as needed
-        if line_number == 0 && self.text.is_empty() {
-            return Some(LineMetric {
-                baseline: self.default_baseline,
-                height: self.default_line_height,
-                ..Default::default()
-            });
-        }
         self.line_metrics.get(line_number).cloned()
     }
 
@@ -566,11 +557,6 @@ impl TextLayout for CoreGraphicsTextLayout {
 
     // given a point on the screen, return an offset in the text, basically
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        //FIXME: should never be empty
-        if self.line_metrics.is_empty() {
-            return HitTestPoint::default();
-        }
-
         let line_num = self
             .line_metrics
             .iter()
@@ -578,11 +564,13 @@ impl TextLayout for CoreGraphicsTextLayout {
             // if we're past the last line, use the last line
             .unwrap_or_else(|| self.line_metrics.len().saturating_sub(1));
 
-        let line: Line = self
-            .unwrap_frame()
-            .get_line(line_num)
-            .map(Into::into)
-            .unwrap();
+        let line = match self.unwrap_frame().get_line(line_num) {
+            Some(line) => line,
+            None => {
+                assert!(self.text.is_empty());
+                return HitTestPoint::default();
+            }
+        };
         let metric = &self.line_metrics[line_num];
         // a y position inside this line
         let fake_y = metric.y_offset + metric.baseline;
@@ -709,9 +697,17 @@ impl CoreGraphicsTextLayout {
         self.width_constraint = width;
 
         let frame = self.framesetter.create_frame(char_range, &path);
-        self.line_metrics = build_line_metrics(&frame, frame_size.height, &self.text).into();
-        self.frame_size = Size::new(frame_size.width, frame_size.height);
+        self.line_metrics = build_line_metrics(
+            &frame,
+            frame_size.height,
+            &self.text,
+            self.default_line_height,
+            self.default_baseline,
+        )
+        .into();
+        assert!(self.line_metrics.len() > 0);
 
+        self.frame_size = Size::new(frame_size.width, frame_size.height);
         if self.text.is_empty() {
             self.frame_size.height = self.default_line_height;
         }
@@ -751,15 +747,9 @@ impl CoreGraphicsTextLayout {
     }
 
     fn line_range(&self, line: usize) -> Option<(usize, usize)> {
-        // no lines: we return the empty string
-        //FIXME: just never have no lines
-        if self.line_count() == 0 {
-            Some((0, 0))
-        } else {
-            self.line_metrics
-                .get(line)
-                .map(|lm| (lm.start_offset, lm.end_offset))
-        }
+        self.line_metrics
+            .get(line)
+            .map(|lm| (lm.start_offset, lm.end_offset))
     }
 
     #[allow(dead_code)]
@@ -778,7 +768,13 @@ impl CoreGraphicsTextLayout {
 }
 
 #[allow(clippy::while_let_on_iterator)]
-fn build_line_metrics(frame: &Frame, frame_height: f64, text: &str) -> Vec<LineMetric> {
+fn build_line_metrics(
+    frame: &Frame,
+    frame_height: f64,
+    text: &str,
+    default_line_height: f64,
+    default_baseline: f64,
+) -> Vec<LineMetric> {
     let line_origins = frame.get_line_origins(CFRange::init(0, 0));
     assert_eq!(frame.lines().len(), line_origins.len());
     let mut result = Vec::with_capacity(frame.lines().len() + 1);
@@ -832,6 +828,15 @@ fn build_line_metrics(frame: &Frame, frame_height: f64, text: &str) -> Vec<LineM
             baseline: typo_bounds.ascent,
             height,
             y_offset,
+        });
+    }
+
+    // empty string is treated as a single empty line
+    if text.is_empty() {
+        result.push(LineMetric {
+            height: default_line_height,
+            baseline: default_baseline,
+            ..Default::default()
         });
     }
     result

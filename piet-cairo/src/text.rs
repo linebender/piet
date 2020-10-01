@@ -177,15 +177,7 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        if line_number == 0 && self.text.is_empty() {
-            Some(LineMetric {
-                baseline: self.font.extents().ascent,
-                height: self.font.extents().height,
-                ..Default::default()
-            })
-        } else {
-            self.line_metrics.get(line_number).cloned()
-        }
+        self.line_metrics.get(line_number).cloned()
     }
 
     fn line_count(&self) -> usize {
@@ -261,6 +253,13 @@ impl CairoTextLayout {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
         self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
+        if self.line_metrics.is_empty() {
+            self.line_metrics.push(LineMetric {
+                baseline: self.font.extents().ascent,
+                height: self.font.extents().height,
+                ..Default::default()
+            })
+        }
 
         let width = self
             .line_metrics
