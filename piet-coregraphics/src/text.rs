@@ -54,16 +54,13 @@ pub struct CoreGraphicsTextLayout {
     attr_string: AttributedString,
     framesetter: Framesetter,
     pub(crate) frame: Option<Frame>,
-    // distance from the top of the frame to the baseline of each line
-    pub(crate) line_y_positions: Rc<[f64]>,
-    /// offsets in utf8 of lines
-    line_offsets: Rc<[usize]>,
     pub(crate) frame_size: Size,
     image_bounds: Rect,
     width_constraint: f64,
     // these two are stored values we use to determine cursor extents when the layout is empty.
     default_baseline: f64,
     default_line_height: f64,
+    line_metrics: Rc<[LineMetric]>,
 }
 
 /// Building text layouts for `CoreGraphics`.
@@ -552,6 +549,7 @@ impl TextLayout for CoreGraphicsTextLayout {
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
         // special case for when we have no text
+        //FIXME: just include this in line_metrics as needed
         if line_number == 0 && self.text.is_empty() {
             return Some(LineMetric {
                 baseline: self.default_baseline,
@@ -559,72 +557,35 @@ impl TextLayout for CoreGraphicsTextLayout {
                 ..Default::default()
             });
         }
-
-        let lines = self.unwrap_frame().get_lines();
-        let line = lines.get(line_number.min(isize::max_value() as usize) as isize)?;
-        let line = Line::new(&line);
-        let typo_bounds = line.get_typographic_bounds();
-        let (start_offset, end_offset) = self.line_range(line_number)?;
-        let text = self.line_text(line_number)?;
-        //FIXME: this is just ascii whitespace
-        let trailing_whitespace = text
-            .as_bytes()
-            .iter()
-            .rev()
-            .take_while(|b| match b {
-                b' ' | b'\t' | b'\n' | b'\r' => true,
-                _ => false,
-            })
-            .count();
-        // this may not be exactly right, but i'm also not sure we ever use this?
-        //  see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
-        let ascent = (typo_bounds.ascent + 0.5).floor();
-        let descent = (typo_bounds.descent + 0.5).floor();
-        let leading = (typo_bounds.leading + 0.5).floor();
-        let height = ascent + descent + leading;
-        let y_offset = self.line_y_positions[line_number] - ascent;
-
-        Some(LineMetric {
-            start_offset,
-            end_offset,
-            trailing_whitespace,
-            baseline: typo_bounds.ascent,
-            height,
-            y_offset,
-        })
+        self.line_metrics.get(line_number).cloned()
     }
 
     fn line_count(&self) -> usize {
-        self.line_y_positions.len()
+        self.line_metrics.len()
     }
 
     // given a point on the screen, return an offset in the text, basically
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        if self.line_y_positions.is_empty() {
+        //FIXME: should never be empty
+        if self.line_metrics.is_empty() {
             return HitTestPoint::default();
         }
 
-        let mut line_num = self
-            .line_y_positions
+        let line_num = self
+            .line_metrics
             .iter()
-            .position(|y| y >= &point.y)
+            .position(|lm| lm.y_offset + lm.height >= point.y)
             // if we're past the last line, use the last line
-            .unwrap_or_else(|| self.line_y_positions.len().saturating_sub(1));
-        // because y_positions is the position of the baseline, check that we don't
-        // fall between the preceding baseline and that line's descent
-        if line_num > 0 {
-            let prev_line = self.unwrap_frame().get_line(line_num - 1).unwrap();
-            let typo_bounds = Line::new(&&prev_line).get_typographic_bounds();
-            if self.line_y_positions[line_num - 1] + typo_bounds.descent >= point.y {
-                line_num -= 1;
-            }
-        }
+            .unwrap_or_else(|| self.line_metrics.len().saturating_sub(1));
+
         let line: Line = self
             .unwrap_frame()
             .get_line(line_num)
             .map(Into::into)
             .unwrap();
-        let fake_y = self.line_y_positions[line_num];
+        let metric = &self.line_metrics[line_num];
+        // a y position inside this line
+        let fake_y = metric.y_offset + metric.baseline;
         // map that back into our inverted coordinate space
         let fake_y = -(self.frame_size.height - fake_y);
         let point_in_string_space = CGPoint::new(point.x, fake_y);
@@ -634,10 +595,9 @@ impl TextLayout for CoreGraphicsTextLayout {
             -1 => self.text.len(),
             n if n >= 0 => {
                 let utf16_range = line.get_string_range();
-                let utf8_range = self.line_range(line_num).unwrap();
                 let line_txt = self.line_text(line_num).unwrap();
                 let rel_offset = (n - utf16_range.location) as usize;
-                utf8_range.0
+                metric.start_offset
                     + util::count_until_utf16(line_txt, rel_offset)
                         .unwrap_or_else(|| line_txt.len())
             }
@@ -662,15 +622,16 @@ impl TextLayout for CoreGraphicsTextLayout {
         }
 
         let line_num = self.line_number_for_utf8_offset(idx);
-        let line: Line = self.unwrap_frame().get_line(line_num).unwrap().into();
+        let line: Line = self.unwrap_frame().get_line(line_num).unwrap();
         let text = self.line_text(line_num).unwrap();
+        let metric = &self.line_metrics[line_num];
 
-        let offset_remainder = idx - self.line_offsets[line_num];
+        let offset_remainder = idx - metric.start_offset;
         let off16: usize = util::count_utf16(&text[..offset_remainder]);
         let line_range = line.get_string_range();
         let char_idx = line_range.location + off16 as isize;
         let x_pos = line.get_offset_for_string_index(char_idx);
-        let y_pos = self.line_y_positions[line_num];
+        let y_pos = metric.y_offset + metric.baseline;
         HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
     }
 
@@ -722,12 +683,11 @@ impl CoreGraphicsTextLayout {
             frame: None,
             frame_size: Size::ZERO,
             image_bounds: Rect::ZERO,
-            line_y_positions: Rc::new([]),
             // NaN to ensure we always execute code in update_width
             width_constraint: f64::NAN,
-            line_offsets: Rc::new([]),
             default_baseline,
             default_line_height,
+            line_metrics: Rc::new([]),
         };
         layout.update_width(width_constraint).unwrap();
         layout
@@ -737,44 +697,42 @@ impl CoreGraphicsTextLayout {
     #[allow(clippy::float_cmp)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let width = new_width.into().unwrap_or(f64::INFINITY);
-        if width.ceil() != self.width_constraint.ceil() {
-            let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
-            let char_range = self.attr_string.range();
-            let (frame_size, _) = self.framesetter.suggest_frame_size(char_range, constraints);
-            let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
-            let path = CGPath::from_rect(rect, None);
-            self.width_constraint = width;
-            let frame = self.framesetter.create_frame(char_range, &path);
-            let lines = frame.get_lines();
-            let line_count = lines.len();
-            let line_origins = frame.get_line_origins(CFRange::init(0, line_count));
-            self.line_y_positions = line_origins
-                .iter()
-                .map(|l| frame_size.height - l.y)
-                .collect();
-            self.frame = Some(frame);
-            self.frame_size = Size::new(frame_size.width, frame_size.height);
-
-            if self.text.is_empty() {
-                self.frame_size.height = self.default_line_height;
-            }
-
-            let mut line_bounds = lines
-                .iter()
-                .map(|l| Line::new(&l).get_image_bounds())
-                .zip(self.line_y_positions.iter())
-                .map(|(rect, y_pos)| Rect::new(rect.x0, y_pos - rect.y1, rect.x1, y_pos - rect.y0));
-
-            let first_line_bounds = line_bounds.next().unwrap_or_default();
-            self.image_bounds = line_bounds.fold(first_line_bounds, |acc, el| acc.union(el));
-
-            self.rebuild_line_offsets();
+        if width.ceil() == self.width_constraint.ceil() {
+            return Ok(());
         }
+
+        let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
+        let char_range = self.attr_string.range();
+        let (frame_size, _) = self.framesetter.suggest_frame_size(char_range, constraints);
+        let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
+        let path = CGPath::from_rect(rect, None);
+        self.width_constraint = width;
+
+        let frame = self.framesetter.create_frame(char_range, &path);
+        self.line_metrics = build_line_metrics(&frame, frame_size.height, &self.text).into();
+        self.frame_size = Size::new(frame_size.width, frame_size.height);
+
+        if self.text.is_empty() {
+            self.frame_size.height = self.default_line_height;
+        }
+
+        let mut line_bounds = frame
+            .lines()
+            .iter()
+            .map(Line::get_image_bounds)
+            .zip(self.line_metrics.iter().map(|l| l.y_offset + l.baseline))
+            // these are relative to the baseline *and* upside down, so we invert y
+            .map(|(rect, y_pos)| Rect::new(rect.x0, y_pos - rect.y1, rect.x1, y_pos - rect.y0));
+
+        let first_line_bounds = line_bounds.next().unwrap_or_default();
+        self.image_bounds = line_bounds.fold(first_line_bounds, |acc, el| acc.union(el));
+        self.frame = Some(frame);
+
         Ok(())
     }
 
     pub(crate) fn draw(&self, ctx: &mut CGContextRef) {
-        self.unwrap_frame().0.draw(ctx)
+        self.unwrap_frame().draw(ctx)
     }
 
     #[inline]
@@ -783,80 +741,112 @@ impl CoreGraphicsTextLayout {
     }
 
     fn line_number_for_utf8_offset(&self, offset: usize) -> usize {
-        match self.line_offsets.binary_search(&offset) {
+        match self
+            .line_metrics
+            .binary_search_by_key(&offset, |lm| lm.start_offset)
+        {
             Ok(line) => line,
             Err(line) => line.saturating_sub(1),
         }
     }
 
-    /// for each line in a layout, determine its offset in utf8.
-    #[allow(clippy::while_let_on_iterator)]
-    fn rebuild_line_offsets(&mut self) {
-        let lines = self.unwrap_frame().get_lines();
-
-        let utf16_line_offsets = lines.iter().map(|l| {
-            let line = Line::new(&l);
-            let range = line.get_string_range();
-            range.location as usize
-        });
-
-        let mut chars = self.text.chars();
-        let mut cur_16 = 0;
-        let mut cur_8 = 0;
-
-        self.line_offsets = utf16_line_offsets
-            .map(|off_16| {
-                if off_16 == 0 {
-                    return 0;
-                }
-                while let Some(c) = chars.next() {
-                    cur_16 += c.len_utf16();
-                    cur_8 += c.len_utf8();
-                    if cur_16 == off_16 {
-                        return cur_8;
-                    }
-                }
-                panic!("error calculating utf8 offsets");
-            })
-            .collect();
-    }
-
     fn line_range(&self, line: usize) -> Option<(usize, usize)> {
         // no lines: we return the empty string
+        //FIXME: just never have no lines
         if self.line_count() == 0 {
             Some((0, 0))
-        // out of bounds, we return none
-        } else if line >= self.line_count() {
-            None
         } else {
-            let start = self.line_offsets[line];
-            let end = self
-                .line_offsets
-                .get(line + 1)
-                .copied()
-                .unwrap_or_else(|| self.text.len());
-            Some((start, end))
+            self.line_metrics
+                .get(line)
+                .map(|lm| (lm.start_offset, lm.end_offset))
         }
     }
 
     #[allow(dead_code)]
     fn debug_print_lines(&self) {
-        for i in 0..self.line_y_positions.len() {
-            let start = self.line_offsets[i];
-            let end = self
-                .line_offsets
-                .get(i + 1)
-                .copied()
-                .unwrap_or_else(|| self.text.len());
+        for (i, lm) in self.line_metrics.iter().enumerate() {
+            let range = lm.range();
             println!(
                 "L{} ({}..{}): '{}'",
                 i,
-                start,
-                end,
-                &self.text[start..end].escape_debug()
+                range.start,
+                range.end,
+                &self.text[lm.range()].escape_debug()
             );
         }
     }
+}
+
+#[allow(clippy::while_let_on_iterator)]
+fn build_line_metrics(frame: &Frame, frame_height: f64, text: &str) -> Vec<LineMetric> {
+    let line_origins = frame.get_line_origins(CFRange::init(0, 0));
+    assert_eq!(frame.lines().len(), line_origins.len());
+    let mut result = Vec::with_capacity(frame.lines().len() + 1);
+
+    let mut chars = text.chars();
+    let mut cur_16 = 0;
+    let mut cur_8 = 0;
+
+    // a closure for converting our offsets
+    let mut utf16_to_utf8 = |off_16| {
+        if off_16 == 0 {
+            0
+        } else {
+            while let Some(c) = chars.next() {
+                cur_16 += c.len_utf16();
+                cur_8 += c.len_utf8();
+                if cur_16 == off_16 {
+                    return cur_8;
+                }
+            }
+            panic!("error calculating utf8 offsets");
+        }
+    };
+
+    let mut last_line_end = 0;
+    for (i, line) in frame.lines().iter().enumerate() {
+        let range = line.get_string_range();
+
+        let y_pos = frame_height - line_origins[i].y;
+
+        let start_offset = last_line_end;
+        let end_offset = utf16_to_utf8((range.location + range.length) as usize);
+        last_line_end = end_offset;
+
+        let trailing_whitespace = count_trailing_ws(&text[start_offset..end_offset]);
+
+        let typo_bounds = line.get_typographic_bounds();
+
+        // this may not be exactly right, but i'm also not sure we ever use this?
+        //  see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
+        let ascent = (typo_bounds.ascent + 0.5).floor();
+        let descent = (typo_bounds.descent + 0.5).floor();
+        let leading = (typo_bounds.leading + 0.5).floor();
+        let height = ascent + descent + leading;
+        let y_offset = y_pos - ascent;
+
+        result.push(LineMetric {
+            start_offset,
+            end_offset,
+            trailing_whitespace,
+            baseline: typo_bounds.ascent,
+            height,
+            y_offset,
+        });
+    }
+    result
+}
+
+fn count_trailing_ws(s: &str) -> usize {
+    //FIXME: this is just ascii whitespace
+    s.as_bytes()
+        .iter()
+        .rev()
+        .take_while(|b| match b {
+            b' ' | b'\t' | b'\n' | b'\r' => true,
+            _ => false,
+        })
+        .count()
 }
 
 /// Generate an opentype tag. The string should be exactly 4 bytes long.
@@ -1015,12 +1005,12 @@ mod tests {
             .build()
             .unwrap();
         let p1 = layout.hit_test_text_position(0);
-        assert_eq!(p1.point, Point::new(0.0, 16.0));
+        assert_close!(p1.point.y, 16.0, 0.5);
 
         let p1 = layout.hit_test_text_position(7);
-        assert_eq!(p1.point.y, 36.0);
+        assert_close!(p1.point.y, 36.0, 0.5);
         // just the general idea that this is the second character
-        assert!(p1.point.x > 5.0 && p1.point.x < 15.0);
+        assert_close!(p1.point.x, 10.0, 5.0);
     }
 
     #[test]
