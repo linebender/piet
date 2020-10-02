@@ -145,7 +145,7 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use make_image_buf")]
+    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         let mut buf = vec![0; self.width * self.height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
@@ -153,7 +153,10 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get an in-memory pixel buffer from the bitmap.
-    pub fn make_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
+    // Clippy complains about a to_xxx method taking &mut self. Semantically speaking, this is not
+    // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
         let mut buf = vec![0; self.width * self.height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(ImageBuf::from_raw(buf, fmt, self.width, self.height))
@@ -210,7 +213,7 @@ impl<'a> BitmapTarget<'a> {
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let height = self.height;
         let width = self.width;
-        let image = self.make_image_buf(ImageFormat::RgbaPremul)?;
+        let image = self.to_image_buf(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::RGBA);
@@ -249,13 +252,13 @@ mod tests {
     }
 
     #[test]
-    fn make_image_buf() {
+    fn to_image_buf() {
         let mut device = Device::new().unwrap();
         let mut target = device.bitmap_target(640, 480, 1.0).unwrap();
         let mut piet = target.render_context();
         piet.clip(Rect::ZERO);
         piet.finish().unwrap();
         std::mem::drop(piet);
-        target.make_image_buf(ImageFormat::RgbaPremul).unwrap();
+        target.to_image_buf(ImageFormat::RgbaPremul).unwrap();
     }
 }
