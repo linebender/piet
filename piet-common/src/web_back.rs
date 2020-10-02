@@ -13,7 +13,7 @@ use std::io::BufWriter;
 use png::{ColorType, Encoder};
 use wasm_bindgen::JsCast;
 
-use piet::ImageFormat;
+use piet::{ImageBuf, ImageFormat};
 #[doc(hidden)]
 pub use piet_web::*;
 
@@ -127,8 +127,19 @@ impl<'a> BitmapTarget<'a> {
         Ok(img_data.data().0)
     }
 
+    /// Get an in-memory pixel buffer from the bitmap.
+    // Clippy complains about a to_xxx method taking &mut self. Semantically speaking, this is not
+    // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
+        let data = self.raw_pixels(fmt)?;
+        let width = self.canvas.width() as usize;
+        let height = self.canvas.height() as usize;
+        Ok(ImageBuf::from_raw(data, fmt, width, height))
+    }
+
     /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use raw_pixels")]
+    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         self.raw_pixels(fmt)
     }

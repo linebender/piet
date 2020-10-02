@@ -12,7 +12,7 @@ use core_graphics::{color_space::CGColorSpace, context::CGContext, image::CGImag
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
-use piet::{Error, ImageFormat};
+use piet::{Error, ImageBuf, ImageFormat};
 #[doc(hidden)]
 pub use piet_coregraphics::*;
 
@@ -104,18 +104,25 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use raw_pixels")]
+    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
     pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.raw_pixels(fmt)
-    }
-
-    /// Get raw RGBA pixels from the bitmap.
-    pub fn raw_pixels(&mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         let width = self.ctx.width() as usize;
         let height = self.ctx.height() as usize;
         let mut buf = vec![0; width * height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(buf)
+    }
+
+    /// Get an in-memory pixel buffer from the bitmap.
+    // Clippy complains about a to_xxx method taking &mut self. Semantically speaking, this is not
+    // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
+        let width = self.ctx.width() as usize;
+        let height = self.ctx.height() as usize;
+        let mut buf = vec![0; width * height * 4];
+        self.copy_raw_pixels(fmt, &mut buf)?;
+        Ok(ImageBuf::from_raw(buf, fmt, width, height))
     }
 
     /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
@@ -161,7 +168,8 @@ impl<'a> BitmapTarget<'a> {
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
         let width = self.ctx.width() as usize;
         let height = self.ctx.height() as usize;
-        let mut data = self.raw_pixels(ImageFormat::RgbaPremul)?;
+        let mut data = vec![0; width * height * 4];
+        self.copy_raw_pixels(ImageFormat::RgbaPremul, &mut data)?;
         piet_coregraphics::unpremultiply_rgba(&mut data);
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
