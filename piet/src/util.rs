@@ -49,6 +49,25 @@ pub fn count_until_utf16(s: &str, utf16_text_position: usize) -> Option<usize> {
     None
 }
 
+/// If this string ends in a [newline function (NLF)][] (5.8), return the length
+/// of the NLF in bytes.
+///
+/// Note: this is currently just handling the newline character, `\\n`. When a
+/// line ends in a newline and a user clicks at the end of that line,
+/// you generally want to insert the cursor *before* that character.
+///
+/// In the future, we may want to respect other separators, as per the
+/// unicode spec.
+///
+/// [newline function (NLF)]: https://www.unicode.org/versions/Unicode13.0.0/ch05.pdf
+pub fn trailing_nlf(s: &str) -> Option<usize> {
+    if s.as_bytes().last() == Some(&b'\n') {
+        Some(1)
+    } else {
+        None
+    }
+}
+
 /// Returns the index of the line containing this utf8 position,
 /// or the last line index if the position is out of bounds.
 ///

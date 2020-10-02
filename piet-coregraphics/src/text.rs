@@ -577,10 +577,11 @@ impl TextLayout for CoreGraphicsTextLayout {
             None => {
                 // if we can't find a line we're either an empty string or we're
                 // at the newline at eof
-                assert!(self.text.is_empty() || self.text.as_bytes().last() == Some(&b'\n'));
+                assert!(self.text.is_empty() || util::trailing_nlf(&self.text).is_some());
                 return HitTestPoint::new(self.text.len(), false);
             }
         };
+        let line_text = self.line_text(line_num).unwrap();
         let metric = &self.line_metrics[line_num];
         // a y position inside this line
         let fake_y = metric.y_offset + metric.baseline;
@@ -588,19 +589,23 @@ impl TextLayout for CoreGraphicsTextLayout {
         let fake_y = -(self.frame_size.height - fake_y);
         let point_in_string_space = CGPoint::new(point.x, fake_y);
         let offset_utf16 = line.get_string_index_for_position(point_in_string_space);
-        let offset = match offset_utf16 {
+        let mut offset = match offset_utf16 {
             // this is 'kCFNotFound'.
             -1 => self.text.len(),
             n if n >= 0 => {
                 let utf16_range = line.get_string_range();
-                let line_txt = self.line_text(line_num).unwrap();
                 let rel_offset = (n - utf16_range.location) as usize;
                 metric.start_offset
-                    + util::count_until_utf16(line_txt, rel_offset)
-                        .unwrap_or_else(|| line_txt.len())
+                    + util::count_until_utf16(line_text, rel_offset)
+                        .unwrap_or_else(|| line_text.len())
             }
             // some other value; should never happen
             _ => panic!("gross violation of api contract"),
+        };
+
+        // if the offset is EOL && EOL is a newline, return the preceding offset
+        if offset == metric.end_offset {
+            offset -= util::trailing_nlf(line_text).unwrap_or(0);
         };
 
         let typo_bounds = line.get_typographic_bounds();
@@ -619,7 +624,7 @@ impl TextLayout for CoreGraphicsTextLayout {
         let line = match self.unwrap_frame().get_line(line_num) {
             Some(line) => line,
             None => {
-                assert!(self.text.is_empty() || self.text.as_bytes().last() == Some(&b'\n'));
+                assert!(self.text.is_empty() || util::trailing_nlf(&self.text).is_some());
                 let lm = &self.line_metrics[line_num];
                 let y_pos = lm.y_offset + lm.baseline;
                 return HitTestPosition::new(Point::new(0., y_pos), line_num);
@@ -694,7 +699,7 @@ impl CoreGraphicsTextLayout {
         .into();
         assert!(self.line_metrics.len() > 0);
 
-        self.bonus_height = if self.text.is_empty() || self.text.as_bytes().last() == Some(&b'\n') {
+        self.bonus_height = if self.text.is_empty() || util::trailing_nlf(&self.text).is_some() {
             self.line_metrics.last().unwrap().height
         } else {
             0.0
@@ -829,7 +834,7 @@ fn build_line_metrics(
             ..Default::default()
         });
     // newline at EOF is treated as an additional empty line
-    } else if text.as_bytes().last() == Some(&b'\n') {
+    } else if util::trailing_nlf(text).is_some() {
         let newline_eof = result
             .last()
             .map(|lm| {

@@ -1,6 +1,6 @@
 //! Basic conformance testing for text.
 
-use kurbo::Point;
+use kurbo::{Point, Size};
 use piet_common::*;
 
 macro_rules! assert_close {
@@ -116,4 +116,51 @@ fn newline_eof() {
         layout_newline.size().height,
         1.0
     );
+}
+
+#[test]
+fn eol_hit_testing() {
+    let mut factory = make_factory();
+
+    let text = "AA AA\nAA";
+    let line_size = measure_width(&mut factory, "AA", FontFamily::SYSTEM_UI, 12.0);
+    let layout = factory
+        .new_text_layout(text)
+        .max_width(line_size.width)
+        .font(FontFamily::SYSTEM_UI, 12.0)
+        .build()
+        .unwrap();
+
+    let metrics = layout.line_metric(0).unwrap();
+
+    // first line: a soft break
+    // we expect this to always give us the start of the next line, because
+    // we don't handle affinity
+    let right_of_line = layout.hit_test_point(Point::new(line_size.width + 3.0, 5.0));
+    assert_eq!(right_of_line.idx, 3);
+    let hit = layout.hit_test_text_position(right_of_line.idx);
+    // left edge
+    assert_close!(hit.point.x, 0.0, 1.0);
+    // baseline of second line
+    assert_close!(hit.point.y, metrics.height + metrics.baseline, 2.0);
+
+    //second line: hard break
+    //ideally this puts us on the second line, but before the newline?
+    let right_of_line =
+        layout.hit_test_point(Point::new(line_size.width + 3.0, metrics.height + 5.0));
+    assert_eq!(right_of_line.idx, 5);
+    let hit = layout.hit_test_text_position(right_of_line.idx);
+    // right edge
+    assert_close!(hit.point.x, line_size.width, 2.0);
+    // baseline of second line
+    assert_close!(hit.point.y, metrics.height + metrics.baseline, 2.0);
+}
+
+fn measure_width(factory: &mut impl Text, text: &str, font: FontFamily, size: f64) -> Size {
+    factory
+        .new_text_layout(text.to_owned())
+        .font(font, size)
+        .build()
+        .unwrap()
+        .size()
 }

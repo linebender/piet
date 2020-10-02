@@ -220,6 +220,9 @@ impl TextLayout for CairoTextLayout {
 
         let mut htp = hit_test_line_point(&self.font, line, point);
         htp.idx += lm.start_offset;
+        if htp.idx == lm.end_offset {
+            htp.idx -= util::trailing_nlf(line).unwrap_or(0);
+        }
         htp.is_inside &= y_inside;
         htp
     }
@@ -259,7 +262,7 @@ impl CairoTextLayout {
                 height: self.font.extents().height,
                 ..Default::default()
             })
-        } else if self.text.as_bytes().last() == Some(&b'\n') {
+        } else if util::trailing_nlf(&self.text).is_some() {
             let newline_eof = self
                 .line_metrics
                 .last()
