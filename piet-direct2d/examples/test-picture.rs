@@ -72,10 +72,7 @@ fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::
     // Get the data so we can write it to a file
     // TODO: Have a safe way to accomplish this :D
     let pixel_count = (size.width * size.height) as usize * 4;
-    let mut raw_pixels: Vec<u8> = Vec::with_capacity(pixel_count);
-    for _ in 0..pixel_count {
-        raw_pixels.push(0);
-    }
+    let mut raw_pixels = vec![0_u8; pixel_count];
     unsafe {
         d3d_ctx
             .inner()
@@ -94,7 +91,6 @@ fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::
                 .offset(size.width as isize * 4 * y as isize);
             std::ptr::copy_nonoverlapping(src, dst, size.width as usize * 4);
         }
-        raw_pixels.set_len(pixel_count);
     }
 
     image::save_buffer(

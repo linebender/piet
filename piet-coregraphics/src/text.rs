@@ -862,10 +862,7 @@ fn count_trailing_ws(s: &str) -> usize {
     s.as_bytes()
         .iter()
         .rev()
-        .take_while(|b| match b {
-            b' ' | b'\t' | b'\n' | b'\r' => true,
-            _ => false,
-        })
+        .take_while(|b| matches!(b, b' ' | b'\t' | b'\n' | b'\r'))
         .count()
 }
 
