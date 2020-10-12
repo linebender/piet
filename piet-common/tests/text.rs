@@ -29,6 +29,15 @@ fn make_factory() -> PietText {
     text
 }
 
+// https://github.com/linebender/piet/issues/334
+#[test]
+fn negative_width_doesnt_crash() {
+    let mut factory = make_factory();
+    let text = "oops";
+    let layout = factory.new_text_layout(text).max_width(-4.0).build();
+    assert!(layout.is_ok())
+}
+
 #[test]
 fn empty_layout() {
     let mut factory = make_factory();

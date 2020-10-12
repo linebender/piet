@@ -131,6 +131,7 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     type Out = D2DTextLayout;
 
     fn max_width(mut self, width: f64) -> Self {
+        let width = width.max(0.0);
         let result = match self.layout.as_mut() {
             Ok(layout) => layout.set_max_width(width),
             Err(_) => Ok(()),
