@@ -385,6 +385,9 @@ impl D2DTextLayout {
         );
 
         self.size = size;
+        if self.text.is_empty() {
+            self.size.height = self.default_line_height;
+        }
         self.line_metrics = line_metrics.into();
         self.inking_insets = inking_insets;
     }
@@ -479,6 +482,24 @@ mod test {
         ($val:expr, $target:expr, $tolerance:expr,) => {{
             assert_close!($val, $target, $tolerance)
         }};
+    }
+
+    #[test]
+    fn layout_size() {
+        let a_font = FontFamily::new_unchecked("Segoe UI");
+        let mut factory = D2DText::new_for_test();
+        let empty_layout = factory
+            .new_text_layout("")
+            .font(a_font.clone(), 22.0)
+            .build()
+            .unwrap();
+        let layout = factory
+            .new_text_layout("hello")
+            .font(a_font, 22.0)
+            .build()
+            .unwrap();
+
+        assert_close!(empty_layout.size().height, layout.size().height, 1e-6);
     }
 
     #[test]
