@@ -9,20 +9,12 @@ edition = "2018"
 keywords = ["graphics", "2d"]
 
 [features]
-d2d = ["piet-direct2d"]
-cairo = ["piet-cairo", "cairo-rs", "cairo-sys-rs"]
 web = ["piet-web"]
 
 [dependencies]
 piet = { version = "0.2.0-pre5", path = "../piet" }
-piet-cairo = { version = "0.2.0-pre5", path = "../piet-cairo", optional = true }
-piet-coregraphics = { version = "0.2.0-pre5", path = "../piet-coregraphics", optional = true }
-piet-direct2d = { version = "0.2.0-pre5", path = "../piet-direct2d", optional = true }
 piet-web = { version = "0.2.0-pre5", path = "../piet-web", optional = true }
-
 cfg-if = "0.1.10"
-cairo-rs = { version = "0.9.1", default_features = false, optional = true }
-cairo-sys-rs = { version = "0.10.0", optional = true }
 png = { version = "0.16.1", optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
