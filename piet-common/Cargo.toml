@@ -11,6 +11,23 @@ keywords = ["graphics", "2d"]
 [features]
 web = ["piet-web"]
 
+# passing on all the image features. AVIF is not supported because it does not
+# support decoding, and thats al we use `Image` for.
+image_png = ["piet/image_png"]
+jpeg = ["piet/jpeg"]
+jpeg_rayon = ["piet/jpeg_rayon"]
+gif = ["piet/gif"]
+bmp = ["piet/bmp"]
+ico = ["piet/ico"]
+tiff = ["piet/tiff"]
+webp = ["piet/webp"]
+pnm = ["piet/pnm"]
+dds = ["piet/dds"]
+tga = ["piet/tga"]
+farbfeld = ["piet/farbfeld"]
+dxt = ["piet/dxt"]
+hdr = ["piet/hdr"]
+
 [dependencies]
 piet = { version = "0.2.0-pre5", path = "../piet" }
 piet-web = { version = "0.2.0-pre5", path = "../piet-web", optional = true }

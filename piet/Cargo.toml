@@ -10,7 +10,7 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-image = { version = "0.23.10", optional = true }
+image = { version = "0.23.10", optional = true, default-features = false }
 kurbo = "0.6.3"
 pico-args =  { version = "0.3.3", optional = true }
 png = {version = "0.16.2", optional = true }
@@ -18,3 +18,21 @@ os_info = { version = "2.0.7", optional = true, default-features = false }
 
 [features]
 samples = ["pico-args", "png", "os_info"]
+
+# passing on all the image features. AVIF is not supported because it does not
+# support decoding, and thats al we use `Image` for.
+image_png = ["image/png"]
+jpeg = ["image/jpeg"]
+jpeg_rayon = ["image/jpeg_rayon"]
+gif = ["image/gif"]
+bmp = ["image/bmp"]
+ico = ["image/ico"]
+tiff = ["image/tiff"]
+webp = ["image/webp"]
+pnm = ["image/pnm"]
+dds = ["image/dds"]
+tga = ["image/tga"]
+farbfeld = ["image/farbfeld"]
+dxt = ["image/dxt"]
+hdr = ["image/hdr"]
+
