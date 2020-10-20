@@ -114,6 +114,7 @@ impl ImageBuf {
             .map(move |row| {
                 row.chunks_exact(bytes_per_pixel)
                     .map(move |p| match format {
+                        ImageFormat::GrayScale => Color::grey8(p[0]),
                         ImageFormat::Rgb => Color::rgb8(p[0], p[1], p[2]),
                         ImageFormat::RgbaSeparate => Color::rgba8(p[0], p[1], p[2], p[3]),
                         ImageFormat::RgbaPremul => {
