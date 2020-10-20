@@ -483,7 +483,7 @@ impl WebRenderContext<'_> {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.begin_path();
-        for el in shape.to_bez_path(1e-3) {
+        for el in shape.path_elements(1e-3) {
             match el {
                 PathEl::MoveTo(p) => self.ctx.move_to(p.x, p.y),
                 PathEl::LineTo(p) => self.ctx.line_to(p.x, p.y),

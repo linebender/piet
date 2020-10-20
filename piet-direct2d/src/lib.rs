@@ -137,7 +137,7 @@ fn path_from_shape(
     let mut sink = path.open()?;
     sink.set_fill_mode(fill_rule);
     let mut need_close = false;
-    for el in shape.to_bez_path(BEZ_TOLERANCE) {
+    for el in shape.path_elements(BEZ_TOLERANCE) {
         match el {
             PathEl::MoveTo(p) => {
                 if need_close {

@@ -424,7 +424,7 @@ impl<'a> CoreGraphicsContext<'a> {
         // state. But just in case, and it should be harmless.
         self.ctx.begin_path();
         let mut last = Point::default();
-        for el in shape.to_bez_path(1e-3) {
+        for el in shape.path_elements(1e-3) {
             match el {
                 PathEl::MoveTo(p) => {
                     self.ctx.move_to_point(p.x, p.y);
