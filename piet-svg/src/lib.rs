@@ -389,7 +389,7 @@ fn add_shape(node: &mut impl Node, shape: impl Shape, attrs: &Attrs) {
         attrs.apply_to(&mut x);
         node.append(x);
     } else {
-        let mut path = svg::node::element::Path::new().set("d", shape.into_bez_path(1e-3).to_svg());
+        let mut path = svg::node::element::Path::new().set("d", shape.into_path(1e-3).to_svg());
         attrs.apply_to(&mut path);
         node.append(path)
     }
