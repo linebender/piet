@@ -12,7 +12,7 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
-    util, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
+    util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
     TextLayout, TextLayoutBuilder, TextStorage,
 };
 use unicode_segmentation::UnicodeSegmentation;
@@ -31,28 +31,28 @@ pub struct WebFont {
 #[derive(Clone)]
 pub struct WebTextLayout {
     ctx: CanvasRenderingContext2d,
-    // TODO like cairo, should this be pub(crate)?
-    pub font: WebFont,
-    pub text: Rc<dyn TextStorage>,
+    pub(crate) font: WebFont,
+    pub(crate) text: Rc<dyn TextStorage>,
 
     // Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
     size: Size,
+    color: Color,
 }
 
 pub struct WebTextLayoutBuilder {
     ctx: CanvasRenderingContext2d,
-    font: WebFont,
     text: Rc<dyn TextStorage>,
     width: f64,
+    defaults: util::LayoutDefaults,
 }
 
 /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
-#[allow(dead_code)] // TODO: Remove
 #[derive(Clone)]
 enum FontStyle {
     Normal,
     Italic,
+    #[allow(dead_code)] // Not used by piet, but here for completeness
     Oblique(Option<f64>),
 }
 
@@ -73,9 +73,9 @@ impl Text for WebText {
             // TODO: it's very likely possible to do this without cloning ctx, but
             // I couldn't figure out the lifetime errors from a `&'a` reference.
             ctx: self.ctx.clone(),
-            font: WebFont::new(FontFamily::default()),
             text: Rc::new(text),
             width: f64::INFINITY,
+            defaults: Default::default(),
         }
     }
 }
@@ -90,8 +90,28 @@ impl WebFont {
         }
     }
 
-    // TODO should this be pub(crate)?
-    pub fn get_font_string(&self) -> String {
+    fn with_style(mut self, style: piet::FontStyle) -> Self {
+        let style = if style == piet::FontStyle::Italic {
+            FontStyle::Italic
+        } else {
+            FontStyle::Normal
+        };
+
+        self.style = style;
+        self
+    }
+
+    fn with_weight(mut self, weight: piet::FontWeight) -> Self {
+        self.weight = weight.to_raw() as u32;
+        self
+    }
+
+    fn with_size(mut self, size: f64) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub(crate) fn get_font_string(&self) -> String {
         let style_str = match self.style {
             FontStyle::Normal => Cow::from("normal"),
             FontStyle::Italic => Cow::from("italic"),
@@ -121,8 +141,8 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
         self
     }
 
-    fn default_attribute(self, _attribute: impl Into<TextAttribute>) -> Self {
-        web_sys::console::log_1(&"Text attributes not yet implemented for web".into());
+    fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
+        self.defaults.set(attribute);
         self
     }
 
@@ -136,14 +156,18 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
     }
 
     fn build(self) -> Result<Self::Out, Error> {
-        self.ctx.set_font(&self.font.get_font_string());
+        let font = WebFont::new(self.defaults.font)
+            .with_size(self.defaults.font_size)
+            .with_weight(self.defaults.weight)
+            .with_style(self.defaults.style);
 
         let mut layout = WebTextLayout {
             ctx: self.ctx,
-            font: self.font,
+            font,
             text: self.text,
             line_metrics: Vec::new(),
             size: Size::ZERO,
+            color: self.defaults.fg_color,
         };
 
         layout.update_width(self.width)?;
@@ -180,6 +204,7 @@ impl TextLayout for WebTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        self.ctx.set_font(&self.font.get_font_string());
         // internal logic is using grapheme clusters, but return the text position associated
         // with the border of the grapheme cluster.
 
@@ -211,7 +236,7 @@ impl TextLayout for WebTextLayout {
                 is_y_inside = false;
                 self.line_metrics.last()
             })
-            .cloned() // TODO remove this clone?
+            .cloned()
             .unwrap_or_else(|| {
                 is_y_inside = false;
                 Default::default()
@@ -232,6 +257,7 @@ impl TextLayout for WebTextLayout {
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
+        self.ctx.set_font(&self.font.get_font_string());
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
         // first need to find line it's on, and get line start offset
@@ -250,7 +276,18 @@ impl TextLayout for WebTextLayout {
 }
 
 impl WebTextLayout {
+    pub(crate) fn size(&self) -> Size {
+        self.size
+    }
+
+    pub(crate) fn color(&self) -> &Color {
+        &self.color
+    }
+
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+        // various functions like `text_width` are stateful, and require
+        // the context to be configured correcttly.
+        self.ctx.set_font(&self.font.get_font_string());
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
         let line_metrics =

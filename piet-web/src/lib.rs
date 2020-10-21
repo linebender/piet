@@ -218,16 +218,21 @@ impl RenderContext for WebRenderContext<'_> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
+        self.ctx.save();
         self.ctx.set_font(&layout.font.get_font_string());
+        let brush = layout.color().make_brush(self, || layout.size().to_rect());
+        self.set_brush(&brush, true);
         let pos = pos.into();
         for lm in &layout.line_metrics {
             let line_text = &layout.text[lm.range()];
-            let draw_line = self.ctx.fill_text(line_text, pos.x, pos.y).wrap();
+            let line_y = lm.y_offset + lm.baseline + pos.y;
+            let draw_line = self.ctx.fill_text(line_text, pos.x, line_y).wrap();
 
             if let Err(e) = draw_line {
                 self.err = Err(e);
             }
         }
+        self.ctx.restore();
     }
 
     fn save(&mut self) -> Result<(), Error> {
