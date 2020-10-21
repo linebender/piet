@@ -5,6 +5,7 @@ authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Cairo backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
 repository = "https://github.com/linebender/piet"
+readme = "../README.md"
 edition = "2018"
 keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
