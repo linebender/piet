@@ -36,6 +36,46 @@ impl Color {
         Color::Rgba32(rgba)
     }
 
+    pub const fn hex_to_decimal(hex: &str) -> f64 {
+      match u16::from_str_radix(hex, 16) {
+        Ok(v) => v as f64,
+        Err(_) => {
+          println!("Unable to convert hex pairs: {}", hex);
+          std::process::exit(128);
+        }
+      }
+    }
+
+    /// Create a color from a hex string value.
+    ///
+    /// ```
+    /// use piet::Color;
+    ///
+    /// let hex_color = "#f0f0f0";
+    ///
+    /// let one = Color::from_hex(hex_color);
+    /// ```
+
+    pub const fn from_hex(hex_string: String) -> Color {
+      let components:Vec<&str> = hex_string.split("").filter(|&u| u != "#").collect();
+
+      let hex:Vec<String> = match components.len() {
+        3 => {
+          components.iter().map(|&c| format!("{}{}", c, c)).collect()
+        },
+        6 => components.iter().map(|&c| format!("{}", c)).collect()
+      };
+
+
+      let hex_rgb:&str = hex.join("").as_str();
+
+      Color::rgb(
+        Color::hex_to_decimal(&hex_rgb[0..2]),
+        Color::hex_to_decimal(&hex_rgb[2..4]),
+        Color::hex_to_decimal(&hex_rgb[4..])
+      )
+    }
+
     /// Create a color from a grey value.
     ///
     /// ```
