@@ -40,7 +40,6 @@ impl Color {
       match u16::from_str_radix(hex, 16) {
         Ok(v) => v as f64,
         Err(_) => {
-          println!("Unable to convert hex pairs: {}", hex);
           std::process::exit(128);
         }
       }
@@ -63,11 +62,11 @@ impl Color {
         3 => {
           components.iter().map(|&c| format!("{}{}", c, c)).collect()
         },
-        6 => components.iter().map(|&c| format!("{}", c)).collect()
+        _ => components.iter().map(|&c| format!("{}", c)).collect()
       };
 
 
-      let hex_rgb:&str = hex.join("").as_str();
+      let hex_rgb:&str = &hex.join("").as_str();
 
       Color::rgb(
         Color::hex_to_decimal(&hex_rgb[0..2]),
