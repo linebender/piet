@@ -281,7 +281,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
                 4,
             ),
             ImageFormat::RgbaSeparate => (CGColorSpace::create_device_rgb(), kCGImageAlphaLast, 4),
-            ImgaeFormat::GrayScale => (CGColorSpace::create_device_gray(), 0, 1),
+            ImageFormat::GrayScale => (CGColorSpace::create_device_gray(), 0, 1),
             _ => unimplemented!(),
         };
         let bits_per_component = 8;
