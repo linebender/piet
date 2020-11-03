@@ -66,6 +66,7 @@ pub struct CoreGraphicsTextLayout {
     default_baseline: f64,
     default_line_height: f64,
     line_metrics: Rc<[LineMetric]>,
+    x_offsets: Rc<[f64]>,
 }
 
 /// Building text layouts for `CoreGraphics`.
@@ -583,11 +584,12 @@ impl TextLayout for CoreGraphicsTextLayout {
         };
         let line_text = self.line_text(line_num).unwrap();
         let metric = &self.line_metrics[line_num];
+        let x_offset = self.x_offsets[line_num];
         // a y position inside this line
         let fake_y = metric.y_offset + metric.baseline;
         // map that back into our inverted coordinate space
         let fake_y = -(self.frame_size.height - fake_y);
-        let point_in_string_space = CGPoint::new(point.x, fake_y);
+        let point_in_string_space = CGPoint::new(point.x - x_offset, fake_y);
         let offset_utf16 = line.get_string_index_for_position(point_in_string_space);
         let mut offset = match offset_utf16 {
             // this is 'kCFNotFound'.
@@ -610,7 +612,8 @@ impl TextLayout for CoreGraphicsTextLayout {
 
         let typo_bounds = line.get_typographic_bounds();
         let is_inside_y = point.y >= 0. && point.y <= self.frame_size.height;
-        let is_inside_x = point.x >= 0. && point.x <= typo_bounds.width;
+        let is_inside_x =
+            point_in_string_space.x >= 0. && point_in_string_space.x <= typo_bounds.width;
         let is_inside = is_inside_x && is_inside_y;
 
         HitTestPoint::new(offset, is_inside)
@@ -633,12 +636,13 @@ impl TextLayout for CoreGraphicsTextLayout {
 
         let text = self.line_text(line_num).unwrap();
         let metric = &self.line_metrics[line_num];
+        let x_offset = self.x_offsets[line_num];
 
         let offset_remainder = idx - metric.start_offset;
         let off16: usize = util::count_utf16(&text[..offset_remainder]);
         let line_range = line.get_string_range();
         let char_idx = line_range.location + off16 as isize;
-        let x_pos = line.get_offset_for_string_index(char_idx);
+        let x_pos = line.get_offset_for_string_index(char_idx) + x_offset;
         let y_pos = metric.y_offset + metric.baseline;
         HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
     }
@@ -668,6 +672,7 @@ impl CoreGraphicsTextLayout {
             default_baseline,
             default_line_height,
             line_metrics: Rc::new([]),
+            x_offsets: Rc::new([]),
         };
         layout.update_width(width_constraint).unwrap();
         layout
@@ -689,14 +694,15 @@ impl CoreGraphicsTextLayout {
         self.width_constraint = width;
 
         let frame = self.framesetter.create_frame(char_range, &path);
-        self.line_metrics = build_line_metrics(
+        let (metrics, x_offsets) = build_line_metrics(
             &frame,
             frame_size.height,
             &self.text,
             self.default_line_height,
             self.default_baseline,
-        )
-        .into();
+        );
+        self.line_metrics = metrics.into();
+        self.x_offsets = x_offsets.into();
         assert!(self.line_metrics.len() > 0);
 
         self.bonus_height = if self.text.is_empty() || util::trailing_nlf(&self.text).is_some() {
@@ -769,10 +775,11 @@ fn build_line_metrics(
     text: &str,
     default_line_height: f64,
     default_baseline: f64,
-) -> Vec<LineMetric> {
+) -> (Vec<LineMetric>, Vec<f64>) {
     let line_origins = frame.get_line_origins(CFRange::init(0, 0));
     assert_eq!(frame.lines().len(), line_origins.len());
-    let mut result = Vec::with_capacity(frame.lines().len() + 1);
+    let mut metrics = Vec::with_capacity(frame.lines().len() + 1);
+    let mut x_offsets = Vec::with_capacity(frame.lines().len() + 1);
 
     let mut chars = text.chars();
     let mut cur_16 = 0;
@@ -799,6 +806,7 @@ fn build_line_metrics(
         let range = line.get_string_range();
 
         let y_pos = frame_height - line_origins[i].y;
+        let x_offset = line_origins[i].x;
 
         let start_offset = last_line_end;
         let end_offset = utf16_to_utf8((range.location + range.length) as usize);
@@ -816,7 +824,7 @@ fn build_line_metrics(
         let height = ascent + descent + leading;
         let y_offset = y_pos - ascent;
 
-        result.push(LineMetric {
+        metrics.push(LineMetric {
             start_offset,
             end_offset,
             trailing_whitespace,
@@ -824,18 +832,19 @@ fn build_line_metrics(
             height,
             y_offset,
         });
+        x_offsets.push(x_offset);
     }
 
     // empty string is treated as a single empty line
     if text.is_empty() {
-        result.push(LineMetric {
+        metrics.push(LineMetric {
             height: default_line_height,
             baseline: default_baseline,
             ..Default::default()
         });
     // newline at EOF is treated as an additional empty line
     } else if util::trailing_nlf(text).is_some() {
-        let newline_eof = result
+        let newline_eof = metrics
             .last()
             .map(|lm| {
                 LineMetric {
@@ -852,9 +861,11 @@ fn build_line_metrics(
                 }
             })
             .unwrap();
-        result.push(newline_eof);
+        let x_offset = x_offsets.last().copied().unwrap();
+        metrics.push(newline_eof);
+        x_offsets.push(x_offset);
     }
-    result
+    (metrics, x_offsets)
 }
 
 fn count_trailing_ws(s: &str) -> usize {
