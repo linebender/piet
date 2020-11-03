@@ -110,7 +110,8 @@ impl Text for D2DText {
         let text = Rc::new(text);
         let width = f32::INFINITY;
         let wide_str = ToWide::to_wide(&text.as_str());
-        let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32)
+        let is_rtl = util::first_strong_rtl(text.as_str());
+        let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32, is_rtl)
             .and_then(|format| dwrite::TextLayout::new(&self.dwrite, format, width, &wide_str))
             .map_err(Into::into);
 
