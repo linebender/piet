@@ -5,6 +5,8 @@ use std::ops::{Bound, Range, RangeBounds};
 use crate::kurbo::{Rect, Size};
 use crate::{Color, FontFamily, FontStyle, FontWeight, LineMetric, TextAttribute};
 
+use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
+
 /// The default point sie for text in piet.
 pub const DEFAULT_FONT_SIZE: f64 = 12.0;
 
@@ -196,6 +198,21 @@ pub fn unpremul(x: u8, a: u8) -> u8 {
         let y = (x as u32 * 255 + (a as u32 / 2)) / (a as u32);
         y.min(255) as u8
     }
+}
+
+/// A heurstic for text direction; returns `true` if, while enumerating characters
+/// in this string, a character in the 'R' (strong right-to-left) category is
+/// encountered before any character in the 'L' (strong left-to-right) category is.
+///
+/// See [Unicode technical report 9](https://unicode.org/reports/tr9/#Table_Bidirectional_Character_Types).
+pub fn first_strong_rtl(text: &str) -> bool {
+    text.chars()
+        // an upper bound on how many chars we'll check
+        .take(200)
+        .map(BidiClass::of)
+        .find(|c| c.category() == BidiClassCategory::Strong)
+        .map(|c| c.is_rtl())
+        .unwrap_or(false)
 }
 
 #[cfg(test)]
