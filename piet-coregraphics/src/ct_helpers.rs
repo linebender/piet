@@ -36,10 +36,9 @@ use core_text::{
     string_attributes,
 };
 use foreign_types::ForeignType;
-use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
 use piet::kurbo::{Affine, Rect};
-use piet::{Color, FontFamily, FontFamilyInner, TextAlignment};
+use piet::{util, Color, FontFamily, FontFamilyInner, TextAlignment};
 
 #[derive(Clone)]
 pub(crate) struct AttributedString {
@@ -129,7 +128,7 @@ impl AttributedString {
         let range = CFRange::init(0, 0);
         let cf_string = CFString::new(text);
         inner.replace_str(&cf_string, range);
-        let rtl = first_strong_rtl(text);
+        let rtl = util::first_strong_rtl(text);
         AttributedString { inner, rtl }
     }
 
@@ -336,21 +335,6 @@ pub(crate) fn add_font(font_data: &[u8]) -> Result<String, ()> {
 }
 
 //TODO: this will probably be shared at some point?
-/// A heurstic for text direction; returns `true` if, while enumerating characters
-/// in this string, a character in the 'R' (strong right-to-left) category is
-/// encountered before any character in the 'L' (strong left-to-right) category is.
-///
-/// See [Unicode technical report 9](https://unicode.org/reports/tr9/#Table_Bidirectional_Character_Types).
-fn first_strong_rtl(text: &str) -> bool {
-    text.chars()
-        // an upper bound on how many chars we'll check
-        .take(200)
-        .map(BidiClass::of)
-        .find(|c| c.category() == BidiClassCategory::Strong)
-        .map(|c| c.is_rtl())
-        .unwrap_or(false)
-}
-
 impl FontCollection {
     pub(crate) fn new_with_all_fonts() -> FontCollection {
         FontCollection(font_collection::create_for_all_families())
