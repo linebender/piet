@@ -1,6 +1,6 @@
 [package]
 name = "piet-svg"
-version = "0.2.0-pre6"
+version = "0.2.0"
 authors = ["Benjamin Saunders <ben.e.saunders@gmail.com>"]
 description = "SVG backend for piet 2D graphics abstraction."
 edition = "2018"
@@ -10,9 +10,9 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-piet = { version = "=0.2.0-pre6", path = "../piet" }
+piet = { version = "0.2.0", path = "../piet" }
 
 svg = "0.8.0"
 
 [dev-dependencies]
-piet = { version = "=0.2.0-pre6", path = "../piet", features = ["samples"] }
+piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
