@@ -36,15 +36,6 @@ impl Color {
         Color::Rgba32(rgba)
     }
 
-    pub const fn hex_to_decimal(hex: &str) -> f64 {
-      match u16::from_str_radix(hex, 16) {
-        Ok(v) => v as f64,
-        Err(_) => {
-          std::process::exit(128);
-        }
-      }
-    }
-
     /// Create a color from a hex string value.
     ///
     /// ```
@@ -54,26 +45,52 @@ impl Color {
     ///
     /// let one = Color::from_hex(hex_color);
     /// ```
+    pub const fn from_hex(hex_string: &str) -> Result<Color, ()> {
+      if hex_str = hex_str.trim_start_matches('#');
 
-    pub const fn from_hex(hex_string: String) -> Color {
-      let components:Vec<&str> = hex_string.split("").filter(|&u| u != "#").collect();
+      if !hex_str.is_ascii() {
+        return Err(())
+      }
 
-      let hex:Vec<String> = match components.len() {
-        3 => {
-          components.iter().map(|&c| format!("{}{}", c, c)).collect()
-        },
-        _ => components.iter().map(|&c| format!("{}", c)).collect()
+      let mut channels = match hex_str.as_bytes() {
+        &[r, g, b] => [r, r, g, g, b, b, b'f', b'f'],
+        &[r, g, b, a] => [r, r, g, g, b, b, a, a],
+        &[r0, r1, g0, g1, b0, b1] => [r0, r1, g0, g1, b0, b1, b'f', b'f'],
+        &[r0, r1, g0, g1, b0, b1, a0, a1] => [r0, r1, g0, g1, b0, b1, a0, a1],
+        _ => return Err(()),
       };
 
+      for channel in &mut channels {
+        match hex_from_ascii_byte(*channel) {
+          Ok(h) => *channel = hex,
+          Err(_e) => {
+            return Err(())
+          }
+        }
+      }
 
-      let hex_rgb:&str = &hex.join("").as_str();
+      Ok(from_4bit_hex(channels))
+    }
 
-      Color::rgb(
-        Color::hex_to_decimal(&hex_rgb[0..2]),
-        Color::hex_to_decimal(&hex_rgb[2..4]),
-        Color::hex_to_decimal(&hex_rgb[4..])
+    fn from_4bit_hex(components: [u8; 8]) -> Color {
+      let [r0, r1, g0, g1, b0, b1, a0, a1] = components;
+
+      Color::rgba8(
+        r0 << | r1, g0 << 4 | g1, b0 << 4 | b1, a0 << 4 | a1
       )
     }
+
+    fn hex_from_ascii_byte(b: u8) -> Result<u8, u8> {
+      match b {
+          // 0-9
+          0x30..=0x39 => Ok(b - 0x30),
+          // uppercase A-F
+          0x41..=0x46 => Ok(b - 0x41 + 10),
+          // lowercase a-f
+          0x61..=0x66 => Ok(b - 0x61 + 10),
+          _ => Err(b),
+      }   
+  }
 
     /// Create a color from a grey value.
     ///
