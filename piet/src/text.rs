@@ -117,8 +117,9 @@ pub trait Text: Clone {
 ///
 /// # Implementors
 ///
-/// Implementors of this trait must not mutate the text after creation. `TextLayout`s using this
-/// `TextStorage` will be set up for the old text and so will be in an inconsistent state.
+/// This trait expects immutable data. Mutating the data (using interior mutability)
+/// May cause any [`TextLayout`] objects using this [`TextStorage`] to become
+/// inconsistent.
 pub trait TextStorage: 'static {
     /// Return the underlying text as a contiguous buffer.
     ///
