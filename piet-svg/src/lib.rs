@@ -225,7 +225,7 @@ impl piet::RenderContext for RenderContext {
     }
 
     fn restore(&mut self) -> Result<()> {
-        self.state = self.stack.pop().ok_or_else(|| Error::StackUnbalance)?;
+        self.state = self.stack.pop().ok_or(Error::StackUnbalance)?;
         Ok(())
     }
 
