@@ -114,6 +114,11 @@ pub trait Text: Clone {
 ///
 /// This has a `'static` bound because the inner type will be behind a shared
 /// pointer.
+///
+/// # Implementors
+///
+/// Implementors of this trait must not mutate the text after creation. `TextLayout`s using this
+/// `TextStorage` will be set up for the old text and so will be in an inconsistent state.
 pub trait TextStorage: 'static {
     /// Return the underlying text as a contiguous buffer.
     ///
