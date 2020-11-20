@@ -4,6 +4,7 @@ mod grapheme;
 mod lines;
 
 use std::borrow::Cow;
+use std::fmt;
 use std::ops::RangeBounds;
 use std::rc::Rc;
 
@@ -77,6 +78,12 @@ impl Text for WebText {
             width: f64::INFINITY,
             defaults: Default::default(),
         }
+    }
+}
+
+impl fmt::Debug for WebText {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("WebText").finish()
     }
 }
 
@@ -172,6 +179,12 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
 
         layout.update_width(self.width)?;
         Ok(layout)
+    }
+}
+
+impl fmt::Debug for WebTextLayoutBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("WebTextLayoutBuilder").finish()
     }
 }
 
@@ -272,6 +285,12 @@ impl TextLayout for WebTextLayout {
 
         let x_pos = hit_test_line_position(&self.ctx, line, line_position);
         HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
+    }
+}
+
+impl fmt::Debug for WebTextLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("WebTextLayout").finish()
     }
 }
 

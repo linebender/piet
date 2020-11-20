@@ -4,6 +4,7 @@ mod lines;
 
 use std::cell::{Cell, RefCell};
 use std::convert::TryInto;
+use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -88,6 +89,12 @@ impl D2DText {
     pub fn new_for_test() -> D2DText {
         let dwrite = DwriteFactory::new().unwrap();
         D2DText::new(dwrite)
+    }
+}
+
+impl fmt::Debug for D2DText {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("D2DText").finish()
     }
 }
 
@@ -202,6 +209,12 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     }
 }
 
+impl fmt::Debug for D2DTextLayoutBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("D2DTextLayoutBuilder").finish()
+    }
+}
+
 impl D2DTextLayoutBuilder {
     /// used for both range and default attributes
     fn add_attribute_shared(&mut self, attr: TextAttribute, range: Option<Range<usize>>) {
@@ -274,6 +287,12 @@ impl D2DTextLayoutBuilder {
         let baseline = self.default_font_size * ascent_fraction;
 
         (line_height, baseline)
+    }
+}
+
+impl fmt::Debug for D2DTextLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("D2DTextLayout").finish()
     }
 }
 

@@ -1,6 +1,7 @@
 //! Text related stuff for the coregraphics backend
 
 use std::collections::HashMap;
+use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -431,6 +432,12 @@ impl CoreGraphicsText {
     }
 }
 
+impl fmt::Debug for CoreGraphicsText {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CoreGraphicsText").finish()
+    }
+}
+
 impl Text for CoreGraphicsText {
     type TextLayout = CoreGraphicsTextLayout;
     type TextLayoutBuilder = CoreGraphicsTextLayoutBuilder;
@@ -488,6 +495,12 @@ impl CoreGraphicsTextLayoutBuilder {
     }
 }
 
+impl fmt::Debug for CoreGraphicsTextLayoutBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CoreGraphicsTextLayoutBuilder").finish()
+    }
+}
+
 impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
     type Out = CoreGraphicsTextLayout;
 
@@ -532,6 +545,12 @@ impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
             self.default_baseline,
             self.default_line_height,
         ))
+    }
+}
+
+impl fmt::Debug for CoreGraphicsTextLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CoreGraphicsTextLayout").finish()
     }
 }
 
