@@ -72,8 +72,16 @@ fn rects_for_empty_range() {
 #[test]
 fn empty_layout_size() {
     let mut factory = make_factory();
-    let empty_layout = factory.new_text_layout("").build().unwrap();
-    let non_empty_layout = factory.new_text_layout("-").build().unwrap();
+    let empty_layout = factory
+        .new_text_layout("")
+        .font(FontFamily::SYSTEM_UI, 24.0)
+        .build()
+        .unwrap();
+    let non_empty_layout = factory
+        .new_text_layout("-")
+        .font(FontFamily::SYSTEM_UI, 24.0)
+        .build()
+        .unwrap();
     assert!(empty_layout.size().height > 0.0);
     assert_close!(
         empty_layout.size().height,

@@ -409,7 +409,7 @@ impl<'a> CairoRenderContext<'a> {
         // state. But just in case, and it should be harmless.
         self.ctx.new_path();
         let mut last = Point::ZERO;
-        for el in shape.to_bez_path(1e-3) {
+        for el in shape.path_elements(1e-3) {
             match el {
                 PathEl::MoveTo(p) => {
                     self.ctx.move_to(p.x, p.y);

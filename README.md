@@ -17,24 +17,27 @@ A companion for Bézier path representation and geometry is [kurbo].
 
 ## Backends
 
+*For cross-platform use, the [`piet-common`][] crate reexports the most
+appropriate implementation for the current target.*
+
 #### `piet-cairo` [![crates.io](https://img.shields.io/crates/v/piet-cairo)](https://crates.io/crates/piet-cairo)
 
 The `piet-cairo` crate depends on the cairo library, found at
 https://www.cairographics.org/download/. A simple test of the cairo
-backend is to run `cargo run --example basic-cairo`, which should
-produce an image file called `temp-cairo.png`.
+backend is to run `cargo run --example test-picture 0`, which should
+produce an image file called `cairo-test-0.png`.
 
 #### `piet-coregraphics` [![crates.io](https://img.shields.io/crates/v/piet-coregraphics)](https://crates.io/crates/piet-coregraphics)
 
 The `piet-coregraphics` crate works on macOS only. A simple test of the coregraphics
-backend is to run `cargo run --example test-picture`, which should
+backend is to run `cargo run --example test-picture 0`, which should
 produce an image file called `coregraphics-test-0.png`.
 
 #### `piet-direct2d` [![crates.io](https://img.shields.io/crates/v/piet-direct2d)](https://crates.io/crates/piet-direct2d)
 
 The `piet-direct2d` create works on Windows only. A simple test of the direct2d
-backend is to run `cargo run --example basic`, which should
-produce an image called `temp-image.png`.
+backend is to run `cargo run --example test-picture 0`, which should
+produce an image called `d2d-test-0.png`.
 
 #### `piet-svg` [![crates.io](https://img.shields.io/crates/v/piet-svg)](https://crates.io/crates/piet-svg)
 #### `piet-web` [![crates.io](https://img.shields.io/crates/v/piet-web)](https://crates.io/crates/piet-web)
@@ -65,3 +68,4 @@ The library is of course named after [Piet Mondrian]. It's abstract and hopefull
 [Skia Graphics Library]: https://skia.org
 [C++ 2D graphics api proposal]: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0267r8.pdf
 [Piet Mondrian]: https://en.wikipedia.org/wiki/Piet_Mondrian
+[`piet-common`]: https://crates.io/crates/piet-common

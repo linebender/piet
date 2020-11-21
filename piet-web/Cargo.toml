@@ -1,10 +1,11 @@
 [package]
 name = "piet-web"
-version = "0.2.0-pre5"
+version = "0.2.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Web canvas backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
 repository = "https://github.com/linebender/piet"
+readme = "../README.md"
 edition = "2018"
 keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api", "wasm"]
@@ -13,7 +14,7 @@ categories = ["rendering::graphics-api", "wasm"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-piet = { version = "0.2.0-pre5", path = "../piet" }
+piet = { version = "0.2.0", path = "../piet" }
 
 unicode-segmentation = "1.6.0"
 xi-unicode = "0.2.0"

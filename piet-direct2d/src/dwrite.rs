@@ -20,8 +20,9 @@ use winapi::um::dwrite::{
     DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE, DWRITE_FONT_STYLE_ITALIC,
     DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_FONT_WEIGHT_NORMAL,
     DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS, DWRITE_OVERHANG_METRICS,
-    DWRITE_TEXT_ALIGNMENT_CENTER, DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING,
-    DWRITE_TEXT_ALIGNMENT_TRAILING, DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
+    DWRITE_READING_DIRECTION_RIGHT_TO_LEFT, DWRITE_TEXT_ALIGNMENT_CENTER,
+    DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_TEXT_ALIGNMENT_TRAILING,
+    DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
 };
 use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winnls::GetUserDefaultLocaleName;
@@ -250,6 +251,7 @@ impl TextFormat {
         factory: &DwriteFactory,
         family: impl AsRef<[u16]>,
         size: f32,
+        rtl: bool,
     ) -> Result<TextFormat, Error> {
         let family = family.as_ref();
 
@@ -268,6 +270,9 @@ impl TextFormat {
             );
 
             let r = wrap(hr, ptr, TextFormat)?;
+            if rtl {
+                r.0.SetReadingDirection(DWRITE_READING_DIRECTION_RIGHT_TO_LEFT);
+            }
             Ok(r)
         }
     }

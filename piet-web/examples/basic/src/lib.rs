@@ -7,6 +7,9 @@ use web_sys::{window, HtmlCanvasElement};
 use piet::{samples, RenderContext};
 use piet_web::WebRenderContext;
 
+//TODO: figure out how to dynamically select the sample?
+const SAMPLE_PICTURE_NO: usize = 11;
+
 #[wasm_bindgen]
 pub fn run() {
     #[cfg(feature = "console_error_panic_hook")]
@@ -27,6 +30,7 @@ pub fn run() {
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
 
+    let sample = samples::get::<WebRenderContext>(SAMPLE_PICTURE_NO);
     let dpr = window.device_pixel_ratio();
     canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
     canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);
@@ -34,7 +38,6 @@ pub fn run() {
 
     let mut piet_context = WebRenderContext::new(context, window);
 
-    // TODO: make the test picture selectable
-    samples::get(0).draw(&mut piet_context).unwrap();
+    sample.draw(&mut piet_context).unwrap();
     piet_context.finish().unwrap();
 }
