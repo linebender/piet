@@ -218,16 +218,21 @@ impl RenderContext for WebRenderContext<'_> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
+        self.ctx.save();
         self.ctx.set_font(&layout.font.get_font_string());
+        let brush = layout.color().make_brush(self, || layout.size().to_rect());
+        self.set_brush(&brush, true);
         let pos = pos.into();
         for lm in &layout.line_metrics {
             let line_text = &layout.text[lm.range()];
-            let draw_line = self.ctx.fill_text(line_text, pos.x, pos.y).wrap();
+            let line_y = lm.y_offset + lm.baseline + pos.y;
+            let draw_line = self.ctx.fill_text(line_text, pos.x, line_y).wrap();
 
             if let Err(e) = draw_line {
                 self.err = Err(e);
             }
         }
+        self.ctx.restore();
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -478,7 +483,7 @@ impl WebRenderContext<'_> {
         // This shouldn't be necessary, we always leave the context in no-path
         // state. But just in case, and it should be harmless.
         self.ctx.begin_path();
-        for el in shape.to_bez_path(1e-3) {
+        for el in shape.path_elements(1e-3) {
             match el {
                 PathEl::MoveTo(p) => self.ctx.move_to(p.x, p.y),
                 PathEl::LineTo(p) => self.ctx.line_to(p.x, p.y),

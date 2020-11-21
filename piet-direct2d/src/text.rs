@@ -110,7 +110,8 @@ impl Text for D2DText {
         let text = Rc::new(text);
         let width = f32::INFINITY;
         let wide_str = ToWide::to_wide(&text.as_str());
-        let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32)
+        let is_rtl = util::first_strong_rtl(text.as_str());
+        let layout = TextFormat::new(&self.dwrite, &[], util::DEFAULT_FONT_SIZE as f32, is_rtl)
             .and_then(|format| dwrite::TextLayout::new(&self.dwrite, format, width, &wide_str))
             .map_err(Into::into);
 
@@ -386,6 +387,9 @@ impl D2DTextLayout {
         );
 
         self.size = size;
+        if self.text.is_empty() {
+            self.size.height = self.default_line_height;
+        }
         self.line_metrics = line_metrics.into();
         self.inking_insets = inking_insets;
     }
@@ -480,6 +484,24 @@ mod test {
         ($val:expr, $target:expr, $tolerance:expr,) => {{
             assert_close!($val, $target, $tolerance)
         }};
+    }
+
+    #[test]
+    fn layout_size() {
+        let a_font = FontFamily::new_unchecked("Segoe UI");
+        let mut factory = D2DText::new_for_test();
+        let empty_layout = factory
+            .new_text_layout("")
+            .font(a_font.clone(), 22.0)
+            .build()
+            .unwrap();
+        let layout = factory
+            .new_text_layout("hello")
+            .font(a_font, 22.0)
+            .build()
+            .unwrap();
+
+        assert_close!(empty_layout.size().height, layout.size().height, 1e-6);
     }
 
     #[test]
