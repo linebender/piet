@@ -10,7 +10,7 @@ use piet::{
 type Result<T> = std::result::Result<T, Error>;
 
 /// SVG text (unimplemented)
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Text;
 
 impl Text {
@@ -37,6 +37,7 @@ impl piet::Text for Text {
     }
 }
 
+#[derive(Debug)]
 pub struct TextLayoutBuilder;
 
 impl piet::TextLayoutBuilder for TextLayoutBuilder {
@@ -68,7 +69,7 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
 }
 
 /// SVG text layout (unimplemented)
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TextLayout;
 
 impl piet::TextLayout for TextLayout {

@@ -3,6 +3,7 @@
 mod grapheme;
 mod lines;
 
+use std::fmt;
 use std::ops::RangeBounds;
 use std::rc::Rc;
 
@@ -81,6 +82,12 @@ impl Text for CairoText {
     }
 }
 
+impl fmt::Debug for CairoText {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoText").finish()
+    }
+}
+
 impl CairoFont {
     pub(crate) fn new(family: FontFamily) -> Self {
         CairoFont { family }
@@ -98,6 +105,12 @@ impl CairoFont {
         let ctm = scale_matrix(1.0);
         let options = FontOptions::default();
         ScaledFont::new(&font_face, &font_matrix, &ctm, &options)
+    }
+}
+
+impl fmt::Debug for CairoFont {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoFont").finish()
     }
 }
 
@@ -154,6 +167,12 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
         layout.update_width(self.width_constraint)?;
         Ok(layout)
+    }
+}
+
+impl fmt::Debug for CairoTextLayoutBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoTextLayoutBuilder").finish()
     }
 }
 
@@ -292,6 +311,12 @@ impl CairoTextLayout {
         self.size = Size::new(width, height);
 
         Ok(())
+    }
+}
+
+impl fmt::Debug for CairoTextLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoTextLayout").finish()
     }
 }
 
