@@ -13,7 +13,8 @@ keywords = ["graphics", "2d"]
 web = ["piet-web"]
 
 # passing on all the image features. AVIF is not supported because it does not
-# support decoding, and thats al we use `Image` for.
+# support decoding, and that's all we use `Image` for.
+image = ["piet/image"]
 image_png = ["piet/image_png"]
 jpeg = ["piet/jpeg"]
 jpeg_rayon = ["piet/jpeg_rayon"]
