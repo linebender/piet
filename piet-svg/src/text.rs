@@ -77,6 +77,10 @@ impl piet::TextLayout for TextLayout {
         unimplemented!()
     }
 
+    fn trailing_whitespace_width(&self) -> f64 {
+        unimplemented!()
+    }
+
     fn image_bounds(&self) -> Rect {
         unimplemented!()
     }

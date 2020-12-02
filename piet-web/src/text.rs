@@ -193,6 +193,11 @@ impl TextLayout for WebTextLayout {
         self.size
     }
 
+    fn trailing_whitespace_width(&self) -> f64 {
+        //FIXME this should be calculated separately like in other backends
+        self.size.width
+    }
+
     fn image_bounds(&self) -> Rect {
         //FIXME: figure out actual image bounds on web?
         self.size.to_rect()
