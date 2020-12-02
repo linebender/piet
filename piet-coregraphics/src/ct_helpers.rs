@@ -243,6 +243,10 @@ impl Line {
         self.0.get_typographic_bounds()
     }
 
+    pub(crate) fn get_trailing_whitespace_width(&self) -> f64 {
+        unsafe { CTLineGetTrailingWhitespaceWidth(self.0.as_concrete_TypeRef()) }
+    }
+
     pub(crate) fn get_image_bounds(&self) -> Rect {
         unsafe {
             let r = CTLineGetImageBounds(self.0.as_concrete_TypeRef(), std::ptr::null_mut());
@@ -399,6 +403,7 @@ extern "C" {
         count: usize,
     ) -> CTParagraphStyleRef;
     fn CTLineGetImageBounds(line: CTLineRef, ctx: *mut c_void) -> CGRect;
+    fn CTLineGetTrailingWhitespaceWidth(line: CTLineRef) -> f64;
     fn CTFontCollectionCreateMatchingFontDescriptorsForFamily(
         collection: CTFontCollectionRef,
         family: CFStringRef,

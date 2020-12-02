@@ -68,6 +68,7 @@ pub struct CoreGraphicsTextLayout {
     default_line_height: f64,
     line_metrics: Rc<[LineMetric]>,
     x_offsets: Rc<[f64]>,
+    trailing_ws_width: f64,
 }
 
 /// Building text layouts for `CoreGraphics`.
@@ -562,6 +563,10 @@ impl TextLayout for CoreGraphicsTextLayout {
         )
     }
 
+    fn trailing_whitespace_width(&self) -> f64 {
+        self.trailing_ws_width
+    }
+
     fn image_bounds(&self) -> Rect {
         self.image_bounds
     }
@@ -692,6 +697,7 @@ impl CoreGraphicsTextLayout {
             default_line_height,
             line_metrics: Rc::new([]),
             x_offsets: Rc::new([]),
+            trailing_ws_width: 0.0,
         };
         layout.update_width(width_constraint).unwrap();
         layout
@@ -713,7 +719,7 @@ impl CoreGraphicsTextLayout {
         self.width_constraint = width;
 
         let frame = self.framesetter.create_frame(char_range, &path);
-        let (metrics, x_offsets) = build_line_metrics(
+        let (metrics, x_offsets, trailing_ws_width) = build_line_metrics(
             &frame,
             frame_size.height,
             &self.text,
@@ -722,6 +728,7 @@ impl CoreGraphicsTextLayout {
         );
         self.line_metrics = metrics.into();
         self.x_offsets = x_offsets.into();
+        self.trailing_ws_width = trailing_ws_width;
         assert!(self.line_metrics.len() > 0);
 
         self.bonus_height = if self.text.is_empty() || util::trailing_nlf(&self.text).is_some() {
@@ -787,6 +794,7 @@ impl CoreGraphicsTextLayout {
     }
 }
 
+/// Returns metrics, x_offsets, and the max width including trailing whitespace.
 #[allow(clippy::while_let_on_iterator)]
 fn build_line_metrics(
     frame: &Frame,
@@ -794,11 +802,12 @@ fn build_line_metrics(
     text: &str,
     default_line_height: f64,
     default_baseline: f64,
-) -> (Vec<LineMetric>, Vec<f64>) {
+) -> (Vec<LineMetric>, Vec<f64>, f64) {
     let line_origins = frame.get_line_origins(CFRange::init(0, 0));
     assert_eq!(frame.lines().len(), line_origins.len());
     let mut metrics = Vec::with_capacity(frame.lines().len() + 1);
     let mut x_offsets = Vec::with_capacity(frame.lines().len() + 1);
+    let mut max_width_with_ws = 0.0_f64;
 
     let mut chars = text.chars();
     let mut cur_16 = 0;
@@ -834,6 +843,8 @@ fn build_line_metrics(
         let trailing_whitespace = count_trailing_ws(&text[start_offset..end_offset]);
 
         let typo_bounds = line.get_typographic_bounds();
+        let ws_width = line.get_trailing_whitespace_width();
+        max_width_with_ws = max_width_with_ws.max(typo_bounds.width + ws_width);
 
         // this may not be exactly right, but i'm also not sure we ever use this?
         //  see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
@@ -884,7 +895,7 @@ fn build_line_metrics(
         metrics.push(newline_eof);
         x_offsets.push(x_offset);
     }
-    (metrics, x_offsets)
+    (metrics, x_offsets, max_width_with_ws)
 }
 
 fn count_trailing_ws(s: &str) -> usize {

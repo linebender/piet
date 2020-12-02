@@ -49,6 +49,7 @@ pub struct D2DTextLayout {
     // currently calculated on build
     line_metrics: Rc<[LineMetric]>,
     size: Size,
+    trailing_ws_width: f64,
     /// insets that, when applied to our layout rect, generates our inking/image rect.
     inking_insets: Insets,
     // this is in a refcell because we need to mutate it to set colors on first draw
@@ -200,6 +201,7 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
             line_metrics: Rc::new([]),
             layout: Rc::new(RefCell::new(layout)),
             size: Size::ZERO,
+            trailing_ws_width: 0.0,
             inking_insets: Insets::ZERO,
             default_line_height,
             default_baseline,
@@ -299,6 +301,10 @@ impl fmt::Debug for D2DTextLayout {
 impl TextLayout for D2DTextLayout {
     fn size(&self) -> Size {
         self.size
+    }
+
+    fn trailing_whitespace_width(&self) -> f64 {
+        self.trailing_ws_width
     }
 
     fn image_bounds(&self) -> Rect {
@@ -406,6 +412,7 @@ impl D2DTextLayout {
         );
 
         self.size = size;
+        self.trailing_ws_width = text_metrics.widthIncludingTrailingWhitespace as f64;
         if self.text.is_empty() {
             self.size.height = self.default_line_height;
         }
