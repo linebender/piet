@@ -21,7 +21,9 @@ use winapi::um::d2d1::{
     D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
 };
 use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
-use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
+use winapi::um::dcommon::{
+    D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_ALPHA_MODE_STRAIGHT,
+};
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
@@ -333,9 +335,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // TODO: this method _really_ needs error checking, so much can go wrong...
         let alpha_mode = match format {
             ImageFormat::Rgb => D2D1_ALPHA_MODE_IGNORE,
-            ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate | ImageFormat::GrayScale => {
-                D2D1_ALPHA_MODE_PREMULTIPLIED
-            }
+            ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => D2D1_ALPHA_MODE_PREMULTIPLIED,
+            ImageFormat::Grayscale => D2D1_ALPHA_MODE_STRAIGHT,
             _ => return Err(Error::NotSupported),
         };
 
