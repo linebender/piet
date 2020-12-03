@@ -21,9 +21,7 @@ use winapi::um::d2d1::{
     D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
 };
 use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
-use winapi::um::dcommon::{
-    D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_ALPHA_MODE_STRAIGHT,
-};
+use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 
@@ -334,14 +332,10 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     ) -> Result<Self::Image, Error> {
         // TODO: this method _really_ needs error checking, so much can go wrong...
         let alpha_mode = match format {
-            ImageFormat::Rgb => D2D1_ALPHA_MODE_IGNORE,
+            ImageFormat::Rgb | ImageFormat::Grayscale => D2D1_ALPHA_MODE_IGNORE,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => D2D1_ALPHA_MODE_PREMULTIPLIED,
-            ImageFormat::Grayscale => D2D1_ALPHA_MODE_STRAIGHT,
             _ => return Err(Error::NotSupported),
         };
-
-        let is_grayscale = matches!(format, ImageFormat::Grayscale);
-
         let buf = match format {
             ImageFormat::Rgb => {
                 let mut new_buf = vec![255; width * height * 4];
@@ -368,14 +362,23 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 }
                 Cow::from(new_buf)
             }
-            ImageFormat::RgbaPremul | ImageFormat::Grayscale => Cow::from(buf),
+            ImageFormat::RgbaPremul => Cow::from(buf),
+            ImageFormat::Grayscale => {
+                // it seems like there's no good way to create a 1-channel bitmap
+                // here? I am not alone:
+                // https://stackoverflow.com/questions/44270215/direct2d-fails-when-drawing-a-single-channel-bitmap
+                let mut new_buf = vec![255; width * height * 4];
+                for i in 0..width * height {
+                    new_buf[i * 4 + 0] = buf[i];
+                    new_buf[i * 4 + 1] = buf[i];
+                    new_buf[i * 4 + 2] = buf[i];
+                }
+                Cow::from(new_buf)
+            }
             // This should be unreachable, we caught it above.
             _ => return Err(Error::NotSupported),
         };
-
-        let bitmap = self
-            .rt
-            .create_bitmap(width, height, is_grayscale, &buf, alpha_mode)?;
+        let bitmap = self.rt.create_bitmap(width, height, &buf, alpha_mode)?;
         Ok(bitmap)
     }
 

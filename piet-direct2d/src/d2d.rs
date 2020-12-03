@@ -17,7 +17,7 @@ use piet::kurbo::{Circle, Line, Rect, RoundedRect};
 use wio::com::ComPtr;
 
 use winapi::shared::dxgi::{IDXGIDevice, IDXGISurface};
-use winapi::shared::dxgiformat::{DXGI_FORMAT_A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM};
+use winapi::shared::dxgiformat::DXGI_FORMAT_R8G8B8A8_UNORM;
 use winapi::shared::minwindef::TRUE;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::d2d1::{
@@ -669,7 +669,6 @@ impl DeviceContext {
         &mut self,
         width: usize,
         height: usize,
-        grayscale: bool,
         buf: &[u8],
         alpha_mode: D2D1_ALPHA_MODE,
     ) -> Result<Bitmap, Error> {
@@ -677,18 +676,12 @@ impl DeviceContext {
         // Note: value is set so that multiplying by 4 (for pitch) is valid.
         assert!(width <= 0x3fff_ffff);
         assert!(height <= 0xffff_ffff);
-        let bytes_per_pixel = if grayscale { 1 } else { 4 };
-        let format = if grayscale {
-            DXGI_FORMAT_A8_UNORM
-        } else {
-            DXGI_FORMAT_R8G8B8A8_UNORM
-        };
         let size = D2D1_SIZE_U {
             width: width as u32,
             height: height as u32,
         };
         let format = D2D1_PIXEL_FORMAT {
-            format,
+            format: DXGI_FORMAT_R8G8B8A8_UNORM,
             alphaMode: alpha_mode,
         };
         let props = D2D1_BITMAP_PROPERTIES1 {
@@ -698,7 +691,7 @@ impl DeviceContext {
             bitmapOptions: D2D1_BITMAP_OPTIONS_NONE,
             colorContext: null_mut(),
         };
-        let pitch = (width * bytes_per_pixel) as u32;
+        let pitch = (width * 4) as u32;
         unsafe {
             let mut ptr = null_mut();
             let hr = self.0.deref().CreateBitmap(
