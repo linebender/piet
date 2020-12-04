@@ -18,6 +18,7 @@ pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
             ImageFormat::RgbaSeparate,
             ImageFormat::RgbaPremul,
             ImageFormat::Rgb,
+            ImageFormat::Grayscale,
         ] {
             let image_data = make_image_data(16, 16, format);
             let image = rc.make_image(16, 16, &image_data, format)?;
@@ -65,6 +66,7 @@ fn make_image_data(width: usize, height: usize, format: ImageFormat) -> Vec<u8> 
                     result[ix + 1] = g;
                     result[ix + 2] = b;
                 }
+                ImageFormat::Grayscale => result[ix] = a,
             }
         }
     }

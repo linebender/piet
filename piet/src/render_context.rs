@@ -22,6 +22,8 @@ pub enum InterpolationMode {
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum ImageFormat {
+    /// 1 byte per pixel
+    Grayscale,
     /// 3 bytes per pixel, in RGB order.
     Rgb,
     /// 4 bytes per pixel, in RGBA order, with separate alpha.
@@ -33,6 +35,7 @@ pub enum ImageFormat {
 impl ImageFormat {
     pub fn bytes_per_pixel(self) -> usize {
         match self {
+            ImageFormat::Grayscale => 1,
             ImageFormat::Rgb => 3,
             ImageFormat::RgbaPremul | ImageFormat::RgbaSeparate => 4,
         }
