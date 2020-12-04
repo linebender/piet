@@ -339,6 +339,16 @@ pub trait TextLayout: Clone {
     /// behaviour, but it is out of scope for the time being.
     fn size(&self) -> Size;
 
+    /// The width of this layout, including the width of any trailing whitespace.
+    ///
+    /// In many situations you do not want to include the width of trailing
+    /// whitespace when measuring width; for instance when word-wrap is enabled,
+    /// trailing whitespace is ignored. In other circumstances, however, this
+    /// width is important, such as when editing a single line of text; in these
+    /// cases you want to use this method to ensure you account for the actual
+    /// size of any trailing whitespace.
+    fn trailing_whitespace_width(&self) -> f64;
+
     /// Returns a `Rect` representing the bounding box of the glyphs in this layout,
     /// relative to the top-left of the layout object.
     ///

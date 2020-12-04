@@ -177,6 +177,10 @@ impl TextLayout for NullTextLayout {
         Size::ZERO
     }
 
+    fn trailing_whitespace_width(&self) -> f64 {
+        0.0
+    }
+
     fn image_bounds(&self) -> Rect {
         Rect::ZERO
     }

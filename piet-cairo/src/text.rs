@@ -3,6 +3,7 @@
 mod grapheme;
 mod lines;
 
+use std::fmt;
 use std::ops::RangeBounds;
 use std::rc::Rc;
 
@@ -36,6 +37,7 @@ pub struct CairoTextLayout {
     // color here and then just grab it when we draw ourselves.
     pub(crate) fg_color: Color,
     size: Size,
+    trailing_ws_width: f64,
     pub(crate) font: ScaledFont,
     pub(crate) text: Rc<dyn TextStorage>,
 
@@ -81,6 +83,12 @@ impl Text for CairoText {
     }
 }
 
+impl fmt::Debug for CairoText {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoText").finish()
+    }
+}
+
 impl CairoFont {
     pub(crate) fn new(family: FontFamily) -> Self {
         CairoFont { family }
@@ -98,6 +106,12 @@ impl CairoFont {
         let ctm = scale_matrix(1.0);
         let options = FontOptions::default();
         ScaledFont::new(&font_face, &font_matrix, &ctm, &options)
+    }
+}
+
+impl fmt::Debug for CairoFont {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoFont").finish()
     }
 }
 
@@ -148,6 +162,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
             fg_color: self.defaults.fg_color,
             font: scaled_font,
             size: Size::ZERO,
+            trailing_ws_width: 0.0,
             line_metrics: Vec::new(),
             text: self.text,
         };
@@ -157,9 +172,19 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 }
 
+impl fmt::Debug for CairoTextLayoutBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoTextLayoutBuilder").finish()
+    }
+}
+
 impl TextLayout for CairoTextLayout {
     fn size(&self) -> Size {
         self.size
+    }
+
+    fn trailing_whitespace_width(&self) -> f64 {
+        self.trailing_ws_width
     }
 
     fn image_bounds(&self) -> Rect {
@@ -278,11 +303,20 @@ impl CairoTextLayout {
             self.line_metrics.push(newline_eof);
         }
 
-        let width = self
+        let (width, ws_width) = self
             .line_metrics
             .iter()
-            .map(|lm| self.font.text_extents(&self.text[lm.range()]).x_advance)
-            .fold(0.0, |a: f64, b| a.max(b));
+            .map(|lm| {
+                let full_width = self.font.text_extents(&self.text[lm.range()]).x_advance;
+                let non_ws_width = if lm.trailing_whitespace > 0 {
+                    let non_ws_range = lm.start_offset..lm.end_offset - lm.trailing_whitespace;
+                    self.font.text_extents(&self.text[non_ws_range]).x_advance
+                } else {
+                    full_width
+                };
+                (non_ws_width, full_width)
+            })
+            .fold((0.0, 0.0), |a: (f64, f64), b| (a.0.max(b.0), a.1.max(b.1)));
 
         let height = self
             .line_metrics
@@ -290,8 +324,15 @@ impl CairoTextLayout {
             .map(|l| l.y_offset + l.height)
             .unwrap_or_else(|| self.font.extents().height);
         self.size = Size::new(width, height);
+        self.trailing_ws_width = ws_width;
 
         Ok(())
+    }
+}
+
+impl fmt::Debug for CairoTextLayout {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoTextLayout").finish()
     }
 }
 
@@ -958,13 +999,6 @@ mod test {
             3.0,
         );
 
-        // This tests that trailing whitespace is included in the first line width.
-        assert_close!(
-            full_layout.hit_test_text_position(5).point.x,
-            piet_space_width,
-            3.0,
-        );
-
         // These test y position of text positions on line 1 (0-index)
         assert_close!(
             full_layout.hit_test_text_position(10).point.y,
@@ -1119,13 +1153,6 @@ mod test {
         assert_close!(
             full_layout.hit_test_text_position(3).point.x,
             pie_width,
-            3.0,
-        );
-
-        // This tests that trailing whitespace is included in the first line width.
-        assert_close!(
-            full_layout.hit_test_text_position(5).point.x,
-            piet_space_width,
             3.0,
         );
 

@@ -77,7 +77,13 @@ struct Args {
 ///
 /// The `prefix` argument is used for the file names of failure cases.
 pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> Result<(), BoxErr> {
-    let args = Args::from_env()?;
+    let args = match Args::from_env() {
+        Ok(args) => args,
+        Err(e) => {
+            print_help_text();
+            return Err(e);
+        }
+    };
 
     if !args.out_dir.exists() {
         std::fs::create_dir_all(&args.out_dir)?;
@@ -381,4 +387,21 @@ impl std::fmt::Display for FailureReason {
             }
         }
     }
+}
+
+fn print_help_text() {
+    eprintln!(
+        "Piet Sample Image Generator
+
+Options:
+
+$ ./test_picture [<number> | --all] [--out=<dir>] [--compare=<dir>]
+
+- to draw a single image, pass a number in the range 0..={}
+- to draw all images, pass --all
+- to specify an output directory, pass --out=DIR (defaults to working directory)
+- to check your output against previously generated samples, pass --comapare=DIR
+    ",
+        SAMPLE_COUNT - 1
+    );
 }

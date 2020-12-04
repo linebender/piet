@@ -181,3 +181,26 @@ fn measure_width(factory: &mut impl Text, text: &str, font: FontFamily, size: f6
         .unwrap()
         .size()
 }
+
+#[test]
+fn debug_impl_exists() {
+    let mut factory = make_factory();
+    let text = "";
+    let layout_builder = factory.new_text_layout(text);
+    let layout = factory.new_text_layout(text).build().unwrap();
+    let _args = format_args!("{:?} {:?} {:?}", text, layout_builder, layout);
+}
+
+#[test]
+fn trailing_whitespace_width() {
+    let mut factory = make_factory();
+    let text = "hello";
+    let text_ws = "hello     ";
+    let non_ws = factory.new_text_layout(text).build().unwrap();
+    let ws = factory.new_text_layout(text_ws).build().unwrap();
+
+    assert_close!(non_ws.size().width, ws.size().width, 0.1);
+    assert_close!(non_ws.trailing_whitespace_width(), non_ws.size().width, 0.1);
+    // the width with whitespace is ~very approximately~ twice the width without whitespace
+    assert_close!(ws.trailing_whitespace_width() / ws.size().width, 2.0, 0.5);
+}
