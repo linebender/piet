@@ -296,7 +296,6 @@ impl RenderContext for WebRenderContext<'_> {
                 new_buf
             }
             ImageFormat::Grayscale => {
-
                 let mut new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     new_buf[i * 4 + 0] = buf[i];
@@ -304,7 +303,8 @@ impl RenderContext for WebRenderContext<'_> {
                     new_buf[i * 4 + 2] = buf[i];
                     new_buf[i * 4 + 3] = 255;
                 }
-                new_buf            }
+                new_buf
+            }
             _ => Vec::new(),
         };
         let image_data =
