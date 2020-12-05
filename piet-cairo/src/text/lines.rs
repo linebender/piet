@@ -132,10 +132,17 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &ScaledFont, width: f64) 
             }
 
             // now do the hard break
+            let mut line_end = line_break;
+            // Remove any trailing newline characters from the line.
+            while matches!(text.get(line_end - 1..line_end), Some("\n") | Some("\r"))
+                && line_end > line_start
+            {
+                line_end -= 1;
+            }
             add_line_metric(
                 text,
                 line_start,
-                line_break,
+                line_end,
                 baseline,
                 height,
                 &mut y_offset,
