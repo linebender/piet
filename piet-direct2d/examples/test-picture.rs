@@ -10,12 +10,12 @@ use piet_direct2d::D2DRenderContext;
 const HIDPI: f32 = 2.0;
 const FILE_PREFIX: &str = "d2d-test-";
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    samples::samples_main(run_sample, FILE_PREFIX)
+fn main() {
+    samples::samples_main(run_sample, FILE_PREFIX);
 }
 
 fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let sample = samples::get(number);
+    let sample = samples::get(number)?;
     let size = sample.size();
 
     let file_name = format!("{}{}.png", FILE_PREFIX, number);
