@@ -272,8 +272,7 @@ impl RenderContext for WebRenderContext<'_> {
         canvas.set_height(height as u32);
         let mut buf = match format {
             // Discussion topic: if buf were mut here, we could probably avoid this clone.
-            // See https://github.com/rustwasm/wasm-bindgen/issues/1005 for an issue that might
-            // also resolve the need to clone.
+            // See https://github.com/rustwasm/wasm-bindgen/issues/2364 for the issue.
             ImageFormat::RgbaSeparate => buf.to_vec(),
             ImageFormat::RgbaPremul => {
                 let mut new_buf = vec![0; width * height * 4];
@@ -292,6 +291,16 @@ impl RenderContext for WebRenderContext<'_> {
                     new_buf[i * 4 + 0] = buf[i * 3 + 0];
                     new_buf[i * 4 + 1] = buf[i * 3 + 1];
                     new_buf[i * 4 + 2] = buf[i * 3 + 2];
+                    new_buf[i * 4 + 3] = 255;
+                }
+                new_buf
+            }
+            ImageFormat::Grayscale => {
+                let mut new_buf = vec![0; width * height * 4];
+                for i in 0..width * height {
+                    new_buf[i * 4 + 0] = buf[i];
+                    new_buf[i * 4 + 1] = buf[i];
+                    new_buf[i * 4 + 2] = buf[i];
                     new_buf[i * 4 + 3] = 255;
                 }
                 new_buf
