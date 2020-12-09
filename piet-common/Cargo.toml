@@ -10,6 +10,8 @@ edition = "2018"
 keywords = ["graphics", "2d"]
 
 [features]
+default = ["skia"]
+skia = ["skulpin", "piet-skia"]
 web = ["piet-web"]
 
 # passing on all the image features. AVIF is not supported because it does not
@@ -37,7 +39,9 @@ cfg-if = "1.0"
 png = { version = "0.16.1", optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
-piet-cairo = { version = "0.2.0", path = "../piet-cairo" }
+skulpin = {version = "0.11.1", optional = true}
+piet-skia = { path = "../piet-skia", optional = true}
+piet-cairo = { version = "0.2.0", path = "../piet-cairo"}
 cairo-rs = { version = "0.9.1", default_features = false}
 cairo-sys-rs = { version = "0.10.0" }
 
