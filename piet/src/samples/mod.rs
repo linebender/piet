@@ -169,7 +169,7 @@ impl Args {
             number: args.free_from_str()?,
         };
 
-        if !(args.all || args.number.is_some() || args.compare_dir.is_some()) && !args.help {
+        if !(args.help || args.all || args.number.is_some() || args.compare_dir.is_some()) {
             Err(Box::new(Error::InvalidSampleArgs))
         } else {
             Ok(args)
