@@ -193,9 +193,53 @@ impl Color {
         )
     }
 
-    /// Opaque white.
-    pub const WHITE: Color = Color::rgb8(0xff, 0xff, 0xff);
+    // basic css3 colors (not including shades for now)
+
+    /// Opaque aqua (or cyan).
+    pub const AQUA: Color = Color::rgb8(0, 255, 255);
 
     /// Opaque black.
     pub const BLACK: Color = Color::rgb8(0, 0, 0);
+
+    /// Opaque blue.
+    pub const BLUE: Color = Color::rgb8(0, 0, 255);
+
+    /// Opaque fuchsia (or magenta).
+    pub const FUCHSIA: Color = Color::rgb8(255, 0, 255);
+
+    /// Opaque gray.
+    pub const GRAY: Color = Color::grey8(128);
+
+    /// Opaque green.
+    pub const GREEN: Color = Color::rgb8(0, 128, 0);
+
+    /// Opaque lime.
+    pub const LIME: Color = Color::rgb8(0, 255, 0);
+
+    /// Opaque maroon.
+    pub const MAROON: Color = Color::rgb8(128, 0, 0);
+
+    /// Opaque navy.
+    pub const NAVY: Color = Color::rgb8(0, 0, 128);
+
+    /// Opaque olive.
+    pub const OLIVE: Color = Color::rgb8(128, 128, 0);
+
+    /// Opaque purple.
+    pub const PURPLE: Color = Color::rgb8(128, 0, 128);
+
+    /// Opaque red.
+    pub const RED: Color = Color::rgb8(255, 0, 0);
+
+    /// Opaque silver.
+    pub const SILVER: Color = Color::grey8(192);
+
+    /// Opaque teal.
+    pub const TEAL: Color = Color::rgb8(0, 128, 128);
+
+    /// Opaque white.
+    pub const WHITE: Color = Color::grey8(255);
+
+    /// Opaque yellow.
+    pub const YELLOW: Color = Color::rgb8(255, 255, 0);
 }
