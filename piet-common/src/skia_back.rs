@@ -44,7 +44,7 @@ pub type PietTextLayoutBuilder = SkiaTextLayoutBuilder;
 /////
 ///// This type matches `RenderContext::Image`
 //pub type Image = ImageSurface;
-pub type Image = ();
+pub type Image = SkiaImage;
 
 /// A struct that can be used to create bitmap render contexts.
 ///

@@ -11,7 +11,7 @@ keywords = ["graphics", "2d"]
 
 [features]
 default = ["skia"]
-skia = ["skulpin", "piet-skia"]
+skia = ["skia-safe", "piet-skia"]
 web = ["piet-web"]
 
 # passing on all the image features. AVIF is not supported because it does not
@@ -39,7 +39,7 @@ cfg-if = "1.0"
 png = { version = "0.16.1", optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
-skulpin = {version = "0.11.1", optional = true}
+skia-safe = { git = "https://github.com/Vurich/rust-skia.git", features = ["gl", "wayland"], optional = true }
 piet-skia = { path = "../piet-skia", optional = true}
 piet-cairo = { version = "0.2.0", path = "../piet-cairo"}
 cairo-rs = { version = "0.9.1", default_features = false}

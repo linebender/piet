@@ -8,7 +8,7 @@ use piet::{
 };
 use std::borrow::Cow;
 pub use text::*;
-use skulpin::skia_safe;
+use skia_safe;
 
 mod text;
 
