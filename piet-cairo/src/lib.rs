@@ -319,6 +319,20 @@ fn draw_image<'a>(
     dst_rect: Rect,
     interp: InterpolationMode,
 ) {
+    let src_rect = match src_rect {
+        Some(src_rect) => src_rect,
+        None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
+    };
+    // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
+    // either the source or destination is empty, and early-return if so.
+    if src_rect.width() == 0.
+        || src_rect.height() == 0.
+        || dst_rect.width() == 0.
+        || dst_rect.height() == 0.
+    {
+        return;
+    }
+
     let _ = ctx.with_save(|rc| {
         let surface_pattern = SurfacePattern::create(image);
         let filter = match interp {
@@ -326,10 +340,6 @@ fn draw_image<'a>(
             InterpolationMode::Bilinear => Filter::Bilinear,
         };
         surface_pattern.set_filter(filter);
-        let src_rect = match src_rect {
-            Some(src_rect) => src_rect,
-            None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
-        };
         let scale_x = dst_rect.width() / src_rect.width();
         let scale_y = dst_rect.height() / src_rect.height();
         rc.clip(dst_rect);
