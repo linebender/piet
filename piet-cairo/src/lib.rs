@@ -224,8 +224,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             ImageFormat::RgbaSeparate | ImageFormat::RgbaPremul => Format::ARgb32,
             _ => return Err(Error::NotSupported),
         };
-        let mut image = ImageSurface::create(cairo_fmt, width as i32, height as i32)
+        let width_int = width as i32;
+        let height_int = height as i32;
+        let mut image = ImageSurface::create(cairo_fmt, width_int, height_int)
             .map_err(|e| Error::BackendError(Box::new(e)))?;
+
+        // early-return if the image has no data in it
+        if width_int == 0 || height_int == 0 {
+            return Ok(image);
+        }
+
         // Confident no borrow errors because we just created it.
         let bytes_per_pixel = format.bytes_per_pixel();
         let bytes_per_row = width * bytes_per_pixel;
