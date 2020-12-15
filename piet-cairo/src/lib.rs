@@ -333,11 +333,7 @@ fn draw_image<'a>(
     };
     // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
     // either the source or destination is empty, and early-return if so.
-    if src_rect.width() == 0.
-        || src_rect.height() == 0.
-        || dst_rect.width() == 0.
-        || dst_rect.height() == 0.
-    {
+    if src_rect.is_empty() || dst_rect.is_empty() {
         return;
     }
 
