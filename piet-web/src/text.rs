@@ -314,8 +314,15 @@ impl WebTextLayout {
         self.ctx.set_font(&self.font.get_font_string());
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
-        let line_metrics =
-            lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
+        let line_metrics = if self.text.is_empty() {
+            vec![LineMetric {
+                baseline: self.font.size * 0.2,
+                height: self.font.size * 1.2,
+                ..Default::default()
+            }]
+        } else {
+            lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size)
+        };
 
         let max_width = line_metrics
             .iter()
