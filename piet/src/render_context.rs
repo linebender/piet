@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use kurbo::{Affine, Point, Rect, Shape};
 
 use crate::{
-    Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, LinearGradient,
+    Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, Image, LinearGradient,
     RadialGradient, StrokeStyle, Text, TextLayout,
 };
 
@@ -67,7 +67,7 @@ where
     type TextLayout: TextLayout;
 
     /// The associated type of an image.
-    type Image;
+    type Image: Image;
 
     /// Report an internal error.
     ///

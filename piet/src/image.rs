@@ -22,6 +22,12 @@ use crate::kurbo::Size;
 use crate::util::unpremul;
 use crate::{Color, ImageFormat, RenderContext};
 
+/// Represents an image type that knows its size.
+pub trait Image {
+    /// The size of the image
+    fn size(&self) -> Size;
+}
+
 /// An in-memory pixel buffer.
 ///
 /// Contains raw bytes, dimensions, and image format ([`piet::ImageFormat`]).

@@ -23,10 +23,10 @@ use winapi::um::d2d1::{
 use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
 
-use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
+use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 
 use piet::{
-    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
+    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
     StrokeStyle,
 };
 
@@ -573,5 +573,12 @@ impl<'a> IntoBrush<D2DRenderContext<'a>> for Brush {
         _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, Brush> {
         Cow::Borrowed(self)
+    }
+}
+
+impl Image for Bitmap {
+    fn size(&self) -> Size {
+        let inner = self.get_size();
+        Size::new(inner.width.into(), inner.height.into())
     }
 }

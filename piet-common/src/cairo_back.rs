@@ -43,7 +43,7 @@ pub type PietTextLayoutBuilder = CairoTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = ImageSurface;
+pub type PietImage = CairoImage;
 
 /// A struct that can be used to create bitmap render contexts.
 ///

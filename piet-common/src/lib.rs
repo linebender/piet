@@ -65,7 +65,7 @@ mod test {
         piet_text: PietText,
         piet_text_layout: PietTextLayout,
         piet_text_layout_builder: PietTextLayoutBuilder,
-        image: Image,
+        image: PietImage,
     }
 
     sa::assert_impl_all!(Device: Send);

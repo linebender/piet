@@ -23,8 +23,8 @@ use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
 use piet::util::unpremul;
 use piet::{
-    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
-    RenderContext, RoundInto, StrokeStyle,
+    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
+    LineJoin, RenderContext, RoundInto, StrokeStyle,
 };
 
 pub use crate::text::{CoreGraphicsText, CoreGraphicsTextLayout, CoreGraphicsTextLayoutBuilder};
@@ -350,7 +350,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         self.ctx.translate(rect.min_x(), rect.max_y());
         self.ctx.scale(1.0, -1.0);
         self.ctx
-            .draw_image(to_cgrect(rect.with_origin(Point::ZERO)), image);
+            .draw_image(to_cgrect(rect.with_origin(Point::ZERO)), &image.0);
         self.ctx.restore();
     }
 
@@ -394,6 +394,15 @@ impl<'a> IntoBrush<CoreGraphicsContext<'a>> for Brush {
         _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, Brush> {
         Cow::Borrowed(self)
+    }
+}
+
+impl Image for CoreGraphicsImage {
+    fn size(&self) -> Size {
+        // `size_t` (which could be 64 bits wide) does not losslessly convert to `f64`. In
+        // reality, the image you're working with would have to be pretty big to be an issue, and
+        // the issue would only be accuracy of the size.
+        Size::new(self.0.width() as f64, self.0.height() as f64)
     }
 }
 

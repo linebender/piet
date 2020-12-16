@@ -6,7 +6,7 @@ use std::ops::RangeBounds;
 use kurbo::{Affine, Point, Rect, Shape, Size};
 
 use crate::{
-    Color, Error, FixedGradient, FontFamily, HitTestPoint, HitTestPosition, ImageFormat,
+    Color, Error, FixedGradient, FontFamily, HitTestPoint, HitTestPosition, Image, ImageFormat,
     InterpolationMode, IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextAttribute,
     TextLayout, TextLayoutBuilder, TextStorage,
 };
@@ -217,5 +217,11 @@ impl IntoBrush<NullRenderContext> for NullBrush {
         _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, NullBrush> {
         Cow::Borrowed(self)
+    }
+}
+
+impl Image for NullImage {
+    fn size(&self) -> Size {
+        Size::ZERO
     }
 }
