@@ -1,20 +1,31 @@
-
 #![allow(warnings)] // TODO remove me!!!
 
-use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
+use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
 use piet::{
-    Color, Error, FixedGradient, FontFamily, HitTestPoint, ImageFormat, InterpolationMode,
-    IntoBrush, LineMetric, RenderContext, StrokeStyle, Text, TextLayout, TextLayoutBuilder,
+    Color, Error, FixedGradient, ImageFormat, InterpolationMode,
+    IntoBrush, RenderContext, StrokeStyle, TextLayout, FixedLinearGradient,
+    FixedRadialGradient,
 };
 use std::borrow::Cow;
 pub use text::*;
 use skia_safe;
+use skia_safe::{Path, PaintStyle, Paint, FontMgr, TileMode};
+use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
+use skia_safe::effects::gradient_shader::{linear, radial};
+use skia_safe::shader::Shader;
 
 mod text;
 
+static LOREM_IPSUM: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur at leo at nulla tincidunt placerat. Proin eget purus augue. Quisque et est ullamcorper, pellentesque felis nec, pulvinar massa. Aliquam imperdiet, nulla ut dictum euismod, purus dui pulvinar risus, eu suscipit elit neque ac est. Nullam eleifend justo quis placerat ultricies. Vestibulum ut elementum velit. Praesent et dolor sit amet purus bibendum mattis. Aliquam erat volutpat.";
+
+fn pairf32(p: Point) -> (f32, f32) {
+    (p.x as f32, p.y as f32)
+}
+
 #[derive(Clone)]
 pub enum Brush {
-    Solid(u32),
+    Solid(skia_safe::Color),
+    Gradient(Shader)
 }
 
 impl<'a> IntoBrush<SkiaRenderContext<'a>> for Brush {
@@ -27,19 +38,72 @@ impl<'a> IntoBrush<SkiaRenderContext<'a>> for Brush {
     }
 }
 
+fn apply_brush(paint: &mut Paint, brush: &Brush) {
+    match brush {
+        Brush::Solid(color) => {
+            paint.set_color(*color);
+        }
+        Brush::Gradient(gradient) => {
+            // clone might be inefficient
+            paint.set_shader(gradient.clone());
+        }
+    }
+}
+
 pub struct SkiaRenderContext<'a> {
     canvas: &'a mut skia_safe::Canvas,
 }
 
 impl<'a> SkiaRenderContext<'a>{
     pub fn new(canvas: &'a mut skia_safe::Canvas) -> Self {
+        let mut paint = Paint::default();
         SkiaRenderContext{
-            canvas
+            canvas,
         }
     }
 }
 
 pub struct SkiaImage;
+
+// TODO this is temporal and we just want to use skia's paths
+fn create_path(shape: impl Shape) -> Path {
+    let mut path = Path::new();
+    
+    let mut last = Point::ZERO;
+    for el in shape.path_elements(1e-3) {
+        match el {
+            PathEl::MoveTo(p) => {
+                path.move_to(pairf32(p));
+                last = p;
+            }
+            PathEl::LineTo(p) => {
+                path.line_to(pairf32(p));
+                last = p;
+            }
+            PathEl::QuadTo(p1, p2) => {
+                path.quad_to(pairf32(p1), pairf32(p2));
+                last = p2;
+            }
+            PathEl::CurveTo(p1, p2, p3) => {
+                path.cubic_to(pairf32(p1), pairf32(p2), pairf32(p3));
+                last = p3;
+            }
+            PathEl::ClosePath => {path.close();}
+        }
+    }
+    path
+}
+
+pub fn convert_color(color: Color) -> skia_safe::Color {
+    let rgba = color.as_rgba_u32();
+    // swap r and a
+    let argb = (rgba >> 8) | ((rgba & 255) << 24);
+    skia_safe::Color::new(argb)
+}
+
+pub fn convert_point(point: Point) -> skia_safe::Point {
+    skia_safe::Point::new(point.x as f32, point.y as f32)
+}
 
 impl<'a> RenderContext for SkiaRenderContext<'a> {
     type Brush = Brush;
@@ -52,40 +116,66 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn clear(&mut self, color: Color) {
-        unimplemented!();
+        let color = convert_color(color);
+        self.canvas.clear(color);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
-        Brush::Solid(100)
-        //unimplemented!();
+        Brush::Solid(convert_color(color))
     }
 
     fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
-        unimplemented!();
+        // TODO
+        let gradient = gradient.into();
+        let mut colors_from_stops = |stops: Vec<piet::GradientStop>| {
+            stops.into_iter().map(|stop| convert_color(stop.color)).collect()
+        };
+        let shader = match gradient {
+            FixedGradient::Linear(FixedLinearGradient {
+                start,
+                end,
+                stops
+            }) => {
+                let start = convert_point(start);
+                let end = convert_point(end);
+                let colors: Vec<_> = colors_from_stops(stops);
+                linear((start, end), colors.as_slice(), None, TileMode::Clamp, None, None)
+            }
+            FixedGradient::Radial(FixedRadialGradient {
+                center,
+                origin_offset,
+                radius,
+                stops
+            }) => {
+                let center = convert_point(center);
+                let radius = radius as f32;
+                let colors: Vec<_> = colors_from_stops(stops);
+                radial(center, radius, colors.as_slice(), None, TileMode::Clamp, None, None)
+            }
+        };
+        Ok(Brush::Gradient(shader.unwrap()))
     }
 
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
-        dbg!("unimplemented");   
-        //unimplemented!();
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        let mut paint = Paint::default();
+        apply_brush(&mut paint, brush.as_ref());
+        let mut path = create_path(shape);
+        self.canvas.draw_path(&path, &paint);
     }
 
-    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
-        unimplemented!();
-    }
+    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {}
 
-    fn clip(&mut self, shape: impl Shape) {
-        unimplemented!();
-    }
+    fn clip(&mut self, shape: impl Shape) {}
 
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64) {
-        dbg!("---");
-        let f = 0.5;
-        let mut paint = skia_safe::Paint::new(skia_safe::Color4f::new(1.0 - f, 0.0, f, 1.0), None);
-        self.canvas.draw_line(
-            skia_safe::Point::new(100.0, 500.0),
-            skia_safe::Point::new(800.0, 500.0),
-            &paint,
-        );
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        let mut paint = Paint::default();
+        apply_brush(&mut paint, brush.as_ref());
+        paint.set_stroke_width(width as f32);
+        paint.set_style(PaintStyle::Stroke);
+        let mut path = create_path(shape);
+        self.canvas.draw_path(&path, &paint);
     }
 
     fn stroke_styled(
@@ -95,7 +185,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         width: f64,
         style: &StrokeStyle,
     ) {
-        unimplemented!();
+        //unimplemented!();
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -103,15 +193,25 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
-        unimplemented!();
+        let pos = pos.into();
+        let mut paint = Paint::default();
+        let rect = layout.image_bounds() + pos.to_vec2();
+        let brush = layout.fg_color.make_brush(self, || rect);
+        let mut paint = Paint::default();
+        apply_brush(&mut paint, brush.as_ref());
+        
+        let pos = skia_safe::Point::new(pos.x as f32, pos.y as f32);
+        layout.paragraph.paint(&mut self.canvas, pos); 
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        unimplemented!();
+        self.canvas.save();
+        return Ok(())
     }
 
     fn restore(&mut self) -> Result<(), Error> {
-        unimplemented!();
+        self.canvas.restore();
+        Ok(())
     }
 
     fn finish(&mut self) -> Result<(), Error> {
@@ -119,7 +219,13 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn transform(&mut self, transform: Affine) {
-        unimplemented!();
+        let coefs = transform.as_coeffs();
+        let mut matrix = [0f32; 6];
+        for (e, c) in matrix.iter_mut().zip(coefs.iter()) {
+            *e = *c as f32;
+        };
+        let matrix = skia_safe::Matrix::from_affine(&matrix);
+        self.canvas.concat(&matrix);
     }
 
     fn current_transform(&self) -> Affine {

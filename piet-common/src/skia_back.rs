@@ -75,9 +75,9 @@ impl Device {
     /// Create a new bitmap target.
     pub fn bitmap_target(
         &mut self,
-        width: usize,
-        height: usize,
-        pix_scale: f64,
+        _width: usize,
+        _height: usize,
+        _pix_scale: f64,
     ) -> Result<BitmapTarget, piet::Error> {
         unimplemented!()
     }
@@ -97,8 +97,8 @@ impl<'a> BitmapTarget<'a> {
     /// and doesn't write anything.
     pub fn copy_raw_pixels(
         &mut self,
-        fmt: ImageFormat,
-        buf: &mut [u8],
+        _fmt: ImageFormat,
+        _buf: &mut [u8],
     ) -> Result<usize, piet::Error> {
         unimplemented!();
     }
@@ -107,13 +107,13 @@ impl<'a> BitmapTarget<'a> {
     // Clippy complains about a to_xxx method taking &mut self. Semantically speaking, this is not
     // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
     #[allow(clippy::wrong_self_convention)]
-    pub fn to_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
+    pub fn to_image_buf(&mut self, _fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
         unimplemented!();
     }
 
     /// Get raw RGBA pixels from the bitmap.
     #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    pub fn into_raw_pixels(/*mut*/self, _fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         unimplemented!();
     }
 
