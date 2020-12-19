@@ -545,11 +545,7 @@ fn draw_image<'a>(
     interp: InterpolationMode,
 ) {
     let src_size = image.get_size();
-    if dst_rect.width() == 0.
-        || dst_rect.height() == 0.
-        || src_size.width == 0.
-        || src_size.height == 0.
-    {
+    if dst_rect.is_empty() || src_size.width == 0. || src_size.height == 0. {
         // source or destination are empty
         return;
     }
