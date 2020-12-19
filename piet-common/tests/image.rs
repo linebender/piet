@@ -5,6 +5,9 @@ fn with_context(cb: impl FnOnce(&mut Piet) -> Result<(), String>) {
     let mut device = Device::new().unwrap();
     let mut target = device.bitmap_target(400, 400, 2.0).unwrap();
     let mut ctx = target.render_context();
+    // We don't unwrap here because at least on Windows, dropping the context before calling
+    // `finish` causes another panic, which results in an abort where you don't get any debugging
+    // info about the first panic.
     let res = cb(&mut ctx);
     ctx.finish().unwrap();
     if let Err(e) = res {
@@ -16,6 +19,8 @@ fn with_context(cb: impl FnOnce(&mut Piet) -> Result<(), String>) {
 fn empty_image_should_not_panic() {
     let image = ImageBuf::empty();
     with_context(|ctx| {
+        // Do it this way round so that if the backend panics on an empty image, we get a better
+        // report of the panic for the reasons mentioned in `with_context`.
         let image = ctx
             .make_image(
                 image.width(),
