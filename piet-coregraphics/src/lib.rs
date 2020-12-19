@@ -112,11 +112,28 @@ pub enum Brush {
     Gradient(Gradient),
 }
 
+/// A core-graphics image
+pub enum CoreGraphicsImage {
+    /// Empty images are not supported for core-graphics, so we need a variant here to handle that
+    /// case.
+    Empty,
+    NonEmpty(CGImage),
+}
+
+impl CoreGraphicsImage {
+    fn as_ref(&self) -> Option<&CGImage> {
+        match self {
+            CoreGraphicsImage::Empty => None,
+            CoreGraphicsImage::NonEmpty(img) => Some(img),
+        }
+    }
+}
+
 impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Brush = Brush;
     type Text = CoreGraphicsText;
     type TextLayout = CoreGraphicsTextLayout;
-    type Image = CGImage;
+    type Image = CoreGraphicsImage;
     //type StrokeStyle = StrokeStyle;
 
     fn clear(&mut self, color: Color) {
@@ -271,12 +288,11 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
-        // todo use Arc<[u8]> when core-foundation-rs suports it
-        let data: Arc<Vec<u8>> = if buf.is_empty() {
-            Arc::new(vec![0])
-        } else {
-            Arc::new(buf.to_owned())
-        };
+        if width == 0 || height == 0 {
+            return Ok(CoreGraphicsImage::Empty);
+        }
+        assert!(!buf.is_empty() && buf.len() <= format.bytes_per_pixel() * width * height);
+        let data = Arc::new(buf.to_owned());
         let data_provider = CGDataProvider::from_buffer(data);
         let (colorspace, bitmap_info, bytes) = match format {
             ImageFormat::Rgb => (CGColorSpace::create_device_rgb(), 0, 3),
@@ -305,7 +321,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             should_interpolate,
             rendering_intent,
         );
-        Ok(image)
+        Ok(CoreGraphicsImage::NonEmpty(image))
     }
 
     fn draw_image(
@@ -314,6 +330,10 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
+        let image = match image.as_ref() {
+            Some(img) => img,
+            None => return,
+        };
         self.ctx.save();
         //https://developer.apple.com/documentation/coregraphics/cginterpolationquality?language=objc
         let quality = match interp {
@@ -341,9 +361,11 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         dst_rect: impl Into<Rect>,
         _interp: InterpolationMode,
     ) {
-        if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
-            // TODO: apply interpolation mode
-            self.ctx.draw_image(to_cgrect(dst_rect), &cropped);
+        if let CoreGraphicsImage::NonEmpty(image) = image {
+            if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
+                // TODO: apply interpolation mode
+                self.ctx.draw_image(to_cgrect(dst_rect), &cropped);
+            }
         }
     }
 
