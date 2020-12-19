@@ -271,8 +271,9 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
-        let data: Arc<[u8]> = if buf.is_empty() {
-            Arc::new([0])
+        // todo use Arc<[u8]> when core-foundation-rs suports it
+        let data: Arc<Vec<u8>> = if buf.is_empty() {
+            Arc::new(vec![0])
         } else {
             Arc::new(buf.to_owned())
         };
