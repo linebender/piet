@@ -271,7 +271,11 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
-        let data = Arc::new(buf.to_owned());
+        let data: Arc<[u8]> = if buf.is_empty() {
+            Arc::new([0])
+        } else {
+            Arc::new(buf.to_owned())
+        };
         let data_provider = CGDataProvider::from_buffer(data);
         let (colorspace, bitmap_info, bytes) = match format {
             ImageFormat::Rgb => (CGColorSpace::create_device_rgb(), 0, 3),
