@@ -330,6 +330,18 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
+        // CreateBitmap will fail if we try to make an empty image. To solve this, we change an
+        // empty image into 1x1 transparent image. Not ideal, but prevents a crash. TODO find a
+        // better solution.
+        if width == 0 || height == 0 {
+            return Ok(self.rt.create_bitmap(
+                1,
+                1,
+                &[0, 0, 0, 0][..],
+                D2D1_ALPHA_MODE_PREMULTIPLIED,
+            )?);
+        }
+
         // TODO: this method _really_ needs error checking, so much can go wrong...
         let alpha_mode = match format {
             ImageFormat::Rgb | ImageFormat::Grayscale => D2D1_ALPHA_MODE_IGNORE,
@@ -532,6 +544,11 @@ fn draw_image<'a>(
     dst_rect: Rect,
     interp: InterpolationMode,
 ) {
+    let src_size = image.get_size();
+    if dst_rect.is_empty() || src_size.width == 0. || src_size.height == 0. {
+        // source or destination are empty
+        return;
+    }
     let interp = match interp {
         InterpolationMode::NearestNeighbor => D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
         InterpolationMode::Bilinear => D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
