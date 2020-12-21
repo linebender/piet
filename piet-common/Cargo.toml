@@ -30,6 +30,8 @@ farbfeld = ["piet/farbfeld"]
 dxt = ["piet/dxt"]
 hdr = ["piet/hdr"]
 
+serde = ["piet/serde"]
+
 [dependencies]
 piet = { version = "0.2.0", path = "../piet" }
 piet-web = { version = "0.2.0", path = "../piet-web", optional = true }
