@@ -44,7 +44,7 @@ pub type PietTextLayoutBuilder = D2DTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = Bitmap;
+pub type PietImage = Bitmap;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {

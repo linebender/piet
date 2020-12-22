@@ -23,10 +23,10 @@ use winapi::um::d2d1::{
 use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
 
-use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
+use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 
 use piet::{
-    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
+    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
     StrokeStyle,
 };
 
@@ -334,12 +334,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // empty image into 1x1 transparent image. Not ideal, but prevents a crash. TODO find a
         // better solution.
         if width == 0 || height == 0 {
-            return Ok(self.rt.create_bitmap(
-                1,
-                1,
-                &[0, 0, 0, 0][..],
-                D2D1_ALPHA_MODE_PREMULTIPLIED,
-            )?);
+            return Ok(self.rt.create_empty_bitmap()?);
         }
 
         // TODO: this method _really_ needs error checking, so much can go wrong...
@@ -544,8 +539,7 @@ fn draw_image<'a>(
     dst_rect: Rect,
     interp: InterpolationMode,
 ) {
-    let src_size = image.get_size();
-    if dst_rect.is_empty() || src_size.width == 0. || src_size.height == 0. {
+    if dst_rect.is_empty() || image.empty_image {
         // source or destination are empty
         return;
     }
@@ -573,5 +567,16 @@ impl<'a> IntoBrush<D2DRenderContext<'a>> for Brush {
         _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, Brush> {
         Cow::Borrowed(self)
+    }
+}
+
+impl Image for Bitmap {
+    fn size(&self) -> Size {
+        if self.empty_image {
+            Size::ZERO
+        } else {
+            let inner = self.get_size();
+            Size::new(inner.width.into(), inner.height.into())
+        }
     }
 }

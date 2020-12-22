@@ -9,10 +9,10 @@ mod text;
 use std::borrow::Cow;
 use std::{io, mem};
 
-use piet::kurbo::{Affine, Point, Rect, Shape};
+use piet::kurbo::{Affine, Point, Rect, Shape, Size};
 use piet::{
-    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
-    StrokeStyle,
+    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
+    LineJoin, StrokeStyle,
 };
 use svg::node::Node;
 
@@ -62,7 +62,7 @@ impl piet::RenderContext for RenderContext {
     type Text = Text;
     type TextLayout = TextLayout;
 
-    type Image = Image;
+    type Image = SvgImage;
 
     fn status(&mut self) -> Result<()> {
         Ok(())
@@ -454,7 +454,13 @@ fn fmt_opacity(color: &Color) -> String {
 }
 
 /// SVG image (unimplemented)
-pub struct Image(());
+pub struct SvgImage(());
+
+impl Image for SvgImage {
+    fn size(&self) -> Size {
+        todo!()
+    }
+}
 
 #[derive(Debug, Copy, Clone)]
 struct Id(u64);

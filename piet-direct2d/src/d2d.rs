@@ -113,7 +113,10 @@ pub struct Layer(ComPtr<ID2D1Layer>);
 #[derive(Clone)]
 pub struct Brush(ComPtr<ID2D1Brush>);
 
-pub struct Bitmap(ComPtr<ID2D1Bitmap1>);
+pub struct Bitmap {
+    inner: ComPtr<ID2D1Bitmap1>,
+    pub(crate) empty_image: bool,
+}
 
 pub struct Effect(ComPtr<ID2D1Effect>);
 
@@ -387,14 +390,20 @@ impl DeviceContext {
         let hr = self
             .0
             .CreateBitmapFromDxgiSurface(dxgi.as_raw(), &props, &mut ptr);
-        wrap(hr, ptr, Bitmap)
+        wrap(hr, ptr, |ptr| Bitmap {
+            inner: ptr,
+            // I'm pretty sure an empty dxgi surface will be invalid, so we can be sure the image
+            // is not empty.
+            empty_image: false,
+        })
     }
 
     /// Set the target for the device context.
     ///
     /// Useful for rendering into bitmaps.
     pub fn set_target(&mut self, target: &Bitmap) {
-        unsafe { self.0.SetTarget(target.0.as_raw() as *mut ID2D1Image) }
+        assert!(!target.empty_image);
+        unsafe { self.0.SetTarget(target.inner.as_raw() as *mut ID2D1Image) }
     }
 
     /// Set the dpi scale.
@@ -674,8 +683,8 @@ impl DeviceContext {
     ) -> Result<Bitmap, Error> {
         // Maybe using TryInto would be more Rust-like.
         // Note: value is set so that multiplying by 4 (for pitch) is valid.
-        assert!(width <= 0x3fff_ffff);
-        assert!(height <= 0xffff_ffff);
+        assert!(width != 0 && width <= 0x3fff_ffff);
+        assert!(height != 0 && height <= 0xffff_ffff);
         let size = D2D1_SIZE_U {
             width: width as u32,
             height: height as u32,
@@ -701,7 +710,43 @@ impl DeviceContext {
                 &props,
                 &mut ptr,
             );
-            wrap(hr, ptr, Bitmap)
+            wrap(hr, ptr, |ptr| Bitmap {
+                inner: ptr,
+                empty_image: false,
+            })
+        }
+    }
+
+    /// Create a valid empty image
+    ///
+    /// The image will actually be a 1x1 transparent pixel, but with the `empty_image` flag set so
+    /// rendering can be skipped.
+    pub(crate) fn create_empty_bitmap(&mut self) -> Result<Bitmap, Error> {
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self.0.deref().CreateBitmap(
+                D2D1_SIZE_U {
+                    width: 1,
+                    height: 1,
+                },
+                [0, 0, 0, 0].as_ptr() as *const c_void,
+                4,
+                &D2D1_BITMAP_PROPERTIES1 {
+                    pixelFormat: D2D1_PIXEL_FORMAT {
+                        format: DXGI_FORMAT_R8G8B8A8_UNORM,
+                        alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                    },
+                    dpiX: 96.0,
+                    dpiY: 96.0,
+                    bitmapOptions: D2D1_BITMAP_OPTIONS_NONE,
+                    colorContext: null_mut(),
+                },
+                &mut ptr,
+            );
+            wrap(hr, ptr, |ptr| Bitmap {
+                inner: ptr,
+                empty_image: true,
+            })
         }
     }
 
@@ -731,7 +776,7 @@ impl DeviceContext {
             // derefs are so we get RenderTarget method rather than DeviceContext method.
             // pointer casts are partly to undo that :)
             self.0.deref().deref().DrawBitmap(
-                bitmap.0.as_raw() as *mut ID2D1Bitmap,
+                bitmap.inner.as_raw() as *mut ID2D1Bitmap,
                 dst_rect,
                 opacity,
                 interp_mode,
@@ -900,7 +945,7 @@ impl<'a> GeometrySink<'a> {
 /// This might not be needed.
 impl Bitmap {
     pub fn get_size(&self) -> D2D1_SIZE_F {
-        unsafe { self.0.GetSize() }
+        unsafe { self.inner.GetSize() }
     }
 }
 

@@ -1,4 +1,4 @@
-use kurbo::Rect;
+use kurbo::{Rect, Size};
 use piet_common::*;
 
 fn with_context(cb: impl FnOnce(&mut Piet) -> Result<(), String>) {
@@ -65,4 +65,34 @@ fn empty_image_area_should_not_panic() {
         );
         Ok(())
     })
+}
+
+#[test]
+fn image_size() {
+    let image = ImageBuf::from_raw(&[0, 0, 0, 0][..], ImageFormat::RgbaSeparate, 1, 1);
+    with_context(|ctx| {
+        let image = image.to_image(ctx);
+        if image.size() != Size::new(1., 1.) {
+            return Err(format!(
+                "expected {:?}, found {:?}",
+                Size::new(1., 1.),
+                image.size()
+            ));
+        }
+        Ok(())
+    });
+
+    // try an empty image
+    let image = ImageBuf::empty();
+    with_context(|ctx| {
+        let image = image.to_image(ctx);
+        if image.size() != Size::new(0., 0.) {
+            return Err(format!(
+                "expected {:?}, found {:?}",
+                Size::new(0., 0.),
+                image.size()
+            ));
+        }
+        Ok(())
+    });
 }

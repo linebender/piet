@@ -10,8 +10,8 @@ use cairo::{Context, Filter, Format, ImageSurface, Matrix, SurfacePattern};
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 use piet::{
-    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
-    RenderContext, StrokeStyle, TextLayout,
+    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
+    LineJoin, RenderContext, StrokeStyle, TextLayout,
 };
 
 pub use crate::text::{CairoText, CairoTextLayout, CairoTextLayoutBuilder};
@@ -28,20 +28,7 @@ pub struct CairoRenderContext<'a> {
     transform_stack: Vec<Affine>,
 }
 
-impl<'a> CairoRenderContext<'a> {
-    /// Create a new Cairo back-end.
-    ///
-    /// At the moment, it uses the "toy text API" for text layout, but when
-    /// we change to a more sophisticated text layout approach, we'll probably
-    /// need a factory for that as an additional argument.
-    pub fn new(ctx: &Context) -> CairoRenderContext {
-        CairoRenderContext {
-            ctx,
-            text: CairoText::new(),
-            transform_stack: Vec::new(),
-        }
-    }
-}
+impl<'a> CairoRenderContext<'a> {}
 
 #[derive(Clone)]
 pub enum Brush {
@@ -49,6 +36,8 @@ pub enum Brush {
     Linear(cairo::LinearGradient),
     Radial(cairo::RadialGradient),
 }
+
+pub struct CairoImage(ImageSurface);
 
 // we call this with different types of gradient that have `add_color_stop_rgba` fns,
 // and there's no trait for this behaviour so we use a macro. ¯\_(ツ)_/¯
@@ -73,7 +62,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Text = CairoText;
     type TextLayout = CairoTextLayout;
 
-    type Image = ImageSurface;
+    type Image = CairoImage;
 
     fn status(&mut self) -> Result<(), Error> {
         Ok(())
@@ -231,7 +220,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
         // early-return if the image has no data in it
         if width_int == 0 || height_int == 0 {
-            return Ok(image);
+            return Ok(CairoImage(image));
         }
 
         // Confident no borrow errors because we just created it.
@@ -288,7 +277,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                 }
             }
         }
-        Ok(image)
+        Ok(CairoImage(image))
     }
 
     #[inline]
@@ -298,7 +287,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        draw_image(self, image, None, dst_rect.into(), interp);
+        self.draw_image_inner(&image.0, None, dst_rect.into(), interp);
     }
 
     #[inline]
@@ -309,7 +298,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
+        self.draw_image_inner(&image.0, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
@@ -318,44 +307,6 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_brush(&*brush);
         self.ctx.mask_surface(&image, origin.x, origin.y);
     }
-}
-
-fn draw_image<'a>(
-    ctx: &mut CairoRenderContext<'a>,
-    image: &<CairoRenderContext<'a> as RenderContext>::Image,
-    src_rect: Option<Rect>,
-    dst_rect: Rect,
-    interp: InterpolationMode,
-) {
-    let src_rect = match src_rect {
-        Some(src_rect) => src_rect,
-        None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
-    };
-    // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
-    // either the source or destination is empty, and early-return if so.
-    if src_rect.is_empty() || dst_rect.is_empty() {
-        return;
-    }
-
-    let _ = ctx.with_save(|rc| {
-        let surface_pattern = SurfacePattern::create(image);
-        let filter = match interp {
-            InterpolationMode::NearestNeighbor => Filter::Nearest,
-            InterpolationMode::Bilinear => Filter::Bilinear,
-        };
-        surface_pattern.set_filter(filter);
-        let scale_x = dst_rect.width() / src_rect.width();
-        let scale_y = dst_rect.height() / src_rect.height();
-        rc.clip(dst_rect);
-        rc.ctx.translate(
-            dst_rect.x0 - scale_x * src_rect.x0,
-            dst_rect.y0 - scale_y * src_rect.y0,
-        );
-        rc.ctx.scale(scale_x, scale_y);
-        rc.ctx.set_source(&surface_pattern);
-        rc.ctx.paint();
-        Ok(())
-    });
 }
 
 impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
@@ -368,23 +319,26 @@ impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
     }
 }
 
-fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
-    match line_cap {
-        LineCap::Butt => cairo::LineCap::Butt,
-        LineCap::Round => cairo::LineCap::Round,
-        LineCap::Square => cairo::LineCap::Square,
-    }
-}
-
-fn convert_line_join(line_join: LineJoin) -> cairo::LineJoin {
-    match line_join {
-        LineJoin::Miter => cairo::LineJoin::Miter,
-        LineJoin::Round => cairo::LineJoin::Round,
-        LineJoin::Bevel => cairo::LineJoin::Bevel,
+impl Image for CairoImage {
+    fn size(&self) -> Size {
+        Size::new(self.0.get_width().into(), self.0.get_height().into())
     }
 }
 
 impl<'a> CairoRenderContext<'a> {
+    /// Create a new Cairo back-end.
+    ///
+    /// At the moment, it uses the "toy text API" for text layout, but when
+    /// we change to a more sophisticated text layout approach, we'll probably
+    /// need a factory for that as an additional argument.
+    pub fn new(ctx: &Context) -> CairoRenderContext {
+        CairoRenderContext {
+            ctx,
+            text: CairoText::new(),
+            transform_stack: Vec::new(),
+        }
+    }
+
     /// Set the source pattern to the brush.
     ///
     /// Cairo is super stateful, and we're trying to have more retained stuff.
@@ -454,6 +408,60 @@ impl<'a> CairoRenderContext<'a> {
                 PathEl::ClosePath => self.ctx.close_path(),
             }
         }
+    }
+
+    fn draw_image_inner(
+        &mut self,
+        image: &ImageSurface,
+        src_rect: Option<Rect>,
+        dst_rect: Rect,
+        interp: InterpolationMode,
+    ) {
+        let src_rect = match src_rect {
+            Some(src_rect) => src_rect,
+            None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
+        };
+        // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
+        // either the source or destination is empty, and early-return if so.
+        if src_rect.is_empty() || dst_rect.is_empty() {
+            return;
+        }
+
+        let _ = self.with_save(|rc| {
+            let surface_pattern = SurfacePattern::create(image);
+            let filter = match interp {
+                InterpolationMode::NearestNeighbor => Filter::Nearest,
+                InterpolationMode::Bilinear => Filter::Bilinear,
+            };
+            surface_pattern.set_filter(filter);
+            let scale_x = dst_rect.width() / src_rect.width();
+            let scale_y = dst_rect.height() / src_rect.height();
+            rc.clip(dst_rect);
+            rc.ctx.translate(
+                dst_rect.x0 - scale_x * src_rect.x0,
+                dst_rect.y0 - scale_y * src_rect.y0,
+            );
+            rc.ctx.scale(scale_x, scale_y);
+            rc.ctx.set_source(&surface_pattern);
+            rc.ctx.paint();
+            Ok(())
+        });
+    }
+}
+
+fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
+    match line_cap {
+        LineCap::Butt => cairo::LineCap::Butt,
+        LineCap::Round => cairo::LineCap::Round,
+        LineCap::Square => cairo::LineCap::Square,
+    }
+}
+
+fn convert_line_join(line_join: LineJoin) -> cairo::LineJoin {
+    match line_join {
+        LineJoin::Miter => cairo::LineJoin::Miter,
+        LineJoin::Round => cairo::LineJoin::Round,
+        LineJoin::Bevel => cairo::LineJoin::Bevel,
     }
 }
 

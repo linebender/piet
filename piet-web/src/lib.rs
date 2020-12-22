@@ -18,12 +18,12 @@ use web_sys::{
     ImageData, Window,
 };
 
-use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
+use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 
 use piet::util::unpremul;
 use piet::{
-    Color, Error, FixedGradient, GradientStop, ImageFormat, InterpolationMode, IntoBrush, LineCap,
-    LineJoin, RenderContext, StrokeStyle,
+    Color, Error, FixedGradient, GradientStop, Image, ImageFormat, InterpolationMode, IntoBrush,
+    LineCap, LineJoin, RenderContext, StrokeStyle,
 };
 
 pub use text::{WebFont, WebTextLayout, WebTextLayoutBuilder};
@@ -399,6 +399,12 @@ impl IntoBrush<WebRenderContext<'_>> for Brush {
         _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, Brush> {
         Cow::Borrowed(self)
+    }
+}
+
+impl Image for WebImage {
+    fn size(&self) -> Size {
+        Size::new(self.width.into(), self.height.into())
     }
 }
 

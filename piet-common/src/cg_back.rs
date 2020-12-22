@@ -8,7 +8,7 @@ use std::path::Path;
 #[cfg(feature = "png")]
 use std::{fs::File, io::BufWriter};
 
-use core_graphics::{color_space::CGColorSpace, context::CGContext, image::CGImage};
+use core_graphics::{color_space::CGColorSpace, context::CGContext};
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
@@ -42,7 +42,7 @@ pub type PietTextLayoutBuilder = CoreGraphicsTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = CGImage;
+pub type PietImage = CoreGraphicsImage;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {

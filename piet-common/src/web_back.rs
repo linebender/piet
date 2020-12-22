@@ -42,7 +42,7 @@ pub type PietTextLayoutBuilder = WebTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = WebImage;
+pub type PietImage = WebImage;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {
