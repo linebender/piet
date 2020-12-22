@@ -54,8 +54,7 @@ impl Color {
     }
 
     /// Create a color with a grey value in the range 0.0..=1.0.
-    pub fn grey(grey: impl Into<f64>) -> Color {
-        let grey = grey.into();
+    pub fn grey(grey: f64) -> Color {
         Color::rgb(grey, grey, grey)
     }
 
@@ -63,11 +62,11 @@ impl Color {
     ///
     /// The interpretation is the same as rgba32, and no greater precision is
     /// (currently) assumed.
-    pub fn rgba<F: Into<f64>>(r: F, g: F, b: F, a: F) -> Color {
-        let r = (r.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let g = (g.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let b = (b.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let a = (a.into().max(0.0).min(1.0) * 255.0).round() as u32;
+    pub fn rgba(r: f64, g: f64, b: f64, a: f64) -> Color {
+        let r = (r.max(0.0).min(1.0) * 255.0).round() as u32;
+        let g = (g.max(0.0).min(1.0) * 255.0).round() as u32;
+        let b = (b.max(0.0).min(1.0) * 255.0).round() as u32;
+        let a = (a.max(0.0).min(1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | a)
     }
 
@@ -75,10 +74,10 @@ impl Color {
     ///
     /// The interpretation is the same as rgb8, and no greater precision is
     /// (currently) assumed.
-    pub fn rgb<F: Into<f64>>(r: F, g: F, b: F) -> Color {
-        let r = (r.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let g = (g.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let b = (b.into().max(0.0).min(1.0) * 255.0).round() as u32;
+    pub fn rgb(r: f64, g: f64, b: f64) -> Color {
+        let r = (r.max(0.0).min(1.0) * 255.0).round() as u32;
+        let g = (g.max(0.0).min(1.0) * 255.0).round() as u32;
+        let b = (b.max(0.0).min(1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | 0xff)
     }
 
@@ -102,7 +101,7 @@ impl Color {
     #[allow(non_snake_case)]
     #[allow(clippy::many_single_char_names)]
     #[allow(clippy::unreadable_literal)]
-    pub fn hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
+    pub fn hlc(h: f64, L: f64, c: f64) -> Color {
         // The reverse transformation from Lab to XYZ, see
         // https://en.wikipedia.org/wiki/CIELAB_color_space
         fn f_inv(t: f64) -> f64 {
@@ -113,11 +112,9 @@ impl Color {
                 3. * d * d * (t - 4. / 29.)
             }
         }
-        let th = h.into() * (std::f64::consts::PI / 180.);
-        let c = c.into();
+        let th = h * (std::f64::consts::PI / 180.);
         let a = c * th.cos();
         let b = c * th.sin();
-        let L = l.into();
         let ll = (L + 16.) * (1. / 116.);
         // Produce raw XYZ values
         let X = f_inv(ll + a * (1. / 500.));
@@ -152,15 +149,15 @@ impl Color {
     /// Create a color from a CIEL\*a\*b\* polar specification and alpha.
     ///
     /// The `a` value represents alpha in the range 0.0 to 1.0.
-    pub fn hlca<F: Into<f64>>(h: F, l: F, c: F, a: impl Into<f64>) -> Color {
+    pub fn hlca(h: f64, l: f64, c: f64, a: f64) -> Color {
         Color::hlc(h, c, l).with_alpha(a)
     }
 
     /// Change just the alpha value of a color.
     ///
     /// The `a` value represents alpha in the range 0.0 to 1.0.
-    pub fn with_alpha(self, a: impl Into<f64>) -> Color {
-        let a = (a.into().max(0.0).min(1.0) * 255.0).round() as u32;
+    pub fn with_alpha(self, a: f64) -> Color {
+        let a = (a.max(0.0).min(1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((self.as_rgba_u32() & !0xff) | a)
     }
 
