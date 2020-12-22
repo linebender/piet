@@ -22,7 +22,7 @@ use crate::kurbo::Size;
 use crate::util::unpremul;
 use crate::{Color, ImageFormat, RenderContext};
 
-/// Represents an image type that knows its size.
+/// A trait for a backend's bitmap image type.
 pub trait Image {
     /// The size of the image
     fn size(&self) -> Size;
