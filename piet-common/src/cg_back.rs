@@ -103,16 +103,6 @@ impl<'a> BitmapTarget<'a> {
         CoreGraphicsContext::new_y_up(&mut self.ctx, self.height, None)
     }
 
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        let width = self.ctx.width() as usize;
-        let height = self.ctx.height() as usize;
-        let mut buf = vec![0; width * height * 4];
-        self.copy_raw_pixels(fmt, &mut buf)?;
-        Ok(buf)
-    }
-
     /// Get an in-memory pixel buffer from the bitmap.
     // Clippy complains about a to_xxx method taking &mut self. Semantically speaking, this is not
     // really a mutation, so we'll keep the name. Consider using interior mutability in the future.

@@ -138,12 +138,6 @@ impl<'a> BitmapTarget<'a> {
         Ok(ImageBuf::from_raw(data, fmt, width, height))
     }
 
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.raw_pixels(fmt)
-    }
-
     /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
     /// copied, returns the number of bytes written. If `buf` wasn't big enough, returns an error
     /// and doesn't write anything.

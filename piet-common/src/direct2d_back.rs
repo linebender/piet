@@ -144,14 +144,6 @@ impl<'a> BitmapTarget<'a> {
         D2DRenderContext::new(self.d2d, self.dwrite.clone(), &mut self.context)
     }
 
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        let mut buf = vec![0; self.width * self.height * 4];
-        self.copy_raw_pixels(fmt, &mut buf)?;
-        Ok(buf)
-    }
-
     /// Get an in-memory pixel buffer from the bitmap.
     // Clippy complains about a to_xxx method taking &mut self. Semantically speaking, this is not
     // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
