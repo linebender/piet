@@ -314,12 +314,6 @@ pub enum TextAlignment {
 ///
 /// [`LineMetric`]: struct.LineMetric.html
 pub trait TextLayout: Clone {
-    /// Measure the advance width of the text.
-    #[deprecated(since = "0.2.0", note = "Use size().width insead")]
-    fn width(&self) -> f64 {
-        self.size().width
-    }
-
     /// The total size of this `TextLayout`.
     ///
     /// This is the size required to draw this `TextLayout`, as provided by the

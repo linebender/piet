@@ -175,16 +175,6 @@ impl<'a> BitmapTarget<'a> {
         Ok(ImageBuf::from_raw(buf, fmt, width, height))
     }
 
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        let width = self.surface.get_width() as usize;
-        let height = self.surface.get_height() as usize;
-        let mut buf = vec![0; width * height * 4];
-        self.copy_raw_pixels(fmt, &mut buf)?;
-        Ok(buf)
-    }
-
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
