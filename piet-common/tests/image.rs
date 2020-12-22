@@ -80,5 +80,19 @@ fn image_size() {
             ));
         }
         Ok(())
-    })
+    });
+
+    // try an empty image
+    let image = ImageBuf::empty();
+    with_context(|ctx| {
+        let image = image.to_image(ctx);
+        if image.size() != Size::new(0., 0.) {
+            return Err(format!(
+                "expected {:?}, found {:?}",
+                Size::new(0., 0.),
+                image.size()
+            ));
+        }
+        Ok(())
+    });
 }

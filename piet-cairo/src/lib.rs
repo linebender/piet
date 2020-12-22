@@ -287,7 +287,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        draw_image(self, &image.0, None, dst_rect.into(), interp);
+        self.draw_image_inner(&image.0, None, dst_rect.into(), interp);
     }
 
     #[inline]
@@ -298,13 +298,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        draw_image(
-            self,
-            &image.0,
-            Some(src_rect.into()),
-            dst_rect.into(),
-            interp,
-        );
+        self.draw_image_inner(&image.0, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
@@ -415,44 +409,44 @@ impl<'a> CairoRenderContext<'a> {
             }
         }
     }
-}
 
-fn draw_image<'a>(
-    ctx: &mut CairoRenderContext<'a>,
-    image: &ImageSurface,
-    src_rect: Option<Rect>,
-    dst_rect: Rect,
-    interp: InterpolationMode,
-) {
-    let src_rect = match src_rect {
-        Some(src_rect) => src_rect,
-        None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
-    };
-    // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
-    // either the source or destination is empty, and early-return if so.
-    if src_rect.is_empty() || dst_rect.is_empty() {
-        return;
-    }
-
-    let _ = ctx.with_save(|rc| {
-        let surface_pattern = SurfacePattern::create(image);
-        let filter = match interp {
-            InterpolationMode::NearestNeighbor => Filter::Nearest,
-            InterpolationMode::Bilinear => Filter::Bilinear,
+    fn draw_image_inner(
+        &mut self,
+        image: &ImageSurface,
+        src_rect: Option<Rect>,
+        dst_rect: Rect,
+        interp: InterpolationMode,
+    ) {
+        let src_rect = match src_rect {
+            Some(src_rect) => src_rect,
+            None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
         };
-        surface_pattern.set_filter(filter);
-        let scale_x = dst_rect.width() / src_rect.width();
-        let scale_y = dst_rect.height() / src_rect.height();
-        rc.clip(dst_rect);
-        rc.ctx.translate(
-            dst_rect.x0 - scale_x * src_rect.x0,
-            dst_rect.y0 - scale_y * src_rect.y0,
-        );
-        rc.ctx.scale(scale_x, scale_y);
-        rc.ctx.set_source(&surface_pattern);
-        rc.ctx.paint();
-        Ok(())
-    });
+        // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
+        // either the source or destination is empty, and early-return if so.
+        if src_rect.is_empty() || dst_rect.is_empty() {
+            return;
+        }
+
+        let _ = self.with_save(|rc| {
+            let surface_pattern = SurfacePattern::create(image);
+            let filter = match interp {
+                InterpolationMode::NearestNeighbor => Filter::Nearest,
+                InterpolationMode::Bilinear => Filter::Bilinear,
+            };
+            surface_pattern.set_filter(filter);
+            let scale_x = dst_rect.width() / src_rect.width();
+            let scale_y = dst_rect.height() / src_rect.height();
+            rc.clip(dst_rect);
+            rc.ctx.translate(
+                dst_rect.x0 - scale_x * src_rect.x0,
+                dst_rect.y0 - scale_y * src_rect.y0,
+            );
+            rc.ctx.scale(scale_x, scale_y);
+            rc.ctx.set_source(&surface_pattern);
+            rc.ctx.paint();
+            Ok(())
+        });
+    }
 }
 
 fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
