@@ -9,6 +9,7 @@ readme = "../README.md"
 edition = "2018"
 keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
+include = ["src/**/*", "Cargo.toml", "snapshots/resources/*"]
 
 [dependencies]
 image = { version = "0.23.10", optional = true, default-features = false }
