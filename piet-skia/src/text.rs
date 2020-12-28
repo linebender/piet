@@ -159,8 +159,15 @@ impl TextLayout for SkiaTextLayout {
         unimplemented!();
     }
 
-    fn hit_test_point(&self, point: Point) -> HitTestPoint {
+    fn hit_test_point(&self, point: Point) -> HitTestPoint { 
         unimplemented!();
+        //if point.y > self.paragraph.height() {
+        //   return HitTestPoint::default() 
+        //}
+        //let width = self.paragraph
+        //    .get_line_metrics()
+        //    .iter()
+        //    .map(|l| l.width);
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {

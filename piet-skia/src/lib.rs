@@ -13,10 +13,9 @@ use skia_safe::{Path, PaintStyle, Paint, FontMgr, TileMode};
 use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
 use skia_safe::effects::gradient_shader::{linear, radial};
 use skia_safe::shader::Shader;
+use skia_safe::ClipOp;
 
 mod text;
-
-static LOREM_IPSUM: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur at leo at nulla tincidunt placerat. Proin eget purus augue. Quisque et est ullamcorper, pellentesque felis nec, pulvinar massa. Aliquam imperdiet, nulla ut dictum euismod, purus dui pulvinar risus, eu suscipit elit neque ac est. Nullam eleifend justo quis placerat ultricies. Vestibulum ut elementum velit. Praesent et dolor sit amet purus bibendum mattis. Aliquam erat volutpat.";
 
 fn pairf32(p: Point) -> (f32, f32) {
     (p.x as f32, p.y as f32)
@@ -50,16 +49,26 @@ fn apply_brush(paint: &mut Paint, brush: &Brush) {
     }
 }
 
+// convinience method for default Paint struct
+fn create_paint() -> Paint {
+    let mut paint = Paint::default();
+    paint.set_anti_alias(true);
+    paint
+}
+
 pub struct SkiaRenderContext<'a> {
     canvas: &'a mut skia_safe::Canvas,
 }
 
 impl<'a> SkiaRenderContext<'a>{
     pub fn new(canvas: &'a mut skia_safe::Canvas) -> Self {
-        let mut paint = Paint::default();
         SkiaRenderContext{
             canvas,
         }
+    }
+
+    pub fn get_skia(&mut self) -> &mut skia_safe::Canvas {
+        self.canvas
     }
 }
 
@@ -158,7 +167,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
 
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
-        let mut paint = Paint::default();
+        let mut paint = create_paint();
         apply_brush(&mut paint, brush.as_ref());
         let mut path = create_path(shape);
         self.canvas.draw_path(&path, &paint);
@@ -166,11 +175,14 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
 
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {}
 
-    fn clip(&mut self, shape: impl Shape) {}
+    fn clip(&mut self, shape: impl Shape) {
+        let mut path = create_path(shape);
+        self.canvas.clip_path(&path, ClipOp::Intersect, false);
+    }
 
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64) {
         let brush = brush.make_brush(self, || shape.bounding_box());
-        let mut paint = Paint::default();
+        let mut paint = create_paint();
         apply_brush(&mut paint, brush.as_ref());
         paint.set_stroke_width(width as f32);
         paint.set_style(PaintStyle::Stroke);
@@ -194,10 +206,10 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         let pos = pos.into();
-        let mut paint = Paint::default();
+        let mut paint = create_paint();
         let rect = layout.image_bounds() + pos.to_vec2();
         let brush = layout.fg_color.make_brush(self, || rect);
-        let mut paint = Paint::default();
+        let mut paint = create_paint();
         apply_brush(&mut paint, brush.as_ref());
         
         let pos = skia_safe::Point::new(pos.x as f32, pos.y as f32);
@@ -229,7 +241,18 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn current_transform(&self) -> Affine {
-        unimplemented!();
+        // TODO figure out why anim.rs example is not working
+        //let matrix = self.canvas.total_matrix();
+        //if let Some(affine) = matrix.to_affine() {
+        //    let mut matrix = [0f64; 6];
+        //    for (e, c) in matrix.iter_mut().zip(affine.iter()) {
+        //        *e = *c as f64;
+        //    }
+        //    Affine::new(matrix)
+        //} else {
+        //    Affine::new([1., 0., 0., 1., 0., 0.])
+        //};
+        Affine::new([1., 0., 0., 1., 0., 0.])
     }
 
     // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
