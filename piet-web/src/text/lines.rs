@@ -161,6 +161,19 @@ pub(crate) fn calculate_line_metrics(
         }
     }
 
+    // the trailing line, if there is no explicit newline.
+    if line_start != text.len() {
+        add_line_metric(
+            text,
+            line_start,
+            text.len(),
+            baseline,
+            height,
+            &mut y_offset,
+            &mut line_metrics,
+        );
+    }
+
     line_metrics
 }
 
