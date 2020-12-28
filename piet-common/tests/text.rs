@@ -208,6 +208,21 @@ fn debug_impl_exists() {
 
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn width_sanity() {
+    let mut factory = make_factory();
+    let text = "hello";
+    let ws = factory.new_text_layout(text).build().unwrap();
+    assert_eq!(ws.line_count(), 1);
+    let lm = ws.line_metric(0).unwrap();
+    assert_eq!(lm.start_offset, 0);
+    assert_eq!(lm.end_offset, text.len());
+
+    let width = ws.size().width;
+    assert_close!(width, 27.0, 5.0);
+}
+
+#[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn trailing_whitespace_width() {
     let mut factory = make_factory();
     let text = "hello";
