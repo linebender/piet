@@ -313,16 +313,30 @@ impl WebTextLayout {
         // the context to be configured correcttly.
         self.ctx.set_font(&self.font.get_font_string());
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+        let mut line_metrics =
+            lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
 
-        let line_metrics = if self.text.is_empty() {
-            vec![LineMetric {
+        if self.text.is_empty() {
+            line_metrics.push(LineMetric {
                 baseline: self.font.size * 0.2,
                 height: self.font.size * 1.2,
                 ..Default::default()
-            }]
-        } else {
-            lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size)
-        };
+            })
+        } else if util::trailing_nlf(&self.text).is_some() {
+            assert!(!line_metrics.is_empty());
+            let newline_eof = line_metrics
+                .last()
+                .map(|lm| LineMetric {
+                    start_offset: self.text.len(),
+                    end_offset: self.text.len(),
+                    height: lm.height,
+                    baseline: lm.baseline,
+                    y_offset: lm.y_offset + lm.height,
+                    trailing_whitespace: 0,
+                })
+                .unwrap();
+            line_metrics.push(newline_eof);
+        }
 
         let max_width = line_metrics
             .iter()
