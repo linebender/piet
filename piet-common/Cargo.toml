@@ -1,6 +1,6 @@
 [package]
 name = "piet-common"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Selection of a single preferred back-end for piet"
 license = "MIT/Apache-2.0"
@@ -34,7 +34,7 @@ serde = ["piet/serde"]
 
 [dependencies]
 piet = { version = "0.3.0", path = "../piet" }
-piet-web = { version = "0.3.0", path = "../piet-web", optional = true }
+piet-web = { version = "0.3.1", path = "../piet-web", optional = true }
 cfg-if = "1.0"
 png = { version = "0.16.1", optional = true }
 
@@ -51,7 +51,7 @@ core-graphics = { version = "0.22.0" }
 piet-direct2d = { version = "0.3.0", path = "../piet-direct2d" }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-piet-web = { version = "0.3.0", path = "../piet-web" }
+piet-web = { version = "0.3.1", path = "../piet-web" }
 wasm-bindgen = "0.2.59"
 
 [target.'cfg(target_arch="wasm32")'.dev-dependencies]
