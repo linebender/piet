@@ -110,9 +110,7 @@ impl ImageBuf {
     ///
     /// The return value is an iterator over "rows", where each "row" is an iterator
     /// over the color of the pixels in that row.
-    pub fn pixel_colors<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = impl Iterator<Item = Color> + 'a> + 'a {
+    pub fn pixel_colors(&self) -> impl Iterator<Item = impl Iterator<Item = Color> + '_> {
         let format = self.format;
         let bytes_per_pixel = format.bytes_per_pixel();
         self.pixels
