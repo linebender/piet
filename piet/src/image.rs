@@ -136,6 +136,11 @@ impl ImageBuf {
         ctx.make_image(self.width(), self.height(), &self.pixels, self.format)
             .unwrap()
     }
+
+    /// Checks whether two ImageBufs point to the same image data in memory.
+    pub fn ptr_eq(&self, other: &ImageBuf) -> bool {
+        Arc::ptr_eq(&self.raw_pixels_shared(), &other.raw_pixels_shared())
+    }
 }
 
 impl Default for ImageBuf {
