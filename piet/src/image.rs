@@ -137,7 +137,7 @@ impl ImageBuf {
             .unwrap()
     }
 
-    /// Checks whether two ImageBufs point to the same image data in memory.
+    /// Returns `true` if the two `ImageBuf`s refer to the same memory location.
     pub fn ptr_eq(&self, other: &ImageBuf) -> bool {
         Arc::ptr_eq(&self.raw_pixels_shared(), &other.raw_pixels_shared())
     }
