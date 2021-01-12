@@ -1,64 +1,164 @@
 //! Text functionality for Piet cairo backend
 
-mod grapheme;
-mod lines;
-
+use std::convert::TryInto;
 use std::fmt;
-use std::ops::RangeBounds;
+use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 
-use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
+use glib::translate::{from_glib_full, ToGlibPtr};
 
-use piet::kurbo::{Point, Rect, Size};
+use pango::{AttrList, FontMapExt};
+use pango_sys::pango_attr_insert_hyphens_new;
+use pangocairo::FontMap;
+
+use piet::kurbo::{Point, Rect, Size, Vec2};
 use piet::{
-    util, Color, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
+    util, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_segmentation::GraphemeCursor;
 
-use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
+type PangoLayout = pango::Layout;
+type PangoContext = pango::Context;
+type PangoAttribute = pango::Attribute;
+type PangoWeight = pango::Weight;
+type PangoStyle = pango::Style;
+type PangoUnderline = pango::Underline;
+type PangoAlignment = pango::Alignment;
 
-/// Right now, we don't need any state, as the "toy text API" treats the
-/// access to system font information as a global. This will change.
-// we use a phantom lifetime here to match the API of the d2d backend,
-// and the likely API of something with access to system font information.
+const PANGO_SCALE: f64 = pango::SCALE as f64;
+const UNBOUNDED_WRAP_WIDTH: i32 = -1;
+
 #[derive(Clone)]
-pub struct CairoText;
-
-#[derive(Clone)]
-struct CairoFont {
-    family: FontFamily,
+pub struct CairoText {
+    pango_context: PangoContext,
 }
 
 #[derive(Clone)]
 pub struct CairoTextLayout {
-    // we currently don't handle range attributes, so we stash the default
-    // color here and then just grab it when we draw ourselves.
-    pub(crate) fg_color: Color,
-    size: Size,
-    trailing_ws_width: f64,
-    pub(crate) font: ScaledFont,
-    pub(crate) text: Rc<dyn TextStorage>,
+    text: Rc<dyn TextStorage>,
 
-    // currently calculated on build
-    pub(crate) line_metrics: Vec<LineMetric>,
+    size: Size,
+    ink_size: Size,
+    pango_offset: Vec2,
+    trailing_ws_width: f64,
+
+    line_metrics: Rc<[LineMetric]>,
+    pango_layout: PangoLayout,
 }
 
 pub struct CairoTextLayoutBuilder {
     text: Rc<dyn TextStorage>,
     defaults: util::LayoutDefaults,
+    attributes: Vec<AttributeWithRange>,
+    last_range_start_pos: usize,
     width_constraint: f64,
+    pango_layout: PangoLayout,
+}
+
+struct AttributeWithRange {
+    attribute: TextAttribute,
+    range: Option<Range<usize>>, //No range == entire layout
+}
+
+impl AttributeWithRange {
+    fn into_pango(self) -> Option<PangoAttribute> {
+        let mut pango_attribute = match &self.attribute {
+            TextAttribute::FontFamily(family) => {
+                let family = family.name();
+                /*
+                 * NOTE: If the family fails to resolve we just don't apply the attribute.
+                 * That allows Pango to use its default font of choice to render that text
+                 */
+                PangoAttribute::new_family(family)?
+            }
+
+            TextAttribute::FontSize(size) => {
+                let size = (size * PANGO_SCALE) as i32;
+                PangoAttribute::new_size_absolute(size).unwrap()
+            }
+
+            TextAttribute::Weight(weight) => {
+                //This is horrid
+                let pango_weights = [
+                    (100, PangoWeight::Thin),
+                    (200, PangoWeight::Ultralight),
+                    (300, PangoWeight::Light),
+                    (350, PangoWeight::Semilight),
+                    (380, PangoWeight::Book),
+                    (400, PangoWeight::Normal),
+                    (500, PangoWeight::Medium),
+                    (600, PangoWeight::Semibold),
+                    (700, PangoWeight::Bold),
+                    (800, PangoWeight::Ultrabold),
+                    (900, PangoWeight::Heavy),
+                    (1_000, PangoWeight::Ultraheavy),
+                ];
+
+                let weight = weight.to_raw() as i32;
+                let mut closest_index = 0;
+                let mut closest_distance = 2_000; //Random very large value
+                for (current_index, pango_weight) in pango_weights.iter().enumerate() {
+                    let distance = (pango_weight.0 - weight).abs();
+                    if distance < closest_distance {
+                        closest_distance = distance;
+                        closest_index = current_index;
+                    }
+                }
+
+                PangoAttribute::new_weight(pango_weights[closest_index].1).unwrap()
+            }
+
+            TextAttribute::TextColor(text_color) => {
+                let (r, g, b, _) = text_color.as_rgba8();
+                PangoAttribute::new_foreground(
+                    (r as u16 * 256) + (r as u16),
+                    (g as u16 * 256) + (g as u16),
+                    (b as u16 * 256) + (b as u16),
+                )
+                .unwrap()
+            }
+
+            TextAttribute::Style(style) => {
+                let style = match style {
+                    FontStyle::Regular => PangoStyle::Normal,
+                    FontStyle::Italic => PangoStyle::Italic,
+                };
+                PangoAttribute::new_style(style).unwrap()
+            }
+
+            &TextAttribute::Underline(underline) => {
+                let underline = if underline {
+                    PangoUnderline::Single
+                } else {
+                    PangoUnderline::None
+                };
+                PangoAttribute::new_underline(underline).unwrap()
+            }
+
+            &TextAttribute::Strikethrough(strikethrough) => {
+                PangoAttribute::new_strikethrough(strikethrough).unwrap()
+            }
+        };
+
+        if let Some(range) = self.range {
+            pango_attribute.set_start_index(range.start.try_into().unwrap());
+            pango_attribute.set_end_index(range.end.try_into().unwrap());
+        }
+
+        Some(pango_attribute)
+    }
 }
 
 impl CairoText {
     /// Create a new factory that satisfies the piet `Text` trait.
-    ///
-    /// No state is needed for now because the current implementation is just
-    /// toy text, but that will change when proper text is implemented.
     #[allow(clippy::new_without_default)]
     pub fn new() -> CairoText {
-        CairoText
+        let fontmap = FontMap::get_default().unwrap();
+        CairoText {
+            pango_context: fontmap.create_context().unwrap(),
+        }
     }
 }
 
@@ -67,18 +167,35 @@ impl Text for CairoText {
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
+        //TODO: Veryify that a family exists with the requested name
         Some(FontFamily::new_unchecked(family_name))
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
+        /*
+         * NOTE(ForLoveOfCats): It does not appear that Pango natively supports loading font
+         * data raw. All online resource I've seen so far point to registering fonts with
+         * fontconfig and then letting Pango grab it from there but they all assume you have
+         * a font file path which we do not have here.
+         * See: https://gitlab.freedesktop.org/fontconfig/fontconfig/-/issues/12
+         */
         Err(Error::NotSupported)
     }
 
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
+        let pango_layout = PangoLayout::new(&self.pango_context);
+        pango_layout.set_text(text.as_str());
+
+        pango_layout.set_alignment(PangoAlignment::Left);
+        pango_layout.set_justify(false);
+
         CairoTextLayoutBuilder {
-            defaults: util::LayoutDefaults::default(),
             text: Rc::new(text),
+            defaults: util::LayoutDefaults::default(),
+            attributes: Vec::new(),
+            last_range_start_pos: 0,
             width_constraint: f64::INFINITY,
+            pango_layout,
         }
     }
 }
@@ -86,32 +203,6 @@ impl Text for CairoText {
 impl fmt::Debug for CairoText {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("CairoText").finish()
-    }
-}
-
-impl CairoFont {
-    pub(crate) fn new(family: FontFamily) -> Self {
-        CairoFont { family }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn resolve_simple(&self, size: f64) -> ScaledFont {
-        self.resolve(size, FontSlant::Normal, FontWeight::Normal)
-    }
-
-    /// Create a ScaledFont for this family.
-    pub(crate) fn resolve(&self, size: f64, slant: FontSlant, weight: FontWeight) -> ScaledFont {
-        let font_face = FontFace::toy_create(self.family.name(), slant, weight);
-        let font_matrix = scale_matrix(size);
-        let ctm = scale_matrix(1.0);
-        let options = FontOptions::default();
-        ScaledFont::new(&font_face, &font_matrix, &ctm, &options)
-    }
-}
-
-impl fmt::Debug for CairoFont {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("CairoFont").finish()
     }
 }
 
@@ -123,8 +214,39 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         self
     }
 
-    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
-        // TextAlignment is not supported by cairo toy text.
+    fn alignment(self, alignment: TextAlignment) -> Self {
+        /*
+         * NOTE: Pango has `auto_dir` enabled by default. This means that
+         * when it encounters a paragraph starting with a left-to-right
+         * character the meanings of `Left` and `Right` are switched for
+         * that paragraph. As a result the meaning of Piet's own `Start`
+         * and `End` are preserved
+         *
+         * See: http://gtk-rs.org/docs/pango/struct.Layout.html#method.set_auto_dir
+         */
+
+        match alignment {
+            TextAlignment::Start => {
+                self.pango_layout.set_justify(false);
+                self.pango_layout.set_alignment(PangoAlignment::Left);
+            }
+
+            TextAlignment::End => {
+                self.pango_layout.set_justify(false);
+                self.pango_layout.set_alignment(PangoAlignment::Right);
+            }
+
+            TextAlignment::Center => {
+                self.pango_layout.set_justify(false);
+                self.pango_layout.set_alignment(PangoAlignment::Center);
+            }
+
+            TextAlignment::Justified => {
+                self.pango_layout.set_alignment(PangoAlignment::Left);
+                self.pango_layout.set_justify(true);
+            }
+        }
+
         self
     }
 
@@ -134,37 +256,108 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 
     fn range_attribute(
-        self,
-        _range: impl RangeBounds<usize>,
-        _attribute: impl Into<TextAttribute>,
+        mut self,
+        range: impl RangeBounds<usize>,
+        attribute: impl Into<TextAttribute>,
     ) -> Self {
+        let range = util::resolve_range(range, self.text.len());
+        let attribute = attribute.into();
+
+        debug_assert!(
+            range.start >= self.last_range_start_pos,
+            "attributes must be added in non-decreasing start order"
+        );
+        self.last_range_start_pos = range.start;
+
+        self.attributes.push(AttributeWithRange {
+            attribute,
+            range: Some(range),
+        });
+
         self
     }
 
     fn build(self) -> Result<Self::Out, Error> {
-        // set our default font
-        let font = CairoFont::new(self.defaults.font.clone());
-        let size = self.defaults.font_size;
-        let weight = if self.defaults.weight.to_raw() <= piet::FontWeight::MEDIUM.to_raw() {
-            FontWeight::Normal
-        } else {
-            FontWeight::Bold
-        };
-        let slant = match self.defaults.style {
-            FontStyle::Italic => FontSlant::Italic,
-            FontStyle::Regular => FontSlant::Normal,
+        let pango_attributes = AttrList::new();
+        let add_attribute = |attribute| {
+            if let Some(attribute) = attribute {
+                pango_attributes.insert(attribute);
+            }
         };
 
-        let scaled_font = font.resolve(size, slant, weight);
+        if let Some(attr) = unsafe { from_glib_full(pango_attr_insert_hyphens_new(0)) } {
+            pango_attributes.insert(attr);
+        }
+
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::FontFamily(self.defaults.font),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::FontSize(self.defaults.font_size),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Weight(self.defaults.weight),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::TextColor(self.defaults.fg_color),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Style(self.defaults.style),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Underline(self.defaults.underline),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Strikethrough(self.defaults.strikethrough),
+                range: None,
+            }
+            .into_pango(),
+        );
+
+        for attribute in self.attributes {
+            add_attribute(attribute.into_pango());
+        }
+
+        self.pango_layout.set_attributes(Some(&pango_attributes));
+
+        //NOTE: We give Pango a width of -1 in `update_width` when we don't want wrapping
+        self.pango_layout.set_wrap(pango::WrapMode::WordChar);
+        self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
 
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
-            fg_color: self.defaults.fg_color,
-            font: scaled_font,
-            size: Size::ZERO,
-            trailing_ws_width: 0.0,
-            line_metrics: Vec::new(),
             text: self.text,
+            size: Size::ZERO,
+            ink_size: Size::ZERO,
+            pango_offset: Vec2::ZERO,
+            trailing_ws_width: 0.0,
+            line_metrics: Rc::new([]),
+            pango_layout: self.pango_layout,
         };
 
         layout.update_width(self.width_constraint);
@@ -188,7 +381,7 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn image_bounds(&self) -> Rect {
-        self.size.to_rect()
+        self.ink_size.to_rect()
     }
 
     fn text(&self) -> &str {
@@ -210,233 +403,207 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        // internal logic is using grapheme clusters, but return the text position associated
-        // with the border of the grapheme cluster.
+        let x = (point.x + self.pango_offset.x) * PANGO_SCALE;
+        let y = (point.y + self.pango_offset.y) * PANGO_SCALE;
 
-        // null case
-        if self.text.is_empty() {
-            return HitTestPoint::default();
-        }
-
-        let height = self
-            .line_metrics
-            .last()
-            .map(|lm| lm.y_offset + lm.height)
-            .unwrap_or(0.0);
-
-        // determine whether this click is within the y bounds of the layout,
-        // and what line it coorresponds to. (For points above and below the layout,
-        // we hittest the first and last lines respectively.)
-        let (y_inside, lm) = if point.y < 0. {
-            (false, self.line_metrics.first().unwrap())
-        } else if point.y >= height {
-            (false, self.line_metrics.last().unwrap())
+        let (is_inside, index, trailing) = self.pango_layout.xy_to_index(x as i32, y as i32);
+        let index = if trailing == 0 {
+            index.try_into().unwrap()
         } else {
-            let line = self
-                .line_metrics
-                .iter()
-                .find(|l| point.y >= l.y_offset && point.y < l.y_offset + l.height)
-                .unwrap();
-            (true, line)
+            /*
+             * NOTE(ForLoveOfCats): The docs specify that a non-zero value for trailing
+             * indicates that the point aligns to the trailing edge of the grapheme. In
+             * that case the value tells us the number of "characters" in the grapheme.
+             */
+
+            let text = &self.text;
+            let index = index.try_into().unwrap();
+            let trailing = trailing.try_into().unwrap();
+
+            text[index..]
+                .char_indices()
+                .nth(trailing)
+                .map(|(offset, _)| index + offset)
+                .unwrap_or_else(|| text.len())
         };
 
-        // Trailing whitespace is remove for the line
-        let line = &self.text[lm.range()];
+        let (metric_index, metric) = self
+            .line_metrics
+            .iter()
+            .enumerate()
+            .find(|(_, metric)| metric.start_offset <= index && index < metric.end_offset)
+            .unwrap_or_else(|| {
+                /*
+                 * NOTE: Handle out of bounds end of text index.
+                 * An index such that `index == text.len()` is possible but the
+                 * find predicate will not resolve to any metric in that case so
+                 * always return the last metric if the find fails
+                 */
+                let index = self.line_metrics.len() - 1;
+                (index, &self.line_metrics[index])
+            });
 
-        let mut htp = hit_test_line_point(&self.font, line, point);
-        htp.idx += lm.start_offset;
-        if htp.idx == lm.end_offset {
-            htp.idx -= util::trailing_nlf(line).unwrap_or(0);
-        }
-        htp.is_inside &= y_inside;
-        htp
+        //NOTE: Manually move to start of next line when hit test is on a soft line break
+        let index = {
+            let text = &self.text;
+            if index == text.len()
+                || matches!(text.as_bytes()[index], b'\r' | b'\n')
+                || metric_index + 1 >= self.line_metrics.len()
+            {
+                index
+            } else {
+                let mut iterator = GraphemeCursor::new(index, text.len(), true);
+                let next = iterator
+                    .next_boundary(text.as_str(), 0)
+                    .unwrap_or(Some(index))
+                    .unwrap_or(index);
+
+                if next >= metric.end_offset {
+                    next
+                } else {
+                    index
+                }
+            }
+        };
+
+        HitTestPoint::new(index, is_inside)
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
-        let idx = idx.min(self.text.len());
-        assert!(self.text.is_char_boundary(idx));
+        let line = self
+            .line_metrics
+            .iter()
+            .enumerate()
+            .find_map(|(line_index, metric)| {
+                if metric.start_offset <= idx && idx < metric.end_offset {
+                    Some(line_index)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(self.line_metrics.len() - 1);
+        let metric = self.line_metric(line).unwrap();
 
-        if idx == 0 && self.text.is_empty() {
-            return HitTestPosition::new(Point::new(0., self.font.extents().ascent), 0);
-        }
+        let pos_rect = self.pango_layout.index_to_pos(idx as i32);
 
-        // first need to find line it's on, and get line start offset
-        let line_num = util::line_number_for_position(&self.line_metrics, idx);
-        let lm = self.line_metrics.get(line_num).cloned().unwrap();
+        let point = Point::new(
+            (pos_rect.x as f64 / PANGO_SCALE) - self.pango_offset.x,
+            (pos_rect.y as f64 / PANGO_SCALE) + metric.baseline - self.pango_offset.y,
+        );
 
-        let y_pos = lm.y_offset + lm.baseline;
-
-        // Then for the line, do text position
-        // Trailing whitespace is removed for the line
-        let line = &self.text[lm.range()];
-        let line_position = idx - lm.start_offset;
-
-        let x_pos = hit_test_line_position(&self.font, line, line_position);
-        HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
+        HitTestPosition::new(point, line)
     }
 }
 
 impl CairoTextLayout {
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
-        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+    pub(crate) fn pango_layout(&self) -> &PangoLayout {
+        &self.pango_layout
+    }
 
-        self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
-        if self.text.is_empty() {
-            self.line_metrics.push(LineMetric {
-                baseline: self.font.extents().ascent,
-                height: self.font.extents().height,
-                ..Default::default()
-            })
-        } else if util::trailing_nlf(&self.text).is_some() {
-            let newline_eof = self
-                .line_metrics
-                .last()
-                .map(|lm| LineMetric {
-                    start_offset: self.text.len(),
-                    end_offset: self.text.len(),
-                    height: lm.height,
-                    baseline: lm.baseline,
-                    y_offset: lm.y_offset + lm.height,
-                    trailing_whitespace: 0,
-                })
-                .unwrap();
-            self.line_metrics.push(newline_eof);
+    pub(crate) fn pango_offset(&self) -> Vec2 {
+        self.pango_offset
+    }
+
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
+        if let Some(new_width) = new_width.into() {
+            let pango_width = new_width * pango::SCALE as f64;
+            self.pango_layout.set_width(pango_width as i32);
+        } else {
+            /*
+             * NOTE: This is the default value, however `update_width` *could*
+             * be called any number of times with different values so we need
+             * to make sure to reset back to default whenever we get no width
+             */
+            self.pango_layout.set_width(UNBOUNDED_WRAP_WIDTH);
         }
 
-        let (width, ws_width) = self
-            .line_metrics
-            .iter()
-            .map(|lm| {
-                let full_width = self.font.text_extents(&self.text[lm.range()]).x_advance;
-                let non_ws_width = if lm.trailing_whitespace > 0 {
-                    let non_ws_range = lm.start_offset..lm.end_offset - lm.trailing_whitespace;
-                    self.font.text_extents(&self.text[non_ws_range]).x_advance
-                } else {
-                    full_width
-                };
-                (non_ws_width, full_width)
-            })
-            .fold((0.0, 0.0), |a: (f64, f64), b| (a.0.max(b.0), a.1.max(b.1)));
+        let mut line_metrics = Vec::new();
+        let mut y_offset = 0.;
+        let mut widest_logical_width = 0;
+        let mut widest_whitespaceless_width = 0;
+        let mut iterator = self.pango_layout.get_iter().unwrap();
+        loop {
+            let line = iterator.get_line_readonly().unwrap();
 
-        let height = self
-            .line_metrics
-            .last()
-            .map(|l| l.y_offset + l.height)
-            .unwrap_or_else(|| self.font.extents().height);
-        self.size = Size::new(width, height);
-        self.trailing_ws_width = ws_width;
+            /*
+             * NOTE: These values are not currently exposed so we need to get them
+             * manually. It's kinda sucky I know
+             *
+             * TODO(ForLoveOfCats): Submit a PR to gtk-rs to expose these values
+             */
+            let (start_offset, end_offset) = unsafe {
+                let raw_line = line.to_glib_none();
+
+                let start_offset = (*raw_line.0).start_index as usize;
+                let length = (*raw_line.0).length as usize;
+
+                (start_offset, start_offset + length)
+            };
+
+            //Pango likes to give us the line range *without* the newline char(s)
+            let end_offset = match self.text.as_bytes()[end_offset..] {
+                [b'\r', b'\n', ..] => end_offset + 2,
+                [b'\r', ..] | [b'\n', ..] => end_offset + 1,
+                _ => end_offset,
+            };
+
+            let logical_rect = line.get_extents().1;
+            if logical_rect.width > widest_logical_width {
+                widest_logical_width = logical_rect.width;
+            }
+
+            let line_text = &self.text[start_offset..end_offset];
+            let trimmed_len = line_text.trim_end().len();
+            let trailing_whitespace = line_text[trimmed_len..].len();
+
+            widest_whitespaceless_width = {
+                let start_x = line.index_to_x(trimmed_len as i32, false);
+                let end_x = line.index_to_x(line_text.len() as i32, true);
+                let whitespace_width = end_x - start_x;
+                let whitespaceless_width = logical_rect.width - whitespace_width;
+                widest_whitespaceless_width.max(whitespaceless_width)
+            };
+
+            line_metrics.push(LineMetric {
+                start_offset,
+                end_offset,
+                trailing_whitespace,
+                baseline: (iterator.get_baseline() as f64 / PANGO_SCALE) - y_offset,
+                height: logical_rect.height as f64 / PANGO_SCALE,
+                y_offset,
+            });
+            y_offset += logical_rect.height as f64 / PANGO_SCALE;
+
+            if !iterator.next_line() {
+                break;
+            }
+        }
+
+        //NOTE: Pango appears to always give us at least one line even with empty input
+        self.line_metrics = line_metrics.into();
+
+        let ink_extent = self.pango_layout.get_extents().0;
+        let logical_extent = self.pango_layout.get_extents().1;
+        self.size = Size::new(
+            widest_whitespaceless_width as f64 / PANGO_SCALE,
+            logical_extent.height as f64 / PANGO_SCALE,
+        );
+        self.ink_size = Size::new(
+            ink_extent.width as f64 / PANGO_SCALE,
+            ink_extent.height as f64 / PANGO_SCALE,
+        );
+        self.pango_offset = Vec2::new(
+            logical_extent.x as f64 / PANGO_SCALE,
+            logical_extent.y as f64 / PANGO_SCALE,
+        );
+
+        self.trailing_ws_width = widest_logical_width as f64 / PANGO_SCALE;
     }
 }
 
 impl fmt::Debug for CairoTextLayout {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("CairoTextLayout").finish()
-    }
-}
-
-// NOTE this is the same as the old, non-line-aware version of hit_test_point
-// Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_point(font: &ScaledFont, text: &str, point: Point) -> HitTestPoint {
-    // null case
-    if text.is_empty() {
-        return HitTestPoint::default();
-    }
-
-    // get bounds
-    // TODO handle if string is not null yet count is 0?
-    let end = UnicodeSegmentation::graphemes(text, true).count() - 1;
-    let end_bounds = match get_grapheme_boundaries(font, text, end) {
-        Some(bounds) => bounds,
-        None => return HitTestPoint::default(),
-    };
-
-    let start = 0;
-    let start_bounds = match get_grapheme_boundaries(font, text, start) {
-        Some(bounds) => bounds,
-        None => return HitTestPoint::default(),
-    };
-
-    // first test beyond ends
-    if point.x > end_bounds.trailing {
-        return HitTestPoint::new(text.len(), false);
-    }
-    if point.x <= start_bounds.leading {
-        return HitTestPoint::default();
-    }
-
-    // then test the beginning and end (common cases)
-    if let Some(hit) = point_x_in_grapheme(point.x, &start_bounds) {
-        return hit;
-    }
-    if let Some(hit) = point_x_in_grapheme(point.x, &end_bounds) {
-        return hit;
-    }
-
-    // Now that we know it's not beginning or end, begin binary search.
-    // Iterative style
-    let mut left = start;
-    let mut right = end;
-    loop {
-        // pick halfway point
-        let middle = left + ((right - left) / 2);
-
-        let grapheme_bounds = match get_grapheme_boundaries(font, text, middle) {
-            Some(bounds) => bounds,
-            None => return HitTestPoint::default(),
-        };
-
-        if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
-            return hit;
-        }
-
-        // since it's not a hit, check if closer to start or finish
-        // and move the appropriate search boundary
-        if point.x < grapheme_bounds.leading {
-            right = middle;
-        } else if point.x > grapheme_bounds.trailing {
-            left = middle + 1;
-        } else {
-            unreachable!("hit_test_point conditional is exhaustive");
-        }
-    }
-}
-
-// NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
-// Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_position(font: &ScaledFont, text: &str, text_position: usize) -> f64 {
-    // Using substrings with unicode grapheme awareness
-
-    let text_len = text.len();
-
-    if text_position == 0 {
-        return 0.0;
-    }
-
-    if text_position as usize >= text_len {
-        return font.text_extents(&text).x_advance;
-    }
-
-    // Already checked that text_position > 0 and text_position < count.
-    // If text position is not at a grapheme boundary, use the text position of current
-    // grapheme cluster. But return the original text position
-    // Use the indices (byte offset, which for our purposes = utf8 code units).
-    let grapheme_indices = UnicodeSegmentation::grapheme_indices(text, true)
-        .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
-
-    grapheme_indices
-        .last()
-        .map(|(idx, _)| font.text_extents(&text[..idx]).x_advance)
-        .unwrap_or_else(|| font.text_extents(&text).x_advance)
-}
-
-fn scale_matrix(scale: f64) -> Matrix {
-    Matrix {
-        xx: scale,
-        yx: 0.0,
-        xy: 0.0,
-        yy: scale,
-        x0: 0.0,
-        y0: 0.0,
     }
 }
 
@@ -650,7 +817,7 @@ mod test {
         // outside
         println!("layout_width: {:?}", layout.size().width); // 56.0
 
-        let pt = layout.hit_test_point(Point::new(56.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(55.0, 0.0));
         assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, true);
 
@@ -790,15 +957,15 @@ mod test {
         assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
         assert_eq!(pt.idx, 9);
-        let pt = layout.hit_test_point(Point::new(29.0, 0.0));
-        assert_eq!(pt.idx, 10);
-        let pt = layout.hit_test_point(Point::new(32.0, 0.0));
-        assert_eq!(pt.idx, 10);
-        let pt = layout.hit_test_point(Point::new(35.5, 0.0));
-        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(38.0, 0.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(42.0, 0.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(46.5, 0.0));
         assert_eq!(pt.idx, 14);
-        let pt = layout.hit_test_point(Point::new(40.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(52.0, 0.0));
+        assert_eq!(pt.idx, 14);
+        let pt = layout.hit_test_point(Point::new(58.0, 0.0));
         assert_eq!(pt.idx, 14);
     }
 
@@ -1204,9 +1371,9 @@ mod test {
         // this should break into four lines
         let layout = text.new_text_layout(input).max_width(30.0).build().unwrap();
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 12.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 26.0)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 40.0)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 53.99999)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 27.0)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 43.0)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 57.0)
 
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         assert_eq!(pt.idx, 0);
@@ -1214,26 +1381,26 @@ mod test {
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
         assert_eq!(pt.idx, 0);
         assert!(pt.is_inside);
-        let pt = layout.hit_test_point(Point::new(1.0, 14.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 16.0));
         assert_eq!(pt.idx, 5);
-        let pt = layout.hit_test_point(Point::new(1.0, 28.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 30.0));
         assert_eq!(pt.idx, 10);
-        let pt = layout.hit_test_point(Point::new(1.0, 44.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 56.0));
         assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
         let best_layout = text.new_text_layout("best").build().unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 26.0...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 56.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 62.0));
         assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(25.0, 56.0));
+        let pt = layout.hit_test_point(Point::new(25.0, 62.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(27.0, 56.0));
+        let pt = layout.hit_test_point(Point::new(27.0, 62.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
