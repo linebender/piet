@@ -30,7 +30,7 @@ pub fn run() {
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
 
-    let sample = samples::get::<WebRenderContext>(SAMPLE_PICTURE_NO);
+    let sample = samples::get::<WebRenderContext>(SAMPLE_PICTURE_NO).unwrap();
     let dpr = window.device_pixel_ratio();
     canvas.set_width((canvas.offset_width() as f64 * dpr) as u32);
     canvas.set_height((canvas.offset_height() as f64 * dpr) as u32);

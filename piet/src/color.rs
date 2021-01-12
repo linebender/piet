@@ -12,10 +12,14 @@ pub enum Color {
     Rgba32(u32),
 }
 
-impl Debug for Color {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
-        write!(f, "#{:08x}", self.as_rgba_u32())
-    }
+/// Errors that can occur when parsing a hex color.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ColorParseError {
+    /// The input string has an incorrect length
+    WrongSize(usize),
+    /// A byte in the input string is not in one of the ranges `0..=9`,
+    /// `a..=f`, or `A..=F`.
+    NotHex { idx: usize, byte: u8 },
 }
 
 impl Color {
@@ -36,6 +40,25 @@ impl Color {
         Color::Rgba32(rgba)
     }
 
+    /// Attempt to create a color from a CSS-style hex string.
+    ///
+    /// This will accept strings in the following formats, *with or without*
+    /// the leading `#`:
+    ///
+    /// - `rrggbb`
+    /// - `rrggbbaa`
+    /// - `rbg`
+    /// - `rbga`
+    ///
+    /// This method returns a [`ColorParseError`] if the color cannot be parsed.
+    pub const fn from_hex_str(hex: &str) -> Result<Color, ColorParseError> {
+        // can't use `map()` in a const function
+        match get_4bit_hex_channels(hex) {
+            Ok(channels) => Ok(color_from_4bit_hex(channels)),
+            Err(e) => Err(e),
+        }
+    }
+
     /// Create a color from a grey value.
     ///
     /// ```
@@ -54,8 +77,7 @@ impl Color {
     }
 
     /// Create a color with a grey value in the range 0.0..=1.0.
-    pub fn grey(grey: impl Into<f64>) -> Color {
-        let grey = grey.into();
+    pub fn grey(grey: f64) -> Color {
         Color::rgb(grey, grey, grey)
     }
 
@@ -63,11 +85,11 @@ impl Color {
     ///
     /// The interpretation is the same as rgba32, and no greater precision is
     /// (currently) assumed.
-    pub fn rgba<F: Into<f64>>(r: F, g: F, b: F, a: F) -> Color {
-        let r = (r.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let g = (g.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let b = (b.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let a = (a.into().max(0.0).min(1.0) * 255.0).round() as u32;
+    pub fn rgba(r: f64, g: f64, b: f64, a: f64) -> Color {
+        let r = (r.max(0.0).min(1.0) * 255.0).round() as u32;
+        let g = (g.max(0.0).min(1.0) * 255.0).round() as u32;
+        let b = (b.max(0.0).min(1.0) * 255.0).round() as u32;
+        let a = (a.max(0.0).min(1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | a)
     }
 
@@ -75,10 +97,10 @@ impl Color {
     ///
     /// The interpretation is the same as rgb8, and no greater precision is
     /// (currently) assumed.
-    pub fn rgb<F: Into<f64>>(r: F, g: F, b: F) -> Color {
-        let r = (r.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let g = (g.into().max(0.0).min(1.0) * 255.0).round() as u32;
-        let b = (b.into().max(0.0).min(1.0) * 255.0).round() as u32;
+    pub fn rgb(r: f64, g: f64, b: f64) -> Color {
+        let r = (r.max(0.0).min(1.0) * 255.0).round() as u32;
+        let g = (g.max(0.0).min(1.0) * 255.0).round() as u32;
+        let b = (b.max(0.0).min(1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | 0xff)
     }
 
@@ -102,7 +124,7 @@ impl Color {
     #[allow(non_snake_case)]
     #[allow(clippy::many_single_char_names)]
     #[allow(clippy::unreadable_literal)]
-    pub fn hlc<F: Into<f64>>(h: F, l: F, c: F) -> Color {
+    pub fn hlc(h: f64, L: f64, c: f64) -> Color {
         // The reverse transformation from Lab to XYZ, see
         // https://en.wikipedia.org/wiki/CIELAB_color_space
         fn f_inv(t: f64) -> f64 {
@@ -113,11 +135,9 @@ impl Color {
                 3. * d * d * (t - 4. / 29.)
             }
         }
-        let th = h.into() * (std::f64::consts::PI / 180.);
-        let c = c.into();
+        let th = h * (std::f64::consts::PI / 180.);
         let a = c * th.cos();
         let b = c * th.sin();
-        let L = l.into();
         let ll = (L + 16.) * (1. / 116.);
         // Produce raw XYZ values
         let X = f_inv(ll + a * (1. / 500.));
@@ -152,15 +172,15 @@ impl Color {
     /// Create a color from a CIEL\*a\*b\* polar specification and alpha.
     ///
     /// The `a` value represents alpha in the range 0.0 to 1.0.
-    pub fn hlca<F: Into<f64>>(h: F, l: F, c: F, a: impl Into<f64>) -> Color {
+    pub fn hlca(h: f64, l: f64, c: f64, a: f64) -> Color {
         Color::hlc(h, c, l).with_alpha(a)
     }
 
     /// Change just the alpha value of a color.
     ///
     /// The `a` value represents alpha in the range 0.0 to 1.0.
-    pub fn with_alpha(self, a: impl Into<f64>) -> Color {
-        let a = (a.into().max(0.0).min(1.0) * 255.0).round() as u32;
+    pub fn with_alpha(self, a: f64) -> Color {
+        let a = (a.max(0.0).min(1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((self.as_rgba_u32() & !0xff) | a)
     }
 
@@ -193,9 +213,140 @@ impl Color {
         )
     }
 
-    /// Opaque white.
-    pub const WHITE: Color = Color::rgb8(0xff, 0xff, 0xff);
+    // basic css3 colors (not including shades for now)
+
+    /// Opaque aqua (or cyan).
+    pub const AQUA: Color = Color::rgb8(0, 255, 255);
 
     /// Opaque black.
     pub const BLACK: Color = Color::rgb8(0, 0, 0);
+
+    /// Opaque blue.
+    pub const BLUE: Color = Color::rgb8(0, 0, 255);
+
+    /// Opaque fuchsia (or magenta).
+    pub const FUCHSIA: Color = Color::rgb8(255, 0, 255);
+
+    /// Opaque gray.
+    pub const GRAY: Color = Color::grey8(128);
+
+    /// Opaque green.
+    pub const GREEN: Color = Color::rgb8(0, 128, 0);
+
+    /// Opaque lime.
+    pub const LIME: Color = Color::rgb8(0, 255, 0);
+
+    /// Opaque maroon.
+    pub const MAROON: Color = Color::rgb8(128, 0, 0);
+
+    /// Opaque navy.
+    pub const NAVY: Color = Color::rgb8(0, 0, 128);
+
+    /// Opaque olive.
+    pub const OLIVE: Color = Color::rgb8(128, 128, 0);
+
+    /// Opaque purple.
+    pub const PURPLE: Color = Color::rgb8(128, 0, 128);
+
+    /// Opaque red.
+    pub const RED: Color = Color::rgb8(255, 0, 0);
+
+    /// Opaque silver.
+    pub const SILVER: Color = Color::grey8(192);
+
+    /// Opaque teal.
+    pub const TEAL: Color = Color::rgb8(0, 128, 128);
+
+    /// Opaque white.
+    pub const WHITE: Color = Color::grey8(255);
+
+    /// Opaque yellow.
+    pub const YELLOW: Color = Color::rgb8(255, 255, 0);
+}
+
+const fn get_4bit_hex_channels(hex_str: &str) -> Result<[u8; 8], ColorParseError> {
+    let mut four_bit_channels = match hex_str.as_bytes() {
+        &[b'#', r, g, b] | &[r, g, b] => [r, r, g, g, b, b, b'f', b'f'],
+        &[b'#', r, g, b, a] | &[r, g, b, a] => [r, r, g, g, b, b, a, a],
+        &[b'#', r0, r1, g0, g1, b0, b1] | &[r0, r1, g0, g1, b0, b1] => {
+            [r0, r1, g0, g1, b0, b1, b'f', b'f']
+        }
+        &[b'#', r0, r1, g0, g1, b0, b1, a0, a1] | &[r0, r1, g0, g1, b0, b1, a0, a1] => {
+            [r0, r1, g0, g1, b0, b1, a0, a1]
+        }
+        other => return Err(ColorParseError::WrongSize(other.len())),
+    };
+
+    // convert to hex in-place
+    // this is written without a for loop to satisfy `const`
+    let mut i = 0;
+    while i < four_bit_channels.len() {
+        let ascii = four_bit_channels[i];
+        let as_hex = match hex_from_ascii_byte(ascii) {
+            Ok(hex) => hex,
+            Err(byte) => return Err(ColorParseError::NotHex { idx: i, byte }),
+        };
+        four_bit_channels[i] = as_hex;
+        i += 1;
+    }
+    Ok(four_bit_channels)
+}
+
+const fn color_from_4bit_hex(components: [u8; 8]) -> Color {
+    let [r0, r1, g0, g1, b0, b1, a0, a1] = components;
+    Color::rgba8(r0 << 4 | r1, g0 << 4 | g1, b0 << 4 | b1, a0 << 4 | a1)
+}
+
+const fn hex_from_ascii_byte(b: u8) -> Result<u8, u8> {
+    match b {
+        b'0'..=b'9' => Ok(b - b'0'),
+        b'A'..=b'F' => Ok(b - b'A' + 10),
+        b'a'..=b'f' => Ok(b - b'a' + 10),
+        _ => Err(b),
+    }
+}
+
+impl Debug for Color {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "#{:08x}", self.as_rgba_u32())
+    }
+}
+
+impl std::fmt::Display for ColorParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ColorParseError::WrongSize(n) => write!(f, "Input string has invalid length {}", n),
+            ColorParseError::NotHex { idx, byte } => {
+                write!(f, "byte {:X} at index {} is not valid hex digit", byte, idx)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ColorParseError {}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn color_from_hex() {
+        assert_eq!(Color::from_hex_str("#BAD"), Color::from_hex_str("BBAADD"));
+        assert_eq!(
+            Color::from_hex_str("#BAD"),
+            Ok(Color::from_rgba32_u32(0xBBAADDFF))
+        );
+        assert_eq!(Color::from_hex_str("BAD"), Color::from_hex_str("BBAADD"));
+        assert_eq!(Color::from_hex_str("#BADF"), Color::from_hex_str("BAD"));
+        assert_eq!(Color::from_hex_str("#BBAADDFF"), Color::from_hex_str("BAD"));
+        assert_eq!(Color::from_hex_str("BBAADDFF"), Color::from_hex_str("BAD"));
+        assert_eq!(Color::from_hex_str("bBAadDfF"), Color::from_hex_str("BAD"));
+        assert_eq!(Color::from_hex_str("#0f6"), Ok(Color::rgb8(0, 0xff, 0x66)));
+        assert_eq!(
+            Color::from_hex_str("#0f6a"),
+            Ok(Color::rgba8(0, 0xff, 0x66, 0xaa))
+        );
+        assert!(Color::from_hex_str("#0f6aa").is_err());
+        assert!(Color::from_hex_str("#0f").is_err());
+        assert!(Color::from_hex_str("x0f").is_err());
+        assert!(Color::from_hex_str("#0afa1").is_err());
+    }
 }

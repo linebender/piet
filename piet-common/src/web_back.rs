@@ -42,7 +42,7 @@ pub type PietTextLayoutBuilder = WebTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = WebImage;
+pub type PietImage = WebImage;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {
@@ -136,12 +136,6 @@ impl<'a> BitmapTarget<'a> {
         let width = self.canvas.width() as usize;
         let height = self.canvas.height() as usize;
         Ok(ImageBuf::from_raw(data, fmt, width, height))
-    }
-
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        self.raw_pixels(fmt)
     }
 
     /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were

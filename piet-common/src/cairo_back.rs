@@ -43,7 +43,7 @@ pub type PietTextLayoutBuilder = CairoTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = ImageSurface;
+pub type PietImage = CairoImage;
 
 /// A struct that can be used to create bitmap render contexts.
 ///
@@ -173,16 +173,6 @@ impl<'a> BitmapTarget<'a> {
         let mut buf = vec![0; width * height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(ImageBuf::from_raw(buf, fmt, width, height))
-    }
-
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        let width = self.surface.get_width() as usize;
-        let height = self.surface.get_height() as usize;
-        let mut buf = vec![0; width * height * 4];
-        self.copy_raw_pixels(fmt, &mut buf)?;
-        Ok(buf)
     }
 
     /// Save bitmap to RGBA PNG file

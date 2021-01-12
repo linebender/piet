@@ -1,5 +1,13 @@
 //! Basic conformance testing for text.
 
+#[cfg(target_arch = "wasm32")]
+extern crate wasm_bindgen_test;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::*;
+
+#[cfg(target_arch = "wasm32")]
+wasm_bindgen_test_configure!(run_in_browser);
+
 use kurbo::{Point, Size};
 use piet_common::*;
 
@@ -31,6 +39,7 @@ fn make_factory() -> PietText {
 
 // https://github.com/linebender/piet/issues/334
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn negative_width_doesnt_crash() {
     let mut factory = make_factory();
     let text = "oops";
@@ -39,6 +48,7 @@ fn negative_width_doesnt_crash() {
 }
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn empty_layout() {
     let mut factory = make_factory();
     let text = "";
@@ -52,6 +62,7 @@ fn empty_layout() {
 }
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn ws_only_layout() {
     let mut factory = make_factory();
     let text = " ";
@@ -62,6 +73,7 @@ fn ws_only_layout() {
 }
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn rects_for_empty_range() {
     let mut factory = make_factory();
     let text = "";
@@ -70,6 +82,7 @@ fn rects_for_empty_range() {
 }
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn empty_layout_size() {
     let mut factory = make_factory();
     let empty_layout = factory
@@ -93,6 +106,7 @@ fn empty_layout_size() {
 /// Text with a newline at EOF should have one more line reported than
 /// the same text without the newline.
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn newline_eof() {
     let mut factory = make_factory();
     let text = "A";
@@ -183,6 +197,7 @@ fn measure_width(factory: &mut impl Text, text: &str, font: FontFamily, size: f6
 }
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn debug_impl_exists() {
     let mut factory = make_factory();
     let text = "";
@@ -192,6 +207,22 @@ fn debug_impl_exists() {
 }
 
 #[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn width_sanity() {
+    let mut factory = make_factory();
+    let text = "hello";
+    let ws = factory.new_text_layout(text).build().unwrap();
+    assert_eq!(ws.line_count(), 1);
+    let lm = ws.line_metric(0).unwrap();
+    assert_eq!(lm.start_offset, 0);
+    assert_eq!(lm.end_offset, text.len());
+
+    let width = ws.size().width;
+    assert_close!(width, 27.0, 5.0);
+}
+
+#[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn trailing_whitespace_width() {
     let mut factory = make_factory();
     let text = "hello";

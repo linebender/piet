@@ -8,7 +8,7 @@ use std::path::Path;
 #[cfg(feature = "png")]
 use std::{fs::File, io::BufWriter};
 
-use core_graphics::{color_space::CGColorSpace, context::CGContext, image::CGImage};
+use core_graphics::{color_space::CGColorSpace, context::CGContext};
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
@@ -42,7 +42,7 @@ pub type PietTextLayoutBuilder = CoreGraphicsTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = CGImage;
+pub type PietImage = CoreGraphicsImage;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {
@@ -101,16 +101,6 @@ impl<'a> BitmapTarget<'a> {
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> CoreGraphicsContext {
         CoreGraphicsContext::new_y_up(&mut self.ctx, self.height, None)
-    }
-
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        let width = self.ctx.width() as usize;
-        let height = self.ctx.height() as usize;
-        let mut buf = vec![0; width * height * 4];
-        self.copy_raw_pixels(fmt, &mut buf)?;
-        Ok(buf)
     }
 
     /// Get an in-memory pixel buffer from the bitmap.

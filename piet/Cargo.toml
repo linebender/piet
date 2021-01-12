@@ -1,6 +1,6 @@
 [package]
 name = "piet"
-version = "0.2.0"
+version = "0.3.1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "An abstraction for 2D graphics."
 license = "MIT/Apache-2.0"
@@ -9,6 +9,7 @@ readme = "../README.md"
 edition = "2018"
 keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
+include = ["src/**/*", "Cargo.toml", "snapshots/resources/*"]
 
 [dependencies]
 image = { version = "0.23.10", optional = true, default-features = false }
@@ -38,3 +39,4 @@ farbfeld = ["image/farbfeld", "image"]
 dxt = ["image/dxt", "image"]
 hdr = ["image/hdr", "image"]
 
+serde = ["kurbo/serde"]

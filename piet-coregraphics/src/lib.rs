@@ -23,8 +23,8 @@ use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
 use piet::util::unpremul;
 use piet::{
-    Color, Error, FixedGradient, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin,
-    RenderContext, RoundInto, StrokeStyle,
+    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
+    LineJoin, RenderContext, RoundInto, StrokeStyle,
 };
 
 pub use crate::text::{CoreGraphicsText, CoreGraphicsTextLayout, CoreGraphicsTextLayoutBuilder};
@@ -112,11 +112,28 @@ pub enum Brush {
     Gradient(Gradient),
 }
 
+/// A core-graphics image
+pub enum CoreGraphicsImage {
+    /// Empty images are not supported for core-graphics, so we need a variant here to handle that
+    /// case.
+    Empty,
+    NonEmpty(CGImage),
+}
+
+impl CoreGraphicsImage {
+    fn as_ref(&self) -> Option<&CGImage> {
+        match self {
+            CoreGraphicsImage::Empty => None,
+            CoreGraphicsImage::NonEmpty(img) => Some(img),
+        }
+    }
+}
+
 impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Brush = Brush;
     type Text = CoreGraphicsText;
     type TextLayout = CoreGraphicsTextLayout;
-    type Image = CGImage;
+    type Image = CoreGraphicsImage;
     //type StrokeStyle = StrokeStyle;
 
     fn clear(&mut self, color: Color) {
@@ -271,6 +288,10 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
+        if width == 0 || height == 0 {
+            return Ok(CoreGraphicsImage::Empty);
+        }
+        assert!(!buf.is_empty() && buf.len() <= format.bytes_per_pixel() * width * height);
         let data = Arc::new(buf.to_owned());
         let data_provider = CGDataProvider::from_buffer(data);
         let (colorspace, bitmap_info, bytes) = match format {
@@ -300,7 +321,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             should_interpolate,
             rendering_intent,
         );
-        Ok(image)
+        Ok(CoreGraphicsImage::NonEmpty(image))
     }
 
     fn draw_image(
@@ -309,6 +330,10 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
+        let image = match image.as_ref() {
+            Some(img) => img,
+            None => return,
+        };
         self.ctx.save();
         //https://developer.apple.com/documentation/coregraphics/cginterpolationquality?language=objc
         let quality = match interp {
@@ -336,9 +361,11 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         dst_rect: impl Into<Rect>,
         _interp: InterpolationMode,
     ) {
-        if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
-            // TODO: apply interpolation mode
-            self.ctx.draw_image(to_cgrect(dst_rect), &cropped);
+        if let CoreGraphicsImage::NonEmpty(image) = image {
+            if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
+                // TODO: apply interpolation mode
+                self.ctx.draw_image(to_cgrect(dst_rect), &cropped);
+            }
         }
     }
 
@@ -367,6 +394,20 @@ impl<'a> IntoBrush<CoreGraphicsContext<'a>> for Brush {
         _bbox: impl FnOnce() -> Rect,
     ) -> std::borrow::Cow<'b, Brush> {
         Cow::Borrowed(self)
+    }
+}
+
+impl Image for CoreGraphicsImage {
+    fn size(&self) -> Size {
+        // `size_t` (which could be 64 bits wide) does not losslessly convert to `f64`. In
+        // reality, the image you're working with would have to be pretty big to be an issue, and
+        // the issue would only be accuracy of the size.
+        match self {
+            CoreGraphicsImage::Empty => Size::new(0., 0.),
+            CoreGraphicsImage::NonEmpty(image) => {
+                Size::new(image.width() as f64, image.height() as f64)
+            }
+        }
     }
 }
 
