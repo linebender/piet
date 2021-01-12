@@ -11,7 +11,7 @@ use cairo::{Context, Filter, Format, ImageSurface, Matrix, SurfacePattern};
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 use piet::{
     Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
-    LineJoin, RenderContext, StrokeStyle, TextLayout,
+    LineJoin, RenderContext, StrokeStyle,
 };
 
 pub use crate::text::{CairoText, CairoTextLayout, CairoTextLayoutBuilder};
@@ -166,15 +166,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         let pos = pos.into();
-        let rect = layout.image_bounds() + pos.to_vec2();
-        let brush = layout.fg_color.make_brush(self, || rect);
-        self.ctx.set_scaled_font(&layout.font);
-        self.set_brush(&*brush);
-
-        for lm in &layout.line_metrics {
-            self.ctx.move_to(pos.x, pos.y + lm.y_offset + lm.baseline);
-            self.ctx.show_text(&layout.text[lm.range()]);
-        }
+        self.ctx.move_to(pos.x, pos.y);
+        pangocairo::show_layout(&self.ctx, &layout.pango_layout);
     }
 
     fn save(&mut self) -> Result<(), Error> {

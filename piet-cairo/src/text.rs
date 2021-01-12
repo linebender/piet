@@ -3,11 +3,15 @@
 mod grapheme;
 mod lines;
 
+use std::convert::TryInto;
 use std::fmt;
-use std::ops::RangeBounds;
+use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
+
+use pango::{AttrList, FontMapExt};
+use pangocairo::FontMap;
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
@@ -19,12 +23,18 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 
+type PangoLayout = pango::Layout;
+type PangoContext = pango::Context;
+type PangoAttribute = pango::Attribute;
+
 /// Right now, we don't need any state, as the "toy text API" treats the
 /// access to system font information as a global. This will change.
 // we use a phantom lifetime here to match the API of the d2d backend,
 // and the likely API of something with access to system font information.
 #[derive(Clone)]
-pub struct CairoText;
+pub struct CairoText {
+    pango_context: PangoContext,
+}
 
 #[derive(Clone)]
 struct CairoFont {
@@ -33,9 +43,6 @@ struct CairoFont {
 
 #[derive(Clone)]
 pub struct CairoTextLayout {
-    // we currently don't handle range attributes, so we stash the default
-    // color here and then just grab it when we draw ourselves.
-    pub(crate) fg_color: Color,
     size: Size,
     trailing_ws_width: f64,
     pub(crate) font: ScaledFont,
@@ -43,12 +50,22 @@ pub struct CairoTextLayout {
 
     // currently calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
+
+    pub(crate) pango_layout: PangoLayout,
 }
 
 pub struct CairoTextLayoutBuilder {
     text: Rc<dyn TextStorage>,
     defaults: util::LayoutDefaults,
+    attributes: Vec<AttributeWithRange>,
+    last_range_start_pos: usize,
     width_constraint: f64,
+    pango_layout: PangoLayout,
+}
+
+pub struct AttributeWithRange {
+    range: Range<usize>,
+    attribute: TextAttribute,
 }
 
 impl CairoText {
@@ -58,7 +75,10 @@ impl CairoText {
     /// toy text, but that will change when proper text is implemented.
     #[allow(clippy::new_without_default)]
     pub fn new() -> CairoText {
-        CairoText
+        let fontmap = FontMap::get_default().unwrap();
+        CairoText {
+            pango_context: fontmap.create_context().unwrap(),
+        }
     }
 }
 
@@ -75,10 +95,16 @@ impl Text for CairoText {
     }
 
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
+        let pango_layout = PangoLayout::new(&self.pango_context);
+        pango_layout.set_text(text.as_str());
+
         CairoTextLayoutBuilder {
-            defaults: util::LayoutDefaults::default(),
             text: Rc::new(text),
+            defaults: util::LayoutDefaults::default(),
+            attributes: Vec::new(),
+            last_range_start_pos: 0,
             width_constraint: f64::INFINITY,
+            pango_layout,
         }
     }
 }
@@ -134,10 +160,22 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 
     fn range_attribute(
-        self,
-        _range: impl RangeBounds<usize>,
-        _attribute: impl Into<TextAttribute>,
+        mut self,
+        range: impl RangeBounds<usize>,
+        attribute: impl Into<TextAttribute>,
     ) -> Self {
+        let range = util::resolve_range(range, self.text.len());
+        let attribute = attribute.into();
+
+        debug_assert!(
+            range.start >= self.last_range_start_pos,
+            "attributes must be added in non-decreasing start order"
+        );
+        self.last_range_start_pos = range.start;
+
+        self.attributes
+            .push(AttributeWithRange { range, attribute });
+
         self
     }
 
@@ -157,14 +195,54 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
         let scaled_font = font.resolve(size, slant, weight);
 
+        let pango_attributes = AttrList::new();
+
+        pango_attributes.insert({
+            let (r, g, b, _) = self.defaults.fg_color.as_rgba();
+            PangoAttribute::new_foreground(
+                (r * 65535.) as u16,
+                (g * 65535.) as u16,
+                (b * 65535.) as u16,
+            )
+            .unwrap()
+        });
+
+        pango_attributes.insert({
+            let font = self.defaults.font;
+            PangoAttribute::new_family(font.name()).unwrap()
+        });
+
+        for attribute in self.attributes {
+            match &attribute.attribute {
+                TextAttribute::TextColor(text_color) => {
+                    let (r, g, b, _) = text_color.as_rgba();
+                    let mut pango_attribute = PangoAttribute::new_foreground(
+                        (r * 65535.) as u16,
+                        (g * 65535.) as u16,
+                        (b * 65535.) as u16,
+                    )
+                    .unwrap();
+                    pango_attribute.set_start_index(attribute.range.start.try_into().unwrap());
+                    pango_attribute.set_end_index(attribute.range.end.try_into().unwrap());
+                    pango_attributes.insert(pango_attribute);
+                }
+
+                TextAttribute::FontSize(_) => {}
+
+                _ => {}
+            }
+        }
+
+        self.pango_layout.set_attributes(Some(&pango_attributes));
+
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
-            fg_color: self.defaults.fg_color,
             font: scaled_font,
             size: Size::ZERO,
             trailing_ws_width: 0.0,
             line_metrics: Vec::new(),
             text: self.text,
+            pango_layout: self.pango_layout,
         };
 
         layout.update_width(self.width_constraint);
