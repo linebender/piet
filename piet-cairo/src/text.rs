@@ -8,6 +8,8 @@ use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 
+use glib::translate::ToGlibPtr;
+
 use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use pango::{AttrList, FontMapExt};
@@ -360,63 +362,63 @@ impl TextLayout for CairoTextLayout {
 
 impl CairoTextLayout {
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
-        let new_width = if let Some(new_width) = new_width.into() {
+        const SCALE: f64 = pango::SCALE as f64;
+
+        if let Some(new_width) = new_width.into() {
             let pango_width = new_width * pango::SCALE as f64;
             self.pango_layout.set_width(pango_width as i32);
-            new_width
         } else {
             //NOTE: -1 is the default value, however `update_width` *could*
             //be called any number of times with different values so we need
             //to make sure to reset back to default whenever we get no width
             self.pango_layout.set_width(-1);
-            std::f64::INFINITY
-        };
+        }
 
-        self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
-        if self.text.is_empty() {
-            self.line_metrics.push(LineMetric {
+        let mut line_metrics = Vec::new();
+        for line_index in 0..self.pango_layout.get_line_count() {
+            if let Some(line) = self.pango_layout.get_line_readonly(line_index) {
+                let (start_offset, end_offset) = unsafe {
+                    let raw_line = line.to_glib_none();
+
+                    let start_offset = (*raw_line.0).start_index as usize;
+                    let length = (*raw_line.0).length as usize;
+
+                    (start_offset, start_offset + length)
+                };
+
+                let logical_rect = line.get_extents().1;
+
+                let line_text = &self.text[start_offset..end_offset];
+                let trimmed_len = line_text.trim_end().len();
+                let trailing_whitespace = line_text[trimmed_len..].chars().count();
+
+                line_metrics.push(LineMetric {
+                    start_offset,
+                    end_offset,
+                    trailing_whitespace,
+                    baseline: logical_rect.height as f64 / SCALE,
+                    height: logical_rect.height as f64 / SCALE, //TODO: This is wrong?
+                    y_offset: logical_rect.y as f64 / SCALE,
+                });
+            }
+        }
+
+        if line_metrics.is_empty() {
+            line_metrics.push(LineMetric {
                 baseline: self.font.extents().ascent,
                 height: self.font.extents().height,
                 ..Default::default()
             })
-        } else if util::trailing_nlf(&self.text).is_some() {
-            let newline_eof = self
-                .line_metrics
-                .last()
-                .map(|lm| LineMetric {
-                    start_offset: self.text.len(),
-                    end_offset: self.text.len(),
-                    height: lm.height,
-                    baseline: lm.baseline,
-                    y_offset: lm.y_offset + lm.height,
-                    trailing_whitespace: 0,
-                })
-                .unwrap();
-            self.line_metrics.push(newline_eof);
         }
 
-        let (width, ws_width) = self
-            .line_metrics
-            .iter()
-            .map(|lm| {
-                let full_width = self.font.text_extents(&self.text[lm.range()]).x_advance;
-                let non_ws_width = if lm.trailing_whitespace > 0 {
-                    let non_ws_range = lm.start_offset..lm.end_offset - lm.trailing_whitespace;
-                    self.font.text_extents(&self.text[non_ws_range]).x_advance
-                } else {
-                    full_width
-                };
-                (non_ws_width, full_width)
-            })
-            .fold((0.0, 0.0), |a: (f64, f64), b| (a.0.max(b.0), a.1.max(b.1)));
+        self.line_metrics = line_metrics;
 
-        let height = self
-            .line_metrics
-            .last()
-            .map(|l| l.y_offset + l.height)
-            .unwrap_or_else(|| self.font.extents().height);
-        self.size = Size::new(width, height);
-        self.trailing_ws_width = ws_width;
+        let logical_extent = self.pango_layout.get_extents().1;
+        self.size = Size::new(
+            logical_extent.width as f64 / SCALE,
+            logical_extent.height as f64 / SCALE,
+        );
+        self.trailing_ws_width = 0.; //TODO
     }
 }
 

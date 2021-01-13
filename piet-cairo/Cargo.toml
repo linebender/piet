@@ -16,6 +16,7 @@ piet = { version = "0.3.0", path = "../piet" }
 cairo-rs = { version = "0.9.1", default-features = false } # We don't need glib
 pango = "0.9.1"
 pangocairo = "0.10.0"
+glib = "0.10.3"
 unicode-segmentation = "1.3.0"
 xi-unicode = "0.3.0"
 
