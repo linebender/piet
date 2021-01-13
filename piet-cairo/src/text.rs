@@ -29,6 +29,8 @@ type PangoLayout = pango::Layout;
 type PangoContext = pango::Context;
 type PangoAttribute = pango::Attribute;
 
+const PANGO_SCALE: f64 = pango::SCALE as f64;
+
 /// Right now, we don't need any state, as the "toy text API" treats the
 /// access to system font information as a global. This will change.
 // we use a phantom lifetime here to match the API of the d2d backend,
@@ -39,15 +41,9 @@ pub struct CairoText {
 }
 
 #[derive(Clone)]
-struct CairoFont {
-    family: FontFamily,
-}
-
-#[derive(Clone)]
 pub struct CairoTextLayout {
     size: Size,
     trailing_ws_width: f64,
-    pub(crate) font: ScaledFont,
     pub(crate) text: Rc<dyn TextStorage>,
 
     // currently calculated on build
@@ -117,32 +113,6 @@ impl fmt::Debug for CairoText {
     }
 }
 
-impl CairoFont {
-    pub(crate) fn new(family: FontFamily) -> Self {
-        CairoFont { family }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn resolve_simple(&self, size: f64) -> ScaledFont {
-        self.resolve(size, FontSlant::Normal, FontWeight::Normal)
-    }
-
-    /// Create a ScaledFont for this family.
-    pub(crate) fn resolve(&self, size: f64, slant: FontSlant, weight: FontWeight) -> ScaledFont {
-        let font_face = FontFace::toy_create(self.family.name(), slant, weight);
-        let font_matrix = scale_matrix(size);
-        let ctm = scale_matrix(1.0);
-        let options = FontOptions::default();
-        ScaledFont::new(&font_face, &font_matrix, &ctm, &options)
-    }
-}
-
-impl fmt::Debug for CairoFont {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("CairoFont").finish()
-    }
-}
-
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
 
@@ -182,8 +152,6 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 
     fn build(self) -> Result<Self::Out, Error> {
-        // set our default font
-        let font = CairoFont::new(self.defaults.font.clone());
         let size = self.defaults.font_size;
         let weight = if self.defaults.weight.to_raw() <= piet::FontWeight::MEDIUM.to_raw() {
             FontWeight::Normal
@@ -194,8 +162,6 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
             FontStyle::Italic => FontSlant::Italic,
             FontStyle::Regular => FontSlant::Normal,
         };
-
-        let scaled_font = font.resolve(size, slant, weight);
 
         let pango_attributes = AttrList::new();
 
@@ -243,7 +209,6 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
-            font: scaled_font,
             size: Size::ZERO,
             trailing_ws_width: 0.0,
             line_metrics: Vec::new(),
@@ -294,76 +259,46 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        // internal logic is using grapheme clusters, but return the text position associated
-        // with the border of the grapheme cluster.
+        let x = point.x * PANGO_SCALE;
+        let y = point.y * PANGO_SCALE;
 
-        // null case
-        if self.text.is_empty() {
-            return HitTestPoint::default();
-        }
-
-        let height = self
-            .line_metrics
-            .last()
-            .map(|lm| lm.y_offset + lm.height)
-            .unwrap_or(0.0);
-
-        // determine whether this click is within the y bounds of the layout,
-        // and what line it coorresponds to. (For points above and below the layout,
-        // we hittest the first and last lines respectively.)
-        let (y_inside, lm) = if point.y < 0. {
-            (false, self.line_metrics.first().unwrap())
-        } else if point.y >= height {
-            (false, self.line_metrics.last().unwrap())
+        let (is_inside, index, trailing) = self.pango_layout.xy_to_index(x as i32, y as i32);
+        let index = if trailing == 0 {
+            index as usize
         } else {
-            let line = self
-                .line_metrics
-                .iter()
-                .find(|l| point.y >= l.y_offset && point.y < l.y_offset + l.height)
-                .unwrap();
-            (true, line)
+            (index + trailing) as usize
         };
 
-        // Trailing whitespace is remove for the line
-        let line = &self.text[lm.range()];
-
-        let mut htp = hit_test_line_point(&self.font, line, point);
-        htp.idx += lm.start_offset;
-        if htp.idx == lm.end_offset {
-            htp.idx -= util::trailing_nlf(line).unwrap_or(0);
-        }
-        htp.is_inside &= y_inside;
-        htp
+        HitTestPoint::new(index, is_inside)
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
-        let idx = idx.min(self.text.len());
-        assert!(self.text.is_char_boundary(idx));
+        let pos_rect = self.pango_layout.index_to_pos(idx as i32);
 
-        if idx == 0 && self.text.is_empty() {
-            return HitTestPosition::new(Point::new(0., self.font.extents().ascent), 0);
-        }
+        let point = Point::new(
+            pos_rect.x as f64 / PANGO_SCALE,
+            (pos_rect.y + pos_rect.height) as f64 / PANGO_SCALE,
+        );
 
-        // first need to find line it's on, and get line start offset
-        let line_num = util::line_number_for_position(&self.line_metrics, idx);
-        let lm = self.line_metrics.get(line_num).cloned().unwrap();
+        let line = self
+            .line_metrics
+            .iter()
+            .enumerate()
+            .find_map(|(line_index, metric)| {
+                if metric.start_offset <= idx && idx < metric.end_offset {
+                    Some(line_index)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(self.line_metrics.len() - 1);
 
-        let y_pos = lm.y_offset + lm.baseline;
-
-        // Then for the line, do text position
-        // Trailing whitespace is removed for the line
-        let line = &self.text[lm.range()];
-        let line_position = idx - lm.start_offset;
-
-        let x_pos = hit_test_line_position(&self.font, line, line_position);
-        HitTestPosition::new(Point::new(x_pos, y_pos), line_num)
+        HitTestPosition::new(point, line)
     }
 }
 
 impl CairoTextLayout {
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
-        const SCALE: f64 = pango::SCALE as f64;
-
         if let Some(new_width) = new_width.into() {
             let pango_width = new_width * pango::SCALE as f64;
             self.pango_layout.set_width(pango_width as i32);
@@ -396,27 +331,20 @@ impl CairoTextLayout {
                     start_offset,
                     end_offset,
                     trailing_whitespace,
-                    baseline: logical_rect.height as f64 / SCALE,
-                    height: logical_rect.height as f64 / SCALE, //TODO: This is wrong?
-                    y_offset: logical_rect.y as f64 / SCALE,
+                    baseline: logical_rect.height as f64 / PANGO_SCALE,
+                    height: logical_rect.height as f64 / PANGO_SCALE, //TODO: This is wrong?
+                    y_offset: logical_rect.y as f64 / PANGO_SCALE,
                 });
             }
         }
 
-        if line_metrics.is_empty() {
-            line_metrics.push(LineMetric {
-                baseline: self.font.extents().ascent,
-                height: self.font.extents().height,
-                ..Default::default()
-            })
-        }
-
+        //NOTE: Pango appears to always give us at least one line even with empty input
         self.line_metrics = line_metrics;
 
         let logical_extent = self.pango_layout.get_extents().1;
         self.size = Size::new(
-            logical_extent.width as f64 / SCALE,
-            logical_extent.height as f64 / SCALE,
+            logical_extent.width as f64 / PANGO_SCALE,
+            logical_extent.height as f64 / PANGO_SCALE,
         );
         self.trailing_ws_width = 0.; //TODO
     }
