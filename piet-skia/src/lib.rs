@@ -49,7 +49,9 @@ fn apply_brush(paint: &mut Paint, brush: &Brush) {
     }
 }
 
-// convinience method for default Paint struct
+// Convinience method for default Paint struct
+// also possible to have single paint for all painting stuff
+// but skia docs says that it's cheap to create
 fn create_paint() -> Paint {
     let mut paint = Paint::default();
     paint.set_anti_alias(true);

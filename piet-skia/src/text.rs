@@ -160,7 +160,8 @@ impl TextLayout for SkiaTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint { 
-        unimplemented!();
+        // TODO
+        HitTestPoint::new(0, false)
         //if point.y > self.paragraph.height() {
         //   return HitTestPoint::default() 
         //}
@@ -171,6 +172,7 @@ impl TextLayout for SkiaTextLayout {
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
-        unimplemented!();
+        // TODO
+        HitTestPosition::new(Point::new(0., 0.), 0)
     }
 }
