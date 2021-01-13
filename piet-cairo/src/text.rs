@@ -15,7 +15,7 @@ use pangocairo::FontMap;
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    util, Color, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
+    util, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
     TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 
@@ -235,6 +235,10 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
         self.pango_layout.set_attributes(Some(&pango_attributes));
 
+        //NOTE: We give Pango a width of -1 for no wrapping
+        self.pango_layout.set_wrap(pango::WrapMode::Word);
+        self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
+
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
             font: scaled_font,
@@ -356,7 +360,17 @@ impl TextLayout for CairoTextLayout {
 
 impl CairoTextLayout {
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
-        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+        let new_width = if let Some(new_width) = new_width.into() {
+            let pango_width = new_width * pango::SCALE as f64;
+            self.pango_layout.set_width(pango_width as i32);
+            new_width
+        } else {
+            //NOTE: -1 is the default value, however `update_width` *could*
+            //be called any number of times with different values so we need
+            //to make sure to reset back to default whenever we get no width
+            self.pango_layout.set_width(-1);
+            std::f64::INFINITY
+        };
 
         self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);
         if self.text.is_empty() {
