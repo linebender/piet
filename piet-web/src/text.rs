@@ -38,6 +38,7 @@ pub struct WebTextLayout {
     // Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
     size: Size,
+    trailing_ws_width: f64,
     color: Color,
 }
 
@@ -174,6 +175,7 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
             text: self.text,
             line_metrics: Vec::new(),
             size: Size::ZERO,
+            trailing_ws_width: 0.0,
             color: self.defaults.fg_color,
         };
 
@@ -194,8 +196,7 @@ impl TextLayout for WebTextLayout {
     }
 
     fn trailing_whitespace_width(&self) -> f64 {
-        //FIXME this should be calculated separately like in other backends
-        self.size.width
+        self.trailing_ws_width
     }
 
     fn image_bounds(&self) -> Rect {
@@ -313,20 +314,52 @@ impl WebTextLayout {
         // the context to be configured correcttly.
         self.ctx.set_font(&self.font.get_font_string());
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
-
-        let line_metrics =
+        let mut line_metrics =
             lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
 
-        let max_width = line_metrics
+        if self.text.is_empty() {
+            line_metrics.push(LineMetric {
+                baseline: self.font.size * 0.2,
+                height: self.font.size * 1.2,
+                ..Default::default()
+            })
+        } else if util::trailing_nlf(&self.text).is_some() {
+            assert!(!line_metrics.is_empty());
+            let newline_eof = line_metrics
+                .last()
+                .map(|lm| LineMetric {
+                    start_offset: self.text.len(),
+                    end_offset: self.text.len(),
+                    height: lm.height,
+                    baseline: lm.baseline,
+                    y_offset: lm.y_offset + lm.height,
+                    trailing_whitespace: 0,
+                })
+                .unwrap();
+            line_metrics.push(newline_eof);
+        }
+
+        let (width, ws_width) = line_metrics
             .iter()
-            .map(|lm| text_width(&self.text[lm.start_offset..lm.end_offset], &self.ctx))
-            .fold(0., f64::max);
+            .map(|lm| {
+                let full_width = text_width(&self.text[lm.range()], &self.ctx);
+                let non_ws_width = if lm.trailing_whitespace > 0 {
+                    let non_ws_range = lm.start_offset..lm.end_offset - lm.trailing_whitespace;
+                    text_width(&self.text[non_ws_range], &self.ctx)
+                } else {
+                    full_width
+                };
+                (non_ws_width, full_width)
+            })
+            .fold((0.0, 0.0), |a: (f64, f64), b| (a.0.max(b.0), a.1.max(b.1)));
+
         let height = line_metrics
             .last()
             .map(|l| l.y_offset + l.height)
             .unwrap_or_default();
         self.line_metrics = line_metrics;
-        self.size = Size::new(max_width, height);
+        self.trailing_ws_width = ws_width;
+        self.size = Size::new(width, height);
         Ok(())
     }
 }

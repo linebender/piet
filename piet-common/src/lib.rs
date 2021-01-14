@@ -1,13 +1,13 @@
 //! A piet backend appropriate for the current platform.
 //!
 //! This crate reexports the [piet crate][piet], alongside an appropriate backend
-//! for the given platform. It also exposes [kurbo][], which defines shape and
+//! for the given platform. It also exposes [kurbo], which defines shape and
 //! curve types useful in drawing.
 //!
 //! The intention of this crate is to provide a single dependency that handles
 //! the common piet use-case. If you have more complicated needs (such as
 //! supporting multiple backends simultaneously) you should use crates such as
-//! [piet][] and [piet-cairo][] directly.
+//! [piet] and [piet-cairo] directly.
 //!
 //! The associated types for brushes, text, and images are exported as type
 //! definitions (resolving to concrete types within the backend), so they can
@@ -69,7 +69,7 @@ mod test {
         piet_text: PietText,
         piet_text_layout: PietTextLayout,
         piet_text_layout_builder: PietTextLayoutBuilder,
-        image: Image,
+        image: PietImage,
     }
 
     sa::assert_impl_all!(Device: Send);

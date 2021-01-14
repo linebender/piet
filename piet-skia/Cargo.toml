@@ -8,5 +8,5 @@ edition = "2018"
 
 [dependencies]
 skia-safe = { git = "https://github.com/Vurich/rust-skia.git", features = ["gl", "wayland", "nightly", "lottie", "textlayout"] }
-piet = { version = "0.2.0", path = "../piet", features = ["samples"] }
+piet = { version = "0.3.1", path = "../piet", features = ["samples"] }
 xi-unicode = "0.2.0"

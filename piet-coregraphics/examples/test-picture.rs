@@ -14,12 +14,12 @@ use piet_coregraphics::CoreGraphicsContext;
 const SCALE: f64 = 2.0;
 const FILE_PREFIX: &str = "coregraphics-test-";
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    samples::samples_main(run_sample, FILE_PREFIX)
+fn main() {
+    samples::samples_main(run_sample, FILE_PREFIX);
 }
 
 fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let sample = samples::get(idx);
+    let sample = samples::get(idx)?;
     let size = sample.size();
 
     let file_name = format!("{}{}.png", FILE_PREFIX, idx);

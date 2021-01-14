@@ -34,8 +34,8 @@ pub const SAMPLE_COUNT: usize = 15;
 pub const GENERATED_BY: &str = "GENERATED_BY";
 
 /// Return a specific sample for drawing.
-pub fn get<R: RenderContext>(number: usize) -> SamplePicture<R> {
-    match number {
+pub fn get<R: RenderContext>(number: usize) -> Result<SamplePicture<R>, BoxErr> {
+    Ok(match number {
         0 => SamplePicture::new(picture_0::SIZE, picture_0::draw),
         1 => SamplePicture::new(picture_1::SIZE, picture_1::draw),
         2 => SamplePicture::new(picture_2::SIZE, picture_2::draw),
@@ -51,8 +51,8 @@ pub fn get<R: RenderContext>(number: usize) -> SamplePicture<R> {
         12 => SamplePicture::new(picture_12::SIZE, picture_12::draw),
         13 => SamplePicture::new(picture_13::SIZE, picture_13::draw),
         14 => SamplePicture::new(picture_14::SIZE, picture_14::draw),
-        _ => panic!("No sample #{} exists", number),
-    }
+        _ => return Err(format!("No sample #{} exists", number).into()),
+    })
 }
 
 /// A pointer to a text drawing and associated info.
@@ -63,6 +63,7 @@ pub struct SamplePicture<T> {
 
 /// Arguments used by backend cli utilities.
 struct Args {
+    help: bool,
     all: bool,
     out_dir: PathBuf,
     number: Option<usize>,
@@ -76,53 +77,67 @@ struct Args {
 /// PNG to the path.
 ///
 /// The `prefix` argument is used for the file names of failure cases.
-pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> Result<(), BoxErr> {
-    let args = match Args::from_env() {
-        Ok(args) => args,
-        Err(e) => {
+pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> ! {
+    let inner = move || -> Result<(), BoxErr> {
+        let args = Args::from_env()?;
+
+        if args.help {
+            eprintln!("Piet Sample Image Generator\n");
             print_help_text();
-            return Err(e);
+            std::process::exit(1);
+        }
+
+        if !args.out_dir.exists() {
+            std::fs::create_dir_all(&args.out_dir)?;
+        }
+
+        if args.all {
+            write_os_info(&args.out_dir)?;
+            run_all(|number| f(number, &args.out_dir))?;
+        } else if let Some(number) = args.number {
+            f(number, &args.out_dir)?;
+        }
+
+        if let Some(compare_dir) = args.compare_dir.as_ref() {
+            let results = compare_snapshots(compare_dir, &args.out_dir, prefix)?;
+            if args.all {
+                let info_one = read_os_info(compare_dir)?;
+                let info_two = read_os_info(&args.out_dir)?;
+                println!("Compared {} snapshots", results.len());
+                print!("base: {}", info_one);
+                println!("rev : {}", info_two);
+            }
+
+            for (number, result) in results.iter() {
+                print!("Image {:02}: ", number);
+                match result {
+                    Some(failure) => println!("{}", failure),
+                    None => println!("Ok"),
+                }
+            }
+
+            if results.values().any(Option::is_some) {
+                Err("--compare passed and some picture didn't match their comparators".into())
+            } else {
+                Ok(())
+            }
+        } else {
+            Ok(())
         }
     };
 
-    if !args.out_dir.exists() {
-        std::fs::create_dir_all(&args.out_dir)?;
-    }
-
-    if args.all {
-        write_os_info(&args.out_dir)?;
-        run_all(|number| f(number, &args.out_dir))?;
-    } else if let Some(number) = args.number {
-        f(number, &args.out_dir)?;
-    }
-
-    if let Some(compare_dir) = args.compare_dir.as_ref() {
-        let results = compare_snapshots(compare_dir, &args.out_dir, prefix)?;
-        if args.all {
-            let info_one = read_os_info(compare_dir)?;
-            let info_two = read_os_info(&args.out_dir)?;
-            println!("Compared {} snapshots", results.len());
-            print!("base: {}", info_one);
-            println!("rev : {}", info_two);
+    if let Err(e) = inner() {
+        eprintln!("error generating sample: {}", e);
+        let mut e = &*e;
+        while let Some(err) = e.source() {
+            eprintln!("caused by: {}", err);
+            e = err;
         }
-
-        for (number, result) in results.iter() {
-            print!("Image {:02}: ", number);
-            match result {
-                Some(failure) => println!("{}", failure),
-                None => println!("Ok"),
-            }
-        }
-
-        let exit_code = if results.values().any(Option::is_some) {
-            1
-        } else {
-            0
-        };
-        std::process::exit(exit_code);
+        print_help_text();
+        std::process::exit(1);
+    } else {
+        std::process::exit(0);
     }
-
-    Ok(())
 }
 
 impl<T> SamplePicture<T> {
@@ -147,13 +162,14 @@ impl Args {
         let out_dir: Option<PathBuf> = args.opt_value_from_str("--out")?;
 
         let args = Args {
+            help: args.contains("--help"),
             all: args.contains("--all"),
             out_dir: out_dir.unwrap_or_else(|| PathBuf::from(".")),
             compare_dir: args.opt_value_from_str("--compare")?,
             number: args.free_from_str()?,
         };
 
-        if !(args.all || args.number.is_some() || args.compare_dir.is_some()) {
+        if !(args.help || args.all || args.number.is_some() || args.compare_dir.is_some()) {
             Err(Box::new(Error::InvalidSampleArgs))
         } else {
             Ok(args)
@@ -391,16 +407,24 @@ impl std::fmt::Display for FailureReason {
 
 fn print_help_text() {
     eprintln!(
-        "Piet Sample Image Generator
+        "Options:
 
-Options:
+$ ./test_picture {{<number> | --all}} [--out=<dir>] [--compare=<dir>] [--help]
 
-$ ./test_picture [<number> | --all] [--out=<dir>] [--compare=<dir>]
+Required Args
+    --all | <number> If 'all', generate all the example pictures. If a number,
+                     then generate that number picture (number must be between
+                     0 and {}
 
-- to draw a single image, pass a number in the range 0..={}
-- to draw all images, pass --all
-- to specify an output directory, pass --out=DIR (defaults to working directory)
-- to check your output against previously generated samples, pass --comapare=DIR
+Optional Args
+    --out=<dir>      Save the results to the directory 'dir'. Defaults to the
+                     working directory.
+    --compare=<dir>  Compare the results with those found in 'dir'. If the results
+                     differ, then print an explanation and exit with a non-zero
+                     status.
+
+Flags
+    --help           Print this help message and exit.
     ",
         SAMPLE_COUNT - 1
     );

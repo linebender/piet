@@ -1,10 +1,10 @@
 #![allow(warnings)] // TODO remove me!!!
 
-use piet::kurbo::{Affine, PathEl, Point, Rect, Shape};
+use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 use piet::{
     Color, Error, FixedGradient, ImageFormat, InterpolationMode,
     IntoBrush, RenderContext, StrokeStyle, TextLayout, FixedLinearGradient,
-    FixedRadialGradient,
+    FixedRadialGradient, Image
 };
 use std::borrow::Cow;
 pub use text::*;
@@ -75,6 +75,14 @@ impl<'a> SkiaRenderContext<'a>{
 }
 
 pub struct SkiaImage;
+
+impl Image for SkiaImage {
+    fn size(&self) -> Size {
+        unimplemented!();
+        //Size::new(self.0.get_width().into(), self.0.get_height().into())
+    }
+}
+
 
 // TODO this is temporal and we just want to use skia's paths
 fn create_path(shape: impl Shape) -> Path {

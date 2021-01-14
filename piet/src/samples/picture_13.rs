@@ -14,12 +14,10 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(Color::WHITE);
     let text = rc.text();
     let _ = text.load_font(include_bytes!(
-        "../../../snapshots/resources/Anaheim-Regular.ttf"
+        "../../snapshots/resources/Anaheim-Regular.ttf"
     ));
     let font = text
-        .load_font(include_bytes!(
-            "../../../snapshots/resources/Anaheim-Bold.ttf"
-        ))
+        .load_font(include_bytes!("../../snapshots/resources/Anaheim-Bold.ttf"))
         .unwrap_or(FontFamily::SYSTEM_UI);
 
     let layout = text

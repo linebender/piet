@@ -22,6 +22,12 @@ use crate::kurbo::Size;
 use crate::util::unpremul;
 use crate::{Color, ImageFormat, RenderContext};
 
+/// A trait for a backend's bitmap image type.
+pub trait Image {
+    /// The size of the image
+    fn size(&self) -> Size;
+}
+
 /// An in-memory pixel buffer.
 ///
 /// Contains raw bytes, dimensions, and image format ([`piet::ImageFormat`]).
@@ -104,9 +110,7 @@ impl ImageBuf {
     ///
     /// The return value is an iterator over "rows", where each "row" is an iterator
     /// over the color of the pixels in that row.
-    pub fn pixel_colors<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = impl Iterator<Item = Color> + 'a> + 'a {
+    pub fn pixel_colors(&self) -> impl Iterator<Item = impl Iterator<Item = Color> + '_> {
         let format = self.format;
         let bytes_per_pixel = format.bytes_per_pixel();
         self.pixels
@@ -131,6 +135,11 @@ impl ImageBuf {
     pub fn to_image<Ctx: RenderContext>(&self, ctx: &mut Ctx) -> Ctx::Image {
         ctx.make_image(self.width(), self.height(), &self.pixels, self.format)
             .unwrap()
+    }
+
+    /// Returns `true` if the two `ImageBuf`s refer to the same memory location.
+    pub fn ptr_eq(&self, other: &ImageBuf) -> bool {
+        Arc::ptr_eq(&self.raw_pixels_shared(), &other.raw_pixels_shared())
     }
 }
 
@@ -184,13 +193,13 @@ impl ImageBuf {
     /// Attempt to load an image from raw bytes.
     ///
     /// If the image crate can't decode an image from the data an error will be returned.
-    pub fn from_data(raw_image: &[u8]) -> Result<ImageBuf, Box<dyn Error>> {
+    pub fn from_data(raw_image: &[u8]) -> Result<ImageBuf, Box<dyn Error + Send + Sync>> {
         let image_data = image::load_from_memory(raw_image).map_err(|e| e)?;
         Ok(ImageBuf::from_dynamic_image(image_data))
     }
 
     /// Attempt to load an image from the file at the provided path.
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<ImageBuf, Box<dyn Error>> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<ImageBuf, Box<dyn Error + Send + Sync>> {
         let image_data = image::open(path).map_err(|e| e)?;
         Ok(ImageBuf::from_dynamic_image(image_data))
     }

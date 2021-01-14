@@ -44,7 +44,7 @@ pub type PietTextLayoutBuilder = D2DTextLayoutBuilder;
 /// The associated image type for this backend.
 ///
 /// This type matches `RenderContext::Image`
-pub type Image = Bitmap;
+pub type PietImage = Bitmap;
 
 /// A struct that can be used to create bitmap render contexts.
 pub struct Device {
@@ -142,14 +142,6 @@ impl<'a> BitmapTarget<'a> {
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> D2DRenderContext {
         D2DRenderContext::new(self.d2d, self.dwrite.clone(), &mut self.context)
-    }
-
-    /// Get raw RGBA pixels from the bitmap.
-    #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(mut self, fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
-        let mut buf = vec![0; self.width * self.height * 4];
-        self.copy_raw_pixels(fmt, &mut buf)?;
-        Ok(buf)
     }
 
     /// Get an in-memory pixel buffer from the bitmap.
