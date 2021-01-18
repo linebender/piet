@@ -388,6 +388,32 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         }
     }
 
+    fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        let src_rect = src_rect.into();
+        if src_rect.width() < 1.0 || src_rect.height() < 1.0 {
+            return Err(Error::InvalidInput);
+        }
+
+        if src_rect.width() > self.ctx.width() as f64
+            || src_rect.height() > self.ctx.height() as f64
+        {
+            return Err(Error::InvalidInput);
+        }
+
+        let full_image = self.ctx.create_image().ok_or(Error::InvalidInput)?;
+
+        if src_rect.width() == self.ctx.width() as f64
+            && src_rect.height() == self.ctx.height() as f64
+        {
+            return Ok(CoreGraphicsImage::NonEmpty(full_image));
+        }
+
+        full_image
+            .cropped(to_cgrect(src_rect))
+            .map(|img| CoreGraphicsImage::NonEmpty(img))
+            .ok_or(Error::InvalidInput)
+    }
+
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let (image, rect) = compute_blurred_rect(rect, blur_radius);
         let cg_rect = to_cgrect(rect);
@@ -645,5 +671,30 @@ mod tests {
         assert_affine_eq!(piet.current_transform(), one * one);
         piet.restore().unwrap();
         assert_affine_eq!(piet.current_transform(), Affine::default());
+    }
+
+    #[test]
+    fn capture_image_area() {
+        let mut ctx = make_context((400.0, 400.0));
+        let mut piet = CoreGraphicsContext::new_y_down(&mut ctx, None);
+
+        assert!(piet
+            .capture_image_area(Rect::new(0.0, 0.0, 0.0, 0.0))
+            .is_err());
+        assert!(piet
+            .capture_image_area(Rect::new(0.0, 0.0, 500.0, 400.0))
+            .is_err());
+        assert!(piet
+            .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
+            .is_ok());
+
+        let copy = piet
+            .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
+            .unwrap();
+        piet.draw_image(
+            &copy,
+            Rect::new(0.0, 0.0, 400.0, 400.0),
+            InterpolationMode::Bilinear,
+        );
     }
 }

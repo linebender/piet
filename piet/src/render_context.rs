@@ -210,6 +210,12 @@ where
         interp: InterpolationMode,
     );
 
+    /// Capture a specified area of an image.
+    ///
+    /// The `src_rect` area of the current render context will be captured
+    /// as a copy and returned.
+    fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error>;
+
     /// Draw a rectangle with Gaussian blur.
     ///
     /// The blur radius is sometimes referred to as the "standard deviation" of
