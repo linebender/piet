@@ -309,6 +309,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.draw_image_inner(&image.0, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
+    fn capture_image_area(&mut self, _src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        Err(Error::MissingFeature)
+    }
+
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
         let (image, origin) = compute_blurred_rect(rect, blur_radius);

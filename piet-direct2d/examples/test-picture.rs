@@ -61,6 +61,7 @@ fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::
         }
     };
     piet_context.finish()?;
+
     std::mem::drop(piet_context);
     context.end_draw()?;
 

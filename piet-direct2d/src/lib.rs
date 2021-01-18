@@ -17,8 +17,9 @@ use std::ops::Deref;
 use associative_cache::{AssociativeCache, Capacity1024, HashFourWay, RoundRobinReplacement};
 
 use winapi::um::d2d1::{
-    D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-    D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
+    ID2D1RenderTarget, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+    D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
+    D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
 };
 use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
@@ -37,7 +38,7 @@ pub use crate::text::{D2DText, D2DTextLayout, D2DTextLayoutBuilder};
 
 use crate::conv::{
     affine_to_matrix3x2f, color_to_colorf, convert_stroke_style, gradient_stop_to_d2d,
-    rect_to_rectf, to_point2f,
+    rect_to_rectf, rect_to_rectu, to_point2f, to_point2u,
 };
 use crate::d2d::{Bitmap, Brush, DeviceContext, FillRule, Geometry};
 
@@ -451,6 +452,28 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             dst_rect.into(),
             interp,
         );
+    }
+
+    fn capture_image_area(&mut self, rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        let r = rect.into();
+
+        let asd = self.rt.get_raw() as *mut ID2D1RenderTarget;
+        let mut target_bitmap = self.rt.create_blank_bitmap(
+            r.width() as usize,
+            r.height() as usize,
+            D2D1_ALPHA_MODE_PREMULTIPLIED,
+        )?;
+
+        let dest_point = to_point2u((0.0f32, 0.0f32));
+        let src_rect = rect_to_rectu(Rect {
+            x0: r.x0,
+            y0: r.y0,
+            x1: r.width(),
+            y1: r.height(),
+        });
+
+        target_bitmap.copy_from_render_target(&dest_point, asd, &src_rect);
+        Ok(target_bitmap)
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {

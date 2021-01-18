@@ -4,7 +4,8 @@ use winapi::um::d2d1::{
     D2D1_CAP_STYLE, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_SQUARE, D2D1_COLOR_F,
     D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_ELLIPSE, D2D1_GRADIENT_STOP,
     D2D1_LINE_JOIN, D2D1_LINE_JOIN_BEVEL, D2D1_LINE_JOIN_MITER, D2D1_LINE_JOIN_ROUND,
-    D2D1_MATRIX_3X2_F, D2D1_POINT_2F, D2D1_RECT_F, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
+    D2D1_MATRIX_3X2_F, D2D1_POINT_2F, D2D1_POINT_2U, D2D1_RECT_F, D2D1_RECT_U, D2D1_ROUNDED_RECT,
+    D2D1_STROKE_STYLE_PROPERTIES,
 };
 
 use piet::kurbo::{Affine, Circle, Point, Rect, Vec2};
@@ -74,6 +75,13 @@ impl From<Point2> for Vec2 {
 pub(crate) fn to_point2f<P: RoundInto<Point2>>(p: P) -> D2D1_POINT_2F {
     p.round_into().0
 }
+pub(crate) fn to_point2u<P: RoundInto<Point2>>(p: P) -> D2D1_POINT_2U {
+    let rounded = p.round_into();
+    D2D1_POINT_2U {
+        x: rounded.0.x.ceil() as u32,
+        y: rounded.0.y.ceil() as u32,
+    }
+}
 
 /// Can't implement RoundFrom here because both types belong to other
 /// crates. Consider moving to kurbo (with windows feature).
@@ -95,6 +103,15 @@ pub(crate) fn rect_to_rectf(rect: Rect) -> D2D1_RECT_F {
         top: rect.y0 as f32,
         right: rect.x1 as f32,
         bottom: rect.y1 as f32,
+    }
+}
+
+pub(crate) fn rect_to_rectu(rect: Rect) -> D2D1_RECT_U {
+    D2D1_RECT_U {
+        left: rect.x0 as u32,
+        top: rect.y0 as u32,
+        right: rect.x1 as u32,
+        bottom: rect.y1 as u32,
     }
 }
 

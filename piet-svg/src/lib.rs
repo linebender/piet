@@ -281,6 +281,10 @@ impl piet::RenderContext for RenderContext {
         draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
+    fn capture_image_area(&mut self, _src_rect: impl Into<Rect>) -> Result<Self::Image> {
+        Err(Error::MissingFeature)
+    }
+
     fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
         unimplemented!()
     }
