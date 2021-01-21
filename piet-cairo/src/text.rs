@@ -28,6 +28,9 @@ use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 type PangoLayout = pango::Layout;
 type PangoContext = pango::Context;
 type PangoAttribute = pango::Attribute;
+type PangoWeight = pango::Weight;
+type PangoStyle = pango::Style;
+type PangoUnderline = pango::Underline;
 
 const PANGO_SCALE: f64 = pango::SCALE as f64;
 
@@ -62,8 +65,8 @@ pub struct CairoTextLayoutBuilder {
 }
 
 pub struct AttributeWithRange {
-    range: Range<usize>,
     attribute: TextAttribute,
+    range: Option<Range<usize>>, //No range == entire layout
 }
 
 impl CairoText {
@@ -120,6 +123,94 @@ impl fmt::Debug for CairoText {
     }
 }
 
+impl CairoTextLayoutBuilder {
+    fn build_pango_attribute(attribute: AttributeWithRange) -> PangoAttribute {
+        let mut pango_attribute = match &attribute.attribute {
+            TextAttribute::FontFamily(family) => {
+                let family = family.name();
+                PangoAttribute::new_family(family).unwrap_or_else(|| {
+                    PangoAttribute::new_family(FontFamily::SERIF.name())
+                        .expect("Failed to load fallback font family")
+                })
+            }
+
+            TextAttribute::FontSize(size) => {
+                let size = (size * PANGO_SCALE) as i32;
+                PangoAttribute::new_size(size).unwrap()
+            }
+
+            TextAttribute::Weight(weight) => {
+                //This is horrid
+                let pango_weights = [
+                    (100, PangoWeight::Thin),
+                    (200, PangoWeight::Ultralight),
+                    (300, PangoWeight::Light),
+                    (350, PangoWeight::Semilight),
+                    (380, PangoWeight::Book),
+                    (400, PangoWeight::Normal),
+                    (500, PangoWeight::Medium),
+                    (600, PangoWeight::Semibold),
+                    (700, PangoWeight::Bold),
+                    (800, PangoWeight::Ultrabold),
+                    (900, PangoWeight::Heavy),
+                    (1_000, PangoWeight::Ultraheavy),
+                ];
+
+                let weight = weight.to_raw() as i32;
+                let mut closest_index = 0;
+                let mut closest_distance = 2_000; //Random very large value
+                for (current_index, pango_weight) in pango_weights.iter().enumerate() {
+                    let distance = (pango_weight.0 - weight).abs();
+                    if distance < closest_distance {
+                        closest_distance = distance;
+                        closest_index = current_index;
+                    }
+                }
+
+                PangoAttribute::new_weight(pango_weights[closest_index].1).unwrap()
+            }
+
+            TextAttribute::TextColor(text_color) => {
+                let (r, g, b, _) = text_color.as_rgba();
+                PangoAttribute::new_foreground(
+                    (r * 65535.) as u16,
+                    (g * 65535.) as u16,
+                    (b * 65535.) as u16,
+                )
+                .unwrap()
+            }
+
+            TextAttribute::Style(style) => {
+                let style = match style {
+                    FontStyle::Regular => PangoStyle::Normal,
+                    FontStyle::Italic => PangoStyle::Italic,
+                };
+                PangoAttribute::new_style(style).unwrap()
+            }
+
+            &TextAttribute::Underline(underline) => {
+                let underline = if underline {
+                    PangoUnderline::Single
+                } else {
+                    PangoUnderline::None
+                };
+                PangoAttribute::new_underline(underline).unwrap()
+            }
+
+            &TextAttribute::Strikethrough(strikethrough) => {
+                PangoAttribute::new_strikethrough(strikethrough).unwrap()
+            }
+        };
+
+        if let Some(range) = attribute.range {
+            pango_attribute.set_start_index(range.start.try_into().unwrap());
+            pango_attribute.set_end_index(range.end.try_into().unwrap());
+        }
+
+        pango_attribute
+    }
+}
+
 impl TextLayoutBuilder for CairoTextLayoutBuilder {
     type Out = CairoTextLayout;
 
@@ -152,60 +243,48 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         );
         self.last_range_start_pos = range.start;
 
-        self.attributes
-            .push(AttributeWithRange { range, attribute });
+        self.attributes.push(AttributeWithRange {
+            attribute,
+            range: Some(range),
+        });
 
         self
     }
 
     fn build(self) -> Result<Self::Out, Error> {
-        let size = self.defaults.font_size;
-        let weight = if self.defaults.weight.to_raw() <= piet::FontWeight::MEDIUM.to_raw() {
-            FontWeight::Normal
-        } else {
-            FontWeight::Bold
-        };
-        let slant = match self.defaults.style {
-            FontStyle::Italic => FontSlant::Italic,
-            FontStyle::Regular => FontSlant::Normal,
-        };
-
         let pango_attributes = AttrList::new();
 
-        pango_attributes.insert({
-            let (r, g, b, _) = self.defaults.fg_color.as_rgba();
-            PangoAttribute::new_foreground(
-                (r * 65535.) as u16,
-                (g * 65535.) as u16,
-                (b * 65535.) as u16,
-            )
-            .unwrap()
-        });
-
-        pango_attributes.insert({
-            let font = self.defaults.font;
-            PangoAttribute::new_family(font.name()).unwrap()
-        });
+        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
+            attribute: TextAttribute::FontFamily(self.defaults.font),
+            range: None,
+        }));
+        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
+            attribute: TextAttribute::FontSize(self.defaults.font_size),
+            range: None,
+        }));
+        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
+            attribute: TextAttribute::Weight(self.defaults.weight),
+            range: None,
+        }));
+        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
+            attribute: TextAttribute::TextColor(self.defaults.fg_color),
+            range: None,
+        }));
+        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
+            attribute: TextAttribute::Style(self.defaults.style),
+            range: None,
+        }));
+        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
+            attribute: TextAttribute::Underline(self.defaults.underline),
+            range: None,
+        }));
+        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
+            attribute: TextAttribute::Strikethrough(self.defaults.strikethrough),
+            range: None,
+        }));
 
         for attribute in self.attributes {
-            match &attribute.attribute {
-                TextAttribute::TextColor(text_color) => {
-                    let (r, g, b, _) = text_color.as_rgba();
-                    let mut pango_attribute = PangoAttribute::new_foreground(
-                        (r * 65535.) as u16,
-                        (g * 65535.) as u16,
-                        (b * 65535.) as u16,
-                    )
-                    .unwrap();
-                    pango_attribute.set_start_index(attribute.range.start.try_into().unwrap());
-                    pango_attribute.set_end_index(attribute.range.end.try_into().unwrap());
-                    pango_attributes.insert(pango_attribute);
-                }
-
-                TextAttribute::FontSize(_) => {}
-
-                _ => {}
-            }
+            pango_attributes.insert(Self::build_pango_attribute(attribute));
         }
 
         self.pango_layout.set_attributes(Some(&pango_attributes));
