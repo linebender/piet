@@ -310,6 +310,7 @@ impl CairoTextLayout {
         }
 
         let mut line_metrics = Vec::new();
+        let mut y_distance = 0.;
         for line_index in 0..self.pango_layout.get_line_count() {
             if let Some(line) = self.pango_layout.get_line_readonly(line_index) {
                 let (start_offset, end_offset) = unsafe {
@@ -321,6 +322,7 @@ impl CairoTextLayout {
                     (start_offset, start_offset + length)
                 };
 
+                let ink_rect = line.get_extents().0;
                 let logical_rect = line.get_extents().1;
 
                 let line_text = &self.text[start_offset..end_offset];
@@ -331,10 +333,12 @@ impl CairoTextLayout {
                     start_offset,
                     end_offset,
                     trailing_whitespace,
-                    baseline: logical_rect.height as f64 / PANGO_SCALE,
-                    height: logical_rect.height as f64 / PANGO_SCALE, //TODO: This is wrong?
-                    y_offset: logical_rect.y as f64 / PANGO_SCALE,
+                    //TODO: Should this be the logical rect instead?
+                    baseline: ink_rect.height as f64 / PANGO_SCALE + y_distance,
+                    height: logical_rect.height as f64 / PANGO_SCALE,
+                    y_offset: y_distance,
                 });
+                y_distance += logical_rect.height as f64 / PANGO_SCALE;
             }
         }
 
