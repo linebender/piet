@@ -21,6 +21,7 @@ use piet::{
     TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 
+use unicode_segmentation::GraphemeCursor;
 use unicode_segmentation::UnicodeSegmentation;
 
 use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
@@ -350,9 +351,23 @@ impl TextLayout for CairoTextLayout {
 
         let (is_inside, index, trailing) = self.pango_layout.xy_to_index(x as i32, y as i32);
         let index = if trailing == 0 {
-            index as usize
+            index.try_into().unwrap()
         } else {
-            (index + trailing) as usize
+            /*
+             * NOTE(ForLoveOfCats): The docs specify that a non-zero value for trailing
+             * indicates that the point aligns to the trailing edge of the grapheme. In
+             * that case the value tells us the number of "characters" in the grapheme.
+             * If we just add this value to the index then we do not correctly align to
+             * the grapheme boundary. I can only assume that by "characters" it means
+             * codepoints which does not line up with our UTF-8 indexing.
+             */
+            let text = self.pango_layout.get_text().unwrap();
+            let index = index.try_into().unwrap();
+            let mut iterator = GraphemeCursor::new(index, text.len(), true);
+            iterator
+                .next_boundary(text.as_str(), 0)
+                .unwrap_or(Some(index))
+                .unwrap()
         };
 
         HitTestPoint::new(index, is_inside)
