@@ -89,6 +89,13 @@ impl Text for CairoText {
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
+        /*
+         * NOTE(ForLoveOfCats): It does not appear that Pango natively supports loading font
+         * data raw. All online resource I've seen so far point to registering fonts with
+         * fontconfig and then letting Pango grab it from there but they all assume you have
+         * a font file path which we do not have here.
+         * See: https://gitlab.freedesktop.org/fontconfig/fontconfig/-/issues/12
+         */
         Err(Error::NotSupported)
     }
 
