@@ -141,7 +141,7 @@ impl CairoTextLayoutBuilder {
 
             TextAttribute::FontSize(size) => {
                 let size = (size * PANGO_SCALE) as i32;
-                PangoAttribute::new_size(size).unwrap()
+                PangoAttribute::new_size_absolute(size).unwrap()
             }
 
             TextAttribute::Weight(weight) => {
