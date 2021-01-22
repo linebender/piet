@@ -18,7 +18,7 @@ use pangocairo::FontMap;
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
     util, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 
 use unicode_segmentation::GraphemeCursor;
@@ -32,6 +32,7 @@ type PangoAttribute = pango::Attribute;
 type PangoWeight = pango::Weight;
 type PangoStyle = pango::Style;
 type PangoUnderline = pango::Underline;
+type PangoAlignment = pango::Alignment;
 
 const PANGO_SCALE: f64 = pango::SCALE as f64;
 
@@ -106,6 +107,9 @@ impl Text for CairoText {
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
         let pango_layout = PangoLayout::new(&self.pango_context);
         pango_layout.set_text(text.as_str());
+
+        pango_layout.set_alignment(PangoAlignment::Left);
+        pango_layout.set_justify(false);
 
         CairoTextLayoutBuilder {
             text: Rc::new(text),
@@ -220,8 +224,31 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         self
     }
 
-    fn alignment(self, _alignment: piet::TextAlignment) -> Self {
-        // TextAlignment is not supported by cairo toy text.
+    fn alignment(self, alignment: TextAlignment) -> Self {
+        //TODO: This will not respect Start/End of right-to-left scripts
+
+        match alignment {
+            TextAlignment::Start => {
+                self.pango_layout.set_justify(false);
+                self.pango_layout.set_alignment(PangoAlignment::Left);
+            }
+
+            TextAlignment::End => {
+                self.pango_layout.set_justify(false);
+                self.pango_layout.set_alignment(PangoAlignment::Right);
+            }
+
+            TextAlignment::Center => {
+                self.pango_layout.set_justify(false);
+                self.pango_layout.set_alignment(PangoAlignment::Center);
+            }
+
+            TextAlignment::Justified => {
+                self.pango_layout.set_alignment(PangoAlignment::Left);
+                self.pango_layout.set_justify(true);
+            }
+        }
+
         self
     }
 
