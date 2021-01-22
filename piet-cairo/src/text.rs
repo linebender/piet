@@ -428,6 +428,12 @@ impl CairoTextLayout {
         let mut widest_logical_width = 0;
         for line_index in 0..self.pango_layout.get_line_count() {
             if let Some(line) = self.pango_layout.get_line_readonly(line_index) {
+                /*
+                 * NOTE: These values are not currently exposed so we need to get them
+                 * manually. It's kinda sucky I know
+                 *
+                 * TODO(ForLoveOfCats): Submit a PR to gtk-rs to expose these values
+                 */
                 let (start_offset, end_offset) = unsafe {
                     let raw_line = line.to_glib_none();
 
