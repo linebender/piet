@@ -28,10 +28,6 @@ type PangoAlignment = pango::Alignment;
 
 const PANGO_SCALE: f64 = pango::SCALE as f64;
 
-/// Right now, we don't need any state, as the "toy text API" treats the
-/// access to system font information as a global. This will change.
-// we use a phantom lifetime here to match the API of the d2d backend,
-// and the likely API of something with access to system font information.
 #[derive(Clone)]
 pub struct CairoText {
     pango_context: PangoContext,
@@ -43,9 +39,8 @@ pub struct CairoTextLayout {
     trailing_ws_width: f64,
     pub(crate) text: Rc<dyn TextStorage>,
 
-    // currently calculated on build
+    //Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
-
     pub(crate) pango_layout: PangoLayout,
 }
 
@@ -65,9 +60,6 @@ pub struct AttributeWithRange {
 
 impl CairoText {
     /// Create a new factory that satisfies the piet `Text` trait.
-    ///
-    /// No state is needed for now because the current implementation is just
-    /// toy text, but that will change when proper text is implemented.
     #[allow(clippy::new_without_default)]
     pub fn new() -> CairoText {
         let fontmap = FontMap::get_default().unwrap();
@@ -423,9 +415,11 @@ impl CairoTextLayout {
             let pango_width = new_width * pango::SCALE as f64;
             self.pango_layout.set_width(pango_width as i32);
         } else {
-            //NOTE: -1 is the default value, however `update_width` *could*
-            //be called any number of times with different values so we need
-            //to make sure to reset back to default whenever we get no width
+            /*
+             * NOTE: -1 is the default value, however `update_width` *could*
+             * be called any number of times with different values so we need
+             * to make sure to reset back to default whenever we get no width
+             */
             self.pango_layout.set_width(-1);
         }
 
@@ -458,7 +452,6 @@ impl CairoTextLayout {
                     start_offset,
                     end_offset,
                     trailing_whitespace,
-                    //TODO: Should this be the logical rect instead?
                     baseline: ink_rect.height as f64 / PANGO_SCALE + y_distance,
                     height: logical_rect.height as f64 / PANGO_SCALE,
                     y_offset: y_distance,
