@@ -1,16 +1,11 @@
 //! Text functionality for Piet cairo backend
 
-mod grapheme;
-mod lines;
-
 use std::convert::TryInto;
 use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 
 use glib::translate::ToGlibPtr;
-
-use cairo::{FontFace, FontOptions, FontSlant, FontWeight, Matrix, ScaledFont};
 
 use pango::{AttrList, FontMapExt};
 use pangocairo::FontMap;
@@ -22,9 +17,6 @@ use piet::{
 };
 
 use unicode_segmentation::GraphemeCursor;
-use unicode_segmentation::UnicodeSegmentation;
-
-use self::grapheme::{get_grapheme_boundaries, point_x_in_grapheme};
 
 type PangoLayout = pango::Layout;
 type PangoContext = pango::Context;
@@ -492,112 +484,6 @@ impl CairoTextLayout {
 impl fmt::Debug for CairoTextLayout {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("CairoTextLayout").finish()
-    }
-}
-
-// NOTE this is the same as the old, non-line-aware version of hit_test_point
-// Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_point(font: &ScaledFont, text: &str, point: Point) -> HitTestPoint {
-    // null case
-    if text.is_empty() {
-        return HitTestPoint::default();
-    }
-
-    // get bounds
-    // TODO handle if string is not null yet count is 0?
-    let end = UnicodeSegmentation::graphemes(text, true).count() - 1;
-    let end_bounds = match get_grapheme_boundaries(font, text, end) {
-        Some(bounds) => bounds,
-        None => return HitTestPoint::default(),
-    };
-
-    let start = 0;
-    let start_bounds = match get_grapheme_boundaries(font, text, start) {
-        Some(bounds) => bounds,
-        None => return HitTestPoint::default(),
-    };
-
-    // first test beyond ends
-    if point.x > end_bounds.trailing {
-        return HitTestPoint::new(text.len(), false);
-    }
-    if point.x <= start_bounds.leading {
-        return HitTestPoint::default();
-    }
-
-    // then test the beginning and end (common cases)
-    if let Some(hit) = point_x_in_grapheme(point.x, &start_bounds) {
-        return hit;
-    }
-    if let Some(hit) = point_x_in_grapheme(point.x, &end_bounds) {
-        return hit;
-    }
-
-    // Now that we know it's not beginning or end, begin binary search.
-    // Iterative style
-    let mut left = start;
-    let mut right = end;
-    loop {
-        // pick halfway point
-        let middle = left + ((right - left) / 2);
-
-        let grapheme_bounds = match get_grapheme_boundaries(font, text, middle) {
-            Some(bounds) => bounds,
-            None => return HitTestPoint::default(),
-        };
-
-        if let Some(hit) = point_x_in_grapheme(point.x, &grapheme_bounds) {
-            return hit;
-        }
-
-        // since it's not a hit, check if closer to start or finish
-        // and move the appropriate search boundary
-        if point.x < grapheme_bounds.leading {
-            right = middle;
-        } else if point.x > grapheme_bounds.trailing {
-            left = middle + 1;
-        } else {
-            unreachable!("hit_test_point conditional is exhaustive");
-        }
-    }
-}
-
-// NOTE this is the same as the old, non-line-aware version of hit_test_text_position.
-// Future: instead of passing Font, should there be some other line-level text layout?
-fn hit_test_line_position(font: &ScaledFont, text: &str, text_position: usize) -> f64 {
-    // Using substrings with unicode grapheme awareness
-
-    let text_len = text.len();
-
-    if text_position == 0 {
-        return 0.0;
-    }
-
-    if text_position as usize >= text_len {
-        return font.text_extents(&text).x_advance;
-    }
-
-    // Already checked that text_position > 0 and text_position < count.
-    // If text position is not at a grapheme boundary, use the text position of current
-    // grapheme cluster. But return the original text position
-    // Use the indices (byte offset, which for our purposes = utf8 code units).
-    let grapheme_indices = UnicodeSegmentation::grapheme_indices(text, true)
-        .take_while(|(byte_idx, _s)| text_position >= *byte_idx);
-
-    grapheme_indices
-        .last()
-        .map(|(idx, _)| font.text_extents(&text[..idx]).x_advance)
-        .unwrap_or_else(|| font.text_extents(&text).x_advance)
-}
-
-fn scale_matrix(scale: f64) -> Matrix {
-    Matrix {
-        xx: scale,
-        yx: 0.0,
-        xy: 0.0,
-        yy: scale,
-        x0: 0.0,
-        y0: 0.0,
     }
 }
 
