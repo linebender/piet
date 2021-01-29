@@ -16,6 +16,9 @@ use skia_safe::shader::Shader;
 use skia_safe::ClipOp;
 
 mod text;
+mod simple_text;
+
+//use simple_text::*;
 
 fn pairf32(p: Point) -> (f32, f32) {
     (p.x as f32, p.y as f32)
@@ -218,12 +221,29 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         let pos = pos.into();
         let mut paint = create_paint();
         let rect = layout.image_bounds() + pos.to_vec2();
-        let brush = layout.fg_color.make_brush(self, || rect);
+        let brush = match layout {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.fg_color.make_brush(self, || rect)
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.fg_color.make_brush(self, || rect)
+            }
+        };
         let mut paint = create_paint();
         apply_brush(&mut paint, brush.as_ref());
         
         let pos = skia_safe::Point::new(pos.x as f32, pos.y as f32);
-        layout.paragraph.paint(&mut self.canvas, pos); 
+        //let pos = skia_safe::Point::default();
+        use skia_safe::Font;
+        //self.canvas.draw_str(layout.text.as_str(), pos, &Font::default(), &paint);
+        match layout {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.paragraph.paint(&mut self.canvas, pos); 
+            }
+            SkiaTextLayout::Simple(simple) => {
+                self.canvas.draw_str(simple.text.as_str(), pos, &Font::default(), &paint);
+            }
+        };
     }
 
     fn save(&mut self) -> Result<(), Error> {

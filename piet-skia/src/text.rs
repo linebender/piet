@@ -9,6 +9,10 @@ use piet::{
 use skia_safe::{Path, Font, FontMgr, Paint};
 use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
 
+use std::fmt;
+
+use crate::simple_text::*;
+
 #[derive(Clone)]
 pub struct SkiaText {}
 
@@ -18,16 +22,42 @@ impl SkiaText {
     }
 }
 
+#[derive(Clone, Debug)]
+pub enum SkiaTextLayout {
+    Simple(SkiaSimpleTextLayout),
+    Paragraph(ParagraphTextLayout),
+}
+
 #[derive(Clone)]
-pub struct SkiaTextLayout {
+pub struct ParagraphTextLayout {
     pub(crate) fg_color: Color,
     size: Size,
     // skia doesn't support Clone trait for font...
     pub font: Rc<Font>,
-    text: Rc<dyn TextStorage>,
+    pub text: Rc<dyn TextStorage>,
     pub width: f32,
     // Paragraph doesn't support Clone trait
     pub paragraph: Rc<Paragraph>,
+}
+
+impl fmt::Debug for ParagraphTextLayout {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SkiaTextLayoutBuilder")
+            .field("fg_color", &self.fg_color)
+            .field("font", &self.font)
+            .field("text", &self.text.as_str())
+            .field("width", &self.width)
+            .finish()
+    }
+}
+
+impl fmt::Debug for SkiaTextLayoutBuilder {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SkiaTextLayoutBuilder")
+            .field("text", &self.text.as_str())
+            .field("width_constraint", &self.width_constraint)
+            .finish()
+    }
 }
 
 pub struct SkiaTextLayoutBuilder {
@@ -84,50 +114,163 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
     }
 
     fn build(mut self) -> Result<Self::Out, Error> {
-        let mut font_collection = FontCollection::new();
-        // TODO it's possible to create it as OnceCell, and preload Fonts
-        // that we might use
-        let font_mngr = FontMgr::new();
-        font_collection.set_default_font_manager(font_mngr, None);
-        let paragraph_style = ParagraphStyle::new();
-        let mut paragraph_builder = ParagraphBuilder::new(&paragraph_style, font_collection);
-        let mut ts = TextStyle::new();
-        ts.set_font_size(self.defaults.font_size as f32);
-        let mut paint = Paint::default();
-        let fg_color = self.defaults.fg_color;
-        paint.set_color(crate::convert_color(fg_color.clone()));
-        ts.set_foreground_color(paint);
-        paragraph_builder.push_style(&ts);
-        paragraph_builder.add_text(self.text.as_str());
-        let mut paragraph = paragraph_builder.build();
-        paragraph.layout(self.width_constraint as f32);
-        // there is no API to get exact width in current skia paragraph
-        let width = paragraph
-            .get_line_metrics()
-            .iter()
-            .map(|l| l.width)
-            .max_by(|x, y| x.abs().partial_cmp(&y.abs()).unwrap_or(std::cmp::Ordering::Equal))
-            .unwrap_or(0.) as f32;
+        let layout = if self.width_constraint.is_finite() {
+            // TODO add to paragraph
+            let mut font = Font::default(); // take font from TextLayout
+            let size = self.defaults.font_size; 
+            font.set_size(size as f32);
+            let mut font_collection = FontCollection::new();
+            // TODO it's possible to create it as OnceCell, and preload Fonts
+            // that we might use
+            let font_mngr = FontMgr::new();
+            font_collection.set_default_font_manager(font_mngr, None);
+            let paragraph_style = ParagraphStyle::new();
+            let mut paragraph_builder = ParagraphBuilder::new(&paragraph_style, font_collection);
+            let mut ts = TextStyle::new();
+            ts.set_font_size(self.defaults.font_size as f32);
+            let mut paint = Paint::default();
+            let fg_color = self.defaults.fg_color;
+            paint.set_color(crate::convert_color(fg_color.clone()));
+            ts.set_foreground_color(paint);
+            paragraph_builder.push_style(&ts);
+            paragraph_builder.add_text(self.text.as_str());
+            let mut paragraph = paragraph_builder.build();
+            paragraph.layout(self.width_constraint as f32);
+            let width = paragraph
+                .get_line_metrics()
+                .iter()
+                .map(|l| l.width)
+                .max_by(|x, y| x.abs().partial_cmp(&y.abs()).unwrap_or(std::cmp::Ordering::Equal))
+                .unwrap_or(0.) as f32;
 
-        // TODO add to paragraph
-        let mut font = Font::default(); // take font from TextLayout
-        let size = self.defaults.font_size;
-        
-        font.set_size(size as f32);
-        // note: if you do paragraph.layout(width) again it will wrap last word
-        // on each line because it's exact size as width_constraint
-        Ok(SkiaTextLayout{ 
-            fg_color,
-            size: Size::ZERO,
-            font: Rc::new(font),
-            text: self.text,
-            width,
-            paragraph: Rc::new(paragraph),
-        })
+            // note: if you do paragraph.layout(width) again it will wrap last word
+            // on each line because it's exact size as width_constraint
+            SkiaTextLayout::Paragraph(ParagraphTextLayout{
+                fg_color,
+                size: Size::ZERO,
+                font: Rc::new(font),
+                text: self.text,
+                width,
+                paragraph: Rc::new(paragraph),
+            })
+        } else {
+            let mut paint = Paint::default();
+            let fg_color = self.defaults.fg_color;
+            paint.set_color(crate::convert_color(fg_color.clone()));
+            let mut font = Font::default(); // take font from TextLayout
+            let size = self.defaults.font_size; 
+            font.set_size(size as f32);
+            let (width, rect) = font.measure_str(self.text.as_str(), None);
+            // note: if you do paragraph.layout(width) again it will wrap last word
+            // on each line because it's exact size as width_constraint
+            
+            SkiaTextLayout::Simple(SkiaSimpleTextLayout{
+                fg_color,
+                size: Size::ZERO,
+                font: Rc::new(font),
+                text: self.text,
+                width,
+                rect
+            })
+        };
+        Ok(layout)
+    }
+}
+impl TextLayout for SkiaTextLayout {
+    fn size(&self) -> Size {
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.size()
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.size()
+            }
+        }
+    }
+
+    fn trailing_whitespace_width(&self) -> f64 {
+        unimplemented!();
+    }
+
+    fn image_bounds(&self) -> Rect {
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.image_bounds()
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.image_bounds()
+            }
+        }
+    }
+
+    fn text(&self) -> &str {
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.text()
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.text()
+            }
+        }
+    }
+
+    fn line_text(&self, line_number: usize) -> Option<&str> {
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.line_text(line_number)
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.line_text(line_number)
+            }
+        }
+    }
+
+    fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.line_metric(line_number)
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.line_metric(line_number)
+            }
+        }
+    }
+
+    fn line_count(&self) -> usize {
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.line_count()
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.line_count()
+            }
+        }
+   }
+
+    fn hit_test_point(&self, point: Point) -> HitTestPoint { 
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.hit_test_point(point)
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.hit_test_point(point)
+            }
+        }
+    }
+
+    fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
+        match self {
+            SkiaTextLayout::Paragraph(paragraph) => {
+                paragraph.hit_test_text_position(idx)
+            }
+            SkiaTextLayout::Simple(simple) => {
+                simple.hit_test_text_position(idx)
+            }
+        }
     }
 }
 
-impl TextLayout for SkiaTextLayout {
+impl TextLayout for ParagraphTextLayout {
     fn size(&self) -> Size {
         let size = Size::new(self.width as f64, self.paragraph.height() as f64);
         size
@@ -157,7 +300,7 @@ impl TextLayout for SkiaTextLayout {
 
     fn line_count(&self) -> usize {
         unimplemented!();
-    }
+   }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint { 
         // TODO
