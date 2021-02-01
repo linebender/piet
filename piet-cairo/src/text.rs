@@ -53,74 +53,21 @@ pub struct CairoTextLayoutBuilder {
     pango_layout: PangoLayout,
 }
 
-pub struct AttributeWithRange {
+struct AttributeWithRange {
     attribute: TextAttribute,
     range: Option<Range<usize>>, //No range == entire layout
 }
 
-impl CairoText {
-    /// Create a new factory that satisfies the piet `Text` trait.
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> CairoText {
-        let fontmap = FontMap::get_default().unwrap();
-        CairoText {
-            pango_context: fontmap.create_context().unwrap(),
-        }
-    }
-}
-
-impl Text for CairoText {
-    type TextLayout = CairoTextLayout;
-    type TextLayoutBuilder = CairoTextLayoutBuilder;
-
-    fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        Some(FontFamily::new_unchecked(family_name))
-    }
-
-    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
-        /*
-         * NOTE(ForLoveOfCats): It does not appear that Pango natively supports loading font
-         * data raw. All online resource I've seen so far point to registering fonts with
-         * fontconfig and then letting Pango grab it from there but they all assume you have
-         * a font file path which we do not have here.
-         * See: https://gitlab.freedesktop.org/fontconfig/fontconfig/-/issues/12
-         */
-        Err(Error::NotSupported)
-    }
-
-    fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
-        let pango_layout = PangoLayout::new(&self.pango_context);
-        pango_layout.set_text(text.as_str());
-
-        pango_layout.set_alignment(PangoAlignment::Left);
-        pango_layout.set_justify(false);
-
-        CairoTextLayoutBuilder {
-            text: Rc::new(text),
-            defaults: util::LayoutDefaults::default(),
-            attributes: Vec::new(),
-            last_range_start_pos: 0,
-            width_constraint: f64::INFINITY,
-            pango_layout,
-        }
-    }
-}
-
-impl fmt::Debug for CairoText {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("CairoText").finish()
-    }
-}
-
-impl CairoTextLayoutBuilder {
-    fn build_pango_attribute(attribute: AttributeWithRange) -> PangoAttribute {
-        let mut pango_attribute = match &attribute.attribute {
+impl AttributeWithRange {
+    fn into_pango(self) -> Option<PangoAttribute> {
+        let mut pango_attribute = match &self.attribute {
             TextAttribute::FontFamily(family) => {
                 let family = family.name();
-                PangoAttribute::new_family(family).unwrap_or_else(|| {
-                    PangoAttribute::new_family(FontFamily::SERIF.name())
-                        .expect("Failed to load fallback font family")
-                })
+                /*
+                 * NOTE: If the family fails to resolve we just don't apply the attribute.
+                 * That allows Pango to use its default font of choice to render that text
+                 */
+                PangoAttribute::new_family(family)?
             }
 
             TextAttribute::FontSize(size) => {
@@ -191,12 +138,66 @@ impl CairoTextLayoutBuilder {
             }
         };
 
-        if let Some(range) = attribute.range {
+        if let Some(range) = self.range {
             pango_attribute.set_start_index(range.start.try_into().unwrap());
             pango_attribute.set_end_index(range.end.try_into().unwrap());
         }
 
-        pango_attribute
+        Some(pango_attribute)
+    }
+}
+
+impl CairoText {
+    /// Create a new factory that satisfies the piet `Text` trait.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> CairoText {
+        let fontmap = FontMap::get_default().unwrap();
+        CairoText {
+            pango_context: fontmap.create_context().unwrap(),
+        }
+    }
+}
+
+impl Text for CairoText {
+    type TextLayout = CairoTextLayout;
+    type TextLayoutBuilder = CairoTextLayoutBuilder;
+
+    fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
+        Some(FontFamily::new_unchecked(family_name))
+    }
+
+    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
+        /*
+         * NOTE(ForLoveOfCats): It does not appear that Pango natively supports loading font
+         * data raw. All online resource I've seen so far point to registering fonts with
+         * fontconfig and then letting Pango grab it from there but they all assume you have
+         * a font file path which we do not have here.
+         * See: https://gitlab.freedesktop.org/fontconfig/fontconfig/-/issues/12
+         */
+        Err(Error::NotSupported)
+    }
+
+    fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
+        let pango_layout = PangoLayout::new(&self.pango_context);
+        pango_layout.set_text(text.as_str());
+
+        pango_layout.set_alignment(PangoAlignment::Left);
+        pango_layout.set_justify(false);
+
+        CairoTextLayoutBuilder {
+            text: Rc::new(text),
+            defaults: util::LayoutDefaults::default(),
+            attributes: Vec::new(),
+            last_range_start_pos: 0,
+            width_constraint: f64::INFINITY,
+            pango_layout,
+        }
+    }
+}
+
+impl fmt::Debug for CairoText {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("CairoText").finish()
     }
 }
 
@@ -265,38 +266,64 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
     fn build(self) -> Result<Self::Out, Error> {
         let pango_attributes = AttrList::new();
+        let add_attribute = |attribute| {
+            if let Some(attribute) = attribute {
+                pango_attributes.insert(attribute);
+            }
+        };
 
-        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
-            attribute: TextAttribute::FontFamily(self.defaults.font),
-            range: None,
-        }));
-        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
-            attribute: TextAttribute::FontSize(self.defaults.font_size),
-            range: None,
-        }));
-        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
-            attribute: TextAttribute::Weight(self.defaults.weight),
-            range: None,
-        }));
-        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
-            attribute: TextAttribute::TextColor(self.defaults.fg_color),
-            range: None,
-        }));
-        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
-            attribute: TextAttribute::Style(self.defaults.style),
-            range: None,
-        }));
-        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
-            attribute: TextAttribute::Underline(self.defaults.underline),
-            range: None,
-        }));
-        pango_attributes.insert(Self::build_pango_attribute(AttributeWithRange {
-            attribute: TextAttribute::Strikethrough(self.defaults.strikethrough),
-            range: None,
-        }));
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::FontFamily(self.defaults.font),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::FontSize(self.defaults.font_size),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Weight(self.defaults.weight),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::TextColor(self.defaults.fg_color),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Style(self.defaults.style),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Underline(self.defaults.underline),
+                range: None,
+            }
+            .into_pango(),
+        );
+        add_attribute(
+            AttributeWithRange {
+                attribute: TextAttribute::Strikethrough(self.defaults.strikethrough),
+                range: None,
+            }
+            .into_pango(),
+        );
 
         for attribute in self.attributes {
-            pango_attributes.insert(Self::build_pango_attribute(attribute));
+            add_attribute(attribute.into_pango());
         }
 
         self.pango_layout.set_attributes(Some(&pango_attributes));
