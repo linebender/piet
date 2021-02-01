@@ -7,7 +7,7 @@ use winapi::um::d2d1::{
     D2D1_MATRIX_3X2_F, D2D1_POINT_2F, D2D1_RECT_F, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
 };
 
-use piet::kurbo::{Affine, Circle, Point, Rect, RoundedRect, Vec2};
+use piet::kurbo::{Affine, Circle, Point, Rect, Vec2};
 
 use piet::{Color, Error, GradientStop, LineCap, LineJoin, RoundFrom, RoundInto, StrokeStyle};
 
@@ -98,11 +98,11 @@ pub(crate) fn rect_to_rectf(rect: Rect) -> D2D1_RECT_F {
     }
 }
 
-pub(crate) fn rounded_rect_to_d2d(round_rect: RoundedRect) -> D2D1_ROUNDED_RECT {
+pub(crate) fn rounded_rect_to_d2d(rect: Rect, radius: f64) -> D2D1_ROUNDED_RECT {
     D2D1_ROUNDED_RECT {
-        rect: rect_to_rectf(round_rect.rect()),
-        radiusX: round_rect.radius() as f32,
-        radiusY: round_rect.radius() as f32,
+        rect: rect_to_rectf(rect),
+        radiusX: radius as f32,
+        radiusY: radius as f32,
     }
 }
 

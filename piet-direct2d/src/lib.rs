@@ -119,7 +119,16 @@ fn geometry_from_shape(
     if let Some(rect) = shape.as_rect() {
         Ok(d2d.create_rect_geometry(rect)?.into())
     } else if let Some(round_rect) = shape.as_rounded_rect() {
-        Ok(d2d.create_round_rect_geometry(round_rect)?.into())
+        // Direct2D's rounded rectangle geometry only supports a single radius
+        // value for the whole rectangle, so we can only use that geometry if
+        // all radius values are the same.
+        if let Some(radius) = round_rect.radii().as_single_radius() {
+            Ok(d2d
+                .create_round_rect_geometry(round_rect.rect(), radius)?
+                .into())
+        } else {
+            path_from_shape(d2d, is_filled, shape, fill_rule)
+        }
     } else if let Some(circle) = shape.as_circle() {
         Ok(d2d.create_circle_geometry(circle)?.into())
     } else {
