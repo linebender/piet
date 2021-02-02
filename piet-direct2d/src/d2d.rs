@@ -536,17 +536,17 @@ impl DeviceContext {
                 );
             }
         } else {
-            let half_width_floor = (rect.width() / 2.0).floor();
-            let half_height_floor = (rect.height() / 2.0).floor();
+            let half_width = rect.width() / 2.0;
+            let half_height = rect.height() / 2.0;
             let half_stroke_width = (width / 2.0) as f64;
             let radii = rect.radii();
 
             // Top-left
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0 - half_stroke_width,
-                rect.rect().y0 - half_stroke_width,
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y0 + half_height_floor,
+                (rect.rect().x0 - half_stroke_width).floor(),
+                (rect.rect().y0 - half_stroke_width).floor(),
+                (rect.rect().x0 + half_width).floor(),
+                (rect.rect().y0 + half_height).floor(),
             ));
             unsafe {
                 self.0.DrawRoundedRectangle(
@@ -560,10 +560,10 @@ impl DeviceContext {
 
             // Top-right
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y0 - half_stroke_width,
-                rect.rect().x1 + half_stroke_width,
-                rect.rect().y0 + half_height_floor,
+                (rect.rect().x0 + half_width).floor(),
+                (rect.rect().y0 - half_stroke_width).floor(),
+                (rect.rect().x1 + half_stroke_width).ceil(),
+                (rect.rect().y0 + half_height).floor(),
             ));
             unsafe {
                 self.0.DrawRoundedRectangle(
@@ -577,10 +577,10 @@ impl DeviceContext {
 
             // Bottom-right
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y0 + half_height_floor,
-                rect.rect().x1 + half_stroke_width,
-                rect.rect().y1 + half_stroke_width,
+                (rect.rect().x0 + half_width).floor(),
+                (rect.rect().y0 + half_height).floor(),
+                (rect.rect().x1 + half_stroke_width).ceil(),
+                (rect.rect().y1 + half_stroke_width).ceil(),
             ));
             unsafe {
                 self.0.DrawRoundedRectangle(
@@ -594,10 +594,10 @@ impl DeviceContext {
 
             // Bottom-left
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0 - half_stroke_width,
-                rect.rect().y0 + half_height_floor,
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y1 + half_stroke_width,
+                (rect.rect().x0 - half_stroke_width).floor(),
+                (rect.rect().y0 + half_height).floor(),
+                (rect.rect().x0 + half_width).floor(),
+                (rect.rect().y1 + half_stroke_width).ceil(),
             ));
             unsafe {
                 self.0.DrawRoundedRectangle(
@@ -651,16 +651,16 @@ impl DeviceContext {
         // for each, so that each FillRoundedRectangle call corresponds to one
         // corner of the resulting rounded rectangle.
         } else {
-            let half_width_floor = (rect.width() / 2.0).floor();
-            let half_height_floor = (rect.height() / 2.0).floor();
+            let half_width = rect.width() / 2.0;
+            let half_height = rect.height() / 2.0;
             let radii = rect.radii();
 
             // Top-left
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0,
-                rect.rect().y0,
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y0 + half_height_floor,
+                rect.rect().x0.floor(),
+                rect.rect().y0.floor(),
+                (rect.rect().x0 + half_width).floor(),
+                (rect.rect().y0 + half_height).floor(),
             ));
             unsafe {
                 self.0.FillRoundedRectangle(
@@ -672,10 +672,10 @@ impl DeviceContext {
 
             // Top-right
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y0,
-                rect.rect().x1,
-                rect.rect().y0 + half_height_floor,
+                (rect.rect().x0 + half_width).floor(),
+                rect.rect().y0.floor(),
+                rect.rect().x1.ceil(),
+                (rect.rect().y0 + half_height).floor(),
             ));
             unsafe {
                 self.0.FillRoundedRectangle(
@@ -687,10 +687,10 @@ impl DeviceContext {
 
             // Bottom-right
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y0 + half_height_floor,
-                rect.rect().x1,
-                rect.rect().y1,
+                (rect.rect().x0 + half_width).floor(),
+                (rect.rect().y0 + half_height).floor(),
+                (rect.rect().x1).ceil(),
+                (rect.rect().y1).ceil(),
             ));
             unsafe {
                 self.0.FillRoundedRectangle(
@@ -702,10 +702,10 @@ impl DeviceContext {
 
             // Bottom-left
             self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0,
-                rect.rect().y0 + half_height_floor,
-                rect.rect().x0 + half_width_floor,
-                rect.rect().y1,
+                (rect.rect().x0).floor(),
+                (rect.rect().y0 + half_height).floor(),
+                (rect.rect().x0 + half_width).floor(),
+                (rect.rect().y1).ceil(),
             ));
             unsafe {
                 self.0.FillRoundedRectangle(
