@@ -10,8 +10,8 @@ edition = "2018"
 keywords = ["graphics", "2d"]
 
 [features]
-default = ["skia"]
 skia = ["skia-safe", "piet-skia"]
+cairo = ["piet-cairo", "cairo-rs", "cairo-sys-rs"]
 web = ["piet-web"]
 
 # passing on all the image features. AVIF is not supported because it does not
@@ -41,11 +41,11 @@ cfg-if = "1.0"
 png = { version = "0.16.1", optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
-skia-safe = { git = "https://github.com/Vurich/rust-skia.git", features = ["gl", "wayland", "nightly", "lottie", "textlayout"], optional = true }
+skia-safe = { git = "https://github.com/Vurich/rust-skia.git", features = ["gl", "lottie", "textlayout"], optional = true }
 piet-skia = { path = "../piet-skia", optional = true}
-#piet-cairo = { version = "0.2.0", path = "../piet-cairo"}
-#cairo-rs = { version = "0.9.1", default_features = false}
-#cairo-sys-rs = { version = "0.10.0" }
+piet-cairo = { version = "0.3.0", path = "../piet-cairo", optional = true }
+cairo-rs = { version = "0.9.1", default_features = false, optional = true }
+cairo-sys-rs = { version = "0.10.0", optional = true }
 
 [target.'cfg(target_os="macos")'.dependencies]
 piet-coregraphics = { version = "0.3.0", path = "../piet-coregraphics" }
