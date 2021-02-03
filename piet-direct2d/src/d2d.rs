@@ -276,7 +276,7 @@ impl D2DFactory {
                 .0
                 .deref()
                 .deref()
-                .CreateRoundedRectangleGeometry(&rounded_rect_to_d2d(rect, radius), &mut ptr); // TODO
+                .CreateRoundedRectangleGeometry(&rounded_rect_to_d2d(rect, radius), &mut ptr);
             wrap(hr, ptr, RoundedRectangleGeometry)
         }
     }
