@@ -370,16 +370,20 @@ fn add_shape(node: &mut impl Node, shape: impl Shape, attrs: &Attrs) {
             .set("r", circle.radius);
         attrs.apply_to(&mut x);
         node.append(x);
+        return;
     } else if let Some(rect) = shape.as_rounded_rect() {
-        let mut x = svg::node::element::Rectangle::new()
-            .set("x", rect.origin().x)
-            .set("y", rect.origin().y)
-            .set("width", rect.width())
-            .set("height", rect.height())
-            .set("rx", rect.radius())
-            .set("ry", rect.radius());
-        attrs.apply_to(&mut x);
-        node.append(x);
+        if let Some(radius) = rect.radii().as_single_radius() {
+            let mut x = svg::node::element::Rectangle::new()
+                .set("x", rect.origin().x)
+                .set("y", rect.origin().y)
+                .set("width", rect.width())
+                .set("height", rect.height())
+                .set("rx", radius)
+                .set("ry", radius);
+            attrs.apply_to(&mut x);
+            node.append(x);
+            return;
+        }
     } else if let Some(rect) = shape.as_rect() {
         let mut x = svg::node::element::Rectangle::new()
             .set("x", rect.origin().x)
@@ -388,11 +392,12 @@ fn add_shape(node: &mut impl Node, shape: impl Shape, attrs: &Attrs) {
             .set("height", rect.height());
         attrs.apply_to(&mut x);
         node.append(x);
-    } else {
-        let mut path = svg::node::element::Path::new().set("d", shape.into_path(1e-3).to_svg());
-        attrs.apply_to(&mut path);
-        node.append(path)
+        return;
     }
+
+    let mut path = svg::node::element::Path::new().set("d", shape.into_path(1e-3).to_svg());
+    attrs.apply_to(&mut path);
+    node.append(path);
 }
 
 #[derive(Debug, Clone, Default)]
