@@ -479,18 +479,10 @@ impl CairoTextLayout {
                 };
 
                 //Pango likes to give us the line range *without* the newline char(s)
-                let end_offset = {
-                    let mut end_offset = end_offset;
-                    loop {
-                        let next_byte = self.text.as_bytes().get(end_offset);
-                        match next_byte {
-                            Some(b'\r') | Some(b'\n') => {
-                                end_offset += 1;
-                            }
-
-                            _ => break end_offset,
-                        }
-                    }
+                let end_offset = match self.text.as_bytes()[end_offset..] {
+                    [b'\r', b'\n', ..] => end_offset + 2,
+                    [b'\r', ..] | [b'\n', ..] => end_offset + 1,
+                    _ => end_offset,
                 };
 
                 let ink_rect = line.get_extents().0;
