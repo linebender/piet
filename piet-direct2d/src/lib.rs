@@ -439,17 +439,22 @@ impl<'a> D2DRenderContext<'a> {
 
         // TODO: do something special (or nothing at all) for line?
         if let Some(rect) = shape.as_rect() {
-            self.rt.fill_rect(rect, &brush)
+            self.rt.fill_rect(rect, &brush);
+            return;
         } else if let Some(round_rect) = shape.as_rounded_rect() {
-            self.rt.fill_rounded_rect(round_rect, &brush)
-        } else if let Some(circle) = shape.as_circle() {
-            self.rt.fill_circle(circle, &brush)
-        } else {
-            match path_from_shape(self.factory, true, shape, fill_rule) {
-                Ok(geom) => self.rt.fill_geometry(&geom, &brush, None),
-                Err(e) => self.err = Err(e),
+            if let Some(radius) = round_rect.radii().as_single_radius() {
+                self.rt.fill_rounded_rect(round_rect.rect(), radius, &brush);
+                return;
             }
+        } else if let Some(circle) = shape.as_circle() {
+            self.rt.fill_circle(circle, &brush);
+            return;
         }
+
+        match path_from_shape(self.factory, true, shape, fill_rule) {
+            Ok(geom) => self.rt.fill_geometry(&geom, &brush, None),
+            Err(e) => self.err = Err(e),
+        };
     }
 
     fn stroke_impl(
@@ -463,24 +468,31 @@ impl<'a> D2DRenderContext<'a> {
         let width = width as f32;
 
         if let Some(line) = shape.as_line() {
-            self.rt.draw_line(line, &brush, width, style)
+            self.rt.draw_line(line, &brush, width, style);
+            return;
         } else if let Some(rect) = shape.as_rect() {
-            self.rt.draw_rect(rect, &brush, width, style)
+            self.rt.draw_rect(rect, &brush, width, style);
+            return;
         } else if let Some(round_rect) = shape.as_rounded_rect() {
-            self.rt.draw_rounded_rect(round_rect, &brush, width, style)
+            if let Some(radius) = round_rect.radii().as_single_radius() {
+                self.rt
+                    .draw_rounded_rect(round_rect.rect(), radius, &brush, width, style);
+                return;
+            }
         } else if let Some(circle) = shape.as_circle() {
-            self.rt.draw_circle(circle, &brush, width, style)
-        } else {
-            let geom = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
-                Ok(geom) => geom,
-                Err(e) => {
-                    self.err = Err(e);
-                    return;
-                }
-            };
-            let width = width;
-            self.rt.draw_geometry(&geom, &*brush, width, style);
+            self.rt.draw_circle(circle, &brush, width, style);
+            return;
         }
+
+        let geom = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+            Ok(geom) => geom,
+            Err(e) => {
+                self.err = Err(e);
+                return;
+            }
+        };
+        let width = width;
+        self.rt.draw_geometry(&geom, &*brush, width, style);
     }
 
     // This is split out to unify error reporting, as there are lots of opportunities for

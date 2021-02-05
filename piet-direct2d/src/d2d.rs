@@ -519,95 +519,20 @@ impl DeviceContext {
 
     pub(crate) fn draw_rounded_rect(
         &mut self,
-        rect: RoundedRect,
+        rect: Rect,
+        radius: f64,
         brush: &Brush,
         width: f32,
         style: Option<&StrokeStyle>,
     ) {
-        let single_radius = rect.radii().as_single_radius();
-        if let Some(radius) = single_radius {
-            let d2d_rounded_rect = rounded_rect_to_d2d(rect.rect(), radius);
-            unsafe {
-                self.0.DrawRoundedRectangle(
-                    &d2d_rounded_rect,
-                    brush.as_raw(),
-                    width,
-                    stroke_style_to_d2d(style),
-                );
-            }
-        } else {
-            let half_width = rect.width() / 2.0;
-            let half_height = rect.height() / 2.0;
-            let half_stroke_width = (width / 2.0) as f64;
-            let radii = rect.radii();
-
-            // Top-left
-            self.push_axis_aligned_clip(&Rect::new(
-                (rect.rect().x0 - half_stroke_width).floor(),
-                (rect.rect().y0 - half_stroke_width).floor(),
-                (rect.rect().x0 + half_width).floor(),
-                (rect.rect().y0 + half_height).floor(),
-            ));
-            unsafe {
-                self.0.DrawRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.top_left),
-                    brush.as_raw(),
-                    width,
-                    stroke_style_to_d2d(style),
-                );
-            }
-            self.pop_axis_aligned_clip();
-
-            // Top-right
-            self.push_axis_aligned_clip(&Rect::new(
-                (rect.rect().x0 + half_width).floor(),
-                (rect.rect().y0 - half_stroke_width).floor(),
-                (rect.rect().x1 + half_stroke_width).ceil(),
-                (rect.rect().y0 + half_height).floor(),
-            ));
-            unsafe {
-                self.0.DrawRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.top_right),
-                    brush.as_raw(),
-                    width,
-                    stroke_style_to_d2d(style),
-                );
-            }
-            self.pop_axis_aligned_clip();
-
-            // Bottom-right
-            self.push_axis_aligned_clip(&Rect::new(
-                (rect.rect().x0 + half_width).floor(),
-                (rect.rect().y0 + half_height).floor(),
-                (rect.rect().x1 + half_stroke_width).ceil(),
-                (rect.rect().y1 + half_stroke_width).ceil(),
-            ));
-            unsafe {
-                self.0.DrawRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.bottom_right),
-                    brush.as_raw(),
-                    width,
-                    stroke_style_to_d2d(style),
-                );
-            }
-            self.pop_axis_aligned_clip();
-
-            // Bottom-left
-            self.push_axis_aligned_clip(&Rect::new(
-                (rect.rect().x0 - half_stroke_width).floor(),
-                (rect.rect().y0 + half_height).floor(),
-                (rect.rect().x0 + half_width).floor(),
-                (rect.rect().y1 + half_stroke_width).ceil(),
-            ));
-            unsafe {
-                self.0.DrawRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.bottom_left),
-                    brush.as_raw(),
-                    width,
-                    stroke_style_to_d2d(style),
-                );
-            }
-            self.pop_axis_aligned_clip();
+        let d2d_rounded_rect = rounded_rect_to_d2d(rect, radius);
+        unsafe {
+            self.0.DrawRoundedRectangle(
+                &d2d_rounded_rect,
+                brush.as_raw(),
+                width,
+                stroke_style_to_d2d(style),
+            );
         }
     }
 
@@ -634,86 +559,11 @@ impl DeviceContext {
         }
     }
 
-    pub(crate) fn fill_rounded_rect(&mut self, rect: RoundedRect, brush: &Brush) {
-        let single_radius = rect.radii().as_single_radius();
-        // If the radii are all equal, then draw with a single
-        // FillRoundedRectangle call. FillRoundedRectangle only takes a single
-        // radius, so we need something more complex when corners have varying
-        // radii.
-        if let Some(radius) = single_radius {
-            let d2d_rounded_rect = rounded_rect_to_d2d(rect.rect(), radius);
-            unsafe {
-                self.0
-                    .FillRoundedRectangle(&d2d_rounded_rect, brush.as_raw());
-            }
-        // If the radii aren't equal, then this code block will draw four
-        // rounded rectangles. When drawing, it will set a clipping rectangle
-        // for each, so that each FillRoundedRectangle call corresponds to one
-        // corner of the resulting rounded rectangle.
-        } else {
-            let half_width = rect.width() / 2.0;
-            let half_height = rect.height() / 2.0;
-            let radii = rect.radii();
-
-            // Top-left
-            self.push_axis_aligned_clip(&Rect::new(
-                rect.rect().x0.floor(),
-                rect.rect().y0.floor(),
-                (rect.rect().x0 + half_width).floor(),
-                (rect.rect().y0 + half_height).floor(),
-            ));
-            unsafe {
-                self.0.FillRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.top_left),
-                    brush.as_raw(),
-                );
-            }
-            self.pop_axis_aligned_clip();
-
-            // Top-right
-            self.push_axis_aligned_clip(&Rect::new(
-                (rect.rect().x0 + half_width).floor(),
-                rect.rect().y0.floor(),
-                rect.rect().x1.ceil(),
-                (rect.rect().y0 + half_height).floor(),
-            ));
-            unsafe {
-                self.0.FillRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.top_right),
-                    brush.as_raw(),
-                );
-            }
-            self.pop_axis_aligned_clip();
-
-            // Bottom-right
-            self.push_axis_aligned_clip(&Rect::new(
-                (rect.rect().x0 + half_width).floor(),
-                (rect.rect().y0 + half_height).floor(),
-                (rect.rect().x1).ceil(),
-                (rect.rect().y1).ceil(),
-            ));
-            unsafe {
-                self.0.FillRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.bottom_right),
-                    brush.as_raw(),
-                );
-            }
-            self.pop_axis_aligned_clip();
-
-            // Bottom-left
-            self.push_axis_aligned_clip(&Rect::new(
-                (rect.rect().x0).floor(),
-                (rect.rect().y0 + half_height).floor(),
-                (rect.rect().x0 + half_width).floor(),
-                (rect.rect().y1).ceil(),
-            ));
-            unsafe {
-                self.0.FillRoundedRectangle(
-                    &rounded_rect_to_d2d(rect.rect(), radii.bottom_left),
-                    brush.as_raw(),
-                );
-            }
-            self.pop_axis_aligned_clip();
+    pub(crate) fn fill_rounded_rect(&mut self, rect: Rect, radius: f64, brush: &Brush) {
+        let d2d_rounded_rect = rounded_rect_to_d2d(rect, radius);
+        unsafe {
+            self.0
+                .FillRoundedRectangle(&d2d_rounded_rect, brush.as_raw());
         }
     }
 
@@ -752,26 +602,9 @@ impl DeviceContext {
         }
     }
 
-    // Rectangle mask
-    pub(crate) fn push_axis_aligned_clip(&mut self, clip: &Rect) {
-        let rectf = &rect_to_rectf(*clip);
-        unsafe {
-            self.0
-                .deref()
-                .deref()
-                .PushAxisAlignedClip(rectf, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE)
-        }
-    }
-
     pub(crate) fn pop_layer(&mut self) {
         unsafe {
             self.0.PopLayer();
-        }
-    }
-
-    pub(crate) fn pop_axis_aligned_clip(&mut self) {
-        unsafe {
-            self.0.PopAxisAlignedClip();
         }
     }
 
