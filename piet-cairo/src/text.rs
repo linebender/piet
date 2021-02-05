@@ -494,7 +494,7 @@ impl CairoTextLayout {
 
                 let line_text = &self.text[start_offset..end_offset];
                 let trimmed_len = line_text.trim_end().len();
-                let trailing_whitespace = line_text[trimmed_len..].chars().count();
+                let trailing_whitespace = line_text[trimmed_len..].len();
 
                 line_metrics.push(LineMetric {
                     start_offset,
