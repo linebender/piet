@@ -7,6 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-skia-safe = { git = "https://github.com/Vurich/rust-skia.git", features = ["gl", "wayland", "nightly", "lottie", "textlayout"] }
+skia-safe = { git = "https://github.com/Vurich/rust-skia.git", features = ["gl", "lottie", "textlayout"] }
 piet = { version = "0.3.1", path = "../piet", features = ["samples"] }
 xi-unicode = "0.2.0"
