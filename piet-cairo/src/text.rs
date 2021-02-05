@@ -210,7 +210,15 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 
     fn alignment(self, alignment: TextAlignment) -> Self {
-        //TODO: This will not respect Start/End of right-to-left scripts
+        /*
+         * NOTE: Pango has `auto_dir` enabled by default. This means that
+         * when it encounters a paragraph starting with a left-to-right
+         * character the meanings of `Left` and `Right` are switched for
+         * that paragraph. As a result the meaning of Piet's own `Start`
+         * and `End` are preserved
+         *
+         * See: http://gtk-rs.org/docs/pango/struct.Layout.html#method.set_auto_dir
+         */
 
         match alignment {
             TextAlignment::Start => {
