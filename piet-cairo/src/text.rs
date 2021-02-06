@@ -461,50 +461,53 @@ impl CairoTextLayout {
         let mut line_metrics = Vec::new();
         let mut y_distance = 0.;
         let mut widest_logical_width = 0;
-        for line_index in 0..self.pango_layout.get_line_count() {
-            if let Some(line) = self.pango_layout.get_line_readonly(line_index) {
-                /*
-                 * NOTE: These values are not currently exposed so we need to get them
-                 * manually. It's kinda sucky I know
-                 *
-                 * TODO(ForLoveOfCats): Submit a PR to gtk-rs to expose these values
-                 */
-                let (start_offset, end_offset) = unsafe {
-                    let raw_line = line.to_glib_none();
+        let mut iterator = self.pango_layout.get_iter().unwrap();
+        loop {
+            let line = iterator.get_line_readonly().unwrap();
 
-                    let start_offset = (*raw_line.0).start_index as usize;
-                    let length = (*raw_line.0).length as usize;
+            /*
+             * NOTE: These values are not currently exposed so we need to get them
+             * manually. It's kinda sucky I know
+             *
+             * TODO(ForLoveOfCats): Submit a PR to gtk-rs to expose these values
+             */
+            let (start_offset, end_offset) = unsafe {
+                let raw_line = line.to_glib_none();
 
-                    (start_offset, start_offset + length)
-                };
+                let start_offset = (*raw_line.0).start_index as usize;
+                let length = (*raw_line.0).length as usize;
 
-                //Pango likes to give us the line range *without* the newline char(s)
-                let end_offset = match self.text.as_bytes()[end_offset..] {
-                    [b'\r', b'\n', ..] => end_offset + 2,
-                    [b'\r', ..] | [b'\n', ..] => end_offset + 1,
-                    _ => end_offset,
-                };
+                (start_offset, start_offset + length)
+            };
 
-                let ink_rect = line.get_extents().0;
-                let logical_rect = line.get_extents().1;
+            //Pango likes to give us the line range *without* the newline char(s)
+            let end_offset = match self.text.as_bytes()[end_offset..] {
+                [b'\r', b'\n', ..] => end_offset + 2,
+                [b'\r', ..] | [b'\n', ..] => end_offset + 1,
+                _ => end_offset,
+            };
 
-                if logical_rect.width > widest_logical_width {
-                    widest_logical_width = logical_rect.width;
-                }
+            let logical_rect = line.get_extents().1;
+            if logical_rect.width > widest_logical_width {
+                widest_logical_width = logical_rect.width;
+            }
 
-                let line_text = &self.text[start_offset..end_offset];
-                let trimmed_len = line_text.trim_end().len();
-                let trailing_whitespace = line_text[trimmed_len..].len();
+            let line_text = &self.text[start_offset..end_offset];
+            let trimmed_len = line_text.trim_end().len();
+            let trailing_whitespace = line_text[trimmed_len..].len();
 
-                line_metrics.push(LineMetric {
-                    start_offset,
-                    end_offset,
-                    trailing_whitespace,
-                    baseline: ink_rect.height as f64 / PANGO_SCALE + y_distance,
-                    height: logical_rect.height as f64 / PANGO_SCALE,
-                    y_offset: y_distance,
-                });
-                y_distance += logical_rect.height as f64 / PANGO_SCALE;
+            line_metrics.push(LineMetric {
+                start_offset,
+                end_offset,
+                trailing_whitespace,
+                baseline: iterator.get_baseline() as f64 / PANGO_SCALE,
+                height: logical_rect.height as f64 / PANGO_SCALE,
+                y_offset: y_distance,
+            });
+            y_distance += logical_rect.height as f64 / PANGO_SCALE;
+
+            if !iterator.next_line() {
+                break;
             }
         }
 
