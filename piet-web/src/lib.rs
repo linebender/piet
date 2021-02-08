@@ -270,10 +270,11 @@ impl RenderContext for WebRenderContext<'_> {
         let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();
         canvas.set_width(width as u32);
         canvas.set_height(height as u32);
+        let mut new_buf: Vec<u8>;
         let buf = match format {
             ImageFormat::RgbaSeparate => buf,
             ImageFormat::RgbaPremul => {
-                let mut new_buf = vec![0; width * height * 4];
+                new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     let a = buf[i * 4 + 3];
                     new_buf[i * 4 + 0] = unpremul(buf[i * 4 + 0], a);
@@ -284,7 +285,7 @@ impl RenderContext for WebRenderContext<'_> {
                 new_buf.as_slice()
             }
             ImageFormat::Rgb => {
-                let mut new_buf = vec![0; width * height * 4];
+                new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     new_buf[i * 4 + 0] = buf[i * 3 + 0];
                     new_buf[i * 4 + 1] = buf[i * 3 + 1];
@@ -294,7 +295,7 @@ impl RenderContext for WebRenderContext<'_> {
                 new_buf.as_slice()
             }
             ImageFormat::Grayscale => {
-                let mut new_buf = vec![0; width * height * 4];
+                new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     new_buf[i * 4 + 0] = buf[i];
                     new_buf[i * 4 + 1] = buf[i];
@@ -305,7 +306,7 @@ impl RenderContext for WebRenderContext<'_> {
             }
             _ => &[],
         };
-        
+
         let image_data = ImageData::new_with_u8_clamped_array(Clamped(buf), width as u32).wrap()?;
         let context = canvas
             .get_context("2d")
@@ -477,14 +478,12 @@ impl WebRenderContext<'_> {
                 let len = dash.0.len() as u32;
                 let array = Float64Array::new_with_length(len);
                 for (i, elem) in dash.0.iter().enumerate() {
-                    unsafe {
-                        Reflect::set(
-                            array.as_ref(),
-                            &JsValue::from(i as u32),
-                            &JsValue::from(*elem),
-                        )
-                        .unwrap();
-                    }
+                    Reflect::set(
+                        array.as_ref(),
+                        &JsValue::from(i as u32),
+                        &JsValue::from(*elem),
+                    )
+                    .unwrap();
                 }
                 (array, dash.1)
             })
