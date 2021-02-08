@@ -18,7 +18,7 @@ piet = { version = "0.3.0", path = "../piet" }
 
 unicode-segmentation = "1.6.0"
 xi-unicode = "0.3.0"
-wasm-bindgen = "0.2.60"
+wasm-bindgen = "0.2.70"
 js-sys = "0.3.36"
 
 [dependencies.web-sys]

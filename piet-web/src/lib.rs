@@ -270,10 +270,8 @@ impl RenderContext for WebRenderContext<'_> {
         let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();
         canvas.set_width(width as u32);
         canvas.set_height(height as u32);
-        let mut buf = match format {
-            // Discussion topic: if buf were mut here, we could probably avoid this clone.
-            // See https://github.com/rustwasm/wasm-bindgen/issues/2364 for the issue.
-            ImageFormat::RgbaSeparate => buf.to_vec(),
+        let buf = match format {
+            ImageFormat::RgbaSeparate => buf,
             ImageFormat::RgbaPremul => {
                 let mut new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
@@ -308,7 +306,7 @@ impl RenderContext for WebRenderContext<'_> {
             _ => Vec::new(),
         };
         let image_data =
-            ImageData::new_with_u8_clamped_array(Clamped(&mut buf), width as u32).wrap()?;
+            ImageData::new_with_u8_clamped_array(Clamped(buf), width as u32).wrap()?;
         let context = canvas
             .get_context("2d")
             .unwrap()
@@ -479,12 +477,14 @@ impl WebRenderContext<'_> {
                 let len = dash.0.len() as u32;
                 let array = Float64Array::new_with_length(len);
                 for (i, elem) in dash.0.iter().enumerate() {
-                    Reflect::set(
-                        array.as_ref(),
-                        &JsValue::from(i as u32),
-                        &JsValue::from(*elem),
-                    )
-                    .unwrap();
+                    unsafe{
+                        Reflect::set(
+                            array.as_ref(),
+                            &JsValue::from(i as u32),
+                            &JsValue::from(*elem),
+                        )
+                        .unwrap();
+                    }
                 }
                 (array, dash.1)
             })
