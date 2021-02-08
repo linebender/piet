@@ -281,7 +281,7 @@ impl RenderContext for WebRenderContext<'_> {
                     new_buf[i * 4 + 2] = unpremul(buf[i * 4 + 2], a);
                     new_buf[i * 4 + 3] = a;
                 }
-                new_buf
+                new_buf.as_slice()
             }
             ImageFormat::Rgb => {
                 let mut new_buf = vec![0; width * height * 4];
@@ -291,7 +291,7 @@ impl RenderContext for WebRenderContext<'_> {
                     new_buf[i * 4 + 2] = buf[i * 3 + 2];
                     new_buf[i * 4 + 3] = 255;
                 }
-                new_buf
+                new_buf.as_slice()
             }
             ImageFormat::Grayscale => {
                 let mut new_buf = vec![0; width * height * 4];
@@ -301,10 +301,11 @@ impl RenderContext for WebRenderContext<'_> {
                     new_buf[i * 4 + 2] = buf[i];
                     new_buf[i * 4 + 3] = 255;
                 }
-                new_buf
+                new_buf.as_slice()
             }
-            _ => Vec::new(),
+            _ => &[],
         };
+        
         let image_data = ImageData::new_with_u8_clamped_array(Clamped(buf), width as u32).wrap()?;
         let context = canvas
             .get_context("2d")
