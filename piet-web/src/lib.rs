@@ -270,12 +270,11 @@ impl RenderContext for WebRenderContext<'_> {
         let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();
         canvas.set_width(width as u32);
         canvas.set_height(height as u32);
-        let mut buf = match format {
-            // Discussion topic: if buf were mut here, we could probably avoid this clone.
-            // See https://github.com/rustwasm/wasm-bindgen/issues/2364 for the issue.
-            ImageFormat::RgbaSeparate => buf.to_vec(),
+        let mut new_buf: Vec<u8>;
+        let buf = match format {
+            ImageFormat::RgbaSeparate => buf,
             ImageFormat::RgbaPremul => {
-                let mut new_buf = vec![0; width * height * 4];
+                new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     let a = buf[i * 4 + 3];
                     new_buf[i * 4 + 0] = unpremul(buf[i * 4 + 0], a);
@@ -283,32 +282,32 @@ impl RenderContext for WebRenderContext<'_> {
                     new_buf[i * 4 + 2] = unpremul(buf[i * 4 + 2], a);
                     new_buf[i * 4 + 3] = a;
                 }
-                new_buf
+                new_buf.as_slice()
             }
             ImageFormat::Rgb => {
-                let mut new_buf = vec![0; width * height * 4];
+                new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     new_buf[i * 4 + 0] = buf[i * 3 + 0];
                     new_buf[i * 4 + 1] = buf[i * 3 + 1];
                     new_buf[i * 4 + 2] = buf[i * 3 + 2];
                     new_buf[i * 4 + 3] = 255;
                 }
-                new_buf
+                new_buf.as_slice()
             }
             ImageFormat::Grayscale => {
-                let mut new_buf = vec![0; width * height * 4];
+                new_buf = vec![0; width * height * 4];
                 for i in 0..width * height {
                     new_buf[i * 4 + 0] = buf[i];
                     new_buf[i * 4 + 1] = buf[i];
                     new_buf[i * 4 + 2] = buf[i];
                     new_buf[i * 4 + 3] = 255;
                 }
-                new_buf
+                new_buf.as_slice()
             }
-            _ => Vec::new(),
+            _ => &[],
         };
-        let image_data =
-            ImageData::new_with_u8_clamped_array(Clamped(&mut buf), width as u32).wrap()?;
+
+        let image_data = ImageData::new_with_u8_clamped_array(Clamped(buf), width as u32).wrap()?;
         let context = canvas
             .get_context("2d")
             .unwrap()
