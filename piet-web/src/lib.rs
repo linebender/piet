@@ -305,8 +305,7 @@ impl RenderContext for WebRenderContext<'_> {
             }
             _ => Vec::new(),
         };
-        let image_data =
-            ImageData::new_with_u8_clamped_array(Clamped(buf), width as u32).wrap()?;
+        let image_data = ImageData::new_with_u8_clamped_array(Clamped(buf), width as u32).wrap()?;
         let context = canvas
             .get_context("2d")
             .unwrap()
@@ -477,7 +476,7 @@ impl WebRenderContext<'_> {
                 let len = dash.0.len() as u32;
                 let array = Float64Array::new_with_length(len);
                 for (i, elem) in dash.0.iter().enumerate() {
-                    unsafe{
+                    unsafe {
                         Reflect::set(
                             array.as_ref(),
                             &JsValue::from(i as u32),
