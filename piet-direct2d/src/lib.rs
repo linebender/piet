@@ -439,22 +439,24 @@ impl<'a> D2DRenderContext<'a> {
 
         // TODO: do something special (or nothing at all) for line?
         if let Some(rect) = shape.as_rect() {
-            self.rt.fill_rect(rect, &brush);
-            return;
-        } else if let Some(round_rect) = shape.as_rounded_rect() {
-            if let Some(radius) = round_rect.radii().as_single_radius() {
-                self.rt.fill_rounded_rect(round_rect.rect(), radius, &brush);
-                return;
-            }
+            self.rt.fill_rect(rect, &brush)
+        } else if let Some(round_rect) = shape
+            .as_rounded_rect()
+            .filter(|r| r.radii().as_single_radius().is_some())
+        {
+            self.rt.fill_rounded_rect(
+                round_rect.rect(),
+                round_rect.radii().as_single_radius().unwrap(),
+                &brush,
+            )
         } else if let Some(circle) = shape.as_circle() {
-            self.rt.fill_circle(circle, &brush);
-            return;
+            self.rt.fill_circle(circle, &brush)
+        } else {
+            match path_from_shape(self.factory, true, shape, fill_rule) {
+                Ok(geom) => self.rt.fill_geometry(&geom, &brush, None),
+                Err(e) => self.err = Err(e),
+            }
         }
-
-        match path_from_shape(self.factory, true, shape, fill_rule) {
-            Ok(geom) => self.rt.fill_geometry(&geom, &brush, None),
-            Err(e) => self.err = Err(e),
-        };
     }
 
     fn stroke_impl(
