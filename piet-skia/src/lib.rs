@@ -1,5 +1,7 @@
 #![allow(warnings)] // TODO remove me!!!
 
+use std::fmt;
+
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 use piet::{
     Color, Error, FixedGradient, ImageFormat, InterpolationMode,
@@ -9,7 +11,7 @@ use piet::{
 use std::borrow::Cow;
 pub use text::*;
 use skia_safe;
-use skia_safe::{Path, PaintStyle, Paint, FontMgr, TileMode};
+use skia_safe::{Path, PaintStyle, Paint, FontMgr, TileMode, Data, ColorType, AlphaType};
 use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
 use skia_safe::effects::gradient_shader::{linear, radial};
 use skia_safe::shader::Shader;
@@ -75,12 +77,11 @@ impl<'a> SkiaRenderContext<'a>{
     }
 }
 
-pub struct SkiaImage;
+pub struct SkiaImage(skia_safe::Image);
 
 impl Image for SkiaImage {
     fn size(&self) -> Size {
-        unimplemented!();
-        //Size::new(self.0.get_width().into(), self.0.get_height().into())
+        Size::new(self.0.width().into(), self.0.height().into())
     }
 }
 
@@ -123,6 +124,23 @@ pub fn convert_color(color: Color) -> skia_safe::Color {
 
 pub fn convert_point(point: Point) -> skia_safe::Point {
     skia_safe::Point::new(point.x as f32, point.y as f32)
+}
+
+#[derive(Debug)]
+pub enum SkiaImageError {
+    FailedToCreate
+}
+
+impl fmt::Display for SkiaImageError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for SkiaImageError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
 }
 
 impl<'a> RenderContext for SkiaRenderContext<'a> {
@@ -292,7 +310,37 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
-        unimplemented!();
+        let dimensions = skia_safe::ISize {
+            width: width as i32,
+            height: height as i32
+        };
+        let (color_type, alpha_type) = match format {
+            ImageFormat::Rgb => {
+                (ColorType::RGB888x, AlphaType::Opaque)
+            }
+            ImageFormat::RgbaPremul => {
+                (ColorType::RGBA8888, AlphaType::Premul)
+            }
+            ImageFormat::RgbaSeparate => {
+                (ColorType::RGBA8888, AlphaType::Unpremul)
+            }
+            ImageFormat::Grayscale => {
+                (ColorType::Gray8, AlphaType::Opaque)
+            }
+            _ => {
+                (ColorType::RGBA8888, AlphaType::Unpremul) 
+            }
+        };
+        let color_space = Some(skia_safe::ColorSpace::new_srgb());
+        let row_bytes = width * color_type.bytes_per_pixel();
+        let image_info = skia_safe::ImageInfo::new_n32(dimensions, alpha_type, color_space);
+        let data = Data::new_copy(buf);
+        let image = skia_safe::Image::from_raster_data(&image_info, data, row_bytes).ok_or(
+            Error::BackendError(
+                Box::new(SkiaImageError::FailedToCreate)
+            )
+        )?;
+        Ok(SkiaImage(image))
     }
 
     #[inline]
@@ -302,7 +350,10 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        unimplemented!();
+        //let mut paint = create_paint();
+        let rect = dst_rect.into();
+        let left_top = skia_safe::Point::new(rect.x0 as f32, rect.y0 as f32);
+        self.canvas.draw_image(&image.0, left_top, None);
     }
 
     #[inline]
