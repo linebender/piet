@@ -123,7 +123,10 @@ fn geometry_from_shape(
         .filter(|r| r.radii().as_single_radius().is_some())
     {
         Ok(d2d
-            .create_round_rect_geometry(round_rect.rect(), round_rect.as_single_radius().unwrap())?
+            .create_round_rect_geometry(
+                round_rect.rect(),
+                round_rect.radii().as_single_radius().unwrap(),
+            )?
             .into())
     } else if let Some(circle) = shape.as_circle() {
         Ok(d2d.create_circle_geometry(circle)?.into())
