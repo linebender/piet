@@ -18,8 +18,6 @@ use skia_safe::ClipOp;
 mod text;
 mod simple_text;
 
-//use simple_text::*;
-
 fn pairf32(p: Point) -> (f32, f32) {
     (p.x as f32, p.y as f32)
 }
@@ -147,7 +145,6 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
-        // TODO
         let gradient = gradient.into();
         let mut colors_from_stops = |stops: Vec<piet::GradientStop>| {
             stops.into_iter().map(|stop| convert_color(stop.color)).collect()
@@ -232,16 +229,17 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         let mut paint = create_paint();
         apply_brush(&mut paint, brush.as_ref());
         
-        let pos = skia_safe::Point::new(pos.x as f32, pos.y as f32);
-        //let pos = skia_safe::Point::default();
-        use skia_safe::Font;
-        //self.canvas.draw_str(layout.text.as_str(), pos, &Font::default(), &paint);
+        let mut pos = skia_safe::Point::new(pos.x as f32, pos.y as f32);
         match layout {
             SkiaTextLayout::Paragraph(paragraph) => {
                 paragraph.paragraph.paint(&mut self.canvas, pos); 
             }
             SkiaTextLayout::Simple(simple) => {
-                self.canvas.draw_str(simple.text.as_str(), pos, &Font::default(), &paint);
+                for line in simple.line_metrics.iter() {
+                    pos.y += line.bounds.height();
+                    let text = &simple.text()[line.start_offset..line.end_offset];
+                    self.canvas.draw_str(text, pos, &simple.font, &paint);
+                }
             }
         };
     }

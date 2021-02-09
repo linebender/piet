@@ -32,8 +32,6 @@ pub enum SkiaTextLayout {
 pub struct ParagraphTextLayout {
     pub(crate) fg_color: Color,
     size: Size,
-    // skia doesn't support Clone trait for font...
-    pub font: Rc<Font>,
     pub text: Rc<dyn TextStorage>,
     pub width: f32,
     // Paragraph doesn't support Clone trait
@@ -44,7 +42,6 @@ impl fmt::Debug for ParagraphTextLayout {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SkiaTextLayoutBuilder")
             .field("fg_color", &self.fg_color)
-            .field("font", &self.font)
             .field("text", &self.text.as_str())
             .field("width", &self.width)
             .finish()
@@ -115,13 +112,7 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
 
     fn build(mut self) -> Result<Self::Out, Error> {
         let layout = if self.width_constraint.is_finite() {
-            // TODO add to paragraph
-            let mut font = Font::default(); // take font from TextLayout
-            let size = self.defaults.font_size; 
-            font.set_size(size as f32);
             let mut font_collection = FontCollection::new();
-            // TODO it's possible to create it as OnceCell, and preload Fonts
-            // that we might use
             let font_mngr = FontMgr::new();
             font_collection.set_default_font_manager(font_mngr, None);
             let paragraph_style = ParagraphStyle::new();
@@ -148,7 +139,6 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
             SkiaTextLayout::Paragraph(ParagraphTextLayout{
                 fg_color,
                 size: Size::ZERO,
-                font: Rc::new(font),
                 text: self.text,
                 width,
                 paragraph: Rc::new(paragraph),
@@ -161,16 +151,23 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
             let size = self.defaults.font_size; 
             font.set_size(size as f32);
             let (width, rect) = font.measure_str(self.text.as_str(), None);
-            // note: if you do paragraph.layout(width) again it will wrap last word
-            // on each line because it's exact size as width_constraint
-            
+            let line_metrics = calculate_line_metrics(self.text.as_str(), &font);
+            let height = line_metrics.last().map(|l| 
+                l.y_offset + l.bounds.height() as f64
+            ).unwrap_or_else(||{
+                let (_, metrics) = font.metrics();
+                let height = (metrics.descent - metrics.ascent + metrics.leading) as f64;
+                height
+            });
+            let width = line_metrics.iter().map(|l| l.bounds.width())
+                .max_by(|x, y| x.partial_cmp(&y).unwrap()).unwrap_or(0.);
+            let size = Size::new(width as f64, height);
             SkiaTextLayout::Simple(SkiaSimpleTextLayout{
+                line_metrics,
                 fg_color,
-                size: Size::ZERO,
+                size,
                 font: Rc::new(font),
                 text: self.text,
-                width,
-                rect
             })
         };
         Ok(layout)
