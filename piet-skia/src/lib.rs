@@ -263,25 +263,21 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
+        let mut paint = create_paint();
         let pos = pos.into();
         let rect = layout.image_bounds() + pos.to_vec2();
-        let brush = match layout {
-            SkiaTextLayout::Paragraph(paragraph) => {
-                paragraph.fg_color.make_brush(self, || rect)
-            }
-            SkiaTextLayout::Simple(simple) => {
-                simple.fg_color.make_brush(self, || rect)
-            }
+        let mut process_brush = |fg_color: &Color| {
+            let brush = fg_color.make_brush(self, || rect);
+            apply_brush(&mut paint, brush.as_ref());
         };
-        let mut paint = create_paint();
-        apply_brush(&mut paint, brush.as_ref());
-        
         let mut pos = skia_safe::Point::new(pos.x as f32, pos.y as f32);
         match layout {
             SkiaTextLayout::Paragraph(paragraph) => {
+                process_brush(&paragraph.fg_color());
                 paragraph.paragraph.paint(&mut self.canvas, pos); 
             }
             SkiaTextLayout::Simple(simple) => {
+                process_brush(&simple.fg_color);
                 for line in simple.line_metrics.iter() {
                     pos.y += line.bounds.height();
                     let text = &simple.text()[line.start_offset..line.end_offset];
@@ -360,11 +356,56 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
                 (ColorType::RGBA8888, AlphaType::Unpremul) 
             }
         };
-        let color_space = Some(skia_safe::ColorSpace::new_srgb());
-        let row_bytes = width * color_type.bytes_per_pixel();
-        let image_info = skia_safe::ImageInfo::new_n32(dimensions, alpha_type, color_space);
-        let data = Data::new_copy(buf);
-        let image = skia_safe::Image::from_raster_data(&image_info, data, row_bytes).ok_or(
+        let src_row_bytes = width * format.bytes_per_pixel();
+        let dst_row_bytes = width * color_type.bytes_per_pixel();
+        let mut new_buf = vec![0u8; dst_row_bytes * height]; 
+        
+        for y in 0..height {
+            let src_off = y * src_row_bytes;
+            let dst_off = y * dst_row_bytes;
+            let mut exact_copy = || {
+                for x in 0..width {
+                    for i in 0..4 {
+                        new_buf[dst_off + x * 4 + i] = buf[src_off + x * 4 + i]
+                    }
+                }
+            };
+
+            match format {
+                ImageFormat::Rgb => {
+                    assert_eq!(format.bytes_per_pixel(), 3);
+                    assert_eq!(color_type.bytes_per_pixel(), 4);
+                    for x in 0..width {
+                        for i in 0..3 {
+                            new_buf[dst_off + x * 4 + i] = buf[src_off + x * 3 + i]
+                        }
+                    }
+                }
+                ImageFormat::RgbaPremul => {
+                    exact_copy();
+                }
+                ImageFormat::RgbaSeparate => {
+                    exact_copy();
+                }
+                ImageFormat::Grayscale => {
+                    assert_eq!(format.bytes_per_pixel(), 1);
+                    assert_eq!(color_type.bytes_per_pixel(), 4);
+                    for x in 0..width {
+                        for i in 0..4 {
+                            new_buf[dst_off + x * 4 + i] = buf[src_off + x];
+                        }
+                    }
+                }
+                _ => {
+                    exact_copy();
+                }
+            };
+        }
+        let color_space = None;
+        let image_info = skia_safe::ImageInfo::new(dimensions, color_type, alpha_type, color_space);
+        // TODO do the same without extra copy
+        let data = Data::new_copy(&new_buf);
+        let image = skia_safe::Image::from_raster_data(&image_info, data, dst_row_bytes).ok_or(
             Error::BackendError(
                 Box::new(SkiaImageError::FailedToCreate)
             )

@@ -7,7 +7,7 @@ use piet::{
     TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 use skia_safe::{Font, FontMgr, Paint};
-use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
+use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph, LineMetricsVector};
 
 use std::fmt;
 
@@ -28,20 +28,30 @@ pub enum SkiaTextLayout {
     Paragraph(ParagraphTextLayout),
 }
 
-#[derive(Clone)]
 pub struct ParagraphTextLayout {
-    pub(crate) fg_color: Color,
-    size: Size,
     pub text: Rc<dyn TextStorage>,
     pub width: f32,
-    // Paragraph doesn't support Clone trait
-    pub paragraph: Rc<Paragraph>,
+    // Paragraph doesn't support Clone trait so we need to store some info to rebuild it
+    // we store Rc here cause we need to clone this data too
+    defaults: Rc<util::LayoutDefaults>,
+    pub paragraph: Paragraph,
+}
+
+
+impl Clone for ParagraphTextLayout {
+    fn clone(&self) -> Self {
+        Self {
+            text: self.text.clone(),
+            width: self.width.clone(),
+            defaults: self.defaults.clone(),
+            paragraph: build_paragraph(self.text.as_ref(), &self.defaults, self.width),
+        }
+    }
 }
 
 impl fmt::Debug for ParagraphTextLayout {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SkiaTextLayoutBuilder")
-            .field("fg_color", &self.fg_color)
             .field("text", &self.text.as_str())
             .field("width", &self.width)
             .finish()
@@ -84,6 +94,27 @@ impl Text for SkiaText {
     }
 }
 
+// It's convinient to have a separate method for creating paragraph, cause it doesn't have Clone
+// TODO all font related data should be moved into struct fields at some poin 
+fn build_paragraph(text: &str, defaults: &util::LayoutDefaults, width_constraint: f32) -> Paragraph {
+    let mut font_collection = FontCollection::new();
+    let font_mngr = FontMgr::new();
+    font_collection.set_default_font_manager(font_mngr, None);
+    let paragraph_style = ParagraphStyle::new();
+    let mut paragraph_builder = ParagraphBuilder::new(&paragraph_style, font_collection);
+    let mut ts = TextStyle::new();
+    ts.set_font_size(defaults.font_size as f32);
+    let mut paint = Paint::default();
+    let fg_color = defaults.fg_color.clone();
+    paint.set_color(crate::convert_color(fg_color));
+    ts.set_foreground_color(paint);
+    paragraph_builder.push_style(&ts);
+    paragraph_builder.add_text(text);
+    let mut paragraph = paragraph_builder.build();
+    paragraph.layout(width_constraint);
+    paragraph
+}
+
 impl TextLayoutBuilder for SkiaTextLayoutBuilder {
     type Out = SkiaTextLayout;
 
@@ -112,21 +143,7 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
 
     fn build(mut self) -> Result<Self::Out, Error> {
         let layout = if self.width_constraint.is_finite() {
-            let mut font_collection = FontCollection::new();
-            let font_mngr = FontMgr::new();
-            font_collection.set_default_font_manager(font_mngr, None);
-            let paragraph_style = ParagraphStyle::new();
-            let mut paragraph_builder = ParagraphBuilder::new(&paragraph_style, font_collection);
-            let mut ts = TextStyle::new();
-            ts.set_font_size(self.defaults.font_size as f32);
-            let mut paint = Paint::default();
-            let fg_color = self.defaults.fg_color;
-            paint.set_color(crate::convert_color(fg_color.clone()));
-            ts.set_foreground_color(paint);
-            paragraph_builder.push_style(&ts);
-            paragraph_builder.add_text(self.text.as_str());
-            let mut paragraph = paragraph_builder.build();
-            paragraph.layout(self.width_constraint as f32);
+            let paragraph = build_paragraph(self.text.as_str(), &self.defaults, self.width_constraint as f32);
             let width = paragraph
                 .get_line_metrics()
                 .iter()
@@ -137,11 +154,10 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
             // note: if you do paragraph.layout(width) again it will wrap last word
             // on each line because it's exact size as width_constraint
             SkiaTextLayout::Paragraph(ParagraphTextLayout{
-                fg_color,
-                size: Size::ZERO,
                 text: self.text,
                 width,
-                paragraph: Rc::new(paragraph),
+                defaults: Rc::new(self.defaults),
+                paragraph,
             })
         } else {
             let mut paint = Paint::default();
@@ -150,7 +166,6 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
             let mut font = Font::default(); // take font from TextLayout
             let size = self.defaults.font_size; 
             font.set_size(size as f32);
-            let (width, rect) = font.measure_str(self.text.as_str(), None);
             let line_metrics = calculate_line_metrics(self.text.as_str(), &font);
             let height = line_metrics.last().map(|l| 
                 l.y_offset + l.bounds.height() as f64
@@ -267,6 +282,19 @@ impl TextLayout for SkiaTextLayout {
     }
 }
 
+impl ParagraphTextLayout {
+    pub fn fg_color(&self) -> Color {
+        self.defaults.fg_color.clone()
+    }
+
+    // this is the most efficient way for updating width, because skia's paragraph perform cashing
+    // for layout function
+    fn update_width(&mut self, new_width: f32) {
+        self.width = new_width;
+        self.paragraph.layout(self.width);
+    }
+}
+
 impl TextLayout for ParagraphTextLayout {
     fn size(&self) -> Size {
         let size = Size::new(self.width as f64, self.paragraph.height() as f64);
@@ -278,14 +306,14 @@ impl TextLayout for ParagraphTextLayout {
     }
 
     fn image_bounds(&self) -> Rect {
-        self.size.to_rect()
+        self.size().to_rect()
     }
 
     fn text(&self) -> &str {
         &self.text
     }
 
-    fn line_text(&self, line_number: usize) -> Option<&str> {
+    fn line_text(&self, _line_number: usize) -> Option<&str> { 
         unimplemented!();
     }
 
@@ -300,7 +328,7 @@ impl TextLayout for ParagraphTextLayout {
    }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint { 
-        // TODO
+        unimplemented!();
         HitTestPoint::new(0, false)
         //if point.y > self.paragraph.height() {
         //   return HitTestPoint::default() 
@@ -312,6 +340,7 @@ impl TextLayout for ParagraphTextLayout {
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
+        unimplemented!();
         // TODO
         HitTestPosition::new(Point::new(0., 0.), 0)
     }
