@@ -1,13 +1,11 @@
-use std::ops::RangeBounds;
 use std::rc::Rc;
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    util, Color, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
+    util, Color, HitTestPoint, HitTestPosition, LineMetric,
+    TextLayout, TextStorage,
 };
-use skia_safe::{Path, Font, FontMgr, Paint};
-use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
+use skia_safe::Font;
 use xi_unicode::LineBreakIterator;
 use std::fmt;
 
@@ -19,12 +17,6 @@ pub struct SimpleLineMetric {
     pub bounds: skia_safe::Rect
 }
 
-// TODO: is non-breaking space trailing whitespace? Check with dwrite and
-// coretext
-fn count_trailing_whitespace(line: &str) -> usize {
-    line.chars().rev().take_while(|c| c.is_whitespace()).count()
-}
-
 fn add_line_metric(
     text: &str,
     start_offset: usize,
@@ -34,9 +26,8 @@ fn add_line_metric(
     font: &Font,
 ) {
     let line = &text[start_offset..end_offset];
-    let trailing_whitespace = count_trailing_whitespace(line);
    
-    let (width, bounds) = font.measure_str(&text[start_offset..end_offset], None);
+    let (_width, bounds) = font.measure_str(line, None);
     let line_metric = SimpleLineMetric {
         start_offset,
         end_offset,
@@ -51,12 +42,6 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &Font) -> Vec<SimpleLineM
     let mut line_metrics = Vec::new();
     let mut line_start = 0;
     let mut y_offset = 0.0;
-
-    //let (_, metrics) = font.metrics();
-    // vertical measures constant across all lines
-    //let height = (metrics.descent - metrics.ascent + metrics.leading) as f64;
-    //let baseline = -metrics.ascent as f64; // skia's ascent is always negative
-
     for (line_break, is_hard_break) in LineBreakIterator::new(text) {
         if is_hard_break { 
             add_line_metric(
@@ -87,12 +72,6 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &Font) -> Vec<SimpleLineM
 
 #[derive(Clone)]
 pub struct SkiaSimpleText;
-
-impl SkiaSimpleText {
-    pub fn new() -> Self {
-        SkiaSimpleText{}
-    }
-}
 
 #[derive(Clone)]
 pub struct SkiaSimpleTextLayout {

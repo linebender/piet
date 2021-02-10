@@ -3,10 +3,10 @@ use std::rc::Rc;
 
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
-    util, Color, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
+    util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text,
     TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
-use skia_safe::{Path, Font, FontMgr, Paint};
+use skia_safe::{Font, FontMgr, Paint};
 use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
 
 use std::fmt;

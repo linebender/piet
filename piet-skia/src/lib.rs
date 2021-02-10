@@ -1,21 +1,20 @@
-#![allow(warnings)] // TODO remove me!!!
-
 use std::fmt;
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 use piet::{
     Color, Error, FixedGradient, ImageFormat, InterpolationMode,
     IntoBrush, RenderContext, StrokeStyle, TextLayout, FixedLinearGradient,
-    FixedRadialGradient, Image
+    FixedRadialGradient, Image, LineJoin, LineCap
 };
 use std::borrow::Cow;
 pub use text::*;
 use skia_safe;
-use skia_safe::{Path, PaintStyle, Paint, FontMgr, TileMode, Data, ColorType, AlphaType};
-use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph};
+use skia_safe::{Path, PaintStyle, Paint, TileMode, Data, ColorType, AlphaType};
 use skia_safe::effects::gradient_shader::{linear, radial};
 use skia_safe::shader::Shader;
 use skia_safe::ClipOp;
+use skia_safe::paint::{Join, Cap};
+use skia_safe::path_effect::PathEffect;
 
 mod text;
 mod simple_text;
@@ -85,29 +84,22 @@ impl Image for SkiaImage {
     }
 }
 
-
-// TODO this is temporal and we just want to use skia's paths
 fn create_path(shape: impl Shape) -> Path {
     let mut path = Path::new();
     
-    let mut last = Point::ZERO;
     for el in shape.path_elements(1e-3) {
         match el {
             PathEl::MoveTo(p) => {
                 path.move_to(pairf32(p));
-                last = p;
             }
             PathEl::LineTo(p) => {
                 path.line_to(pairf32(p));
-                last = p;
             }
             PathEl::QuadTo(p1, p2) => {
                 path.quad_to(pairf32(p1), pairf32(p2));
-                last = p2;
             }
             PathEl::CurveTo(p1, p2, p3) => {
                 path.cubic_to(pairf32(p1), pairf32(p2), pairf32(p3));
-                last = p3;
             }
             PathEl::ClosePath => {path.close();}
         }
@@ -164,7 +156,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
 
     fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
         let gradient = gradient.into();
-        let mut colors_from_stops = |stops: Vec<piet::GradientStop>| {
+        let colors_from_stops = |stops: Vec<piet::GradientStop>| {
             stops.into_iter().map(|stop| convert_color(stop.color)).collect()
         };
         let shader = match gradient {
@@ -184,7 +176,9 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
                 radius,
                 stops
             }) => {
-                let center = convert_point(center);
+                let mut center = convert_point(center);
+                center.x += origin_offset.x as f32;
+                center.y += origin_offset.y as f32;
                 let radius = radius as f32;
                 let colors: Vec<_> = colors_from_stops(stops);
                 radial(center, radius, colors.as_slice(), None, TileMode::Clamp, None, None)
@@ -197,14 +191,16 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         let brush = brush.make_brush(self, || shape.bounding_box());
         let mut paint = create_paint();
         apply_brush(&mut paint, brush.as_ref());
-        let mut path = create_path(shape);
+        let path = create_path(shape);
         self.canvas.draw_path(&path, &paint);
     }
 
-    fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {}
+    fn fill_even_odd(&mut self, _shape: impl Shape, _brush: &impl IntoBrush<Self>) {
+        unimplemented!();
+    }
 
     fn clip(&mut self, shape: impl Shape) {
-        let mut path = create_path(shape);
+        let path = create_path(shape);
         self.canvas.clip_path(&path, ClipOp::Intersect, false);
     }
 
@@ -214,7 +210,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         apply_brush(&mut paint, brush.as_ref());
         paint.set_stroke_width(width as f32);
         paint.set_style(PaintStyle::Stroke);
-        let mut path = create_path(shape);
+        let path = create_path(shape);
         self.canvas.draw_path(&path, &paint);
     }
 
@@ -225,7 +221,41 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         width: f64,
         style: &StrokeStyle,
     ) {
-        //unimplemented!();
+        let brush = brush.make_brush(self, || shape.bounding_box());
+        let mut paint = create_paint();
+        apply_brush(&mut paint, brush.as_ref());
+        let line_join = match style.line_join {
+            Some(LineJoin::Miter) => {
+               Join::Miter 
+            }
+            Some(LineJoin::Round) => {
+                Join::Round
+            }
+            Some(LineJoin::Bevel) => {
+                Join::Bevel
+            }
+            None => {
+                Join::Miter
+            }
+        };
+        let line_cap = match style.line_cap {
+            Some(LineCap::Butt) => {
+                Cap::Butt
+            }
+            Some(LineCap::Round) => {
+                Cap::Round
+            }
+            Some(LineCap::Square) => {
+                Cap::Square
+            }
+            None => {
+                Cap::Butt
+            }
+        };
+        let path = create_path(shape);
+        let path_effect = PathEffect::stroke(width as f32, line_join, line_cap, None);
+        paint.set_path_effect(path_effect);
+        self.canvas.draw_path(&path, &paint);
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -234,7 +264,6 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         let pos = pos.into();
-        let mut paint = create_paint();
         let rect = layout.image_bounds() + pos.to_vec2();
         let brush = match layout {
             SkiaTextLayout::Paragraph(paragraph) => {
@@ -348,26 +377,26 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         &mut self,
         image: &Self::Image,
         dst_rect: impl Into<Rect>,
-        interp: InterpolationMode,
+        _interp: InterpolationMode,
     ) {
-        //let mut paint = create_paint();
         let rect = dst_rect.into();
         let left_top = skia_safe::Point::new(rect.x0 as f32, rect.y0 as f32);
+        // TODO use interp here
         self.canvas.draw_image(&image.0, left_top, None);
     }
 
     #[inline]
     fn draw_image_area(
         &mut self,
-        image: &Self::Image,
-        src_rect: impl Into<Rect>,
-        dst_rect: impl Into<Rect>,
-        interp: InterpolationMode,
+        _image: &Self::Image,
+        _src_rect: impl Into<Rect>,
+        _dst_rect: impl Into<Rect>,
+        _interp: InterpolationMode,
     ) {
         unimplemented!();
     }
 
-    fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
+    fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
         unimplemented!();
     }
 }
