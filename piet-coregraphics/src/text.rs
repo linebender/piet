@@ -141,7 +141,10 @@ impl CoreGraphicsTextLayoutBuilder {
         }
         // Some attributes are 'standalone' and can just be added to the attributed string
         // immediately.
-        if matches!(&attr, TextAttribute::TextColor(_) | TextAttribute::Underline(_)) {
+        if matches!(
+            &attr,
+            TextAttribute::TextColor(_) | TextAttribute::Underline(_)
+        ) {
             return self.add_immediately(attr, range);
         }
 

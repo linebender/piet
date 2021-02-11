@@ -309,6 +309,7 @@ impl WebTextLayout {
         &self.color
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         // various functions like `text_width` are stateful, and require
         // the context to be configured correcttly.
