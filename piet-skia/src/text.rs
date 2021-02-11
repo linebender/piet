@@ -4,21 +4,23 @@ use std::rc::Rc;
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
     util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
+    TextAttribute, TextLayout, TextLayoutBuilder, TextStorage, FontWeight
 };
 use skia_safe::{Font, FontMgr, Paint};
-use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, TextStyle, Paragraph, LineMetricsVector};
+use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, Paragraph, LineMetricsVector, TextStyle};
+use skia_safe::typeface::Typeface;
+use skia_safe::font_style::{FontStyle, Weight, Width, Slant};
 
 use std::fmt;
 
 use crate::simple_text::*;
 
 #[derive(Clone)]
-pub struct SkiaText {}
+pub struct SkiaText;
 
 impl SkiaText {
     pub fn new() -> Self {
-        SkiaText{}
+        SkiaText
     }
 }
 
@@ -94,21 +96,41 @@ impl Text for SkiaText {
     }
 }
 
-// It's convinient to have a separate method for creating paragraph, cause it doesn't have Clone
-// TODO all font related data should be moved into struct fields at some poin 
-fn build_paragraph(text: &str, defaults: &util::LayoutDefaults, width_constraint: f32) -> Paragraph {
+fn build_typeface(defaults: &util::LayoutDefaults) -> Typeface {
     let mut font_collection = FontCollection::new();
     let font_mngr = FontMgr::new();
-    font_collection.set_default_font_manager(font_mngr, None);
-    let paragraph_style = ParagraphStyle::new();
-    let mut paragraph_builder = ParagraphBuilder::new(&paragraph_style, font_collection);
-    let mut ts = TextStyle::new();
-    ts.set_font_size(defaults.font_size as f32);
+    font_collection.set_default_font_manager(font_mngr, defaults.font.name());
+    let width = Width::NORMAL; // no options provided via piet
+    let weight: Weight = (defaults.weight.to_raw() as i32).into();
+    let slant = match defaults.style {
+        piet::FontStyle::Regular => {
+            Slant::Upright
+        }
+        piet::FontStyle::Italic => {
+            Slant::Italic
+        }
+    };
+    let font_style = FontStyle::new(weight, width, slant);
+    Typeface::new(defaults.font.name(), font_style).unwrap()
+}
+
+// It's convinient to have a separate method for creating paragraph, cause it doesn't have Clone
+// TODO all font related data should be moved into struct fields at some point 
+fn build_paragraph(text: &str, defaults: &util::LayoutDefaults, width_constraint: f32) -> Paragraph {
     let mut paint = Paint::default();
+    let mut font_collection = FontCollection::new();
+    let font_mngr = FontMgr::new();
+    font_collection.set_default_font_manager(font_mngr, defaults.font.name());
+    let mut paragraph_style = ParagraphStyle::new();
+    let mut text_style = TextStyle::new();
     let fg_color = defaults.fg_color.clone();
+    let typeface = build_typeface(defaults);
+    text_style.set_typeface(Some(typeface));
+    text_style.set_font_size(defaults.font_size as f32);
     paint.set_color(crate::convert_color(fg_color));
-    ts.set_foreground_color(paint);
-    paragraph_builder.push_style(&ts);
+    text_style.set_foreground_color(paint);
+    paragraph_style.set_text_style(&text_style);
+    let mut paragraph_builder = ParagraphBuilder::new(&paragraph_style, font_collection);
     paragraph_builder.add_text(text);
     let mut paragraph = paragraph_builder.build();
     paragraph.layout(width_constraint);
@@ -141,7 +163,7 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
         // TODO
     }
 
-    fn build(mut self) -> Result<Self::Out, Error> {
+    fn build(self) -> Result<Self::Out, Error> {
         let layout = if self.width_constraint.is_finite() {
             let paragraph = build_paragraph(self.text.as_str(), &self.defaults, self.width_constraint as f32);
             let width = paragraph
@@ -161,11 +183,13 @@ impl TextLayoutBuilder for SkiaTextLayoutBuilder {
             })
         } else {
             let mut paint = Paint::default();
+            let font = {
+                let size = self.defaults.font_size;
+                let typeface = build_typeface(&self.defaults);
+                Font::new(typeface, Some(size as f32))
+            };
             let fg_color = self.defaults.fg_color;
             paint.set_color(crate::convert_color(fg_color.clone()));
-            let mut font = Font::default(); // take font from TextLayout
-            let size = self.defaults.font_size; 
-            font.set_size(size as f32);
             let line_metrics = calculate_line_metrics(self.text.as_str(), &font);
             let height = line_metrics.last().map(|l| 
                 l.y_offset + l.bounds.height() as f64
