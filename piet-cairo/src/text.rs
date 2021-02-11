@@ -277,6 +277,7 @@ impl TextLayout for CairoTextLayout {
 }
 
 impl CairoTextLayout {
+    #[allow(clippy::unnecessary_wraps)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
