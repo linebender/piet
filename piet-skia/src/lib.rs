@@ -341,7 +341,9 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         };
         let (color_type, alpha_type) = match format {
             ImageFormat::Rgb => {
-                (ColorType::RGB888x, AlphaType::Opaque)
+                // RGB888x doesn't work as expected (when storing r: u8 g: u8 b: u8 _: u8) so we
+                // use RGBA8888 here instead
+                (ColorType::RGBA8888, AlphaType::Opaque)
             }
             ImageFormat::RgbaPremul => {
                 (ColorType::RGBA8888, AlphaType::Premul)
@@ -379,6 +381,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
                         for i in 0..3 {
                             new_buf[dst_off + x * 4 + i] = buf[src_off + x * 3 + i]
                         }
+                        new_buf[dst_off + x * 4 + 3] = 255u8;
                     }
                 }
                 ImageFormat::RgbaPremul => {
