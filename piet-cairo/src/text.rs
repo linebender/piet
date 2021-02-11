@@ -167,7 +167,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
             text: self.text,
         };
 
-        layout.update_width(self.width_constraint)?;
+        layout.update_width(self.width_constraint);
         Ok(layout)
     }
 }
@@ -277,8 +277,7 @@ impl TextLayout for CairoTextLayout {
 }
 
 impl CairoTextLayout {
-    #[allow(clippy::unnecessary_wraps)]
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
 
         self.line_metrics = lines::calculate_line_metrics(&self.text, &self.font, new_width);

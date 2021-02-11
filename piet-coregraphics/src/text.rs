@@ -702,13 +702,13 @@ impl CoreGraphicsTextLayout {
             x_offsets: Rc::new([]),
             trailing_ws_width: 0.0,
         };
-        layout.update_width(width_constraint).unwrap();
+        layout.update_width(width_constraint);
         layout
     }
 
     // this used to be part of the TextLayout trait; see https://github.com/linebender/piet/issues/298
     #[allow(clippy::float_cmp)]
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
         let width = new_width.into().unwrap_or(f64::INFINITY);
         if width.ceil() == self.width_constraint.ceil() {
             return Ok(());
