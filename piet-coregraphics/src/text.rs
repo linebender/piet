@@ -711,7 +711,7 @@ impl CoreGraphicsTextLayout {
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
         let width = new_width.into().unwrap_or(f64::INFINITY);
         if width.ceil() == self.width_constraint.ceil() {
-            return Ok(());
+            return;
         }
 
         let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
@@ -753,8 +753,6 @@ impl CoreGraphicsTextLayout {
         let first_line_bounds = line_bounds.next().unwrap_or_default();
         self.image_bounds = line_bounds.fold(first_line_bounds, |acc, el| acc.union(el));
         self.frame = Some(frame);
-
-        Ok(())
     }
 
     pub(crate) fn draw(&self, ctx: &mut CGContextRef) {

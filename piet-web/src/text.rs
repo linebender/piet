@@ -360,7 +360,6 @@ impl WebTextLayout {
         self.line_metrics = line_metrics;
         self.trailing_ws_width = ws_width;
         self.size = Size::new(width, height);
-        Ok(())
     }
 }
 

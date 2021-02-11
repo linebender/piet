@@ -325,8 +325,6 @@ impl CairoTextLayout {
             .unwrap_or_else(|| self.font.extents().height);
         self.size = Size::new(width, height);
         self.trailing_ws_width = ws_width;
-
-        Ok(())
     }
 }
 
