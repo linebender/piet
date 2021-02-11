@@ -1,5 +1,7 @@
 //! Drawing examples for testing backends
 
+#![allow(clippy::unnecessary_wraps)]
+
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
