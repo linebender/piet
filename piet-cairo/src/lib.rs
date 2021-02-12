@@ -70,10 +70,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn clear(&mut self, color: Color) {
         let rgba = color.as_rgba_u32();
-        self.ctx.set_source_rgb(
+        self.ctx.set_source_rgba(
             byte_to_frac(rgba >> 24),
             byte_to_frac(rgba >> 16),
             byte_to_frac(rgba >> 8),
+            byte_to_frac(rgba),
         );
         self.ctx.paint();
     }
