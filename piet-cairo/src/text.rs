@@ -413,20 +413,39 @@ impl TextLayout for CairoTextLayout {
             iterator
                 .next_boundary(text.as_str(), 0)
                 .unwrap_or(Some(index))
-                .unwrap()
+                .unwrap_or(index)
+        };
+
+        let metric = self
+            .line_metrics
+            .iter()
+            .find(|metric| metric.start_offset <= index && index <= metric.end_offset)
+            .unwrap();
+
+        //NOTE: Manually move to start of next line when hit test is at end of line
+        let index = {
+            let text = self.pango_layout.get_text().unwrap();
+            if index == text.len() || matches!(text.as_bytes()[index], b'\r' | b'\n') {
+                index
+            } else {
+                let mut iterator = GraphemeCursor::new(index, text.len(), true);
+                let next = iterator
+                    .next_boundary(text.as_str(), 0)
+                    .unwrap_or(Some(index))
+                    .unwrap_or(index);
+
+                if next == metric.end_offset {
+                    next
+                } else {
+                    index
+                }
+            }
         };
 
         HitTestPoint::new(index, is_inside)
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
-        let pos_rect = self.pango_layout.index_to_pos(idx as i32);
-
-        let point = Point::new(
-            pos_rect.x as f64 / PANGO_SCALE,
-            (pos_rect.y + pos_rect.height) as f64 / PANGO_SCALE,
-        );
-
         let line = self
             .line_metrics
             .iter()
@@ -439,6 +458,14 @@ impl TextLayout for CairoTextLayout {
                 }
             })
             .unwrap_or(self.line_metrics.len() - 1);
+        let metric = self.line_metric(line).unwrap();
+
+        let pos_rect = self.pango_layout.index_to_pos(idx as i32);
+
+        let point = Point::new(
+            pos_rect.x as f64 / PANGO_SCALE,
+            (pos_rect.y as f64 / PANGO_SCALE) + metric.baseline,
+        );
 
         HitTestPosition::new(point, line)
     }
@@ -459,7 +486,7 @@ impl CairoTextLayout {
         }
 
         let mut line_metrics = Vec::new();
-        let mut y_distance = 0.;
+        let mut y_offset = 0.;
         let mut widest_logical_width = 0;
         let mut iterator = self.pango_layout.get_iter().unwrap();
         loop {
@@ -500,11 +527,11 @@ impl CairoTextLayout {
                 start_offset,
                 end_offset,
                 trailing_whitespace,
-                baseline: iterator.get_baseline() as f64 / PANGO_SCALE,
+                baseline: (iterator.get_baseline() as f64 / PANGO_SCALE) - y_offset,
                 height: logical_rect.height as f64 / PANGO_SCALE,
-                y_offset: y_distance,
+                y_offset,
             });
-            y_distance += logical_rect.height as f64 / PANGO_SCALE;
+            y_offset += logical_rect.height as f64 / PANGO_SCALE;
 
             if !iterator.next_line() {
                 break;
