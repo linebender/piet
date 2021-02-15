@@ -9,12 +9,13 @@ use piet::{
 use std::borrow::Cow;
 pub use text::*;
 use skia_safe;
-use skia_safe::{Path, PaintStyle, Paint, TileMode, Data, ColorType, AlphaType};
+use skia_safe::{Path, PaintStyle, Paint, TileMode, Data, ColorType, AlphaType, MaskFilter, BlurStyle};
 use skia_safe::effects::gradient_shader::{linear, radial};
 use skia_safe::shader::Shader;
 use skia_safe::ClipOp;
 use skia_safe::paint::{Join, Cap};
 use skia_safe::path_effect::PathEffect;
+use skia_safe::canvas::SrcRectConstraint;
 
 mod text;
 mod simple_text;
@@ -62,12 +63,14 @@ fn create_paint() -> Paint {
 
 pub struct SkiaRenderContext<'a> {
     canvas: &'a mut skia_safe::Canvas,
+    text: SkiaText,
 }
 
 impl<'a> SkiaRenderContext<'a>{
     pub fn new(canvas: &'a mut skia_safe::Canvas) -> Self {
         SkiaRenderContext{
             canvas,
+            text: SkiaText
         }
     }
 
@@ -259,7 +262,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn text(&mut self) -> &mut Self::Text {
-        unimplemented!();
+        &mut self.text
     }
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
@@ -298,7 +301,8 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     }
 
     fn finish(&mut self) -> Result<(), Error> {
-        unimplemented!();
+        self.canvas.flush();
+        Ok(())
     }
 
     fn transform(&mut self, transform: Affine) {
@@ -392,11 +396,9 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
                 }
                 ImageFormat::Grayscale => {
                     assert_eq!(format.bytes_per_pixel(), 1);
-                    assert_eq!(color_type.bytes_per_pixel(), 4);
+                    assert_eq!(color_type.bytes_per_pixel(), 1);
                     for x in 0..width {
-                        for i in 0..4 {
-                            new_buf[dst_off + x * 4 + i] = buf[src_off + x];
-                        }
+                        new_buf[dst_off + x] = buf[src_off + x];
                     }
                 }
                 _ => {
@@ -423,24 +425,35 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         dst_rect: impl Into<Rect>,
         _interp: InterpolationMode,
     ) {
-        let rect = dst_rect.into();
-        let left_top = skia_safe::Point::new(rect.x0 as f32, rect.y0 as f32);
+        let paint = create_paint();
+        let dst_rect = dst_rect.into();
         // TODO use interp here
-        self.canvas.draw_image(&image.0, left_top, None);
+        let dst_rect = skia_safe::Rect::new(dst_rect.x0 as f32, dst_rect.y0 as f32, dst_rect.x1 as f32, dst_rect.y1 as f32);
+        self.canvas.draw_image_rect(&image.0, None, dst_rect, &paint);
     }
 
     #[inline]
     fn draw_image_area(
         &mut self,
-        _image: &Self::Image,
-        _src_rect: impl Into<Rect>,
-        _dst_rect: impl Into<Rect>,
+        image: &Self::Image,
+        src_rect: impl Into<Rect>,
+        dst_rect: impl Into<Rect>,
         _interp: InterpolationMode,
     ) {
-        unimplemented!();
+        let paint = create_paint();
+        let src_rect = src_rect.into();
+        let dst_rect = dst_rect.into();
+        let src_rect = skia_safe::Rect::new(src_rect.x0 as f32, src_rect.y0 as f32, src_rect.x1 as f32, src_rect.y1 as f32);
+        let dst_rect = skia_safe::Rect::new(dst_rect.x0 as f32, dst_rect.y0 as f32, dst_rect.x1 as f32, dst_rect.y1 as f32);
+        self.canvas.draw_image_rect(&image.0, Some((&src_rect, SrcRectConstraint::Strict)), dst_rect, &paint);
     }
 
-    fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
-        unimplemented!();
+    fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, _brush: &impl IntoBrush<Self>) {
+        // TODO unimplemented
+        let mut paint = create_paint();
+        let blur_style = BlurStyle::Normal;
+        paint.set_mask_filter(MaskFilter::blur(blur_style, blur_radius as f32, None));
+        let path = create_path(rect);
+        self.canvas.draw_path(&path, &paint);
     }
 }

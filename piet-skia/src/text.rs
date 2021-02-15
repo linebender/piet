@@ -6,8 +6,8 @@ use piet::{
     util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text,
     TextAttribute, TextLayout, TextLayoutBuilder, TextStorage, FontWeight
 };
-use skia_safe::{Font, FontMgr, Paint};
-use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, Paragraph, LineMetricsVector, TextStyle};
+use skia_safe::{Font, FontMgr, Paint, Contains};
+use skia_safe::textlayout::{ParagraphBuilder, ParagraphStyle, FontCollection, Paragraph, LineMetricsVector, TextStyle, RectWidthStyle, RectHeightStyle};
 use skia_safe::typeface::Typeface;
 use skia_safe::font_style::{FontStyle, Weight, Width, Slant};
 
@@ -342,18 +342,34 @@ impl TextLayout for ParagraphTextLayout {
     }
 
     fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        // for now we can just support only one line text 
-        let mut metrics = LineMetric::default();
-        Some(metrics) // TODO
+        self.paragraph.get_line_metrics().as_slice().get(line_number).map(|line_metric| {
+            LineMetric {
+                start_offset: line_metric.start_index,
+                end_offset: line_metric.end_index,
+                trailing_whitespace: line_metric.end_index - line_metric.end_excluding_whitespaces,
+                baseline: line_metric.baseline,
+                height: line_metric.height,
+                y_offset: line_metric.baseline - line_metric.ascent
+            }
+        })
     }
 
     fn line_count(&self) -> usize {
-        unimplemented!();
-   }
+        self.paragraph.line_number()
+    }
 
-    fn hit_test_point(&self, point: Point) -> HitTestPoint { 
-        unimplemented!();
-        HitTestPoint::new(0, false)
+    fn hit_test_point(&self, point: Point) -> HitTestPoint {
+        let skia_point = skia_safe::Point::new(point.x as f32, point.y as f32);
+        let position = self.paragraph.get_glyph_position_at_coordinate(skia_point);
+        let glyph_id = position.position as usize;
+        let text_boxes = self.paragraph.get_rects_for_range(glyph_id..(glyph_id + 1), RectHeightStyle::Max, RectWidthStyle::Max);
+        let mut contains = false;
+        for text_box in text_boxes.iter() {
+            if text_box.rect.contains(skia_point) {
+                contains = true
+            }
+        }
+        HitTestPoint::new(glyph_id, contains)
         //if point.y > self.paragraph.height() {
         //   return HitTestPoint::default() 
         //}
@@ -364,7 +380,7 @@ impl TextLayout for ParagraphTextLayout {
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
-        unimplemented!();
+        //unimplemented!();
         // TODO
         HitTestPosition::new(Point::new(0., 0.), 0)
     }
