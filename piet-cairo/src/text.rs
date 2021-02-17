@@ -35,11 +35,12 @@ pub struct CairoText {
 
 #[derive(Clone)]
 pub struct CairoTextLayout {
-    size: Size,
-    trailing_ws_width: f64,
     pub(crate) text: Rc<dyn TextStorage>,
 
     //Calculated on build
+    size: Size,
+    ink_size: Size,
+    trailing_ws_width: f64,
     pub(crate) line_metrics: Vec<LineMetric>,
     pub(crate) pango_layout: PangoLayout,
 }
@@ -342,10 +343,11 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
+            text: self.text,
             size: Size::ZERO,
+            ink_size: Size::ZERO,
             trailing_ws_width: 0.0,
             line_metrics: Vec::new(),
-            text: self.text,
             pango_layout: self.pango_layout,
         };
 
@@ -370,7 +372,7 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn image_bounds(&self) -> Rect {
-        self.size.to_rect()
+        self.ink_size.to_rect()
     }
 
     fn text(&self) -> &str {
@@ -550,10 +552,15 @@ impl CairoTextLayout {
         //NOTE: Pango appears to always give us at least one line even with empty input
         self.line_metrics = line_metrics;
 
+        let ink_extent = self.pango_layout.get_extents().0;
         let logical_extent = self.pango_layout.get_extents().1;
         self.size = Size::new(
             widest_whitespaceless_width as f64 / PANGO_SCALE,
             logical_extent.height as f64 / PANGO_SCALE,
+        );
+        self.ink_size = Size::new(
+            ink_extent.width as f64 / PANGO_SCALE,
+            ink_extent.height as f64 / PANGO_SCALE,
         );
 
         self.trailing_ws_width = widest_logical_width as f64 / PANGO_SCALE;
