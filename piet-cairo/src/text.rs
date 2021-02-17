@@ -488,6 +488,7 @@ impl CairoTextLayout {
         let mut line_metrics = Vec::new();
         let mut y_offset = 0.;
         let mut widest_logical_width = 0;
+        let mut widest_whitespaceless_width = 0;
         let mut iterator = self.pango_layout.get_iter().unwrap();
         loop {
             let line = iterator.get_line_readonly().unwrap();
@@ -523,6 +524,14 @@ impl CairoTextLayout {
             let trimmed_len = line_text.trim_end().len();
             let trailing_whitespace = line_text[trimmed_len..].len();
 
+            widest_whitespaceless_width = {
+                let start_x = line.index_to_x(trimmed_len as i32, false);
+                let end_x = line.index_to_x(line_text.len() as i32, true);
+                let whitespace_width = end_x - start_x;
+                let whitespaceless_width = logical_rect.width - whitespace_width;
+                widest_whitespaceless_width.max(whitespaceless_width)
+            };
+
             line_metrics.push(LineMetric {
                 start_offset,
                 end_offset,
@@ -541,10 +550,9 @@ impl CairoTextLayout {
         //NOTE: Pango appears to always give us at least one line even with empty input
         self.line_metrics = line_metrics;
 
-        let ink_extent = self.pango_layout.get_extents().0;
         let logical_extent = self.pango_layout.get_extents().1;
         self.size = Size::new(
-            ink_extent.width as f64 / PANGO_SCALE,
+            widest_whitespaceless_width as f64 / PANGO_SCALE,
             logical_extent.height as f64 / PANGO_SCALE,
         );
 
