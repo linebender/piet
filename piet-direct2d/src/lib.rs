@@ -30,7 +30,7 @@ use piet::{
     StrokeStyle,
 };
 
-use crate::d2d::wrap_unit;
+use crate::d2d::{wrap_unit, BlendMode};
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use crate::dwrite::DwriteFactory;
 pub use crate::text::{D2DText, D2DTextLayout, D2DTextLayoutBuilder};
@@ -57,6 +57,9 @@ pub struct D2DRenderContext<'a> {
 #[derive(Default)]
 struct CtxState {
     transform: Affine,
+
+    // Bounding box of the shape in the layer
+    bounding_box: Rect,
 
     // Note: when we start pushing both layers and axis aligned clips, this will
     // need to keep track of which is which. But for now, keep it simple.
@@ -190,7 +193,15 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, color: Color) {
-        self.rt.clear(color_to_colorf(color));
+        // Note we cannot use more idiomatic ID2D1RenderTarget::Clear as Piet
+        // cannot use PushAxisAlignedClip to create a clip for the clearing.
+        let old_blend = self.rt.get_blend_mode();
+        let brush = self.solid_brush(color);
+        self.rt.set_blend_mode(BlendMode::Copy);
+        self.ctx_stack.iter().for_each(|c| {
+            self.rt.fill_rect(c.bounding_box, &brush);
+        });
+        self.rt.set_blend_mode(old_blend);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -262,6 +273,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
 
     fn clip(&mut self, shape: impl Shape) {
         // TODO: set size based on bbox of shape.
+        let bounding_box = shape.bounding_box();
         let layer = match self.rt.create_layer(None) {
             Ok(layer) => layer,
             Err(e) => {
@@ -277,7 +289,9 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
         };
         self.rt.push_layer_mask(&geom, &layer);
-        self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
+        let mut ctx = self.ctx_stack.last_mut().unwrap();
+        ctx.n_layers_pop += 1;
+        ctx.bounding_box = bounding_box;
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -292,6 +306,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn save(&mut self) -> Result<(), Error> {
         let new_state = CtxState {
             transform: self.current_transform(),
+            bounding_box: Rect::new(0., 0., 0., 0.),
             n_layers_pop: 0,
         };
         self.ctx_stack.push(new_state);
