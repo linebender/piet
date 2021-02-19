@@ -86,7 +86,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
         // we DO want to clip the specified region
         if let Some(region) = region.into() {
-            self.clip(shape)
+            self.clip(region)
         }
         //we also need to save/restore the operator, so we can apply the SOURCE operator
         let op = self.ctx.get_operator();
