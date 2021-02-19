@@ -26,8 +26,6 @@ pub struct CairoRenderContext<'a> {
     // by cairo. Instead we maintain our own stack, which will contain
     // only those transforms applied by us.
     transform_stack: Vec<Affine>,
-    // see docs for clear on why this is neededd.
-    clip_stack: Vec<&'a dyn Shape<PathElementsIter = dyn Iterator<Item = PathEl>>>,
 }
 
 impl<'a> CairoRenderContext<'a> {}
@@ -71,37 +69,25 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
-        //prepare the colors etc
-        let rgba = color.as_rgba_u32();
-        self.ctx.set_source_rgba(
-            byte_to_frac(rgba >> 24),
-            byte_to_frac(rgba >> 16),
-            byte_to_frac(rgba >> 8),
-            byte_to_frac(rgba),
-        );
-
-        // if we have clips set undo those. We want to ignore clips for this operation
-        if self.clip_stack.len() != 0 {
-            self.ctx.reset_clip()
-        }
-        // we DO want to clip the specified region
-        if let Some(region) = region.into() {
-            self.clip(region)
-        }
-        //we also need to save/restore the operator, so we can apply the SOURCE operator
-        let op = self.ctx.get_operator();
-        self.ctx.set_operator(cairo::Operator::Source);
-        self.ctx.paint();
-        self.ctx.set_operator(op);
-
-        //reset clip again
-        if let Some(region) = region.into() {
-            self.ctx.reset_clip()
-        }
-        //re-apply clips saved
-        for shape in self.clip_stack {
-            self.clip(shape)
-        }
+        let _ = self.with_save(|rc| {
+            //prepare the colors etc
+            let rgba = color.as_rgba_u32();
+            self.ctx.set_source_rgba(
+                byte_to_frac(rgba >> 24),
+                byte_to_frac(rgba >> 16),
+                byte_to_frac(rgba >> 8),
+                byte_to_frac(rgba),
+            );
+            // we DO want to clip the specified region
+            if let Some(region) = region.into() {
+                self.clip(region)
+            }
+            //we also need to save/restore the operator, so we can apply the SOURCE operator
+            let op = self.ctx.get_operator();
+            self.ctx.set_operator(cairo::Operator::Source);
+            self.ctx.paint();
+            self.ctx.set_operator(op);
+        });
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -363,7 +349,6 @@ impl<'a> CairoRenderContext<'a> {
             ctx,
             text: CairoText::new(),
             transform_stack: Vec::new(),
-            clip_stack: Vec::new(),
         }
     }
 
