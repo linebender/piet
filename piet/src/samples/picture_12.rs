@@ -13,7 +13,7 @@ const SELECTION_COLOR: Color = Color::rgb8(165, 205, 255);
 const HILIGHT_COLOR: Color = Color::rgba8(255, 242, 54, 96);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
     let text = rc.text();
     let font2 = text.font_family("Courier New").unwrap();
     let layout = text

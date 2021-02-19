@@ -23,7 +23,7 @@ const BLUE: Color = Color::rgb8(0, 0, 255);
 const GREEN: Color = Color::rgb8(105, 255, 0);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(LIGHT_GREY);
+    rc.clear(None, LIGHT_GREY);
     let text = rc.text();
     let courier = text
         .font_family("Courier New")

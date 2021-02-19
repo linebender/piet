@@ -6,7 +6,7 @@ use crate::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
 pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
 
     let mut y = 5.0;
     for &mode in &[

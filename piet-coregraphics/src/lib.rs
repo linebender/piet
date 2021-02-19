@@ -18,6 +18,7 @@ use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::gradient::CGGradientDrawingOptions;
 use core_graphics::image::CGImage;
+use foreign_types::ForeignTypeRef;
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
@@ -134,12 +135,30 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Text = CoreGraphicsText;
     type TextLayout = CoreGraphicsTextLayout;
     type Image = CoreGraphicsImage;
-    //type StrokeStyle = StrokeStyle;
 
-    fn clear(&mut self, color: Color) {
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        // save cannot fail
+        let _ = self.save();
+        // remove any existing clip
+        unsafe {
+            CGContextResetClip(self.ctx.as_ptr());
+        }
+        // remove the current transform
+        let current_xform = self.current_transform();
+        let xform = current_xform.inverse();
+        self.transform(xform);
+
+        let region = region
+            .into()
+            .map(to_cgrect)
+            .unwrap_or_else(|| self.ctx.clip_bounding_box());
         let (r, g, b, a) = color.as_rgba();
+        self.ctx
+            .set_blend_mode(core_graphics::context::CGBlendMode::Copy);
         self.ctx.set_rgb_fill_color(r, g, b, a);
-        self.ctx.fill_rect(self.ctx.clip_bounding_box());
+        self.ctx.fill_rect(region);
+        // restore cannot fail, because we saved at the start of the method
+        self.restore().unwrap();
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -547,6 +566,11 @@ pub fn unpremultiply_rgba(data: &mut [u8]) {
             }
         }
     }
+}
+
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGContextResetClip(c: core_graphics::sys::CGContextRef);
 }
 
 #[cfg(test)]
