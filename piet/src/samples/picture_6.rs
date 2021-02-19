@@ -42,7 +42,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         stops: create_gradient_stops(),
     }))?;
     rc.stroke_styled(
-        RoundedRect::new(60.0, 0.0, 100.0, 30.0, 7.0),
+        RoundedRect::new(60.0, 0.0, 100.0, 30.0, (7.0, 7.0, 7.0, 15.0)),
         &linear_gradient,
         5.0,
         &stroke_style,
@@ -55,6 +55,17 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         &stroke_style,
     );
     rc.stroke(Rect::new(60.0, 80.0, 100.0, 100.0), &linear_gradient, 4.0);
+
+    rc.fill(
+        RoundedRect::new(115.0, 10.0, 165.0, 40.0, (15.0, 2.0, 2.0, 2.0)),
+        &linear_gradient,
+    );
+
+    rc.stroke(
+        RoundedRect::new(115.0, 50.0, 165.0, 80.0, (2.0, 2.0, 15.0, 2.0)),
+        &linear_gradient,
+        4.0,
+    );
 
     Ok(())
 }

@@ -257,6 +257,9 @@ impl Color {
     /// Opaque teal.
     pub const TEAL: Color = Color::rgb8(0, 128, 128);
 
+    /// Fully transparent
+    pub const TRANSPARENT: Color = Color::rgba8(0, 0, 0, 0);
+
     /// Opaque white.
     pub const WHITE: Color = Color::grey8(255);
 

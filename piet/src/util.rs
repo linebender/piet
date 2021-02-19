@@ -7,7 +7,7 @@ use crate::{Color, FontFamily, FontStyle, FontWeight, LineMetric, TextAttribute}
 
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
-/// The default point sie for text in piet.
+/// The default point size for text in piet.
 pub const DEFAULT_FONT_SIZE: f64 = 12.0;
 
 /// The default foreground text color.

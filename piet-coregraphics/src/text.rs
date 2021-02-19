@@ -141,7 +141,10 @@ impl CoreGraphicsTextLayoutBuilder {
         }
         // Some attributes are 'standalone' and can just be added to the attributed string
         // immediately.
-        if matches!(&attr, TextAttribute::TextColor(_) | TextAttribute::Underline(_)) {
+        if matches!(
+            &attr,
+            TextAttribute::TextColor(_) | TextAttribute::Underline(_)
+        ) {
             return self.add_immediately(attr, range);
         }
 
@@ -699,16 +702,16 @@ impl CoreGraphicsTextLayout {
             x_offsets: Rc::new([]),
             trailing_ws_width: 0.0,
         };
-        layout.update_width(width_constraint).unwrap();
+        layout.update_width(width_constraint);
         layout
     }
 
     // this used to be part of the TextLayout trait; see https://github.com/linebender/piet/issues/298
     #[allow(clippy::float_cmp)]
-    fn update_width(&mut self, new_width: impl Into<Option<f64>>) -> Result<(), Error> {
+    fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
         let width = new_width.into().unwrap_or(f64::INFINITY);
         if width.ceil() == self.width_constraint.ceil() {
-            return Ok(());
+            return;
         }
 
         let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
@@ -750,8 +753,6 @@ impl CoreGraphicsTextLayout {
         let first_line_bounds = line_bounds.next().unwrap_or_default();
         self.image_bounds = line_bounds.fold(first_line_bounds, |acc, el| acc.union(el));
         self.frame = Some(frame);
-
-        Ok(())
     }
 
     pub(crate) fn draw(&self, ctx: &mut CGContextRef) {

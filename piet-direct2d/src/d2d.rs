@@ -267,7 +267,8 @@ impl D2DFactory {
 
     pub fn create_round_rect_geometry(
         &self,
-        rect: RoundedRect,
+        rect: Rect,
+        radius: f64,
     ) -> Result<RoundedRectangleGeometry, Error> {
         unsafe {
             let mut ptr = null_mut();
@@ -275,7 +276,7 @@ impl D2DFactory {
                 .0
                 .deref()
                 .deref()
-                .CreateRoundedRectangleGeometry(&rounded_rect_to_d2d(rect), &mut ptr);
+                .CreateRoundedRectangleGeometry(&rounded_rect_to_d2d(rect, radius), &mut ptr);
             wrap(hr, ptr, RoundedRectangleGeometry)
         }
     }
@@ -517,15 +518,17 @@ impl DeviceContext {
     }
 
     pub(crate) fn draw_rounded_rect(
-        &self,
-        rect: RoundedRect,
+        &mut self,
+        rect: Rect,
+        radius: f64,
         brush: &Brush,
         width: f32,
         style: Option<&StrokeStyle>,
     ) {
+        let d2d_rounded_rect = rounded_rect_to_d2d(rect, radius);
         unsafe {
             self.0.DrawRoundedRectangle(
-                &rounded_rect_to_d2d(rect),
+                &d2d_rounded_rect,
                 brush.as_raw(),
                 width,
                 stroke_style_to_d2d(style),
@@ -556,10 +559,11 @@ impl DeviceContext {
         }
     }
 
-    pub(crate) fn fill_rounded_rect(&self, rect: RoundedRect, brush: &Brush) {
+    pub(crate) fn fill_rounded_rect(&mut self, rect: Rect, radius: f64, brush: &Brush) {
+        let d2d_rounded_rect = rounded_rect_to_d2d(rect, radius);
         unsafe {
             self.0
-                .FillRoundedRectangle(&rounded_rect_to_d2d(rect), brush.as_raw());
+                .FillRoundedRectangle(&d2d_rounded_rect, brush.as_raw());
         }
     }
 

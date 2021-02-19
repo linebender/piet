@@ -118,8 +118,16 @@ fn geometry_from_shape(
     // TODO: Do something special for line?
     if let Some(rect) = shape.as_rect() {
         Ok(d2d.create_rect_geometry(rect)?.into())
-    } else if let Some(round_rect) = shape.as_rounded_rect() {
-        Ok(d2d.create_round_rect_geometry(round_rect)?.into())
+    } else if let Some(round_rect) = shape
+        .as_rounded_rect()
+        .filter(|r| r.radii().as_single_radius().is_some())
+    {
+        Ok(d2d
+            .create_round_rect_geometry(
+                round_rect.rect(),
+                round_rect.radii().as_single_radius().unwrap(),
+            )?
+            .into())
     } else if let Some(circle) = shape.as_circle() {
         Ok(d2d.create_circle_geometry(circle)?.into())
     } else {
@@ -431,8 +439,15 @@ impl<'a> D2DRenderContext<'a> {
         // TODO: do something special (or nothing at all) for line?
         if let Some(rect) = shape.as_rect() {
             self.rt.fill_rect(rect, &brush)
-        } else if let Some(round_rect) = shape.as_rounded_rect() {
-            self.rt.fill_rounded_rect(round_rect, &brush)
+        } else if let Some(round_rect) = shape
+            .as_rounded_rect()
+            .filter(|r| r.radii().as_single_radius().is_some())
+        {
+            self.rt.fill_rounded_rect(
+                round_rect.rect(),
+                round_rect.radii().as_single_radius().unwrap(),
+                &brush,
+            )
         } else if let Some(circle) = shape.as_circle() {
             self.rt.fill_circle(circle, &brush)
         } else {
@@ -454,24 +469,31 @@ impl<'a> D2DRenderContext<'a> {
         let width = width as f32;
 
         if let Some(line) = shape.as_line() {
-            self.rt.draw_line(line, &brush, width, style)
+            self.rt.draw_line(line, &brush, width, style);
+            return;
         } else if let Some(rect) = shape.as_rect() {
-            self.rt.draw_rect(rect, &brush, width, style)
+            self.rt.draw_rect(rect, &brush, width, style);
+            return;
         } else if let Some(round_rect) = shape.as_rounded_rect() {
-            self.rt.draw_rounded_rect(round_rect, &brush, width, style)
+            if let Some(radius) = round_rect.radii().as_single_radius() {
+                self.rt
+                    .draw_rounded_rect(round_rect.rect(), radius, &brush, width, style);
+                return;
+            }
         } else if let Some(circle) = shape.as_circle() {
-            self.rt.draw_circle(circle, &brush, width, style)
-        } else {
-            let geom = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
-                Ok(geom) => geom,
-                Err(e) => {
-                    self.err = Err(e);
-                    return;
-                }
-            };
-            let width = width;
-            self.rt.draw_geometry(&geom, &*brush, width, style);
+            self.rt.draw_circle(circle, &brush, width, style);
+            return;
         }
+
+        let geom = match path_from_shape(self.factory, false, shape, FillRule::EvenOdd) {
+            Ok(geom) => geom,
+            Err(e) => {
+                self.err = Err(e);
+                return;
+            }
+        };
+        let width = width;
+        self.rt.draw_geometry(&geom, &*brush, width, style);
     }
 
     // This is split out to unify error reporting, as there are lots of opportunities for

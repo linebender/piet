@@ -100,6 +100,10 @@ pub struct GradientStop {
 
 /// A flexible, ergonomic way to describe gradient stops.
 pub trait GradientStops {
+    #[allow(clippy::wrong_self_convention)]
+    /// Convert into a vector of gradient steps.
+    ///
+    /// Note: this method may be renamed `into_vec` in a future release.
     fn to_vec(self) -> Vec<GradientStop>;
 }
 
