@@ -189,7 +189,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, color: Color) {
+    fn clear(&mut self, _region: impl Into<Option<Rect>>, color: Color) {
         self.rt.clear(color_to_colorf(color));
     }
 

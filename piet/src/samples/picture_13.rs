@@ -11,7 +11,7 @@ pub const SIZE: Size = Size::new(480., 560.);
 static TEXT: &str = r#"Philosophers often behave like little children who scribble some marks on a piece of paper at random and then ask the grown-up "What's that?" — It happened like this: the grown-up had drawn pictures for the child several times and said "this is a man," "this is a house," etc. And then the child makes some marks too and asks: what's this then?"#;
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
     let text = rc.text();
     let _ = text.load_font(include_bytes!(
         "../../snapshots/resources/Anaheim-Regular.ttf"

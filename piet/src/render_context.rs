@@ -88,10 +88,13 @@ where
     /// Create a new gradient brush.
     fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Self::Brush, Error>;
 
-    /// Clear the canvas with the given color.
+    /// Replace a region of the canvas with the provided [`Color`].
     ///
-    /// Note: only opaque colors are meaningful.
-    fn clear(&mut self, color: Color);
+    /// The region can be omitted, in which case it will apply to the entire
+    /// canvas.
+    ///
+    /// This operation ignores any existing clipping and transforations.
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color);
 
     /// Stroke a shape.
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64);

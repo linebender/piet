@@ -136,7 +136,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Image = CoreGraphicsImage;
     //type StrokeStyle = StrokeStyle;
 
-    fn clear(&mut self, color: Color) {
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let (r, g, b, a) = color.as_rgba();
         self.ctx.set_rgb_fill_color(r, g, b, a);
         self.ctx.fill_rect(self.ctx.clip_bounding_box());

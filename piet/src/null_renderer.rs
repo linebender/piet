@@ -59,7 +59,7 @@ impl RenderContext for NullRenderContext {
         Ok(NullBrush)
     }
 
-    fn clear(&mut self, _color: Color) {}
+    fn clear(&mut self, _: impl Into<Option<Rect>>, _color: Color) {}
 
     fn stroke(&mut self, _shape: impl Shape, _brush: &impl IntoBrush<Self>, _width: f64) {}
 
