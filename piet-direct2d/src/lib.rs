@@ -189,8 +189,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, _region: impl Into<Option<Rect>>, color: Color) {
-        self.rt.clear(color_to_colorf(color));
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        if let Some(rect) = region.into() {
+            self.rt.push_aligned_axis_clip(rect);
+            self.rt.clear(color_to_colorf(color));
+            self.rt.pop_axis_aligned_clip();
+        } else {
+            self.rt.clear(color_to_colorf(color));
+        }
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {

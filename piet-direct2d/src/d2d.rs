@@ -438,6 +438,27 @@ impl DeviceContext {
         }
     }
 
+    /// Clip axis aligned clip
+    ///
+    /// Currently this should be for clipping just RenderContext::clear(). If
+    /// this is used for clipping drawing primitives it requires proper stack to
+    /// not interfere with clearing.
+    pub(crate) fn push_aligned_axis_clip(&mut self, rect: Rect) {
+        unsafe {
+            self.0
+                .PushAxisAlignedClip(&rect_to_rectf(rect), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        }
+    }
+
+    /// Pop axis aligned clip
+    ///
+    /// Currently this should be used for just RenderContext::clear().
+    pub(crate) fn pop_axis_aligned_clip(&mut self) {
+        unsafe {
+            self.0.PopAxisAlignedClip();
+        }
+    }
+
     pub(crate) fn clear(&mut self, color: D2D1_COLOR_F) {
         unsafe {
             self.0.Clear(&color);
