@@ -17,7 +17,7 @@ fn main() {
         let height = 480;
         let mut bitmap = device.bitmap_target(width, height, 1.0).unwrap();
         let mut rc = bitmap.render_context();
-        rc.clear(Color::WHITE);
+        rc.clear(None, Color::WHITE);
         let brush = rc.solid_brush(Color::rgb8(0x00, 0x00, 0x80));
         rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &brush, 1.0);
         rc.finish().unwrap();

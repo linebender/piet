@@ -68,12 +68,21 @@ impl piet::RenderContext for RenderContext {
         Ok(())
     }
 
-    fn clear(&mut self, color: Color) {
-        let mut rect = svg::node::element::Rectangle::new()
-            .set("width", "100%")
-            .set("height", "100%")
-            .set("fill", fmt_color(&color))
-            .set("fill-opacity", fmt_opacity(&color));
+    fn clear(&mut self, rect: impl Into<Option<Rect>>, color: Color) {
+        let rect = rect.into();
+        let mut rect = match rect {
+            Some(rect) => svg::node::element::Rectangle::new()
+                .set("width", rect.width())
+                .set("height", rect.height())
+                .set("x", rect.x0)
+                .set("y", rect.y0),
+            None => svg::node::element::Rectangle::new()
+                .set("width", "100%")
+                .set("height", "100%"),
+        }
+        .set("fill", fmt_color(&color))
+        .set("fill-opacity", fmt_opacity(&color));
+        //FIXME: I don't think we should be clipping, here?
         if let Some(id) = self.state.clip {
             rect.assign("clip-path", format!("url(#{})", id.to_string()));
         }

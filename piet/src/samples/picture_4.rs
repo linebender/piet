@@ -9,7 +9,7 @@ use crate::{
 pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
     let stops = vec![
         GradientStop {
             pos: 0.0,

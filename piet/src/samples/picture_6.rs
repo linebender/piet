@@ -9,7 +9,7 @@ use crate::{
 pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::BLACK);
+    rc.clear(None, Color::BLACK);
 
     let mut stroke_style = StrokeStyle::new();
     stroke_style.set_line_cap(LineCap::Round);

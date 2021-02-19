@@ -15,7 +15,7 @@ const YELLOW_ALPHA: Color = Color::rgba8(0xCF, 0xCF, 0x00, 0x60);
 pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
     rc.stroke(Line::new((10.0, 10.0), (100.0, 50.0)), &BLUE, 1.0);
 
     let georgia = rc.text().font_family("Georgia").ok_or(Error::MissingFont)?;

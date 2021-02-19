@@ -129,16 +129,18 @@ impl RenderContext for WebRenderContext<'_> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, color: Color) {
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let (width, height) = match self.ctx.canvas() {
             Some(canvas) => (canvas.offset_width(), canvas.offset_height()),
             None => return,
             /* Canvas might be null if the dom node is not in
              * the document; do nothing. */
         };
-        let shape = Rect::new(0.0, 0.0, width as f64, height as f64);
+        let rect = region
+            .into()
+            .unwrap_or_else(|| Rect::new(0.0, 0.0, width as f64, height as f64));
         let brush = self.solid_brush(color);
-        self.fill(shape, &brush);
+        self.fill(rect, &brush);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {

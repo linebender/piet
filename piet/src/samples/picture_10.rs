@@ -11,7 +11,7 @@ static SAMPLE_EN: &str = r#"ḧ́ͥm̾ͭpͭ̒ͦ̎ḧ̐̈̾̆͊
 const LIGHT_GREY: Color = Color::grey8(0xc0);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(LIGHT_GREY);
+    rc.clear(None, LIGHT_GREY);
     let text = rc.text();
 
     let layout = text
