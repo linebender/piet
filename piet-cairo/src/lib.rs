@@ -363,6 +363,7 @@ impl<'a> CairoRenderContext<'a> {
             ctx,
             text: CairoText::new(),
             transform_stack: Vec::new(),
+            clip_stack: Vec::new(),
         }
     }
 
