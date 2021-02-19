@@ -69,6 +69,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn clear(&mut self, color: Color) {
+        let op = self.ctx.get_operator();
+        self.ctx.set_operator(cairo::Operator::Source);
+
         let rgba = color.as_rgba_u32();
         self.ctx.set_source_rgba(
             byte_to_frac(rgba >> 24),
@@ -77,6 +80,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             byte_to_frac(rgba),
         );
         self.ctx.paint();
+
+        self.ctx.set_operator(op);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {

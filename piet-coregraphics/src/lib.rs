@@ -13,7 +13,7 @@ use core_graphics::base::{
     kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
 };
 use core_graphics::color_space::CGColorSpace;
-use core_graphics::context::{CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin};
+use core_graphics::context::{CGBlendMode, CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin};
 use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::gradient::CGGradientDrawingOptions;
@@ -48,6 +48,8 @@ pub struct CoreGraphicsContext<'a> {
     // by CTContextGetCTM. Instead we maintain our own stack, which will contain
     // only those transforms applied by us.
     transform_stack: Vec<Affine>,
+
+    blend_mode: CGBlendMode,
 }
 
 impl<'a> CoreGraphicsContext<'a> {
@@ -96,6 +98,7 @@ impl<'a> CoreGraphicsContext<'a> {
             ctx,
             text,
             transform_stack: Vec::new(),
+            blend_mode: CGBlendMode::Normal,
         }
     }
 }
@@ -139,7 +142,10 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     fn clear(&mut self, color: Color) {
         let (r, g, b, a) = color.as_rgba();
         self.ctx.set_rgb_fill_color(r, g, b, a);
+        self.ctx.set_blend_mode(CGBlendMode::Copy)
         self.ctx.fill_rect(self.ctx.clip_bounding_box());
+        self.ctx.set_blend_mode(self.blend_mode)
+
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
