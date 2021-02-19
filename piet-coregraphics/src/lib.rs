@@ -13,7 +13,9 @@ use core_graphics::base::{
     kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
 };
 use core_graphics::color_space::CGColorSpace;
-use core_graphics::context::{CGBlendMode, CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin};
+use core_graphics::context::{
+    CGBlendMode, CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin,
+};
 use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::gradient::CGGradientDrawingOptions;
@@ -142,10 +144,9 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     fn clear(&mut self, color: Color) {
         let (r, g, b, a) = color.as_rgba();
         self.ctx.set_rgb_fill_color(r, g, b, a);
-        self.ctx.set_blend_mode(CGBlendMode::Copy)
+        self.ctx.set_blend_mode(CGBlendMode::Copy);
         self.ctx.fill_rect(self.ctx.clip_bounding_box());
-        self.ctx.set_blend_mode(self.blend_mode)
-
+        self.ctx.set_blend_mode(self.blend_mode);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
