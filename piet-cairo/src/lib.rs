@@ -70,6 +70,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let _ = self.with_save(|rc| {
+            self.ctx.reset_clip()
             //prepare the colors etc
             let rgba = color.as_rgba_u32();
             self.ctx.set_source_rgba(
