@@ -27,7 +27,7 @@ pub struct CairoRenderContext<'a> {
     // only those transforms applied by us.
     transform_stack: Vec<Affine>,
     // see docs for clear on why this is neededd.
-    clip_stack: Vec<impl Shape>,
+    clip_stack: Vec<&'a dyn Shape<PathElementsIter = dyn Iterator<Item = PathEl>>>,
 }
 
 impl<'a> CairoRenderContext<'a> {}
