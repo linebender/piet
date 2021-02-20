@@ -30,7 +30,7 @@ use piet::{
     StrokeStyle,
 };
 
-use crate::d2d::wrap_unit;
+use crate::d2d::{wrap_unit, Layer};
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use crate::dwrite::DwriteFactory;
 pub use crate::text::{D2DText, D2DTextLayout, D2DTextLayoutBuilder};
@@ -48,6 +48,8 @@ pub struct D2DRenderContext<'a> {
 
     /// The context state stack. There is always at least one, until finishing.
     ctx_stack: Vec<CtxState>,
+
+    layers: Vec<(Geometry, Layer)>,
 
     err: Result<(), Error>,
 
@@ -77,6 +79,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
             factory,
             inner_text,
             rt,
+            layers: vec![],
             ctx_stack: vec![CtxState::default()],
             err: Ok(()),
             brush_cache: Default::default(),
@@ -88,6 +91,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         let old_state = self.ctx_stack.pop().unwrap();
         for _ in 0..old_state.n_layers_pop {
             self.rt.pop_layer();
+            self.layers.pop();
         }
     }
 
@@ -192,20 +196,23 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let old_blend = self.rt.get_blend_mode();
         let old_transform = self.current_transform();
+        for _ in 0..self.layers.len() {
+            self.rt.pop_layer();
+        }
         self.rt.set_blend_mode(d2d::BlendMode::Copy);
         self.rt.set_transform_identity();
 
-        // TODO: POP ALL LAYERS
-
         if let Some(rect) = region.into() {
-            self.rt.push_aligned_axis_clip(rect);
+            self.rt.push_axis_aligned_clip(rect);
             self.rt.clear(color_to_colorf(color));
             self.rt.pop_axis_aligned_clip();
         } else {
             self.rt.clear(color_to_colorf(color));
         }
-        // TODO: PUSH OLD LAYERS BACK
 
+        for (mask, layer) in self.layers.iter() {
+            self.rt.push_layer_mask(mask, layer);
+        }
         self.rt.set_blend_mode(old_blend);
         self.rt.set_transform(&affine_to_matrix3x2f(old_transform));
     }
@@ -294,6 +301,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
         };
         self.rt.push_layer_mask(&geom, &layer);
+        self.layers.push((geom, layer));
         self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
     }
 

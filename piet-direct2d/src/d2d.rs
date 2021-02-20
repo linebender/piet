@@ -481,7 +481,7 @@ impl DeviceContext {
     /// Currently this should be for clipping just RenderContext::clear(). If
     /// this is used for clipping drawing primitives it requires proper stack to
     /// not interfere with clearing.
-    pub(crate) fn push_aligned_axis_clip(&mut self, rect: Rect) {
+    pub(crate) fn push_axis_aligned_clip(&mut self, rect: Rect) {
         unsafe {
             self.0
                 .PushAxisAlignedClip(&rect_to_rectf(rect), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
