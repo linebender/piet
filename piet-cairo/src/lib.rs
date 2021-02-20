@@ -70,10 +70,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let _ = self.with_save(|rc| {
-            self.ctx.reset_clip()
+            rc.ctx.reset_clip();
             //prepare the colors etc
             let rgba = color.as_rgba_u32();
-            self.ctx.set_source_rgba(
+            rc.ctx.set_source_rgba(
                 byte_to_frac(rgba >> 24),
                 byte_to_frac(rgba >> 16),
                 byte_to_frac(rgba >> 8),
@@ -81,13 +81,14 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             );
             // we DO want to clip the specified region
             if let Some(region) = region.into() {
-                self.clip(region)
+                rc.clip(region)
             }
             //we also need to save/restore the operator, so we can apply the SOURCE operator
-            let op = self.ctx.get_operator();
-            self.ctx.set_operator(cairo::Operator::Source);
-            self.ctx.paint();
-            self.ctx.set_operator(op);
+            let op = rc.ctx.get_operator();
+            rc.ctx.set_operator(cairo::Operator::Source);
+            rc.ctx.paint();
+            rc.ctx.set_operator(op);
+            Ok(())
         });
     }
 
@@ -132,7 +133,6 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn clip(&mut self, shape: impl Shape) {
-        self.chip_stack.push(shape);
         self.set_path(shape);
         self.ctx.set_fill_rule(cairo::FillRule::Winding);
         self.ctx.clip();
