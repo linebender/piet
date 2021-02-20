@@ -435,15 +435,6 @@ impl DeviceContext {
         }
     }
 
-    pub fn flush(&mut self) -> Result<(), Error> {
-        unsafe {
-            let mut tag1 = 0;
-            let mut tag2 = 0;
-            let hr = self.0.Flush(&mut tag1, &mut tag2);
-            wrap_unit(hr)
-        }
-    }
-
     /// End drawing.
     pub fn end_draw(&mut self) -> Result<(), Error> {
         unsafe {
