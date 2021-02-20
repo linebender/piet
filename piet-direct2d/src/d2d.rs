@@ -459,7 +459,7 @@ impl DeviceContext {
         unsafe {
             self.0.SetPrimitiveBlend(match blend_mode {
                 BlendMode::Copy => D2D1_PRIMITIVE_BLEND_COPY,
-                BlendMode::SourceOver => D2D1_PRIMITIVE_BLEND_COPY,
+                BlendMode::SourceOver => D2D1_PRIMITIVE_BLEND_SOURCE_OVER,
                 BlendMode::Unknown(u) => u,
             })
         }
@@ -506,6 +506,16 @@ impl DeviceContext {
     pub(crate) fn set_transform(&mut self, transform: &D2D1_MATRIX_3X2_F) {
         unsafe {
             self.0.SetTransform(transform);
+        }
+    }
+
+    pub(crate) fn get_transform(&mut self) -> D2D1_MATRIX_3X2_F {
+        unsafe {
+            let mut empty = D2D1_MATRIX_3X2_F {
+                matrix: [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+            };
+            self.0.GetTransform(&mut empty);
+            empty
         }
     }
 

@@ -194,14 +194,16 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
-        let old_blend = self.rt.get_blend_mode();
-        let old_transform = self.current_transform();
+        // Reset transform to identity
+        let old_transform = self.rt.get_transform();
+        self.rt.set_transform_identity();
+
+        // Remove clippings
         for _ in 0..self.layers.len() {
             self.rt.pop_layer();
         }
-        self.rt.set_blend_mode(d2d::BlendMode::Copy);
-        self.rt.set_transform_identity();
 
+        // Clip only by the given rectangle
         if let Some(rect) = region.into() {
             self.rt.push_axis_aligned_clip(rect);
             self.rt.clear(color_to_colorf(color));
@@ -210,11 +212,13 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             self.rt.clear(color_to_colorf(color));
         }
 
+        // Restore clippings
         for (mask, layer) in self.layers.iter() {
             self.rt.push_layer_mask(mask, layer);
         }
-        self.rt.set_blend_mode(old_blend);
-        self.rt.set_transform(&affine_to_matrix3x2f(old_transform));
+
+        // Restore transform
+        self.rt.set_transform(&old_transform);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
