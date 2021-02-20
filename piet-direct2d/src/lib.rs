@@ -190,6 +190,13 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        let old_blend = self.rt.get_blend_mode();
+        let old_transform = self.current_transform();
+        self.rt.set_blend_mode(d2d::BlendMode::Copy);
+        self.rt.set_transform_identity();
+
+        // TODO: POP ALL LAYERS
+
         if let Some(rect) = region.into() {
             self.rt.push_aligned_axis_clip(rect);
             self.rt.clear(color_to_colorf(color));
@@ -197,6 +204,10 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         } else {
             self.rt.clear(color_to_colorf(color));
         }
+        // TODO: PUSH OLD LAYERS BACK
+
+        self.rt.set_blend_mode(old_blend);
+        self.rt.set_transform(&affine_to_matrix3x2f(old_transform));
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {

@@ -41,12 +41,19 @@ use winapi::um::d2d1_1::{
     D2D1_COMPOSITE_MODE, D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_INTERPOLATION_MODE,
     D2D1_PROPERTY_TYPE_FLOAT,
 };
+use winapi::um::d2d1_1::{D2D1_PRIMITIVE_BLEND_COPY, D2D1_PRIMITIVE_BLEND_SOURCE_OVER};
 use winapi::um::d2d1effects::{CLSID_D2D1GaussianBlur, D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
 
 use crate::conv::{circle_to_d2d, rect_to_rectf, rounded_rect_to_d2d, to_point2f};
 use crate::dwrite::TextLayout;
+
+pub(crate) enum BlendMode {
+    SourceOver,
+    Copy,
+    Unknown(u32),
+}
 
 pub enum FillRule {
     EvenOdd,
@@ -428,6 +435,15 @@ impl DeviceContext {
         }
     }
 
+    pub fn flush(&mut self) -> Result<(), Error> {
+        unsafe {
+            let mut tag1 = 0;
+            let mut tag2 = 0;
+            let hr = self.0.Flush(&mut tag1, &mut tag2);
+            wrap_unit(hr)
+        }
+    }
+
     /// End drawing.
     pub fn end_draw(&mut self) -> Result<(), Error> {
         unsafe {
@@ -435,6 +451,28 @@ impl DeviceContext {
             let mut tag2 = 0;
             let hr = self.0.EndDraw(&mut tag1, &mut tag2);
             wrap_unit(hr)
+        }
+    }
+
+    /// Set the blend mode for alpha channel
+    pub(crate) fn set_blend_mode(&mut self, blend_mode: BlendMode) {
+        unsafe {
+            self.0.SetPrimitiveBlend(match blend_mode {
+                BlendMode::Copy => D2D1_PRIMITIVE_BLEND_COPY,
+                BlendMode::SourceOver => D2D1_PRIMITIVE_BLEND_COPY,
+                BlendMode::Unknown(u) => u,
+            })
+        }
+    }
+
+    /// Get the blend mode for alpha channel
+    pub(crate) fn get_blend_mode(&mut self) -> BlendMode {
+        unsafe {
+            match self.0.GetPrimitiveBlend() {
+                u if u == D2D1_PRIMITIVE_BLEND_COPY => BlendMode::Copy,
+                u if u == D2D1_PRIMITIVE_BLEND_SOURCE_OVER => BlendMode::SourceOver,
+                u => BlendMode::Unknown(u),
+            }
         }
     }
 
@@ -468,6 +506,12 @@ impl DeviceContext {
     pub(crate) fn set_transform(&mut self, transform: &D2D1_MATRIX_3X2_F) {
         unsafe {
             self.0.SetTransform(transform);
+        }
+    }
+
+    pub(crate) fn set_transform_identity(&mut self) {
+        unsafe {
+            self.0.SetTransform(&IDENTITY_MATRIX_3X2_F);
         }
     }
 
