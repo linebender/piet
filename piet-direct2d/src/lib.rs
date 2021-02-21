@@ -199,11 +199,23 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             self.rt.pop_layer();
         }
         if let Some(rect) = region.into() {
-            let old_blend = self.rt.get_blend_mode();
-            self.rt.set_blend_mode(d2d::BlendMode::Copy);
-            self.fill(rect, &color);
-            self.rt.set_blend_mode(old_blend);
+            let ctx = self.ctx_stack.last_mut().unwrap();
+            if ctx.transform == Affine::new([1., 0., 0., 1., 0., 0.]) {
+                // If the transformation is axis aligned, we can use axis
+                // alignment clipping and clear
+                self.rt.push_axis_aligned_clip(rect);
+                self.rt.clear(color_to_colorf(color));
+                self.rt.pop_axis_aligned_clip();
+            } else {
+                // The transformation is non-standard and we must use fill to
+                // compensate instead of clear
+                let old_blend = self.rt.get_blend_mode();
+                self.rt.set_blend_mode(d2d::BlendMode::Copy);
+                self.fill(rect, &color);
+                self.rt.set_blend_mode(old_blend);
+            }
         } else {
+            // Clear whole canvas
             self.rt.clear(color_to_colorf(color));
         }
         // Restore clippings
