@@ -71,6 +71,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let _ = self.with_save(|rc| {
             rc.ctx.reset_clip();
+            let matrix = affine_to_matrix(rc.current_transform());
+            rc.transform(rc.current_transform().inverse());
+
             //prepare the colors etc
             let rgba = color.as_rgba_u32();
             rc.ctx.set_source_rgba(
@@ -88,6 +91,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             rc.ctx.set_operator(cairo::Operator::Source);
             rc.ctx.paint();
             rc.ctx.set_operator(op);
+            println!("{:?}",matrix);
+            rc.ctx.set_matrix(matrix);
             Ok(())
         });
     }
@@ -494,6 +499,11 @@ fn affine_to_matrix(affine: Affine) -> Matrix {
         x0: a[4],
         y0: a[5],
     }
+}
+
+/// Can't implement RoundFrom here because both types belong to other crates.
+fn matrix_to_affine(matrix: Matrix) -> Affine {
+    Affine::new([matrix.xx,matrix.yx,matrix.xy,matrix.yy,matrix.x0,matrix.y0])
 }
 
 fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
