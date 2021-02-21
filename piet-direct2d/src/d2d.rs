@@ -500,22 +500,6 @@ impl DeviceContext {
         }
     }
 
-    pub(crate) fn get_transform(&mut self) -> D2D1_MATRIX_3X2_F {
-        unsafe {
-            let mut empty = D2D1_MATRIX_3X2_F {
-                matrix: [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
-            };
-            self.0.GetTransform(&mut empty);
-            empty
-        }
-    }
-
-    pub(crate) fn set_transform_identity(&mut self) {
-        unsafe {
-            self.0.SetTransform(&IDENTITY_MATRIX_3X2_F);
-        }
-    }
-
     pub(crate) fn fill_geometry(
         &mut self,
         geom: &Geometry,
