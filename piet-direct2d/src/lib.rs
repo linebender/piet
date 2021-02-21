@@ -207,8 +207,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 self.rt.clear(color_to_colorf(color));
                 self.rt.pop_axis_aligned_clip();
             } else {
-                // The transformation is non-standard and we must use fill to
-                // compensate instead of clear
+                // Special transformation is applied and we must use fill
+                // instead of clear
                 let old_blend = self.rt.get_blend_mode();
                 self.rt.set_blend_mode(d2d::BlendMode::Copy);
                 self.fill(rect, &color);
