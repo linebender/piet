@@ -76,13 +76,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             let transform = matrix_to_affine(rc.ctx.get_matrix());
 
             if let Some(region) = region {
-                let rotate = rotation_from_affine(transform);
-                let actual_center = Affine::translate(region.center().to_vec2());
-                let ta = actual_center.as_coeffs();
-                let ra = rotate.inverse().as_coeffs();
-                //https://www.euclideanspace.com/maths/geometry/affine/aroundPoint/
-                let rotate2 = Affine::new([ra[0],ra[1],ra[2],ra[3], ta[4]-ra[0]*ta[4]-ra[2]*ta[5], ta[5]-ra[1]*ta[4]-ra[3]*ta[5]]);
-                rc.transform( rotate2);
+                rc.transform((rc.current_transform().inverse()));
             }
 
             //prepare the colors etc
