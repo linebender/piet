@@ -68,15 +68,28 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Ok(())
     }
 
-    fn clear(&mut self, _region: impl Into<Option<Rect>>, color: Color) {
-        let rgba = color.as_rgba_u32();
-        self.ctx.set_source_rgba(
-            byte_to_frac(rgba >> 24),
-            byte_to_frac(rgba >> 16),
-            byte_to_frac(rgba >> 8),
-            byte_to_frac(rgba),
-        );
-        self.ctx.paint();
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        let region: Option<Rect> = region.into();
+        let _ = self.with_save(|rc| {
+            rc.ctx.reset_clip();
+            // we DO want to clip the specified region and reset the transformation
+            if let Some(region) = region {
+                rc.transform(rc.current_transform().inverse());
+                rc.clip(region);
+            }
+
+            //prepare the colors etc
+            let rgba = color.as_rgba_u32();
+            rc.ctx.set_source_rgba(
+                byte_to_frac(rgba >> 24),
+                byte_to_frac(rgba >> 16),
+                byte_to_frac(rgba >> 8),
+                byte_to_frac(rgba),
+            );
+            rc.ctx.set_operator(cairo::Operator::Source);
+            rc.ctx.paint();
+            Ok(())
+        });
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
