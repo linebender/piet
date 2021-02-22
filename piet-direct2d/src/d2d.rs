@@ -49,12 +49,6 @@ use winapi::Interface;
 use crate::conv::{circle_to_d2d, rect_to_rectf, rounded_rect_to_d2d, to_point2f};
 use crate::dwrite::TextLayout;
 
-pub(crate) enum BlendMode {
-    SourceOver,
-    Copy,
-    Unknown(u32),
-}
-
 pub enum FillRule {
     EvenOdd,
     NonZero,
@@ -442,28 +436,6 @@ impl DeviceContext {
             let mut tag2 = 0;
             let hr = self.0.EndDraw(&mut tag1, &mut tag2);
             wrap_unit(hr)
-        }
-    }
-
-    /// Set the blend mode for alpha channel
-    pub(crate) fn set_blend_mode(&mut self, blend_mode: BlendMode) {
-        unsafe {
-            self.0.SetPrimitiveBlend(match blend_mode {
-                BlendMode::Copy => D2D1_PRIMITIVE_BLEND_COPY,
-                BlendMode::SourceOver => D2D1_PRIMITIVE_BLEND_SOURCE_OVER,
-                BlendMode::Unknown(u) => u,
-            })
-        }
-    }
-
-    /// Get the blend mode for alpha channel
-    pub(crate) fn get_blend_mode(&mut self) -> BlendMode {
-        unsafe {
-            match self.0.GetPrimitiveBlend() {
-                u if u == D2D1_PRIMITIVE_BLEND_COPY => BlendMode::Copy,
-                u if u == D2D1_PRIMITIVE_BLEND_SOURCE_OVER => BlendMode::SourceOver,
-                u => BlendMode::Unknown(u),
-            }
         }
     }
 
