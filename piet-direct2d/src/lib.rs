@@ -194,6 +194,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        // Reset transform to identity
         let old_transform = self.rt.get_transform();
         self.rt.set_transform_identity();
 
@@ -201,6 +202,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         for _ in 0..self.layers.len() {
             self.rt.pop_layer();
         }
+
         if let Some(rect) = region.into() {
             self.rt.push_axis_aligned_clip(rect);
             self.rt.clear(color_to_colorf(color));
@@ -209,11 +211,13 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             // Clear whole canvas
             self.rt.clear(color_to_colorf(color));
         }
+
         // Restore clippings
         for (mask, layer) in self.layers.iter() {
             self.rt.push_layer_mask(mask, layer);
         }
 
+        // Restore transform
         self.rt.set_transform(&old_transform);
     }
 
