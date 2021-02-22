@@ -8,7 +8,7 @@ use std::borrow::Cow;
 
 use cairo::{Context, Filter, Format, ImageSurface, Matrix, SurfacePattern};
 
-use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size, Vec2};
+use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 use piet::{
     Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
     LineJoin, RenderContext, StrokeStyle, TextLayout,
@@ -71,12 +71,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let region: Option<Rect> = region.into();
         let _ = self.with_save(|rc| {
-            println!("________");
             rc.ctx.reset_clip();
-            let transform = matrix_to_affine(rc.ctx.get_matrix());
-
+            // we DO want to clip the specified region and reset the transformation
             if let Some(region) = region {
-                rc.transform((rc.current_transform().inverse()));
+                rc.transform(rc.current_transform().inverse());
+                rc.clip(region);
             }
 
             //prepare the colors etc
@@ -87,11 +86,6 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                 byte_to_frac(rgba >> 8),
                 byte_to_frac(rgba),
             );
-            // we DO want to clip the specified region
-            if let Some(region) = region {
-                rc.clip(region)
-            }
-            //we also need to save/restore the operator, so we can apply the SOURCE operator
             rc.ctx.set_operator(cairo::Operator::Source);
             rc.ctx.paint();
             Ok(())
@@ -500,50 +494,6 @@ fn affine_to_matrix(affine: Affine) -> Matrix {
         x0: a[4],
         y0: a[5],
     }
-}
-
-fn matrix_to_affine(matrix: Matrix) -> Affine {
-    Affine::new([
-        matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0,
-    ])
-}
-
-// https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
-fn translation_from_affine(affine: Affine) -> Affine {
-    let a = affine.as_coeffs();
-    // a[0] a[2] a[4]
-    // a[1] a[3] a[5]
-    // 0    0    1
-    let translate = (a[4], a[5]);
-    Affine::translate(translate)
-}
-// https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
-fn scale_from_affine(affine: Affine) -> Affine {
-    let a = affine.as_coeffs();
-    // a[0] a[2] a[4]
-    // a[1] a[3] a[5]
-    // 0    0    1
-    let scalex = (a[0].powf(2.0) + a[1].powf(2.0)).sqrt();
-    let scaley = (a[2].powf(2.0) + a[3].powf(2.0)).sqrt();
-    Affine::scale_non_uniform(scalex, scaley)
-}
-
-// https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
-fn rotation_from_affine(affine: Affine) -> Affine {
-    let a = affine.as_coeffs();
-    // a[0] a[2] a[4]
-    // a[1] a[3] a[5]
-    // 0    0    1
-    let scalex = (a[0].powf(2.0) + a[1].powf(2.0)).sqrt();
-    let scaley = (a[2].powf(2.0) + a[3].powf(2.0)).sqrt();
-    Affine::new([
-        a[0] / scalex,
-        a[1] / scalex,
-        a[2] / scaley,
-        a[3] / scaley,
-        0.0,
-        0.0,
-    ])
 }
 
 fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
