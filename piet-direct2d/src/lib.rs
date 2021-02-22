@@ -204,6 +204,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         }
 
         if let Some(rect) = region.into() {
+            // Clear only the given rect
             self.rt.push_axis_aligned_clip(rect);
             self.rt.clear(color_to_colorf(color));
             self.rt.pop_axis_aligned_clip();
