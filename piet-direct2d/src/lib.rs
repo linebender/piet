@@ -194,14 +194,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
-        // Reset transform to identity
-        let old_transform = self.rt.get_transform();
-        self.rt.set_transform_identity();
-
         // Remove clippings
         for _ in 0..self.layers.len() {
             self.rt.pop_layer();
         }
+
+        // Reset transform to identity
+        let old_transform = self.rt.get_transform();
+        self.rt.set_transform_identity();
 
         if let Some(rect) = region.into() {
             // Clear only the given rect
@@ -213,13 +213,13 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             self.rt.clear(color_to_colorf(color));
         }
 
+        // Restore transform
+        self.rt.set_transform(&old_transform);
+
         // Restore clippings
         for (mask, layer) in self.layers.iter() {
             self.rt.push_layer_mask(mask, layer);
         }
-
-        // Restore transform
-        self.rt.set_transform(&old_transform);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
