@@ -194,26 +194,17 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        let old_transform = self.rt.get_transform();
+        self.rt.set_transform_identity();
+
         // Remove clippings
         for _ in 0..self.layers.len() {
             self.rt.pop_layer();
         }
         if let Some(rect) = region.into() {
-            let ctx = self.ctx_stack.last_mut().unwrap();
-            if ctx.transform == Affine::new([1., 0., 0., 1., 0., 0.]) {
-                // If the transformation is axis aligned, we can use axis
-                // alignment clipping and clear
-                self.rt.push_axis_aligned_clip(rect);
-                self.rt.clear(color_to_colorf(color));
-                self.rt.pop_axis_aligned_clip();
-            } else {
-                // Special transformation is applied and we must use fill
-                // instead of clear
-                let old_blend = self.rt.get_blend_mode();
-                self.rt.set_blend_mode(d2d::BlendMode::Copy);
-                self.fill(rect, &color);
-                self.rt.set_blend_mode(old_blend);
-            }
+            self.rt.push_axis_aligned_clip(rect);
+            self.rt.clear(color_to_colorf(color));
+            self.rt.pop_axis_aligned_clip();
         } else {
             // Clear whole canvas
             self.rt.clear(color_to_colorf(color));
@@ -222,6 +213,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         for (mask, layer) in self.layers.iter() {
             self.rt.push_layer_mask(mask, layer);
         }
+
+        self.rt.set_transform(&old_transform);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
