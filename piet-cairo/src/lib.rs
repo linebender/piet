@@ -69,7 +69,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
-        let region:Option<Rect> = region.into();
+        let region: Option<Rect> = region.into();
         let _ = self.with_save(|rc| {
             println!("________");
             rc.ctx.reset_clip();
@@ -503,7 +503,9 @@ fn affine_to_matrix(affine: Affine) -> Matrix {
 }
 
 fn matrix_to_affine(matrix: Matrix) -> Affine {
-    Affine::new([matrix.xx,matrix.yx,matrix.xy,matrix.yy,matrix.x0,matrix.y0])
+    Affine::new([
+        matrix.xx, matrix.yx, matrix.xy, matrix.yy, matrix.x0, matrix.y0,
+    ])
 }
 
 // https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
@@ -521,9 +523,9 @@ fn scale_from_affine(affine: Affine) -> Affine {
     // a[0] a[2] a[4]
     // a[1] a[3] a[5]
     // 0    0    1
-    let scalex = (a[0].powf(2.0)+a[1].powf(2.0)).sqrt();
-    let scaley = (a[2].powf(2.0)+a[3].powf(2.0)).sqrt();
-    Affine::scale_non_uniform(scalex,scaley)
+    let scalex = (a[0].powf(2.0) + a[1].powf(2.0)).sqrt();
+    let scaley = (a[2].powf(2.0) + a[3].powf(2.0)).sqrt();
+    Affine::scale_non_uniform(scalex, scaley)
 }
 
 // https://math.stackexchange.com/questions/237369/given-this-transformation-matrix-how-do-i-decompose-it-into-translation-rotati
@@ -532,11 +534,17 @@ fn rotation_from_affine(affine: Affine) -> Affine {
     // a[0] a[2] a[4]
     // a[1] a[3] a[5]
     // 0    0    1
-    let scalex = (a[0].powf(2.0)+a[1].powf(2.0)).sqrt();
-    let scaley = (a[2].powf(2.0)+a[3].powf(2.0)).sqrt();
-    Affine::new([a[0]/scalex,a[1]/scalex,a[2]/scaley,a[3]/scaley,0.0,0.0])
+    let scalex = (a[0].powf(2.0) + a[1].powf(2.0)).sqrt();
+    let scaley = (a[2].powf(2.0) + a[3].powf(2.0)).sqrt();
+    Affine::new([
+        a[0] / scalex,
+        a[1] / scalex,
+        a[2] / scaley,
+        a[3] / scaley,
+        0.0,
+        0.0,
+    ])
 }
-
 
 fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
     let size = piet::util::size_for_blurred_rect(rect, radius);

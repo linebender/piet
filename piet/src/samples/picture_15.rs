@@ -24,7 +24,6 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let rotate = Affine::translate((100., 100.))
         * Affine::rotate(radians)
         * Affine::translate((-100., -100.0));
-        // rc.transform(Affine::translate((10., 10.0)));
 
     rc.save().unwrap();
     rc.clip(circle);
