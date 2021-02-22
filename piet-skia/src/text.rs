@@ -361,27 +361,48 @@ impl TextLayout for ParagraphTextLayout {
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
         let skia_point = skia_safe::Point::new(point.x as f32, point.y as f32);
         let position = self.paragraph.get_glyph_position_at_coordinate(skia_point);
-        let glyph_id = position.position as usize;
-        let text_boxes = self.paragraph.get_rects_for_range(glyph_id..(glyph_id + 1), RectHeightStyle::Max, RectWidthStyle::Max);
+        let idx = position.position as usize;
+        let text_boxes = self.paragraph.get_rects_for_range(idx..(idx + 1), RectHeightStyle::Tight, RectWidthStyle::Tight);
         let mut contains = false;
         for text_box in text_boxes.iter() {
             if text_box.rect.contains(skia_point) {
                 contains = true
             }
         }
-        HitTestPoint::new(glyph_id, contains)
-        //if point.y > self.paragraph.height() {
-        //   return HitTestPoint::default() 
-        //}
-        //let width = self.paragraph
-        //    .get_line_metrics()
-        //    .iter()
-        //    .map(|l| l.width);
+        HitTestPoint::new(idx, contains)
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
-        //unimplemented!();
-        // TODO
-        HitTestPosition::new(Point::new(0., 0.), 0)
+        let idx = idx.min(self.text.len());
+        let clipped_idx = if self.text.len() == idx {idx - 1} else {idx}; // handling case when idx = text length
+        let text_boxes = self.paragraph.get_rects_for_range(clipped_idx..(clipped_idx + 1), RectHeightStyle::Tight, RectWidthStyle::Tight);
+        let res = if let Some(glyph_box) = text_boxes.iter().next() {
+            let point = if idx == self.text.len() {
+                Point::new(glyph_box.rect.right as f64, glyph_box.rect.top as f64)
+            } else {
+                Point::new(glyph_box.rect.left as f64, glyph_box.rect.top as f64)
+            };
+            let center = &glyph_box.rect.center();
+            let mut i = 0;
+            let mut line_number = 0;
+            while let Some(metrics) = self.line_metric(i) {
+                if center.y as f64 > metrics.y_offset && (center.y as f64) < metrics.y_offset + metrics.height {
+                    line_number = i;
+                }
+                i += 1;
+            }
+            HitTestPosition::new(point, line_number)
+        } else {
+            let info = format!("{} -- {}", self.text.as_str(), self.text.as_str().len());
+            dbg!(&info);
+            dbg!(idx);
+            //panic!();
+            HitTestPosition::new(Point::new(0., 0.), 0)
+        };
+        //dbg!(idx, &res);
+        res
+        //let glyph_box = text_boxes.iter().next().expect(&format!("hit_test_text_position called with idx={} out of boundary {}", idx, self.text.as_str().len()));
+        //let point = Point::new(glyph_box.rect.left as f64, glyph_box.rect.top as f64);
+        //HitTestPosition::new(point, 0)
     }
 }
