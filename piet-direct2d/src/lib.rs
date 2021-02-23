@@ -30,7 +30,7 @@ use piet::{
     StrokeStyle,
 };
 
-use crate::d2d::wrap_unit;
+use crate::d2d::{wrap_unit, Layer};
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use crate::dwrite::DwriteFactory;
 pub use crate::text::{D2DText, D2DTextLayout, D2DTextLayoutBuilder};
@@ -48,6 +48,8 @@ pub struct D2DRenderContext<'a> {
 
     /// The context state stack. There is always at least one, until finishing.
     ctx_stack: Vec<CtxState>,
+
+    layers: Vec<(Geometry, Layer)>,
 
     err: Result<(), Error>,
 
@@ -77,6 +79,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
             factory,
             inner_text,
             rt,
+            layers: vec![],
             ctx_stack: vec![CtxState::default()],
             err: Ok(()),
             brush_cache: Default::default(),
@@ -88,6 +91,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         let old_state = self.ctx_stack.pop().unwrap();
         for _ in 0..old_state.n_layers_pop {
             self.rt.pop_layer();
+            self.layers.pop();
         }
     }
 
@@ -189,8 +193,33 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, _region: impl Into<Option<Rect>>, color: Color) {
-        self.rt.clear(color_to_colorf(color));
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        // Remove clippings
+        for _ in 0..self.layers.len() {
+            self.rt.pop_layer();
+        }
+
+        // Reset transform to identity
+        let old_transform = self.rt.get_transform();
+        self.rt.set_transform_identity();
+
+        if let Some(rect) = region.into() {
+            // Clear only the given rect
+            self.rt.push_axis_aligned_clip(rect);
+            self.rt.clear(color_to_colorf(color));
+            self.rt.pop_axis_aligned_clip();
+        } else {
+            // Clear whole canvas
+            self.rt.clear(color_to_colorf(color));
+        }
+
+        // Restore transform
+        self.rt.set_transform(&old_transform);
+
+        // Restore clippings
+        for (mask, layer) in self.layers.iter() {
+            self.rt.push_layer_mask(mask, layer);
+        }
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -277,6 +306,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
         };
         self.rt.push_layer_mask(&geom, &layer);
+        self.layers.push((geom, layer));
         self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
     }
 

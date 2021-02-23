@@ -41,6 +41,7 @@ use winapi::um::d2d1_1::{
     D2D1_COMPOSITE_MODE, D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_INTERPOLATION_MODE,
     D2D1_PROPERTY_TYPE_FLOAT,
 };
+use winapi::um::d2d1_1::{D2D1_PRIMITIVE_BLEND_COPY, D2D1_PRIMITIVE_BLEND_SOURCE_OVER};
 use winapi::um::d2d1effects::{CLSID_D2D1GaussianBlur, D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
@@ -438,6 +439,27 @@ impl DeviceContext {
         }
     }
 
+    /// Clip axis aligned clip
+    ///
+    /// Currently this should be for clipping just RenderContext::clear(). If
+    /// this is used for clipping drawing primitives it requires proper stack to
+    /// not interfere with clearing.
+    pub(crate) fn push_axis_aligned_clip(&mut self, rect: Rect) {
+        unsafe {
+            self.0
+                .PushAxisAlignedClip(&rect_to_rectf(rect), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        }
+    }
+
+    /// Pop axis aligned clip
+    ///
+    /// Currently this should be used for just RenderContext::clear().
+    pub(crate) fn pop_axis_aligned_clip(&mut self) {
+        unsafe {
+            self.0.PopAxisAlignedClip();
+        }
+    }
+
     pub(crate) fn clear(&mut self, color: D2D1_COLOR_F) {
         unsafe {
             self.0.Clear(&color);
@@ -447,6 +469,22 @@ impl DeviceContext {
     pub(crate) fn set_transform(&mut self, transform: &D2D1_MATRIX_3X2_F) {
         unsafe {
             self.0.SetTransform(transform);
+        }
+    }
+
+    pub(crate) fn set_transform_identity(&mut self) {
+        unsafe {
+            self.0.SetTransform(&IDENTITY_MATRIX_3X2_F);
+        }
+    }
+
+    pub(crate) fn get_transform(&mut self) -> D2D1_MATRIX_3X2_F {
+        unsafe {
+            let mut empty = D2D1_MATRIX_3X2_F {
+                matrix: [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+            };
+            self.0.GetTransform(&mut empty);
+            empty
         }
     }
 
