@@ -104,10 +104,12 @@ impl Text for D2DText {
     type TextLayout = D2DTextLayout;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        self.dwrite
-            .system_font_collection()
-            .ok()
-            .and_then(|fonts| fonts.font_family(family_name))
+        self.loaded_fonts.borrow().get(family_name).or_else(|| {
+            self.dwrite
+                .system_font_collection()
+                .ok()
+                .and_then(|fonts| fonts.font_family(family_name))
+        })
     }
 
     fn load_font(&mut self, data: &[u8]) -> Result<FontFamily, Error> {
@@ -471,6 +473,13 @@ impl LoadedFonts {
         self.files.push(font_file);
         self.names.push(fam_name.clone());
         Ok(fam_name)
+    }
+
+    fn get(&self, family_name: &str) -> Option<FontFamily> {
+        self.names
+            .iter()
+            .find(|fam| fam.name() == family_name)
+            .cloned()
     }
 
     fn contains(&self, family: &FontFamily) -> bool {
