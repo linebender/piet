@@ -2,23 +2,24 @@ use std::fmt;
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 use piet::{
-    Color, Error, FixedGradient, ImageFormat, InterpolationMode,
-    IntoBrush, RenderContext, StrokeStyle, TextLayout, FixedLinearGradient,
-    FixedRadialGradient, Image, LineJoin, LineCap
+    Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, Image, ImageFormat,
+    InterpolationMode, IntoBrush, LineCap, LineJoin, RenderContext, StrokeStyle, TextLayout,
+};
+use skia_safe;
+use skia_safe::canvas::SrcRectConstraint;
+use skia_safe::effects::gradient_shader::{linear, radial};
+use skia_safe::paint::{Cap, Join};
+use skia_safe::path_effect::PathEffect;
+use skia_safe::shader::Shader;
+use skia_safe::ClipOp;
+use skia_safe::{
+    AlphaType, BlurStyle, ColorType, Data, MaskFilter, Paint, PaintStyle, Path, TileMode,
 };
 use std::borrow::Cow;
 pub use text::*;
-use skia_safe;
-use skia_safe::{Path, PaintStyle, Paint, TileMode, Data, ColorType, AlphaType, MaskFilter, BlurStyle};
-use skia_safe::effects::gradient_shader::{linear, radial};
-use skia_safe::shader::Shader;
-use skia_safe::ClipOp;
-use skia_safe::paint::{Join, Cap};
-use skia_safe::path_effect::PathEffect;
-use skia_safe::canvas::SrcRectConstraint;
 
-mod text;
 mod simple_text;
+mod text;
 
 fn pairf32(p: Point) -> (f32, f32) {
     (p.x as f32, p.y as f32)
@@ -27,7 +28,7 @@ fn pairf32(p: Point) -> (f32, f32) {
 #[derive(Clone)]
 pub enum Brush {
     Solid(skia_safe::Color),
-    Gradient(Shader)
+    Gradient(Shader),
 }
 
 impl<'a> IntoBrush<SkiaRenderContext<'a>> for Brush {
@@ -66,11 +67,11 @@ pub struct SkiaRenderContext<'a> {
     text: SkiaText,
 }
 
-impl<'a> SkiaRenderContext<'a>{
+impl<'a> SkiaRenderContext<'a> {
     pub fn new(canvas: &'a mut skia_safe::Canvas) -> Self {
-        SkiaRenderContext{
+        SkiaRenderContext {
             canvas,
-            text: SkiaText
+            text: SkiaText,
         }
     }
 
@@ -89,7 +90,7 @@ impl Image for SkiaImage {
 
 fn create_path(shape: impl Shape) -> Path {
     let mut path = Path::new();
-    
+
     for el in shape.path_elements(1e-3) {
         match el {
             PathEl::MoveTo(p) => {
@@ -104,7 +105,9 @@ fn create_path(shape: impl Shape) -> Path {
             PathEl::CurveTo(p1, p2, p3) => {
                 path.cubic_to(pairf32(p1), pairf32(p2), pairf32(p3));
             }
-            PathEl::ClosePath => {path.close();}
+            PathEl::ClosePath => {
+                path.close();
+            }
         }
     }
     path
@@ -123,7 +126,7 @@ pub fn convert_point(point: Point) -> skia_safe::Point {
 
 #[derive(Debug)]
 pub enum SkiaImageError {
-    FailedToCreate
+    FailedToCreate,
 }
 
 impl fmt::Display for SkiaImageError {
@@ -160,31 +163,45 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Brush, Error> {
         let gradient = gradient.into();
         let colors_from_stops = |stops: Vec<piet::GradientStop>| {
-            stops.into_iter().map(|stop| convert_color(stop.color)).collect()
+            stops
+                .into_iter()
+                .map(|stop| convert_color(stop.color))
+                .collect()
         };
         let shader = match gradient {
-            FixedGradient::Linear(FixedLinearGradient {
-                start,
-                end,
-                stops
-            }) => {
+            FixedGradient::Linear(FixedLinearGradient { start, end, stops }) => {
                 let start = convert_point(start);
                 let end = convert_point(end);
                 let colors: Vec<_> = colors_from_stops(stops);
-                linear((start, end), colors.as_slice(), None, TileMode::Clamp, None, None)
+                linear(
+                    (start, end),
+                    colors.as_slice(),
+                    None,
+                    TileMode::Clamp,
+                    None,
+                    None,
+                )
             }
             FixedGradient::Radial(FixedRadialGradient {
                 center,
                 origin_offset,
                 radius,
-                stops
+                stops,
             }) => {
                 let mut center = convert_point(center);
                 center.x += origin_offset.x as f32;
                 center.y += origin_offset.y as f32;
                 let radius = radius as f32;
                 let colors: Vec<_> = colors_from_stops(stops);
-                radial(center, radius, colors.as_slice(), None, TileMode::Clamp, None, None)
+                radial(
+                    center,
+                    radius,
+                    colors.as_slice(),
+                    None,
+                    TileMode::Clamp,
+                    None,
+                    None,
+                )
             }
         };
         Ok(Brush::Gradient(shader.unwrap()))
@@ -228,32 +245,16 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         let mut paint = create_paint();
         apply_brush(&mut paint, brush.as_ref());
         let line_join = match style.line_join {
-            Some(LineJoin::Miter) => {
-               Join::Miter 
-            }
-            Some(LineJoin::Round) => {
-                Join::Round
-            }
-            Some(LineJoin::Bevel) => {
-                Join::Bevel
-            }
-            None => {
-                Join::Miter
-            }
+            Some(LineJoin::Miter) => Join::Miter,
+            Some(LineJoin::Round) => Join::Round,
+            Some(LineJoin::Bevel) => Join::Bevel,
+            None => Join::Miter,
         };
         let line_cap = match style.line_cap {
-            Some(LineCap::Butt) => {
-                Cap::Butt
-            }
-            Some(LineCap::Round) => {
-                Cap::Round
-            }
-            Some(LineCap::Square) => {
-                Cap::Square
-            }
-            None => {
-                Cap::Butt
-            }
+            Some(LineCap::Butt) => Cap::Butt,
+            Some(LineCap::Round) => Cap::Round,
+            Some(LineCap::Square) => Cap::Square,
+            None => Cap::Butt,
         };
         let path = create_path(shape);
         let path_effect = PathEffect::stroke(width as f32, line_join, line_cap, None);
@@ -277,7 +278,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         match layout {
             SkiaTextLayout::Paragraph(paragraph) => {
                 process_brush(&paragraph.fg_color());
-                paragraph.paragraph.paint(&mut self.canvas, pos); 
+                paragraph.paragraph.paint(&mut self.canvas, pos);
             }
             SkiaTextLayout::Simple(simple) => {
                 process_brush(&simple.fg_color);
@@ -292,7 +293,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
 
     fn save(&mut self) -> Result<(), Error> {
         self.canvas.save();
-        return Ok(())
+        return Ok(());
     }
 
     fn restore(&mut self) -> Result<(), Error> {
@@ -310,7 +311,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         let mut matrix = [0f32; 6];
         for (e, c) in matrix.iter_mut().zip(coefs.iter()) {
             *e = *c as f32;
-        };
+        }
         let matrix = skia_safe::Matrix::from_affine(&matrix);
         self.canvas.concat(&matrix);
     }
@@ -341,7 +342,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
     ) -> Result<Self::Image, Error> {
         let dimensions = skia_safe::ISize {
             width: width as i32,
-            height: height as i32
+            height: height as i32,
         };
         let (color_type, alpha_type) = match format {
             ImageFormat::Rgb => {
@@ -349,23 +350,15 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
                 // use RGBA8888 here instead
                 (ColorType::RGBA8888, AlphaType::Opaque)
             }
-            ImageFormat::RgbaPremul => {
-                (ColorType::RGBA8888, AlphaType::Premul)
-            }
-            ImageFormat::RgbaSeparate => {
-                (ColorType::RGBA8888, AlphaType::Unpremul)
-            }
-            ImageFormat::Grayscale => {
-                (ColorType::Gray8, AlphaType::Opaque)
-            }
-            _ => {
-                (ColorType::RGBA8888, AlphaType::Unpremul) 
-            }
+            ImageFormat::RgbaPremul => (ColorType::RGBA8888, AlphaType::Premul),
+            ImageFormat::RgbaSeparate => (ColorType::RGBA8888, AlphaType::Unpremul),
+            ImageFormat::Grayscale => (ColorType::Gray8, AlphaType::Opaque),
+            _ => (ColorType::RGBA8888, AlphaType::Unpremul),
         };
         let src_row_bytes = width * format.bytes_per_pixel();
         let dst_row_bytes = width * color_type.bytes_per_pixel();
-        let mut new_buf = vec![0u8; dst_row_bytes * height]; 
-        
+        let mut new_buf = vec![0u8; dst_row_bytes * height];
+
         for y in 0..height {
             let src_off = y * src_row_bytes;
             let dst_off = y * dst_row_bytes;
@@ -411,9 +404,7 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         // TODO do the same without extra copy
         let data = Data::new_copy(&new_buf);
         let image = skia_safe::Image::from_raster_data(&image_info, data, dst_row_bytes).ok_or(
-            Error::BackendError(
-                Box::new(SkiaImageError::FailedToCreate)
-            )
+            Error::BackendError(Box::new(SkiaImageError::FailedToCreate)),
         )?;
         Ok(SkiaImage(image))
     }
@@ -428,8 +419,14 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         let paint = create_paint();
         let dst_rect = dst_rect.into();
         // TODO use interp here
-        let dst_rect = skia_safe::Rect::new(dst_rect.x0 as f32, dst_rect.y0 as f32, dst_rect.x1 as f32, dst_rect.y1 as f32);
-        self.canvas.draw_image_rect(&image.0, None, dst_rect, &paint);
+        let dst_rect = skia_safe::Rect::new(
+            dst_rect.x0 as f32,
+            dst_rect.y0 as f32,
+            dst_rect.x1 as f32,
+            dst_rect.y1 as f32,
+        );
+        self.canvas
+            .draw_image_rect(&image.0, None, dst_rect, &paint);
     }
 
     #[inline]
@@ -443,9 +440,24 @@ impl<'a> RenderContext for SkiaRenderContext<'a> {
         let paint = create_paint();
         let src_rect = src_rect.into();
         let dst_rect = dst_rect.into();
-        let src_rect = skia_safe::Rect::new(src_rect.x0 as f32, src_rect.y0 as f32, src_rect.x1 as f32, src_rect.y1 as f32);
-        let dst_rect = skia_safe::Rect::new(dst_rect.x0 as f32, dst_rect.y0 as f32, dst_rect.x1 as f32, dst_rect.y1 as f32);
-        self.canvas.draw_image_rect(&image.0, Some((&src_rect, SrcRectConstraint::Strict)), dst_rect, &paint);
+        let src_rect = skia_safe::Rect::new(
+            src_rect.x0 as f32,
+            src_rect.y0 as f32,
+            src_rect.x1 as f32,
+            src_rect.y1 as f32,
+        );
+        let dst_rect = skia_safe::Rect::new(
+            dst_rect.x0 as f32,
+            dst_rect.y0 as f32,
+            dst_rect.x1 as f32,
+            dst_rect.y1 as f32,
+        );
+        self.canvas.draw_image_rect(
+            &image.0,
+            Some((&src_rect, SrcRectConstraint::Strict)),
+            dst_rect,
+            &paint,
+        );
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, _brush: &impl IntoBrush<Self>) {

@@ -38,7 +38,7 @@ cfg_if::cfg_if! {
     } else if #[cfg(all(target_os = "linux", feature = "skia"))] {
         #[path = "skia_back.rs"]
         mod backend;
-    } else if #[cfg(target_os = "linux")] { 
+    } else if #[cfg(target_os = "linux")] {
         #[path = "cairo_back.rs"]
         mod backend;
     }

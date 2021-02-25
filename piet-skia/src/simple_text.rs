@@ -1,20 +1,17 @@
 use std::rc::Rc;
 
 use piet::kurbo::{Point, Rect, Size};
-use piet::{
-    util, Color, HitTestPoint, HitTestPosition, LineMetric,
-    TextLayout, TextStorage,
-};
+use piet::{Color, HitTestPoint, HitTestPosition, LineMetric, TextLayout, TextStorage};
 use skia_safe::Font;
-use xi_unicode::LineBreakIterator;
 use std::fmt;
+use xi_unicode::LineBreakIterator;
 
 #[derive(Debug, Clone)]
 pub struct SimpleLineMetric {
     pub start_offset: usize,
     pub end_offset: usize,
     pub y_offset: f64,
-    pub bounds: skia_safe::Rect
+    pub bounds: skia_safe::Rect,
 }
 
 fn add_line_metric(
@@ -26,13 +23,13 @@ fn add_line_metric(
     font: &Font,
 ) {
     let line = &text[start_offset..end_offset];
-   
+
     let (_width, bounds) = font.measure_str(line, None);
     let line_metric = SimpleLineMetric {
         start_offset,
         end_offset,
         y_offset: *y_offset,
-        bounds
+        bounds,
     };
     line_metrics.push(line_metric);
     *y_offset += bounds.height() as f64;
@@ -43,17 +40,16 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &Font) -> Vec<SimpleLineM
     let mut line_start = 0;
     let mut y_offset = 0.0;
     for (line_break, is_hard_break) in LineBreakIterator::new(text) {
-        if is_hard_break { 
+        if is_hard_break {
             add_line_metric(
                 text,
                 line_start,
                 line_break,
                 &mut y_offset,
                 &mut line_metrics,
-                font
+                font,
             );
             line_start = line_break;
-
         }
     }
     // the trailing line, if there is no explicit newline.
@@ -64,7 +60,7 @@ pub(crate) fn calculate_line_metrics(text: &str, font: &Font) -> Vec<SimpleLineM
             text.len(),
             &mut y_offset,
             &mut line_metrics,
-            font
+            font,
         );
     }
     line_metrics
@@ -82,7 +78,6 @@ pub struct SkiaSimpleTextLayout {
     // skia doesn't support Clone trait for font
     pub font: Rc<Font>,
     pub text: Rc<dyn TextStorage>,
-
 }
 
 impl fmt::Debug for SkiaSimpleTextLayout {
@@ -112,13 +107,13 @@ impl TextLayout for SkiaSimpleTextLayout {
         &self.text
     }
 
-    fn line_text(&self, line_number: usize) -> Option<&str> {
+    fn line_text(&self, _line_number: usize) -> Option<&str> {
         unimplemented!();
     }
 
-    fn line_metric(&self, line_number: usize) -> Option<LineMetric> {
-        // for now we can just support only one line text 
-        let mut metrics = LineMetric::default();
+    fn line_metric(&self, _line_number: usize) -> Option<LineMetric> {
+        // for now we can just support only one line text
+        let metrics = LineMetric::default();
         Some(metrics) // TODO
     }
 
@@ -126,11 +121,11 @@ impl TextLayout for SkiaSimpleTextLayout {
         unimplemented!();
     }
 
-    fn hit_test_point(&self, point: Point) -> HitTestPoint { 
+    fn hit_test_point(&self, _point: Point) -> HitTestPoint {
         // TODO
         HitTestPoint::new(0, false)
         //if point.y > self.paragraph.height() {
-        //   return HitTestPoint::default() 
+        //   return HitTestPoint::default()
         //}
         //let width = self.paragraph
         //    .get_line_metrics()
@@ -138,7 +133,7 @@ impl TextLayout for SkiaSimpleTextLayout {
         //    .map(|l| l.width);
     }
 
-    fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
+    fn hit_test_text_position(&self, _idx: usize) -> HitTestPosition {
         // TODO
         HitTestPosition::new(Point::new(0., 0.), 0)
     }

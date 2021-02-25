@@ -2,10 +2,10 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-use skia_safe::{Surface, EncodedImageFormat};
-use piet_skia::SkiaRenderContext;
-use piet::{samples, RenderContext};
 use piet::kurbo::Circle;
+use piet::{samples, RenderContext};
+use piet_skia::SkiaRenderContext;
+use skia_safe::{EncodedImageFormat, Surface};
 
 const HIDPI: f64 = 2.0;
 const FILE_PREFIX: &str = "skia-test-";
@@ -36,13 +36,15 @@ fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Err
     let canvas = surface.canvas();
     canvas.scale((HIDPI as f32, HIDPI as f32));
     let mut piet_ctx = SkiaRenderContext::new(canvas);
-    
+
     sample.draw(&mut piet_ctx)?;
     piet_ctx.finish()?;
-    surface.flush(); 
+    surface.flush();
 
     let image = surface.image_snapshot();
-    let data = image.encode_to_data(EncodedImageFormat::PNG).expect("Failed to encode data");
+    let data = image
+        .encode_to_data(EncodedImageFormat::PNG)
+        .expect("Failed to encode data");
     let mut file = File::create(path)?;
     let bytes = data.as_bytes();
     file.write_all(bytes).map_err(Into::into)

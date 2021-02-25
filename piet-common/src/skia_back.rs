@@ -113,7 +113,7 @@ impl<'a> BitmapTarget<'a> {
 
     /// Get raw RGBA pixels from the bitmap.
     #[deprecated(since = "0.2.0", note = "use to_image_buf")]
-    pub fn into_raw_pixels(/*mut*/self, _fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
+    pub fn into_raw_pixels(/*mut*/ self, _fmt: ImageFormat) -> Result<Vec<u8>, piet::Error> {
         unimplemented!();
     }
 
