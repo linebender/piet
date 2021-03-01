@@ -243,6 +243,7 @@ impl Line {
         self.0.get_typographic_bounds()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_trailing_whitespace_width(&self) -> f64 {
         unsafe { CTLineGetTrailingWhitespaceWidth(self.0.as_concrete_TypeRef()) }
     }

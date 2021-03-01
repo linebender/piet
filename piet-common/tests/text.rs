@@ -234,4 +234,14 @@ fn trailing_whitespace_width() {
     assert_close!(non_ws.trailing_whitespace_width(), non_ws.size().width, 0.1);
     // the width with whitespace is ~very approximately~ twice the width without whitespace
     assert_close!(ws.trailing_whitespace_width() / ws.size().width, 2.0, 0.5);
+
+    // https://github.com/linebender/piet/pull/407
+    // check that we aren't miscalculating trailing whitespace width by (for instance)
+    // incorrectly adding it to base width
+    let text_ws_plus = "hello     +";
+    let ws_plus = factory.new_text_layout(text_ws_plus).build().unwrap();
+    assert!(
+        ws_plus.trailing_whitespace_width() > ws.trailing_whitespace_width(),
+        "trailing ws width is inclusive of other width"
+    );
 }
