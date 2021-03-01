@@ -844,8 +844,7 @@ fn build_line_metrics(
         let trailing_whitespace = count_trailing_ws(&text[start_offset..end_offset]);
 
         let typo_bounds = line.get_typographic_bounds();
-        let ws_width = line.get_trailing_whitespace_width();
-        max_width_with_ws = max_width_with_ws.max(typo_bounds.width + ws_width);
+        max_width_with_ws = max_width_with_ws.max(typo_bounds.width);
 
         // this may not be exactly right, but i'm also not sure we ever use this?
         //  see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
