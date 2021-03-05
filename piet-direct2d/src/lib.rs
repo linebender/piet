@@ -71,13 +71,12 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
     /// TODO: check signature.
     pub fn new(
         factory: &'a D2DFactory,
-        dwrite: DwriteFactory,
+        text: D2DText,
         rt: &'b mut DeviceContext,
     ) -> D2DRenderContext<'b> {
-        let inner_text = D2DText::new(dwrite);
         D2DRenderContext {
             factory,
-            inner_text,
+            inner_text: text,
             rt,
             layers: vec![],
             ctx_stack: vec![CtxState::default()],

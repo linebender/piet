@@ -141,7 +141,8 @@ impl<'a> BitmapTarget<'a> {
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> D2DRenderContext {
-        D2DRenderContext::new(self.d2d, self.dwrite.clone(), &mut self.context)
+        let text = D2DText::new(self.dwrite.clone());
+        D2DRenderContext::new(self.d2d, text, &mut self.context)
     }
 
     /// Get an in-memory pixel buffer from the bitmap.
