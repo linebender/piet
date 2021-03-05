@@ -235,3 +235,17 @@ fn trailing_whitespace_width() {
     // the width with whitespace is ~very approximately~ twice the width without whitespace
     assert_close!(ws.trailing_whitespace_width() / ws.size().width, 2.0, 0.5);
 }
+
+/// Trailing whitespace should all be included in the text of the line,
+/// and should be reported in the `trailing_whitespace` field of the line metrics.
+#[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn line_test_tabs() {
+    let line_text = "a\t\t\t\t\n";
+    let mut factory = make_factory();
+    let layout = factory.new_text_layout(line_text).build().unwrap();
+    assert_eq!(layout.line_count(), 2);
+    assert_eq!(layout.line_text(0), Some(line_text));
+    let metrics = layout.line_metric(0).unwrap();
+    assert_eq!(metrics.trailing_whitespace, line_text.len() - 1);
+}
