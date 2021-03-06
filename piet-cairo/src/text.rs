@@ -791,7 +791,7 @@ mod test {
         // outside
         println!("layout_width: {:?}", layout.size().width); // 56.0
 
-        let pt = layout.hit_test_point(Point::new(56.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(55.0, 0.0));
         assert_eq!(pt.idx, 10); // last text position
         assert_eq!(pt.is_inside, true);
 
