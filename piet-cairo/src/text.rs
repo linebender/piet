@@ -931,15 +931,15 @@ mod test {
         assert_eq!(pt.idx, 9);
         let pt = layout.hit_test_point(Point::new(26.0, 0.0));
         assert_eq!(pt.idx, 9);
-        let pt = layout.hit_test_point(Point::new(29.0, 0.0));
-        assert_eq!(pt.idx, 10);
-        let pt = layout.hit_test_point(Point::new(32.0, 0.0));
-        assert_eq!(pt.idx, 10);
-        let pt = layout.hit_test_point(Point::new(35.5, 0.0));
-        assert_eq!(pt.idx, 14);
         let pt = layout.hit_test_point(Point::new(38.0, 0.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(42.0, 0.0));
+        assert_eq!(pt.idx, 10);
+        let pt = layout.hit_test_point(Point::new(46.5, 0.0));
         assert_eq!(pt.idx, 14);
-        let pt = layout.hit_test_point(Point::new(40.0, 0.0));
+        let pt = layout.hit_test_point(Point::new(52.0, 0.0));
+        assert_eq!(pt.idx, 14);
+        let pt = layout.hit_test_point(Point::new(58.0, 0.0));
         assert_eq!(pt.idx, 14);
     }
 
