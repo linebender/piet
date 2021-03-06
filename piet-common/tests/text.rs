@@ -99,7 +99,7 @@ fn empty_layout_size() {
     assert_close!(
         empty_layout.size().height,
         non_empty_layout.size().height,
-        1.0
+        2.0
     );
 }
 
