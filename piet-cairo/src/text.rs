@@ -422,7 +422,10 @@ impl TextLayout for CairoTextLayout {
             .line_metrics
             .iter()
             .enumerate()
-            .find(|(_, metric)| metric.start_offset <= index && index <= metric.end_offset)
+            .find(|(_, metric)| {
+                metric.start_offset <= index
+                    && index <= metric.end_offset - metric.trailing_whitespace
+            })
             .unwrap();
 
         //NOTE: Manually move to start of next line when hit test is at end of line
