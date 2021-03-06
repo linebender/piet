@@ -418,10 +418,11 @@ impl TextLayout for CairoTextLayout {
                 .unwrap_or(index)
         };
 
-        let metric = self
+        let (metric_index, metric) = self
             .line_metrics
             .iter()
-            .find(|metric| metric.start_offset <= index && index <= metric.end_offset)
+            .enumerate()
+            .find(|(_, metric)| metric.start_offset <= index && index <= metric.end_offset)
             .unwrap();
 
         //NOTE: Manually move to start of next line when hit test is at end of line
@@ -436,7 +437,11 @@ impl TextLayout for CairoTextLayout {
                     .unwrap_or(Some(index))
                     .unwrap_or(index);
 
-                if next == metric.end_offset {
+                /*
+                 * NOTE(ForLoveOfCats): Dirty hack to prevent preferring downstream affinity
+                 * when there are no following metrics. I don't like it either
+                 */
+                if next >= metric.end_offset && metric_index + 1 < self.line_metrics.len() {
                     next
                 } else {
                     index
