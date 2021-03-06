@@ -1345,9 +1345,9 @@ mod test {
         // this should break into four lines
         let layout = text.new_text_layout(input).max_width(30.0).build().unwrap();
         println!("text pos 01: {:?}", layout.hit_test_text_position(0)); // (0.0, 12.0)
-        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 26.0)
-        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 40.0)
-        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 53.99999)
+        println!("text pos 06: {:?}", layout.hit_test_text_position(5)); // (0.0, 27.0)
+        println!("text pos 11: {:?}", layout.hit_test_text_position(10)); // (0.0, 43.0)
+        println!("text pos 16: {:?}", layout.hit_test_text_position(15)); // (0.0, 57.0)
 
         let pt = layout.hit_test_point(Point::new(1.0, -1.0));
         assert_eq!(pt.idx, 0);
@@ -1355,26 +1355,26 @@ mod test {
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
         assert_eq!(pt.idx, 0);
         assert!(pt.is_inside);
-        let pt = layout.hit_test_point(Point::new(1.0, 14.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 16.0));
         assert_eq!(pt.idx, 5);
-        let pt = layout.hit_test_point(Point::new(1.0, 28.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 30.0));
         assert_eq!(pt.idx, 10);
-        let pt = layout.hit_test_point(Point::new(1.0, 44.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 56.0));
         assert_eq!(pt.idx, 15);
 
         // over on y axis, but x still affects the text position
         let best_layout = text.new_text_layout("best").build().unwrap();
         println!("layout width: {:#?}", best_layout.size().width); // 26.0...
 
-        let pt = layout.hit_test_point(Point::new(1.0, 56.0));
+        let pt = layout.hit_test_point(Point::new(1.0, 62.0));
         assert_eq!(pt.idx, 15);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(25.0, 56.0));
+        let pt = layout.hit_test_point(Point::new(25.0, 62.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
-        let pt = layout.hit_test_point(Point::new(27.0, 56.0));
+        let pt = layout.hit_test_point(Point::new(27.0, 62.0));
         assert_eq!(pt.idx, 19);
         assert_eq!(pt.is_inside, false);
 
