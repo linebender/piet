@@ -806,7 +806,7 @@ fn build_line_metrics(
 ) -> (Vec<LineMetric>, Vec<f64>, f64) {
     let line_origins = frame.get_line_origins(CFRange::init(0, 0));
     assert_eq!(frame.lines().len(), line_origins.len());
-    let mut metrics: Vec<LineMetric> = Vec::with_capacity(frame.lines().len() + 1);
+    let mut metrics = Vec::with_capacity(frame.lines().len() + 1);
     let mut x_offsets = Vec::with_capacity(frame.lines().len() + 1);
     let mut max_width_with_ws = 0.0_f64;
 
@@ -830,12 +830,24 @@ fn build_line_metrics(
         }
     };
 
-    for (i, line) in frame.lines().iter().enumerate() {
-        let range = line.get_string_range();
-
+    let mut last_line_end = 0;
+    let mut iter = frame.lines().iter().enumerate().peekable();
+    while let Some((i, line)) = iter.next() {
         let y_pos = frame_height - line_origins[i].y;
         let x_offset = line_origins[i].x;
 
+        //let start_offset = last_line_end;
+        //// the reported end does not include trailing whitespace, so we
+        //// use the start of the next line and count whitespace manually.
+        //let end_offset = iter
+            //.peek()
+            //.map(|(_, nxt)| {
+                //let range = nxt.get_string_range();
+                //utf16_to_utf8(range.location as usize)
+            //})
+            //.unwrap_or_else(|| text.len());
+
+        last_line_end = end_offset;
         let start_offset = utf16_to_utf8(range.location as usize);
         let end_offset = text.len();
         if let Some(prev_line) = metrics.last_mut() {

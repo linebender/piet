@@ -15,7 +15,7 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
         let (non_ws_len_8, ws_len_8) = len_and_ws_len_utf8(
             &text[offset_utf8..],
             raw_metric.length,
-            raw_metric.trailingWhitespaceLength,
+            dbg!(raw_metric.trailingWhitespaceLength),
         );
 
         let end_offset = offset_utf8 + non_ws_len_8 + ws_len_8;

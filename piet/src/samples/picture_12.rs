@@ -29,6 +29,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
 
     let sel_one = layout.rects_for_range(10..72);
     let sel_two = layout.rects_for_range(240..);
+    dbg!(&sel_one, &sel_two);
 
     for rect in sel_one {
         rc.fill(rect + text_pos, &SELECTION_COLOR);

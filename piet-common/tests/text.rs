@@ -241,6 +241,8 @@ fn trailing_whitespace_width() {
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn line_test_tabs() {
+    //FIXME: this is the weird one:
+    //let line_text = "bbbc\na\t\t\t\t\naa\t\ta";
     let line_text = "a\t\t\t\t\n";
     let mut factory = make_factory();
     let layout = factory.new_text_layout(line_text).build().unwrap();
@@ -248,4 +250,41 @@ fn line_test_tabs() {
     assert_eq!(layout.line_text(0), Some(line_text));
     let metrics = layout.line_metric(0).unwrap();
     assert_eq!(metrics.trailing_whitespace, line_text.len() - 1);
+}
+
+#[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn test_line_ranges_with_whitespace() {
+    let line_text = "a\nb \nc   d";
+    let mut factory = make_factory();
+    let layout = factory
+        .new_text_layout(line_text)
+        .max_width(5.0)
+        .build()
+        .unwrap();
+
+    let metrics = layout.line_metric(0).unwrap();
+    assert_eq!(metrics.trailing_whitespace, 1);
+    assert_eq!(layout.line_text(0), Some("a\n"));
+
+    let metrics = layout.line_metric(1).unwrap();
+    assert_eq!(metrics.trailing_whitespace, 2);
+    assert_eq!(layout.line_text(1), Some("b \n"));
+
+    let metrics = layout.line_metric(2).unwrap();
+    assert_eq!(metrics.trailing_whitespace, 3);
+    assert_eq!(layout.line_text(2), Some("c   "));
+
+    let metrics = layout.line_metric(3).unwrap();
+    assert_eq!(metrics.trailing_whitespace, 0);
+    assert_eq!(layout.line_text(3), Some("d"));
+
+    assert!(layout.line_metric(4).is_none());
+
+    //let metrics = layout.line_metric(1).unwrap();
+    //assert_eq!(metrics.range(), 5..12);
+    //assert_eq!(layout.line_text(0), Some("a\t\t\t\t\n"));
+    //let metrics = layout.line_metric(2).unwrap();
+    //assert_eq!(metrics.range(), 12..16);
+    //assert_eq!(layout.line_text(0), Some("aa\t\t"));
 }
