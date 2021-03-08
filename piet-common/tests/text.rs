@@ -37,6 +37,22 @@ fn make_factory() -> PietText {
     text
 }
 
+fn measure_width(factory: &mut impl Text, text: &str, font: FontFamily, size: f64) -> Size {
+    factory
+        .new_text_layout(text.to_owned())
+        .font(font, size)
+        .build()
+        .unwrap()
+        .size()
+}
+
+#[allow(dead_code)]
+fn get_mono_width(size: f64) -> f64 {
+    //FIXME: would be nice to have this check against another glyph to ensure
+    //we're actually monospace, but that would currently break cairo
+    measure_width(&mut make_factory(), "a", FontFamily::MONOSPACE, size).width
+}
+
 // https://github.com/linebender/piet/issues/334
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
@@ -240,15 +256,6 @@ fn eol_hit_testing() {
     assert_close!(hit.point.y, metrics.height + metrics.baseline, 2.0);
 }
 
-fn measure_width(factory: &mut impl Text, text: &str, font: FontFamily, size: f64) -> Size {
-    factory
-        .new_text_layout(text.to_owned())
-        .font(font, size)
-        .build()
-        .unwrap()
-        .size()
-}
-
 #[test]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn debug_impl_exists() {
@@ -272,6 +279,31 @@ fn width_sanity() {
 
     let width = ws.size().width;
     assert_close!(width, 27.0, 5.0);
+}
+
+#[test]
+//FIXME: disabled on linux until pango lands, and wasm until we have proper text there.
+//#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+#[cfg(not(target_os = "linux"))]
+fn emergency_break_selections() {
+    let mut factory = make_factory();
+    let mono_width = get_mono_width(16.0);
+
+    let text = std::iter::repeat('a').take(20).collect::<String>();
+    let layout_width = mono_width * 6.5;
+    let layout = factory
+        .new_text_layout(text)
+        .font(FontFamily::MONOSPACE, 16.0)
+        .max_width(layout_width)
+        .build()
+        .unwrap();
+    assert_eq!(layout.line_count(), 4);
+
+    let rects = layout.rects_for_range(..);
+    assert_eq!(rects.len(), 4);
+    let second_line = rects[1];
+    assert_close!(second_line.min_x(), 0.0, 1.0);
+    assert_close!(second_line.max_x(), 6.0 * mono_width, 1.0);
 }
 
 #[test]

@@ -453,11 +453,18 @@ pub trait TextLayout: Clone {
             } else {
                 metrics.end_offset - metrics.trailing_whitespace
             };
-            let start_point = self.hit_test_text_position(line_range_start);
-            let end_point = self.hit_test_text_position(line_range_end);
-            result.push(Rect::new(start_point.point.x, y0, end_point.point.x, y1));
-        }
 
+            let start_x = self.hit_test_text_position(line_range_start).point.x;
+            //HACK: because we don't have affinity, if the line has an emergency
+            //break we need to manually use the layout width as the end point
+            //for the selection rect. See https://github.com/linebender/piet/issues/323
+            let end_x = if line != last_line && metrics.trailing_whitespace == 0 {
+                self.size().width
+            } else {
+                self.hit_test_text_position(line_range_end).point.x
+            };
+            result.push(Rect::new(start_x, y0, end_x, y1));
+        }
         result
     }
 }
