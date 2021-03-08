@@ -10,7 +10,7 @@ use glib::translate::ToGlibPtr;
 use pango::{AttrList, FontMapExt};
 use pangocairo::FontMap;
 
-use piet::kurbo::{Point, Rect, Size};
+use piet::kurbo::{Point, Rect, Size, Vec2};
 use piet::{
     util, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
     TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
@@ -40,6 +40,7 @@ pub struct CairoTextLayout {
     //Calculated on build
     size: Size,
     ink_size: Size,
+    pango_offset: Vec2,
     trailing_ws_width: f64,
     pub(crate) line_metrics: Vec<LineMetric>,
     pub(crate) pango_layout: PangoLayout,
@@ -346,6 +347,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
             text: self.text,
             size: Size::ZERO,
             ink_size: Size::ZERO,
+            pango_offset: Vec2::ZERO,
             trailing_ws_width: 0.0,
             line_metrics: Vec::new(),
             pango_layout: self.pango_layout,
@@ -473,8 +475,8 @@ impl TextLayout for CairoTextLayout {
         let pos_rect = self.pango_layout.index_to_pos(idx as i32);
 
         let point = Point::new(
-            pos_rect.x as f64 / PANGO_SCALE,
-            (pos_rect.y as f64 / PANGO_SCALE) + metric.baseline,
+            (pos_rect.x as f64 / PANGO_SCALE) - self.pango_offset.x,
+            (pos_rect.y as f64 / PANGO_SCALE) + metric.baseline - self.pango_offset.y,
         );
 
         HitTestPosition::new(point, line)
@@ -482,6 +484,10 @@ impl TextLayout for CairoTextLayout {
 }
 
 impl CairoTextLayout {
+    pub(crate) fn pango_offset(&self) -> Vec2 {
+        self.pango_offset
+    }
+
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
         if let Some(new_width) = new_width.into() {
             let pango_width = new_width * pango::SCALE as f64;
@@ -569,6 +575,10 @@ impl CairoTextLayout {
         self.ink_size = Size::new(
             ink_extent.width as f64 / PANGO_SCALE,
             ink_extent.height as f64 / PANGO_SCALE,
+        );
+        self.pango_offset = Vec2::new(
+            logical_extent.x as f64 / PANGO_SCALE,
+            logical_extent.y as f64 / PANGO_SCALE,
         );
 
         self.trailing_ws_width = widest_logical_width as f64 / PANGO_SCALE;

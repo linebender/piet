@@ -166,7 +166,8 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         let pos = pos.into();
-        self.ctx.move_to(pos.x, pos.y);
+        let offset = layout.pango_offset();
+        self.ctx.move_to(pos.x - offset.x, pos.y - offset.y);
         pangocairo::show_layout(&self.ctx, &layout.pango_layout);
     }
 
