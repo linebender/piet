@@ -407,17 +407,17 @@ impl TextLayout for CairoTextLayout {
              * NOTE(ForLoveOfCats): The docs specify that a non-zero value for trailing
              * indicates that the point aligns to the trailing edge of the grapheme. In
              * that case the value tells us the number of "characters" in the grapheme.
-             * If we just add this value to the index then we do not correctly align to
-             * the grapheme boundary. I can only assume that by "characters" it means
-             * codepoints which does not line up with our UTF-8 indexing.
              */
+
             let text = self.pango_layout.get_text().unwrap();
             let index = index.try_into().unwrap();
-            let mut iterator = GraphemeCursor::new(index, text.len(), true);
-            iterator
-                .next_boundary(text.as_str(), 0)
-                .unwrap_or(Some(index))
-                .unwrap_or(index)
+            let trailing = trailing.try_into().unwrap();
+
+            text[index..]
+                .char_indices()
+                .nth(trailing)
+                .map(|(offset, _)| index + offset)
+                .unwrap_or_else(|| text.len())
         };
 
         let (metric_index, metric) = self
