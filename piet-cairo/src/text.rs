@@ -396,8 +396,8 @@ impl TextLayout for CairoTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        let x = point.x * PANGO_SCALE;
-        let y = point.y * PANGO_SCALE;
+        let x = (point.x + self.pango_offset.x) * PANGO_SCALE;
+        let y = (point.y + self.pango_offset.y) * PANGO_SCALE;
 
         let (is_inside, index, trailing) = self.pango_layout.xy_to_index(x as i32, y as i32);
         let index = if trailing == 0 {
