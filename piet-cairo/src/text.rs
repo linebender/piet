@@ -165,6 +165,7 @@ impl Text for CairoText {
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
+        //TODO: Veryify that a family exists with the requested name
         Some(FontFamily::new_unchecked(family_name))
     }
 
@@ -338,7 +339,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
         self.pango_layout.set_attributes(Some(&pango_attributes));
 
-        //NOTE: We give Pango a width of -1 for no wrapping
+        //NOTE: We give Pango a width of -1 in `update_width` when we don't want wrapping
         self.pango_layout.set_wrap(pango::WrapMode::Word);
         self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
 
