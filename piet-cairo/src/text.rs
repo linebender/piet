@@ -110,11 +110,11 @@ impl AttributeWithRange {
             }
 
             TextAttribute::TextColor(text_color) => {
-                let (r, g, b, _) = text_color.as_rgba();
+                let (r, g, b, _) = text_color.as_rgba8();
                 PangoAttribute::new_foreground(
-                    (r * 65535.) as u16,
-                    (g * 65535.) as u16,
-                    (b * 65535.) as u16,
+                    (r as u16 * 256) + (r as u16),
+                    (g as u16 * 256) + (g as u16),
+                    (b as u16 * 256) + (b as u16),
                 )
                 .unwrap()
             }
