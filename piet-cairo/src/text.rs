@@ -411,7 +411,7 @@ impl TextLayout for CairoTextLayout {
              * that case the value tells us the number of "characters" in the grapheme.
              */
 
-            let text = self.pango_layout.get_text().unwrap();
+            let text = &self.text;
             let index = index.try_into().unwrap();
             let trailing = trailing.try_into().unwrap();
 
@@ -434,7 +434,7 @@ impl TextLayout for CairoTextLayout {
 
         //NOTE: Manually move to start of next line when hit test is at end of line
         let index = {
-            let text = self.pango_layout.get_text().unwrap();
+            let text = &self.text;
             if index == text.len() || matches!(text.as_bytes()[index], b'\r' | b'\n') {
                 index
             } else {
