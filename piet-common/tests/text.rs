@@ -95,11 +95,19 @@ fn empty_layout_size() {
         .font(FontFamily::SYSTEM_UI, 24.0)
         .build()
         .unwrap();
+
     assert!(empty_layout.size().height > 0.0);
+
+    /*
+     * NOTE: This was made more lenient to accommodate the values
+     * Pango produces with some fonts
+     *
+     * FIXME: Investigate more and revert to a tolerance of 1.0
+     */
     assert_close!(
         empty_layout.size().height,
         non_empty_layout.size().height,
-        2.0
+        2.0,
     );
 }
 
