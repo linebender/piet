@@ -35,15 +35,15 @@ pub struct CairoText {
 
 #[derive(Clone)]
 pub struct CairoTextLayout {
-    pub(crate) text: Rc<dyn TextStorage>,
+    text: Rc<dyn TextStorage>,
 
-    //Calculated on build
     size: Size,
     ink_size: Size,
     pango_offset: Vec2,
     trailing_ws_width: f64,
-    pub(crate) line_metrics: Vec<LineMetric>,
-    pub(crate) pango_layout: PangoLayout,
+
+    line_metrics: Rc<[LineMetric]>,
+    pango_layout: PangoLayout,
 }
 
 pub struct CairoTextLayoutBuilder {
@@ -349,7 +349,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
             ink_size: Size::ZERO,
             pango_offset: Vec2::ZERO,
             trailing_ws_width: 0.0,
-            line_metrics: Vec::new(),
+            line_metrics: Rc::new([]),
             pango_layout: self.pango_layout,
         };
 
@@ -484,6 +484,10 @@ impl TextLayout for CairoTextLayout {
 }
 
 impl CairoTextLayout {
+    pub(crate) fn pango_layout(&self) -> &PangoLayout {
+        &self.pango_layout
+    }
+
     pub(crate) fn pango_offset(&self) -> Vec2 {
         self.pango_offset
     }
@@ -564,7 +568,7 @@ impl CairoTextLayout {
         }
 
         //NOTE: Pango appears to always give us at least one line even with empty input
-        self.line_metrics = line_metrics;
+        self.line_metrics = line_metrics.into();
 
         let ink_extent = self.pango_layout.get_extents().0;
         let logical_extent = self.pango_layout.get_extents().1;

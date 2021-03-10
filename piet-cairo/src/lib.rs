@@ -168,7 +168,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let pos = pos.into();
         let offset = layout.pango_offset();
         self.ctx.move_to(pos.x - offset.x, pos.y - offset.y);
-        pangocairo::show_layout(&self.ctx, &layout.pango_layout);
+        pangocairo::show_layout(&self.ctx, layout.pango_layout());
     }
 
     fn save(&mut self) -> Result<(), Error> {
