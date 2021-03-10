@@ -27,6 +27,7 @@ type PangoUnderline = pango::Underline;
 type PangoAlignment = pango::Alignment;
 
 const PANGO_SCALE: f64 = pango::SCALE as f64;
+const UNBOUNDED_WRAP_WIDTH: i32 = -1;
 
 #[derive(Clone)]
 pub struct CairoText {
@@ -499,11 +500,11 @@ impl CairoTextLayout {
             self.pango_layout.set_width(pango_width as i32);
         } else {
             /*
-             * NOTE: -1 is the default value, however `update_width` *could*
+             * NOTE: This is the default value, however `update_width` *could*
              * be called any number of times with different values so we need
              * to make sure to reset back to default whenever we get no width
              */
-            self.pango_layout.set_width(-1);
+            self.pango_layout.set_width(UNBOUNDED_WRAP_WIDTH);
         }
 
         let mut line_metrics = Vec::new();
