@@ -432,10 +432,13 @@ impl TextLayout for CairoTextLayout {
             })
             .unwrap();
 
-        //NOTE: Manually move to start of next line when hit test is at end of line
+        //NOTE: Manually move to start of next line when hit test is on a soft line break
         let index = {
             let text = &self.text;
-            if index == text.len() || matches!(text.as_bytes()[index], b'\r' | b'\n') {
+            if index == text.len()
+                || matches!(text.as_bytes()[index], b'\r' | b'\n')
+                || metric_index + 1 >= self.line_metrics.len()
+            {
                 index
             } else {
                 let mut iterator = GraphemeCursor::new(index, text.len(), true);
@@ -444,11 +447,7 @@ impl TextLayout for CairoTextLayout {
                     .unwrap_or(Some(index))
                     .unwrap_or(index);
 
-                /*
-                 * NOTE(ForLoveOfCats): Dirty hack to prevent preferring downstream affinity
-                 * when there are no following metrics. I don't like it either
-                 */
-                if next >= metric.end_offset && metric_index + 1 < self.line_metrics.len() {
+                if next >= metric.end_offset {
                     next
                 } else {
                     index
