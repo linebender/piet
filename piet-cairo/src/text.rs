@@ -426,11 +426,17 @@ impl TextLayout for CairoTextLayout {
             .line_metrics
             .iter()
             .enumerate()
-            .find(|(_, metric)| {
-                metric.start_offset <= index
-                    && index <= metric.end_offset - metric.trailing_whitespace
-            })
-            .unwrap();
+            .find(|(_, metric)| metric.start_offset <= index && index < metric.end_offset)
+            .unwrap_or_else(|| {
+                /*
+                 * NOTE: Handle out of bounds end of text index.
+                 * An index such that `index == text.len()` is possible but the
+                 * find predicate will not resolve to any metric in that case so
+                 * always return the last metric if the find fails
+                 */
+                let index = self.line_metrics.len() - 1;
+                (index, &self.line_metrics[index])
+            });
 
         //NOTE: Manually move to start of next line when hit test is on a soft line break
         let index = {
