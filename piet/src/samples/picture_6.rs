@@ -14,7 +14,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let mut stroke_style = StrokeStyle::new();
     stroke_style.set_line_cap(LineCap::Round);
     stroke_style.set_line_join(LineJoin::Round);
-    stroke_style.set_dash(vec![10.0, 7.0, 8.0, 6.0], 0.0);
+    stroke_style.set_dash_pattern(vec![10.0, 7.0, 8.0, 6.0]);
 
     // Shape rendering with radial gradient
     let radial_gradient = rc.gradient(FixedGradient::Radial(FixedRadialGradient {
