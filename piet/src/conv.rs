@@ -2,9 +2,10 @@
 
 use kurbo::Vec2;
 
-/// This is our own implementation of a "lossy From" trait, representing
-/// a conversion that can have precision loss. It is essentially adapted
-/// from <https://github.com/rust-lang/rfcs/pull/2484>.
+/// A trait for types that can be converted with precision loss.
+///
+/// This is our own implementation of a "lossy From" trait. It is essentially
+/// adapted from <https://github.com/rust-lang/rfcs/pull/2484>.
 ///
 /// If and when such a trait is standardized, we should switch to that.
 /// Alternatively, a case can be made it should move somewhere else, or
@@ -14,8 +15,10 @@ pub trait RoundFrom<T> {
     fn round_from(x: T) -> Self;
 }
 
-/// The companion to `RoundFrom`. As with `From` and `Into`, a blanket
-/// implementation is provided; for the most part, implement `RoundFrom`.
+/// The companion to `RoundFrom`.
+///
+/// As with `From` and `Into`, a blanket implementation is provided;
+/// for the most part, implement `RoundFrom`.
 pub trait RoundInto<T> {
     fn round_into(self) -> T;
 }
