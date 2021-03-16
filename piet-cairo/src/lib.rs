@@ -366,25 +366,17 @@ impl<'a> CairoRenderContext<'a> {
 
     /// Set the stroke parameters.
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
+        let default_style = StrokeStyle::default();
+        let style = style.unwrap_or(&default_style);
+
         self.ctx.set_line_width(width);
+        self.ctx.set_line_join(convert_line_join(style.line_join));
+        self.ctx.set_line_cap(convert_line_cap(style.line_cap));
 
-        let line_join = style
-            .and_then(|style| style.line_join)
-            .unwrap_or(LineJoin::Miter);
-        self.ctx.set_line_join(convert_line_join(line_join));
-
-        let line_cap = style
-            .and_then(|style| style.line_cap)
-            .unwrap_or(LineCap::Butt);
-        self.ctx.set_line_cap(convert_line_cap(line_cap));
-
-        let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
-        self.ctx.set_miter_limit(miter_limit);
-
-        match style.and_then(|style| style.dash.as_ref()) {
-            None => self.ctx.set_dash(&[], 0.0),
-            Some((dashes, offset)) => self.ctx.set_dash(dashes, *offset),
+        if let Some(limit) = style.miter_limit() {
+            self.ctx.set_miter_limit(limit);
         }
+        self.ctx.set_dash(&style.dash_pattern, style.dash_offset);
     }
 
     fn set_path(&mut self, shape: impl Shape) {
@@ -457,6 +449,7 @@ impl<'a> CairoRenderContext<'a> {
     }
 }
 
+#[allow(deprecated)]
 fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
     match line_cap {
         LineCap::Butt => cairo::LineCap::Butt,
@@ -467,7 +460,7 @@ fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
 
 fn convert_line_join(line_join: LineJoin) -> cairo::LineJoin {
     match line_join {
-        LineJoin::Miter => cairo::LineJoin::Miter,
+        LineJoin::Miter { .. } => cairo::LineJoin::Miter,
         LineJoin::Round => cairo::LineJoin::Round,
         LineJoin::Bevel => cairo::LineJoin::Bevel,
     }

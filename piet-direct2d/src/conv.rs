@@ -131,6 +131,7 @@ pub(crate) fn gradient_stop_to_d2d(stop: &GradientStop) -> D2D1_GRADIENT_STOP {
     }
 }
 
+#[allow(deprecated)]
 fn convert_line_cap(line_cap: LineCap) -> D2D1_CAP_STYLE {
     match line_cap {
         LineCap::Butt => D2D1_CAP_STYLE_FLAT,
@@ -144,7 +145,7 @@ fn convert_line_cap(line_cap: LineCap) -> D2D1_CAP_STYLE {
 
 fn convert_line_join(line_join: LineJoin) -> D2D1_LINE_JOIN {
     match line_join {
-        LineJoin::Miter => D2D1_LINE_JOIN_MITER,
+        LineJoin::Miter { .. } => D2D1_LINE_JOIN_MITER,
         LineJoin::Round => D2D1_LINE_JOIN_ROUND,
         LineJoin::Bevel => D2D1_LINE_JOIN_BEVEL,
         // Discussion topic: MiterOrBevel. Exposing that as optional
@@ -159,31 +160,34 @@ pub(crate) fn convert_stroke_style(
     width: f64,
 ) -> Result<crate::d2d::StrokeStyle, Error> {
     #[allow(unused)]
-    let cap = convert_line_cap(stroke_style.line_cap.unwrap_or(LineCap::Butt));
-    let join = convert_line_join(stroke_style.line_join.unwrap_or(LineJoin::Miter));
-    let (dashes, dash_style, dash_off) = match &stroke_style.dash {
-        Some((dashes, off)) => {
-            let width_recip = if width == 0.0 { 1.0 } else { width.recip() };
-            assert!(dashes.len() <= 0xffff_ffff);
-            (
-                Some(
-                    dashes
-                        .iter()
-                        .map(|x| (*x * width_recip) as f32)
-                        .collect::<Vec<f32>>(),
-                ),
-                D2D1_DASH_STYLE_CUSTOM,
-                *off as f32,
-            )
-        }
-        None => (None, D2D1_DASH_STYLE_SOLID, 0.0),
+    let cap = convert_line_cap(stroke_style.line_cap);
+    let join = convert_line_join(stroke_style.line_join);
+    let (dashes, dash_style, dash_off) = if stroke_style.dash_pattern.is_empty() {
+        (None, D2D1_DASH_STYLE_SOLID, 0.0)
+    } else {
+        let width_recip = if width == 0.0 { 1.0 } else { width.recip() };
+        assert!(stroke_style.dash_pattern.len() <= 0xffff_ffff);
+        let dashes = stroke_style
+            .dash_pattern
+            .iter()
+            .map(|x| (*x * width_recip) as f32)
+            .collect::<Vec<f32>>();
+        (
+            Some(dashes),
+            D2D1_DASH_STYLE_CUSTOM,
+            stroke_style.dash_offset as f32,
+        )
     };
+
+    let miter_limit = stroke_style
+        .miter_limit()
+        .unwrap_or(LineJoin::DEFAULT_MITER_LIMIT) as f32;
     let props = D2D1_STROKE_STYLE_PROPERTIES {
         startCap: cap,
         endCap: cap,
         dashCap: D2D1_CAP_STYLE_FLAT,
         lineJoin: join,
-        miterLimit: stroke_style.miter_limit.unwrap_or(10.0) as f32,
+        miterLimit: miter_limit,
         dashStyle: dash_style,
         dashOffset: dash_off,
     };

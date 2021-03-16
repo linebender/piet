@@ -332,31 +332,32 @@ impl Attrs<'_> {
                 node.assign("stroke-width", width);
             }
             match style.line_join {
-                None | Some(LineJoin::Miter) => {}
-                Some(LineJoin::Round) => {
+                LineJoin::Miter { limit } if limit == LineJoin::DEFAULT_MITER_LIMIT => (),
+                LineJoin::Miter { limit } => {
+                    node.assign("stroke-miterlimit", limit);
+                }
+                LineJoin::Round => {
                     node.assign("stroke-linejoin", "round");
                 }
-                Some(LineJoin::Bevel) => {
+                LineJoin::Bevel => {
                     node.assign("stroke-linejoin", "bevel");
                 }
             }
             match style.line_cap {
-                None | Some(LineCap::Butt) => {}
-                Some(LineCap::Round) => {
+                LineCap::Round => {
                     node.assign("stroke-linecap", "round");
                 }
-                Some(LineCap::Square) => {
+                #[allow(deprecated)]
+                LineCap::Square => {
                     node.assign("stroke-linecap", "square");
                 }
+                LineCap::Butt => (),
             }
-            if let Some((ref array, offset)) = style.dash {
-                node.assign("stroke-dasharray", array.clone());
-                if offset != 0.0 {
-                    node.assign("stroke-dashoffset", offset);
-                }
+            if !style.dash_pattern.is_empty() {
+                node.assign("stroke-dasharray", style.dash_pattern.clone().into_owned());
             }
-            if let Some(limit) = style.miter_limit {
-                node.assign("stroke-miterlimit", limit);
+            if style.dash_offset != 0.0 {
+                node.assign("stroke-dashoffset", style.dash_offset);
             }
         }
     }
