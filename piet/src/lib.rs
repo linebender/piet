@@ -1,4 +1,16 @@
 //! A 2D graphics abstraction.
+//!
+//! This crate contains types and interfaces that represent a traditional 2D
+//! graphics API, in the tradition of [`PostScript`].
+//!
+//! This API can be implemented on various platforms, allowing drawing code
+//! to be reused in an approximately consistent way. Various such implementations
+//! exist, such as [`piet-cairo`], [`piet-coregraphics`], and [`piet-direct2d`].
+//!
+//! [`PostScript`]: https://en.wikipedia.org/wiki/PostScript
+//! [`piet-cairo`]: https://crates.io/crates/piet-cairo
+//! [`piet-coregraphics`]: https://crates.io/crates/piet-coregraphics
+//! [`piet-direct2d`]: https://crates.io/crates/piet-direct2d
 
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
