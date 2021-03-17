@@ -5,9 +5,10 @@ use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 
-use glib::translate::ToGlibPtr;
+use glib::translate::{from_glib_full, ToGlibPtr};
 
 use pango::{AttrList, FontMapExt};
+use pango_sys::pango_attr_insert_hyphens_new;
 use pangocairo::FontMap;
 
 use piet::kurbo::{Point, Rect, Size, Vec2};
@@ -283,6 +284,10 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
                 pango_attributes.insert(attribute);
             }
         };
+
+        if let Some(attr) = unsafe { from_glib_full(pango_attr_insert_hyphens_new(0)) } {
+            pango_attributes.insert(attr);
+        }
 
         add_attribute(
             AttributeWithRange {
