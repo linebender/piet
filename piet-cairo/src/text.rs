@@ -346,7 +346,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         self.pango_layout.set_attributes(Some(&pango_attributes));
 
         //NOTE: We give Pango a width of -1 in `update_width` when we don't want wrapping
-        self.pango_layout.set_wrap(pango::WrapMode::Word);
+        self.pango_layout.set_wrap(pango::WrapMode::WordChar);
         self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
 
         // invalid until update_width() is called
