@@ -103,6 +103,59 @@ fn empty_layout_size() {
     );
 }
 
+#[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn hit_test_multibyte_grapheme_position() {
+    let mut factory = make_factory();
+    // 5 graphemes, 6 code points, 14 bytes
+    // ("a", 1, 1), (£, 1, 2), (€, 1, 3), (💴, 1, 4), (#️⃣, 2, 4)
+    let input = "a£€💴\u{0023}\u{FE0F}";
+    assert_eq!(input.len(), 14);
+    assert_eq!(input.chars().count(), 6);
+
+    let layout = factory.new_text_layout(input).build().unwrap();
+
+    let p0 = layout.hit_test_text_position(0).point;
+    let p1 = layout.hit_test_text_position(1).point;
+    let p3 = layout.hit_test_text_position(3).point;
+    let p6 = layout.hit_test_text_position(6).point;
+    let p10 = layout.hit_test_text_position(10).point;
+    // a codepoint that is not the start of a grapheme
+    let p11 = layout.hit_test_text_position(11).point;
+    let p14 = layout.hit_test_text_position(14).point;
+
+    // just getting around float_cmp lint :shrug:
+    assert_close!(p0.x, 0.0, 1e-6);
+    assert!(p1.x > p0.x);
+    assert!(p3.x > p1.x);
+    assert!(p6.x > p3.x);
+    assert!(p10.x > p6.x);
+
+    // NOTE: this last case isn't well defined. We would like it to return
+    // the location of the start of the grapheme, but coretext just
+    // returns `0.0`.
+    //
+    // two codepoints in a single grapheme:
+    //assert_eq!(p10.x, p11.x);
+
+    // last text position should resolve to trailing edge
+    assert!(p14.x > p11.x);
+}
+
+#[test]
+#[should_panic(expected = "is_char_boundary")]
+//FIXME: should_panic doesn't work on wasm? need to figure out an alternative.
+//see https://github.com/rustwasm/wasm-bindgen/issues/2286
+fn hit_test_interior_byte() {
+    let mut factory = make_factory();
+    // 5 graphemes, 6 code points, 14 bytes
+    // ("a", 1, 1), (£, 1, 2), (€, 1, 3), (💴, 1, 4), (#️⃣, 2, 4)
+    let input = "a£€💴\u{0023}\u{FE0F}";
+
+    let layout = factory.new_text_layout(input).build().unwrap();
+    let _ = layout.hit_test_text_position(7).point;
+}
+
 /// Text with a newline at EOF should have one more line reported than
 /// the same text without the newline.
 #[test]

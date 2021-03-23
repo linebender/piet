@@ -399,6 +399,12 @@ pub trait TextLayout: Clone {
     ///
     /// For more on text positions, see docs for the [`TextLayout`] trait.
     ///
+    /// ## Notes:
+    ///
+    /// The user is expected to ensure that the provided index is a grapheme
+    /// boundary. If it is a character boundary but *not* a grapheme boundary,
+    /// the return value may be backend-specific.
+    ///
     /// ## Panics:
     ///
     /// This method will panic if the text position is not a character boundary,
