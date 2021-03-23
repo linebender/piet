@@ -11,7 +11,7 @@ const HIDPI: f32 = 2.0;
 const FILE_PREFIX: &str = "d2d-test-";
 
 fn main() {
-    samples::samples_main(run_sample, FILE_PREFIX);
+    samples::samples_main(run_sample, FILE_PREFIX, None);
 }
 
 fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
