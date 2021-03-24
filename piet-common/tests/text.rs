@@ -191,6 +191,69 @@ fn hit_test_interior_byte() {
     let _ = layout.hit_test_text_position(7).point;
 }
 
+#[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn hit_test_point_rounding() {
+    let mut factory = make_factory();
+    let unit_width = factory.get_mono_width(12.0);
+    let text = "aaaa";
+    let layout = factory.make_layout(text, FontFamily::MONOSPACE, 12.0, None);
+    let pt = layout.hit_test_point(Point::new(1.0, 5.0));
+    assert_eq!(pt.idx, 0);
+
+    // the hit is inside the first grapheme but we should round up to the next?
+    let pt = layout.hit_test_point(Point::new(unit_width - 1.0, 5.0));
+    assert_eq!(pt.idx, 1);
+    let pt = layout.hit_test_point(Point::new(unit_width + 1.0, 5.0));
+    assert_eq!(pt.idx, 1);
+}
+
+#[test]
+//FIXME: wasm is failing this, and i haven't investigated
+//#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn hit_test_point_outside() {
+    let mut factory = make_factory();
+    let unit_width = factory.get_mono_width(12.0);
+    let text = "aa aaaaa";
+    //wrap at the space
+    let wrap_width = unit_width * 5.5;
+    let layout = factory.make_layout(text, FontFamily::MONOSPACE, 12.0, wrap_width);
+    assert_eq!(layout.line_count(), 2);
+
+    // to the left of the first line
+    let pt = layout.hit_test_point(Point::new(-1.0, 5.0));
+    assert_eq!(pt.idx, 0);
+    assert!(!pt.is_inside);
+
+    // above the first line
+    let pt = layout.hit_test_point(Point::new(1.0, -5.0));
+    assert_eq!(pt.idx, 0);
+    assert!(!pt.is_inside);
+
+    // right of first line
+    let pt = layout.hit_test_point(Point::new(unit_width * 4., 5.0));
+    assert_eq!(pt.idx, 3);
+    assert!(!pt.is_inside);
+
+    // y position in second line
+    let y2 = layout.line_metric(1).unwrap().y_offset + 1.0;
+
+    // to the left of the second line
+    let pt = layout.hit_test_point(Point::new(-1.0, y2));
+    assert_eq!(pt.idx, 3);
+    assert!(!pt.is_inside);
+
+    // to the right of the second line
+    let pt = layout.hit_test_point(Point::new(unit_width * 6.0, y2));
+    assert_eq!(pt.idx, 8);
+    assert!(!pt.is_inside);
+
+    // below the layout, first grapheme
+    let pt = layout.hit_test_point(Point::new(1.0, y2 * 3.0));
+    assert_eq!(pt.idx, 3);
+    assert!(!pt.is_inside);
+}
+
 /// Text with a newline at EOF should have one more line reported than
 /// the same text without the newline.
 #[test]
