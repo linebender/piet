@@ -37,20 +37,47 @@ fn make_factory() -> PietText {
     text
 }
 
-fn measure_width(factory: &mut impl Text, text: &str, font: FontFamily, size: f64) -> Size {
-    factory
-        .new_text_layout(text.to_owned())
-        .font(font, size)
-        .build()
-        .unwrap()
-        .size()
+/// An extension trait to make simple tasks less verbose
+trait FactoryHelpers {
+    type Layout: TextLayout;
+    fn make_layout(
+        &mut self,
+        text: &str,
+        font: FontFamily,
+        size: f64,
+        width: impl Into<Option<f64>>,
+    ) -> Self::Layout;
+
+    fn make_mono_12pt(&mut self, text: &str) -> Self::Layout {
+        self.make_layout(text, FontFamily::MONOSPACE, 12.0, None)
+    }
+
+    fn measure_width(&mut self, text: &str, font: FontFamily, size: f64) -> Size {
+        self.make_layout(text, font, size, None).size()
+    }
+
+    fn get_mono_width(&mut self, size: f64) -> f64 {
+        //FIXME: would be nice to have this check against another glyph to ensure
+        //we're actually monospace, but that would currently break cairo
+        self.measure_width("a", FontFamily::MONOSPACE, size).width
+    }
 }
 
-#[allow(dead_code)]
-fn get_mono_width(size: f64) -> f64 {
-    //FIXME: would be nice to have this check against another glyph to ensure
-    //we're actually monospace, but that would currently break cairo
-    measure_width(&mut make_factory(), "a", FontFamily::MONOSPACE, size).width
+impl<T: Text> FactoryHelpers for T {
+    type Layout = T::TextLayout;
+    fn make_layout(
+        &mut self,
+        text: &str,
+        font: FontFamily,
+        size: f64,
+        width: impl Into<Option<f64>>,
+    ) -> Self::Layout {
+        self.new_text_layout(text.to_owned())
+            .font(font, size)
+            .max_width(width.into().unwrap_or(f64::INFINITY))
+            .build()
+            .unwrap()
+    }
 }
 
 // https://github.com/linebender/piet/issues/334
@@ -101,16 +128,8 @@ fn rects_for_empty_range() {
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn empty_layout_size() {
     let mut factory = make_factory();
-    let empty_layout = factory
-        .new_text_layout("")
-        .font(FontFamily::SYSTEM_UI, 24.0)
-        .build()
-        .unwrap();
-    let non_empty_layout = factory
-        .new_text_layout("-")
-        .font(FontFamily::SYSTEM_UI, 24.0)
-        .build()
-        .unwrap();
+    let empty_layout = factory.make_layout("", FontFamily::SYSTEM_UI, 24.0, None);
+    let non_empty_layout = factory.make_layout("-", FontFamily::SYSTEM_UI, 24.0, None);
     assert!(empty_layout.size().height > 0.0);
     assert_close!(
         empty_layout.size().height,
@@ -223,13 +242,8 @@ fn eol_hit_testing() {
     let mut factory = make_factory();
 
     let text = "AA AA\nAA";
-    let line_size = measure_width(&mut factory, "AA", FontFamily::SYSTEM_UI, 12.0);
-    let layout = factory
-        .new_text_layout(text)
-        .max_width(line_size.width)
-        .font(FontFamily::SYSTEM_UI, 12.0)
-        .build()
-        .unwrap();
+    let line_size = factory.measure_width("AA", FontFamily::SYSTEM_UI, 12.0);
+    let layout = factory.make_layout(text, FontFamily::SYSTEM_UI, 12.0, line_size.width);
 
     let metrics = layout.line_metric(0).unwrap();
 
@@ -287,16 +301,11 @@ fn width_sanity() {
 #[cfg(not(target_os = "linux"))]
 fn emergency_break_selections() {
     let mut factory = make_factory();
-    let mono_width = get_mono_width(16.0);
+    let mono_width = factory.get_mono_width(16.0);
 
     let text = std::iter::repeat('a').take(20).collect::<String>();
     let layout_width = mono_width * 6.5;
-    let layout = factory
-        .new_text_layout(text)
-        .font(FontFamily::MONOSPACE, 16.0)
-        .max_width(layout_width)
-        .build()
-        .unwrap();
+    let layout = factory.make_layout(&text, FontFamily::MONOSPACE, 16.0, layout_width);
     assert_eq!(layout.line_count(), 4);
 
     let rects = layout.rects_for_range(..);
@@ -312,19 +321,19 @@ fn trailing_whitespace_width() {
     let mut factory = make_factory();
     let text = "hello";
     let text_ws = "hello     ";
-    let non_ws = factory.new_text_layout(text).build().unwrap();
-    let ws = factory.new_text_layout(text_ws).build().unwrap();
+    //let non_ws = make_layout(&mut factory, text, FontFamily::MONOSPACE, 12.0);
+    let non_ws = factory.make_mono_12pt(text);
+    let ws = factory.make_mono_12pt(text_ws);
 
     assert_close!(non_ws.size().width, ws.size().width, 0.1);
     assert_close!(non_ws.trailing_whitespace_width(), non_ws.size().width, 0.1);
-    // the width with whitespace is ~very approximately~ twice the width without whitespace
-    assert_close!(ws.trailing_whitespace_width() / ws.size().width, 2.0, 0.5);
-
+    // the width with whitespace is ~approximately~ twice the width without
+    assert_close!(ws.trailing_whitespace_width() / ws.size().width, 2.0, 0.1);
     // https://github.com/linebender/piet/pull/407
-    // check that we aren't miscalculating trailing whitespace width by (for instance)
-    // incorrectly adding it to base width
+    // check that we aren't miscalculating trailing whitespace width by
+    // (for instance) incorrectly adding it to base width
     let text_ws_plus = "hello     +";
-    let ws_plus = factory.new_text_layout(text_ws_plus).build().unwrap();
+    let ws_plus = factory.make_mono_12pt(text_ws_plus);
     assert!(
         ws_plus.trailing_whitespace_width() > ws.trailing_whitespace_width(),
         "trailing ws width is inclusive of other width"
