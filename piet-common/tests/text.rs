@@ -254,6 +254,36 @@ fn hit_test_point_outside() {
     assert!(!pt.is_inside);
 }
 
+#[test]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+fn hit_test_point_multibyte() {
+    let mut factory = make_factory();
+    // 4 graphemes, 4 code points, 10 bytes
+    // ("a", 1, 1), (£, 1, 2), (€, 1, 3), (💴, 1, 4)
+    let input = "a£€💴";
+    let unit_width = factory.get_mono_width(12.0);
+    let layout = factory.make_mono_12pt(input);
+
+    let pt = layout.hit_test_point(Point::new(1.0, 5.0));
+    assert_eq!(pt.idx, 0);
+
+    let pt = layout.hit_test_point(Point::new(unit_width + 1.0, 5.0));
+    assert_eq!(pt.idx, 1);
+
+    let pt = layout.hit_test_point(Point::new(unit_width * 2.0 + 1.0, 5.0));
+    assert_eq!(pt.idx, 3);
+
+    let pt = layout.hit_test_point(Point::new(unit_width * 3.0 + 1.0, 5.0));
+    assert_eq!(pt.idx, 6);
+
+    let emoji_width = layout.size().width - unit_width * 3.0;
+    // should be outside, to the right? emoji won't respect mono width
+
+    let pt = layout.hit_test_point(Point::new(unit_width * 3.0 + emoji_width - 1.0, 5.0));
+    assert_eq!(pt.idx, 10);
+    assert!(pt.is_inside);
+}
+
 /// Text with a newline at EOF should have one more line reported than
 /// the same text without the newline.
 #[test]
