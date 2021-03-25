@@ -11,7 +11,7 @@ fn with_context(cb: impl FnOnce(&mut Piet) -> Result<(), String>) {
     let res = cb(&mut ctx);
     ctx.finish().unwrap();
     if let Err(e) = res {
-        panic!(e)
+        panic!("{}", e)
     }
 }
 
