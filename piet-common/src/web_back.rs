@@ -174,7 +174,7 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
-        Err(piet::Error::MissingFeature)
+        Err(piet::Error::MissingFeature("png"))
     }
 }
 

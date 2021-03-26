@@ -361,7 +361,7 @@ impl RenderContext for WebRenderContext<'_> {
     }
 
     fn capture_image_area(&mut self, _rect: impl Into<Rect>) -> Result<Self::Image, Error> {
-        Err(Error::MissingFeature)
+        Err(Error::Unimplemented)
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
