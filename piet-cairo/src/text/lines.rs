@@ -189,7 +189,11 @@ fn add_line_metric(
 // TODO: is non-breaking space trailing whitespace? Check with dwrite and
 // coretext
 fn count_trailing_whitespace(line: &str) -> usize {
-    line.chars().rev().take_while(|c| c.is_whitespace()).count()
+    line.chars()
+        .rev()
+        .take_while(|c| c.is_whitespace())
+        .map(char::len_utf8)
+        .sum()
 }
 
 #[cfg(test)]
