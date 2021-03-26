@@ -418,19 +418,43 @@ fn emergency_break_selections() {
 }
 
 #[test]
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn trailing_whitespace_width() {
     let mut factory = make_factory();
     let text = "hello";
     let text_ws = "hello     ";
-    //let non_ws = make_layout(&mut factory, text, FontFamily::MONOSPACE, 12.0);
+
+    // U+3000 ideographic space
+    let text_ideographic = "ｍｍｍ";
+    let text_ideographic_ws = "ｍｍｍ　　　";
+
     let non_ws = factory.make_mono_12pt(text);
     let ws = factory.make_mono_12pt(text_ws);
 
+    let ideographic_non_ws = factory.make_mono_12pt(text_ideographic);
+    let ideographic_ws = factory.make_mono_12pt(text_ideographic_ws);
+
     assert_close!(non_ws.size().width, ws.size().width, 0.1);
+    assert_close!(
+        ideographic_non_ws.size().width,
+        ideographic_ws.size().width,
+        0.1
+    );
+
     assert_close!(non_ws.trailing_whitespace_width(), non_ws.size().width, 0.1);
+    assert_close!(
+        ideographic_non_ws.trailing_whitespace_width(),
+        ideographic_non_ws.size().width,
+        0.1
+    );
+
     // the width with whitespace is ~approximately~ twice the width without
     assert_close!(ws.trailing_whitespace_width() / ws.size().width, 2.0, 0.1);
+    assert_close!(
+        ideographic_ws.trailing_whitespace_width() / ideographic_ws.size().width,
+        2.0,
+        0.2
+    );
+
     // https://github.com/linebender/piet/pull/407
     // check that we aren't miscalculating trailing whitespace width by
     // (for instance) incorrectly adding it to base width
