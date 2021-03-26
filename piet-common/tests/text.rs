@@ -418,7 +418,6 @@ fn emergency_break_selections() {
 }
 
 #[test]
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn trailing_whitespace_width() {
     let mut factory = make_factory();
     let text = "hello";
