@@ -37,7 +37,7 @@ use piet::{FontFamily as PietFontFamily, FontStyle, FontWeight, TextAlignment};
 use crate::Brush;
 
 /// "en-US" as null-terminated utf16.
-const DEFAULT_LOCALE: &[u16] = utf16_lit::utf16_null!("en-US");
+const DEFAULT_LOCALE: &[u16] = &utf16_lit::utf16_null!("en-US");
 
 /// The max layout constraint we use with dwrite.
 ///

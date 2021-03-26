@@ -177,7 +177,7 @@ impl Args {
             all: args.contains("--all"),
             out_dir: out_dir.unwrap_or_else(|| PathBuf::from(".")),
             compare_dir: args.opt_value_from_str("--compare")?,
-            number: args.free_from_str()?,
+            number: args.opt_free_from_str()?,
         };
 
         if !(args.help || args.all || args.number.is_some() || args.compare_dir.is_some()) {
