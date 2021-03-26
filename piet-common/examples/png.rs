@@ -1,11 +1,10 @@
 // TODO: Remove all the wasm32 cfg guards once this compiles with piet-web
 
 #[cfg(not(target_arch = "wasm32"))]
-use piet::kurbo::Line;
-use piet::kurbo::Rect;
-use piet::InterpolationMode;
-#[cfg(not(target_arch = "wasm32"))]
-use piet::{Color, RenderContext};
+use piet::{
+    kurbo::{Line, Rect},
+    Color, InterpolationMode, RenderContext,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use piet_common::Device;
 
