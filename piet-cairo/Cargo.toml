@@ -14,6 +14,10 @@ categories = ["rendering::graphics-api"]
 piet = { version = "0.3.0", path = "../piet" }
 
 cairo-rs = { version = "0.9.1", default-features = false } # We don't need glib
+pango = { version = "0.9.1", features = ["v1_44"] }
+pango-sys = { version = "0.10.0", features = ["v1_44"] }
+pangocairo = "0.10.0"
+glib = "0.10.3"
 unicode-segmentation = "1.3.0"
 xi-unicode = "0.3.0"
 
