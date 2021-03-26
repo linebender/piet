@@ -425,8 +425,8 @@ fn trailing_whitespace_width() {
     let text_ws = "hello     ";
 
     // U+3000 ideographic space
-    let text_ideographic = "卒業式";
-    let text_ideographic_ws = "卒業式　　　";
+    let text_ideographic = "ｍｍｍ";
+    let text_ideographic_ws = "ｍｍｍ　　　";
 
     let non_ws = factory.make_mono_12pt(text);
     let ws = factory.make_mono_12pt(text_ws);
