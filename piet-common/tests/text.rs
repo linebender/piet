@@ -453,7 +453,7 @@ fn trailing_whitespace_width() {
     assert_close!(
         ideographic_ws.trailing_whitespace_width() / ideographic_ws.size().width,
         2.0,
-        0.1
+        0.2
     );
 
     // https://github.com/linebender/piet/pull/407
