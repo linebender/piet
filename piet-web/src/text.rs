@@ -67,7 +67,7 @@ impl Text for WebText {
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
-        Err(Error::MissingFeature)
+        Err(Error::Unimplemented)
     }
 
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
