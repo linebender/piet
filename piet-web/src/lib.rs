@@ -360,6 +360,10 @@ impl RenderContext for WebRenderContext<'_> {
         draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
+    fn capture_image_area(&mut self, _rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        Err(Error::MissingFeature)
+    }
+
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
         self.ctx.set_shadow_blur(blur_radius);

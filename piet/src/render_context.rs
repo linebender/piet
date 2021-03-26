@@ -104,7 +104,7 @@ where
     /// modes, at which point it will be easier to just use [`fill`] for
     /// everything.
     ///
-    /// [`fill`]: RenderContext::fill
+    /// [`fill`]: #method.fill
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color);
 
     /// Stroke a shape.
@@ -212,10 +212,12 @@ where
         interp: InterpolationMode,
     );
 
-    /// Capture a specified area of an image.
+    /// Create an [`Image`] of the specified region of the context.
     ///
     /// The `src_rect` area of the current render context will be captured
     /// as a copy and returned.
+    ///
+    /// This can be used for things like caching expensive drawing operations.
     fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error>;
 
     /// Draw a rectangle with Gaussian blur.

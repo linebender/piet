@@ -17,9 +17,8 @@ use std::ops::Deref;
 use associative_cache::{AssociativeCache, Capacity1024, HashFourWay, RoundRobinReplacement};
 
 use winapi::um::d2d1::{
-    ID2D1RenderTarget, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-    D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
-    D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
+    D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+    D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
 };
 use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
@@ -457,7 +456,6 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn capture_image_area(&mut self, rect: impl Into<Rect>) -> Result<Self::Image, Error> {
         let r = rect.into();
 
-        let asd = self.rt.get_raw() as *mut ID2D1RenderTarget;
         let mut target_bitmap = self.rt.create_blank_bitmap(
             r.width() as usize,
             r.height() as usize,
@@ -472,7 +470,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             y1: r.height(),
         });
 
-        target_bitmap.copy_from_render_target(&dest_point, asd, &src_rect);
+        target_bitmap.copy_from_render_target(dest_point, self.rt, src_rect);
         Ok(target_bitmap)
     }
 

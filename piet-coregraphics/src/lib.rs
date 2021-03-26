@@ -402,15 +402,15 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
 
         let full_image = self.ctx.create_image().ok_or(Error::InvalidInput)?;
 
-        if src_rect.width() == self.ctx.width() as f64
-            && src_rect.height() == self.ctx.height() as f64
+        if src_rect.width().round() as usize == self.ctx.width()
+            && src_rect.height().round() as usize == self.ctx.height()
         {
             return Ok(CoreGraphicsImage::NonEmpty(full_image));
         }
 
         full_image
             .cropped(to_cgrect(src_rect))
-            .map(|img| CoreGraphicsImage::NonEmpty(img))
+            .map(CoreGraphicsImage::NonEmpty)
             .ok_or(Error::InvalidInput)
     }
 

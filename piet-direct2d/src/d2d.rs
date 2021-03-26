@@ -413,21 +413,6 @@ impl DeviceContext {
         unsafe { self.0.SetTarget(target.inner.as_raw() as *mut ID2D1Image) }
     }
 
-    /// Get the target for the device context.
-    pub fn get_target(&mut self, target: &Image) {
-        unsafe { self.0.GetTarget(&mut target.inner.as_raw()) }
-    }
-
-    pub fn get_target_wat(&mut self) -> Image {
-        unsafe {
-            let mut foo: *mut ID2D1Image = std::ptr::null_mut();
-            self.0.GetTarget(&mut foo);
-            Image {
-                inner: ComPtr::from_raw(foo),
-            }
-        }
-    }
-
     /// Set the dpi scale.
     ///
     /// Mostly useful when rendering into bitmaps.
@@ -1047,14 +1032,16 @@ impl Bitmap {
     pub fn get_size(&self) -> D2D1_SIZE_F {
         unsafe { self.inner.GetSize() }
     }
-    pub fn copy_from_render_target(
+
+    pub(crate) fn copy_from_render_target(
         &mut self,
-        dest_point: &D2D1_POINT_2U,
-        rt: *mut ID2D1RenderTarget,
-        src_rect: &D2D1_RECT_U,
+        dest_point: D2D1_POINT_2U,
+        rt: &mut DeviceContext,
+        src_rect: D2D1_RECT_U,
     ) {
         unsafe {
-            self.inner.CopyFromRenderTarget(dest_point, rt, src_rect);
+            let rt = rt.get_raw() as *mut _;
+            self.inner.CopyFromRenderTarget(&dest_point, rt, &src_rect);
         }
     }
 }
