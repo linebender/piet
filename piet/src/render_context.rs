@@ -33,6 +33,7 @@ pub enum ImageFormat {
 }
 
 impl ImageFormat {
+    /// The number of bytes required to represent a pixel in this format.
     pub fn bytes_per_pixel(self) -> usize {
         match self {
             ImageFormat::Grayscale => 1,
@@ -64,6 +65,8 @@ where
 
     /// An associated factory for creating text layouts and related resources.
     type Text: Text<TextLayout = Self::TextLayout>;
+
+    /// The type use to represent text layout objects.
     type TextLayout: TextLayout;
 
     /// The associated type of an image.
@@ -131,6 +134,9 @@ where
     /// are clipped by the shape.
     fn clip(&mut self, shape: impl Shape);
 
+    /// Returns a reference to a shared [`Text`] object.
+    ///
+    /// This provides access to the text API.
     fn text(&mut self) -> &mut Self::Text;
 
     /// Draw a text layout.
@@ -240,6 +246,7 @@ pub trait IntoBrush<P: RenderContext>
 where
     P: ?Sized,
 {
+    #[doc(hidden)]
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush>;
 }
 
@@ -280,9 +287,13 @@ impl<P: RenderContext> IntoBrush<P> for Color {
 /// ```
 #[derive(Debug, Clone)]
 pub enum PaintBrush {
+    /// A [`Color`].
     Color(Color),
+    /// A [`LinearGradient`].
     Linear(LinearGradient),
+    /// A [`RadialGradient`].
     Radial(RadialGradient),
+    /// A [`FixedGradient`].
     Fixed(FixedGradient),
 }
 

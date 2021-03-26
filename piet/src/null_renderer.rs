@@ -36,6 +36,7 @@ pub struct NullTextLayoutBuilder;
 
 impl NullRenderContext {
     #[allow(clippy::new_without_default)]
+    #[doc(hidden)]
     pub fn new() -> NullRenderContext {
         NullRenderContext(NullText)
     }

@@ -12,6 +12,7 @@ use kurbo::Vec2;
 /// we should adopt a similar trait (it has some similarity to AsPrimitive
 /// from num_traits).
 pub trait RoundFrom<T> {
+    /// Performs the conversion.
     fn round_from(x: T) -> Self;
 }
 
@@ -20,6 +21,7 @@ pub trait RoundFrom<T> {
 /// As with `From` and `Into`, a blanket implementation is provided;
 /// for the most part, implement `RoundFrom`.
 pub trait RoundInto<T> {
+    /// Performs the conversion.
     fn round_into(self) -> T;
 }
 
