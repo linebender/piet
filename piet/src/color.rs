@@ -8,7 +8,9 @@ use std::fmt::{Debug, Formatter};
 /// extend to some form of wide-gamut colorspace, and in the meantime
 /// is useful for giving programs proper type.
 #[derive(Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Color {
+    #[doc(hidden)]
     Rgba32(u32),
 }
 
@@ -19,6 +21,7 @@ pub enum ColorParseError {
     WrongSize(usize),
     /// A byte in the input string is not in one of the ranges `0..=9`,
     /// `a..=f`, or `A..=F`.
+    #[allow(missing_docs)]
     NotHex { idx: usize, byte: u8 },
 }
 

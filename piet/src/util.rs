@@ -102,6 +102,7 @@ pub fn resolve_range(range: impl RangeBounds<usize>, len: usize) -> Range<usize>
 /// Extent to which to expand the blur.
 const BLUR_EXTENT: f64 = 2.5;
 
+/// Calculate the size required paint a blurred rect.
 pub fn size_for_blurred_rect(rect: Rect, radius: f64) -> Size {
     let padding = BLUR_EXTENT * radius;
     let rect_padded = rect.inflate(padding, padding);
@@ -150,6 +151,7 @@ fn compute_erf7(x: f64) -> f64 {
 
 /// A type backends can use to represent the default values for a `TextLayout`
 #[non_exhaustive]
+#[allow(missing_docs)]
 pub struct LayoutDefaults {
     pub font: FontFamily,
     pub font_size: f64,

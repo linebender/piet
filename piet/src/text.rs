@@ -163,6 +163,7 @@ pub enum TextAttribute {
 
 /// A trait for laying out text.
 pub trait TextLayoutBuilder: Sized {
+    /// The type of the generated [`TextLayout`].
     type Out: TextLayout;
 
     /// Set a max width for this layout.
@@ -274,6 +275,9 @@ pub trait TextLayoutBuilder: Sized {
         attribute: impl Into<TextAttribute>,
     ) -> Self;
 
+    /// Attempt to build the [`TextLayout`].
+    ///
+    /// This should only fail in exceptional circumstances.
     fn build(self) -> Result<Self::Out, Error>;
 }
 
@@ -288,7 +292,12 @@ pub enum TextAlignment {
     /// Text is aligned to the right edge in left-to-right scripts, and the
     /// left edge in right-to-left scripts.
     End,
+    /// Lines are centered in the available space.
     Center,
+    /// Line width is increased to fill available space.
+    ///
+    /// This may be achieved through increases in word or character spacing,
+    /// or through ligatures where available.
     Justified,
 }
 

@@ -64,7 +64,10 @@ pub enum LineJoin {
     ///
     /// This is also currently the default `LineJoin`; you should only need to
     /// construct it if you need to customize the `limit`.
-    Miter { limit: f64 },
+    Miter {
+        /// The maximum distance between the inner and outer stroke edges before beveling.
+        limit: f64,
+    },
     /// The two lines are joined by a circular arc.
     Round,
     /// The two segments are capped with [`LineCap::Butt`], and the notch is filled.

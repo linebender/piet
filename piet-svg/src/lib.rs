@@ -458,16 +458,12 @@ impl IntoBrush<RenderContext> for Brush {
 
 // RGB in hex representation
 fn fmt_color(color: &Color) -> String {
-    match color {
-        Color::Rgba32(x) => format!("#{:06x}", x >> 8),
-    }
+    format!("#{:06x}", color.as_rgba_u32() >> 8)
 }
 
 // Opacity as value from [0, 1]
 fn fmt_opacity(color: &Color) -> String {
-    match color {
-        Color::Rgba32(x) => format!("{}", (x & 0xFF) as f32 / 255.0),
-    }
+    format!("{}", color.as_rgba().3)
 }
 
 /// SVG image (unimplemented)

@@ -77,6 +77,7 @@ impl FontFamily {
         FontFamily(FontFamilyInner::Named(s.into()))
     }
 
+    /// The name of the font family.
     pub fn name(&self) -> &str {
         match &self.0 {
             FontFamilyInner::Serif => "serif",
@@ -100,27 +101,40 @@ impl FontFamily {
 }
 
 impl FontWeight {
+    /// 100
     pub const THIN: FontWeight = FontWeight(100);
+    /// 100
     pub const HAIRLINE: FontWeight = FontWeight::THIN;
 
+    /// 200
     pub const EXTRA_LIGHT: FontWeight = FontWeight(200);
 
+    /// 300
     pub const LIGHT: FontWeight = FontWeight(300);
 
+    /// 400
     pub const REGULAR: FontWeight = FontWeight(400);
+    /// 400
     pub const NORMAL: FontWeight = FontWeight::REGULAR;
 
+    /// 500
     pub const MEDIUM: FontWeight = FontWeight(500);
 
+    /// 600
     pub const SEMI_BOLD: FontWeight = FontWeight(600);
 
+    /// 700
     pub const BOLD: FontWeight = FontWeight(700);
 
+    /// 800
     pub const EXTRA_BOLD: FontWeight = FontWeight(800);
 
+    /// 900
     pub const BLACK: FontWeight = FontWeight(900);
+    /// 900
     pub const HEAVY: FontWeight = FontWeight::BLACK;
 
+    /// 950
     pub const EXTRA_BLACK: FontWeight = FontWeight(950);
 
     /// Create a new `FontWeight` with a custom value.
