@@ -358,7 +358,7 @@ impl Attrs<'_> {
                 LineCap::Butt => (),
             }
             if !style.dash_pattern.is_empty() {
-                node.assign("stroke-dasharray", style.dash_pattern.clone().into_owned());
+                node.assign("stroke-dasharray", style.dash_pattern.to_vec());
             }
             if style.dash_offset != 0.0 {
                 node.assign("stroke-dashoffset", style.dash_offset);

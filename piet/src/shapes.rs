@@ -1,6 +1,6 @@
 //! Options for drawing paths.
 
-use std::borrow::Cow;
+use std::rc::Rc;
 
 /// Options for drawing stroked lines.
 ///
@@ -18,6 +18,19 @@ use std::borrow::Cow;
 /// It is possible that in the future certain of these defaults may change;
 /// if you are particular about your style you can create the various types
 /// explicitly instead of relying on the default impls.
+///
+/// ```
+/// use piet::{LineJoin, StrokeStyle};
+///
+/// const CONST_STLYE: StrokeStyle = StrokeStyle::new()
+///     .dash_pattern(&[5.0, 1.0, 2.0])
+///     .line_join(LineJoin::Round);
+///
+/// let style = StrokeStyle::new()
+///     .dash_pattern(&[10.0, 5.0, 2.0])
+///     .dash_offset(5.0);
+///
+/// ```
 ///
 /// [PLRMv3]: https://www.adobe.com/content/dam/acom/en/devnet/actionscript/articles/PLRM.pdf
 #[derive(Clone, PartialEq, Debug, Default)]
@@ -42,11 +55,22 @@ pub struct StrokeStyle {
     /// an even count.
     ///
     /// By default, this is empty (`&[]`), indicating a solid line.
-    pub dash_pattern: Cow<'static, [f64]>,
+    pub dash_pattern: StrokeDash,
     /// The distance into the `dash_pattern` at which drawing begins.
     ///
     /// By default, this is `0.0`.
     pub dash_offset: f64,
+}
+
+/// A type that represents an alternating pattern of drawn and undrawn segments.
+///
+/// We use our own type as a way of making this work in `const` contexts.
+///
+/// This type `Deref`s to `&[f64]`.
+#[derive(Debug, Default, Clone, PartialEq)]
+pub struct StrokeDash {
+    slice: &'static [f64],
+    alloc: Option<Rc<[f64]>>,
 }
 
 /// Options for angled joins in strokes.
@@ -97,49 +121,30 @@ pub enum LineCap {
 }
 
 impl StrokeStyle {
-    /// Create a new, default `StrokeStyle`.
+    /// Create a new `StrokeStyle` with the provided pattern.
     ///
-    /// To create a `StrokeStyle` in a `const` setting, use [`StrokeStyle::new_with_pattern`].
+    /// For no pattern (a solid line) pass `&[]`.
+    ///
+    /// This is available in a `const` context and does not allocate;
+    /// the other methods for setting the dash pattern *do* allocate, for
+    /// annoying reasons.
     ///
     /// # Example
     ///
     /// ```
     ///  use piet::{LineJoin, StrokeStyle};
     ///
-    ///  let pattern = vec![4.0, 8.0, 2.0, 8.0];
-    ///
-    ///  let style = StrokeStyle::new()
-    ///     .line_join(LineJoin::Round)
-    ///     .dash_pattern(pattern);
-    ///
-    /// ```
-    pub fn new() -> StrokeStyle {
-        StrokeStyle {
-            line_join: Default::default(),
-            line_cap: Default::default(),
-            dash_offset: 0.0,
-            dash_pattern: Cow::Borrowed(&[]),
-        }
-    }
-
-    /// Create a `StrokeStyle` with a pattern.
-    ///
-    /// This constructor is `const`; if you don't want a pattern you may pass
-    /// an empty slice.
-    ///
-    /// # Example
-    ///
-    /// ```
-    ///  use piet::{LineCap, StrokeStyle};
-    ///
-    ///  const DASHED_STYLE: StrokeStyle = StrokeStyle::new_with_pattern(&[8.0, 12.0])
+    ///  const STYLE: StrokeStyle = StrokeStyle::new()
+    ///     .dash_pattern(&[4.0, 2.0])
     ///     .dash_offset(8.0)
-    ///     .line_cap(LineCap::Square);
-    ///
+    ///     .line_join(LineJoin::Round);
     /// ```
-    pub const fn new_with_pattern(pattern: &'static [f64]) -> Self {
+    pub const fn new() -> StrokeStyle {
         StrokeStyle {
-            dash_pattern: Cow::Borrowed(pattern),
+            dash_pattern: StrokeDash {
+                slice: &[],
+                alloc: None,
+            },
             line_join: LineJoin::Miter {
                 limit: LineJoin::DEFAULT_MITER_LIMIT,
             },
@@ -174,14 +179,13 @@ impl StrokeStyle {
 
     /// Builder-style method to set the [`dash_pattern`].
     ///
-    /// You may provide either a `Vec<f64>` or a `&'static [f64]`.
+    /// This method takes a `&'static [f64]`, and does not allocate. If you
+    /// do not have a static slice, you may use [`set_dash_pattern`] instead,
+    /// which does allocate.
     ///
-    /// This method is not available in a const context; use
-    /// [`StrokeStyle::new_with_pattern`] instead.
-    ///
-    /// [`dash_pattern`]: StrokeStyle#structfield.dash_pattern
-    pub fn dash_pattern(mut self, lengths: impl Into<Cow<'static, [f64]>>) -> Self {
-        self.dash_pattern = lengths.into();
+    /// [`dash_pattern`]: #structfield.dash_pattern
+    pub const fn dash_pattern(mut self, lengths: &'static [f64]) -> Self {
+        self.dash_pattern.slice = lengths;
         self
     }
 
@@ -191,8 +195,9 @@ impl StrokeStyle {
     /// and an offset length.
     #[deprecated(since = "0.4.0", note = "Use dash_offset and dash_lengths instead")]
     #[doc(hidden)]
-    pub fn dash(self, dashes: Vec<f64>, offset: f64) -> Self {
-        self.dash_pattern(dashes).dash_offset(offset)
+    pub fn dash(mut self, dashes: Vec<f64>, offset: f64) -> Self {
+        self.dash_pattern.alloc = Some(dashes.into());
+        self.dash_offset(offset)
     }
 
     /// Set the [`LineJoin`].
@@ -212,7 +217,7 @@ impl StrokeStyle {
     #[doc(hidden)]
     pub fn set_dash(&mut self, dashes: Vec<f64>, offset: f64) {
         self.dash_offset = offset;
-        self.dash_pattern = dashes.into();
+        self.dash_pattern.alloc = Some(dashes.into());
     }
 
     /// Set the dash offset.
@@ -221,8 +226,13 @@ impl StrokeStyle {
     }
 
     /// Set the dash pattern.
-    pub fn set_dash_pattern(&mut self, lengths: impl Into<Cow<'static, [f64]>>) {
-        self.dash_pattern = lengths.into();
+    ///
+    /// This method always allocates. To construct without allocating, use the
+    /// [`dash_pattern`] builder method.
+    ///
+    /// [`dash_pattern`]: #method.dash_pattern
+    pub fn set_dash_pattern(&mut self, lengths: impl Into<Rc<[f64]>>) {
+        self.dash_pattern.alloc = Some(lengths.into());
     }
 
     /// If the current [`LineJoin`] is [`LineJoin::Miter`] return the miter limit.
@@ -245,5 +255,16 @@ impl Default for LineJoin {
 impl Default for LineCap {
     fn default() -> Self {
         LineCap::Butt
+    }
+}
+
+impl std::ops::Deref for StrokeDash {
+    type Target = [f64];
+    fn deref(&self) -> &Self::Target {
+        if let Some(alloc) = &self.alloc {
+            &alloc
+        } else {
+            self.slice
+        }
     }
 }
