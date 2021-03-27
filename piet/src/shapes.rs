@@ -19,9 +19,22 @@ use std::borrow::Cow;
 /// if you are particular about your style you can create the various types
 /// explicitly instead of relying on the default impls.
 ///
+/// # Example
+///
+/// ```
+/// use piet::{LineJoin, StrokeStyle};
+///
+/// const CONST_STLYE: StrokeStyle = StrokeStyle::new_with_pattern(&[4.0, 4.0])
+///     .line_join(LineJoin::Round);
+///
+/// let style = StrokeStyle::new()
+///     .dash_pattern(&[10.0, 5.0, 2.0][..])
+///     .dash_offset(5.0);
+///
+/// ```
 /// [PLRMv3]: https://www.adobe.com/content/dam/acom/en/devnet/actionscript/articles/PLRM.pdf
 #[derive(Clone, PartialEq, Debug, Default)]
-pub struct StrokeStyle {
+pub struct StrokeStyle<const N: usize> {
     /// How to join segments of the path.
     ///
     /// By default, this is [`LineJoin::Miter`] with a `limit` of `10.0`.
@@ -42,7 +55,8 @@ pub struct StrokeStyle {
     /// an even count.
     ///
     /// By default, this is empty (`&[]`), indicating a solid line.
-    pub dash_pattern: Cow<'static, [f64]>,
+    pub dash_pattern: [f64; N],
+    //pub dash_pattern: Cow<'static, [f64]>,
     /// The distance into the `dash_pattern` at which drawing begins.
     ///
     /// By default, this is `0.0`.
@@ -93,7 +107,7 @@ pub enum LineCap {
     Square,
 }
 
-impl StrokeStyle {
+impl<const N: usize> StrokeStyle<N> {
     /// Create a new, default `StrokeStyle`.
     ///
     /// To create a `StrokeStyle` in a `const` setting, use [`StrokeStyle::new_with_pattern`].
@@ -110,7 +124,7 @@ impl StrokeStyle {
     ///     .dash_pattern(pattern);
     ///
     /// ```
-    pub fn new() -> StrokeStyle {
+    pub fn new() -> StrokeStyle<0> {
         StrokeStyle {
             line_join: Default::default(),
             line_cap: Default::default(),
@@ -177,8 +191,8 @@ impl StrokeStyle {
     /// [`StrokeStyle::new_with_pattern`] instead.
     ///
     /// [`dash_pattern`]: StrokeStyle#structfield.dash_pattern
-    pub fn dash_pattern(mut self, lengths: impl Into<Cow<'static, [f64]>>) -> Self {
-        self.dash_pattern = lengths.into();
+    pub fn dash_pattern<const M: usize>(mut self, lengths: [f64; M]) -> StrokeStyle<M> {
+        self.dash_pattern = lengths;
         self
     }
 

@@ -111,12 +111,12 @@ where
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64);
 
     /// Stroke a shape, with styled strokes.
-    fn stroke_styled(
+    fn stroke_styled<const N: usize>(
         &mut self,
         shape: impl Shape,
         brush: &impl IntoBrush<Self>,
         width: f64,
-        style: &StrokeStyle,
+        style: &StrokeStyle<N>,
     );
 
     /// Fill a shape, using non-zero fill rule.

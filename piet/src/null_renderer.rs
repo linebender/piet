@@ -63,12 +63,12 @@ impl RenderContext for NullRenderContext {
 
     fn stroke(&mut self, _shape: impl Shape, _brush: &impl IntoBrush<Self>, _width: f64) {}
 
-    fn stroke_styled(
+    fn stroke_styled<const N: usize>(
         &mut self,
         _shape: impl Shape,
         _brush: &impl IntoBrush<Self>,
         _width: f64,
-        _style: &StrokeStyle,
+        _style: &StrokeStyle<N>,
     ) {
     }
 
