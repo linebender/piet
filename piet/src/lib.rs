@@ -12,8 +12,8 @@
 //! [`piet-coregraphics`]: https://crates.io/crates/piet-coregraphics
 //! [`piet-direct2d`]: https://crates.io/crates/piet-direct2d
 
-#![warn(missing_docs, broken_intra_doc_links)]
-#![deny(clippy::trivially_copy_pass_by_ref)]
+#![warn(missing_docs)]
+#![deny(clippy::trivially_copy_pass_by_ref, broken_intra_doc_links)]
 
 pub use kurbo;
 
