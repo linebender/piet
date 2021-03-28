@@ -184,6 +184,7 @@ impl StrokeStyle {
     /// which does allocate.
     ///
     /// [`dash_pattern`]: #structfield.dash_pattern
+    /// [`set_dash_pattern`]: #method.set_dash_pattern
     pub const fn dash_pattern(mut self, lengths: &'static [f64]) -> Self {
         self.dash_pattern.slice = lengths;
         self
