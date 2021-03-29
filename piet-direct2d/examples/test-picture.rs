@@ -24,7 +24,7 @@ fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::
     // Create the D2D factory
     let d2d = piet_direct2d::D2DFactory::new()?;
     let dwrite = piet_direct2d::DwriteFactory::new()?;
-    let text = D2DText::new(dwrite);
+    let text = D2DText::new_with_shared_fonts(dwrite, None);
 
     // Initialize a D3D Device
     let (d3d, d3d_ctx) = piet_direct2d::d3d::D3D11Device::create()?;
