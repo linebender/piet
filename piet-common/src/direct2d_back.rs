@@ -141,7 +141,7 @@ impl<'a> BitmapTarget<'a> {
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> D2DRenderContext {
-        let text = D2DText::new(self.dwrite.clone());
+        let text = D2DText::new_with_shared_fonts(self.dwrite.clone(), None);
         D2DRenderContext::new(self.d2d, text, &mut self.context)
     }
 
