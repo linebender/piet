@@ -1,7 +1,10 @@
 //! A 2D graphics abstraction.
 //!
 //! This crate contains types and interfaces that represent a traditional 2D
-//! graphics API, in the tradition of [`PostScript`].
+//! graphics API, in the tradition of [`PostScript`]. It is built on top of
+//! [`kurbo`], a 2D geometry library.
+//!
+//! The main interface is the [`RenderContext`] trait.
 //!
 //! This API can be implemented on various platforms, allowing drawing code
 //! to be reused in an approximately consistent way. Various such implementations
