@@ -110,10 +110,10 @@ where
     /// [`fill`]: #method.fill
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color);
 
-    /// Stroke a shape.
+    /// Stroke a [`Shape`], using the default [`StrokeStyle`].
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64);
 
-    /// Stroke a shape, with styled strokes.
+    /// Stroke a [`Shape`], providing a custom [`StrokeStyle`].
     fn stroke_styled(
         &mut self,
         shape: impl Shape,
@@ -122,13 +122,17 @@ where
         style: &StrokeStyle,
     );
 
-    /// Fill a shape, using non-zero fill rule.
+    /// Fill a [`Shape`], using the [non-zero fill rule].
+    ///
+    /// [non-zero fill rule]: https://en.wikipedia.org/wiki/Nonzero-rule
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>);
 
-    /// Fill a shape, using even-odd fill rule
+    /// Fill a shape, using the [even-odd fill rule].
+    ///
+    /// [even-odd fill rule]: https://en.wikipedia.org/wiki/Even–odd_rule
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>);
 
-    /// Clip to a shape.
+    /// Clip to a [`Shape`].
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
@@ -139,7 +143,7 @@ where
     /// This provides access to the text API.
     fn text(&mut self) -> &mut Self::Text;
 
-    /// Draw a text layout.
+    /// Draw a [`TextLayout`].
     ///
     /// The `pos` parameter specifies the baseline of the left starting place of
     /// the text. Note: this is true even if the text is right-to-left.
@@ -186,7 +190,24 @@ where
     /// until a [`restore`](#method.restore) operation.
     fn transform(&mut self, transform: Affine);
 
-    /// Create a new image from a pixel buffer.
+    /// Create a new [`Image`] from a pixel buffer.
+    ///
+    /// This takes raw pixel data and attempts create an object that the
+    /// platform knows how to draw.
+    ///
+    /// The generated image can be cached and reused. This is a good idea for
+    /// images that are used frequently, because creating the image type may
+    /// be expensive.
+    ///
+    /// To draw the generated image, pass it to [`draw_image`]. To draw a portion
+    /// of the image, use [`draw_image_area`].
+    ///
+    /// If you are trying to create an image from the contents of this
+    /// [`RenderContext`], see [`capture_image_area`].
+    ///
+    /// [`draw_image`]: #method.draw_image
+    /// [`draw_image_area`]: #method.draw_image_area
+    /// [`capture_image_area`]: #method.capture_image_area
     fn make_image(
         &mut self,
         width: usize,
@@ -195,10 +216,10 @@ where
         format: ImageFormat,
     ) -> Result<Self::Image, Error>;
 
-    /// Draw an image.
+    /// Draw an [`Image`] into the provided [`Rect`].
     ///
-    /// The `image` is scaled to the provided `dst_rect`.
-    /// It will be squashed if the aspect ratios don't match.
+    /// The image is scaled to fit the provided [`Rect`]; it will be squashed
+    /// if the aspect ratios don't match.
     fn draw_image(
         &mut self,
         image: &Self::Image,
@@ -206,7 +227,7 @@ where
         interp: InterpolationMode,
     );
 
-    /// Draw a specified area of an image.
+    /// Draw a specified area of an [`Image`].
     ///
     /// The `src_rect` area of `image` is scaled to the provided `dst_rect`.
     /// It will be squashed if the aspect ratios don't match.
