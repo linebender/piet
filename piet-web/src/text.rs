@@ -144,6 +144,10 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
         self
     }
 
+    fn tab_width(self, _width: f64) -> Self {
+        self
+    }
+
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
         web_sys::console::log_1(&"TextLayout alignment unsupported on web".into());
         self

@@ -84,6 +84,7 @@ pub struct D2DTextLayout {
 pub struct D2DTextLayoutBuilder {
     text: Rc<dyn TextStorage>,
     layout: Result<dwrite::TextLayout, Error>,
+    tab_width: Option<f32>,
     len_utf16: usize,
     loaded_fonts: D2DLoadedFonts,
     default_font: FontFamily,
@@ -161,6 +162,7 @@ impl Text for D2DText {
         D2DTextLayoutBuilder {
             layout,
             text,
+            tab_width: None,
             len_utf16: wide_str.len(),
             colors: Vec::new(),
             loaded_fonts: self.loaded_fonts.clone(),
@@ -183,6 +185,11 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
         if let Err(err) = result {
             self.layout = Err(err.into());
         }
+        self
+    }
+
+    fn tab_width(mut self, width: f64) -> Self {
+        self.tab_width = Some(width as f32);
         self
     }
 
@@ -228,6 +235,10 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     fn build(self) -> Result<Self::Out, Error> {
         let (default_line_height, default_baseline) = self.get_default_line_height_and_baseline();
         let layout = self.layout?;
+
+        if let Some(tab_width) = self.tab_width {
+            layout.set_incremental_tab_stop(tab_width);
+        }
 
         let mut layout = D2DTextLayout {
             text: self.text,

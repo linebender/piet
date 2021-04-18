@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use glib::translate::{from_glib_full, ToGlibPtr};
 
-use pango::{AttrList, FontMapExt};
+use pango::{AttrList, FontMapExt, TabAlign, TabArray};
 use pango_sys::pango_attr_insert_hyphens_new;
 use pangocairo::FontMap;
 
@@ -49,9 +49,12 @@ pub struct CairoTextLayout {
 
 pub struct CairoTextLayoutBuilder {
     text: Rc<dyn TextStorage>,
+
     defaults: util::LayoutDefaults,
     attributes: Vec<AttributeWithRange>,
     last_range_start_pos: usize,
+
+    tab_width: Option<f64>,
     width_constraint: f64,
     pango_layout: PangoLayout,
 }
@@ -193,6 +196,7 @@ impl Text for CairoText {
             defaults: util::LayoutDefaults::default(),
             attributes: Vec::new(),
             last_range_start_pos: 0,
+            tab_width: None,
             width_constraint: f64::INFINITY,
             pango_layout,
         }
@@ -210,6 +214,11 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
     fn max_width(mut self, width: f64) -> Self {
         self.width_constraint = width;
+        self
+    }
+
+    fn tab_width(mut self, width: f64) -> Self {
+        self.tab_width = Some(width);
         self
     }
 
@@ -277,6 +286,13 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     }
 
     fn build(self) -> Result<Self::Out, Error> {
+        if let Some(tab_width) = self.tab_width {
+            let tab_width = (tab_width * PANGO_SCALE) as i32;
+            let mut array = TabArray::new(1, false);
+            array.set_tab(0, TabAlign::Left, tab_width);
+            self.pango_layout.set_tabs(Some(&array));
+        }
+
         let pango_attributes = AttrList::new();
         let add_attribute = |attribute| {
             if let Some(attribute) = attribute {
