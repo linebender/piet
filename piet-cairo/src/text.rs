@@ -548,10 +548,9 @@ impl CairoTextLayout {
             //HACK: This check for RTL is to work around https://gitlab.gnome.org/GNOME/pango/-/issues/544
             let non_ws_width = if trailing_whitespace != 0 && !self.is_rtl {
                 //FIXME: this probably isn't correct for RTL
-                let ws_start = line.index_to_x((start_offset + trimmed_len) as i32, false);
-                ws_start.saturating_sub(logical_rect.x)
+                line.index_to_x((start_offset + trimmed_len) as i32, false)
             } else {
-                logical_rect.width - logical_rect.x
+                logical_rect.width
             };
             widest_whitespaceless_width = widest_whitespaceless_width.max(non_ws_width);
 
