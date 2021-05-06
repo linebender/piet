@@ -619,10 +619,7 @@ fn draw_image<'a>(
         InterpolationMode::NearestNeighbor => D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
         InterpolationMode::Bilinear => D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
     };
-    let src_rect = match src_rect {
-        Some(src_rect) => Some(rect_to_rectf(src_rect)),
-        None => None,
-    };
+    let src_rect = src_rect.map(rect_to_rectf);
     rt.draw_bitmap(
         &image,
         &rect_to_rectf(dst_rect),
