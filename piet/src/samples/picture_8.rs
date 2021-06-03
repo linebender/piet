@@ -11,7 +11,7 @@ pub const SIZE: Size = Size::new(400., 800.);
 static SAMPLE_EN: &str = r#"This essay is an effort to build an ironic political myth faithful to feminism, socialism, and materialism. Perhaps more faithful as blasphemy is faithful, than as reverent worship and identification. Blasphemy has always seemed to require taking things very seriously. I know no better stance to adopt from within the secular-religious, evangelical traditions of United States politics, including the politics of socialist-feminism."#;
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
     let text = rc.text();
 
     let en_leading = text

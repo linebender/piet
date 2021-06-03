@@ -1,5 +1,7 @@
 //! Wrappers around CF/CT types, with nice interfaces.
 
+#![allow(clippy::upper_case_acronyms)]
+
 use std::ffi::c_void;
 use std::rc::Rc;
 
@@ -35,7 +37,7 @@ use core_text::{
     line::{CTLine, CTLineRef, TypographicBounds},
     string_attributes,
 };
-use foreign_types::ForeignType;
+use foreign_types::{ForeignType, ForeignTypeRef};
 
 use piet::kurbo::{Affine, Rect};
 use piet::{util, Color, FontFamily, FontFamilyInner, TextAlignment};
@@ -197,6 +199,7 @@ impl Framesetter {
     }
 
     /// returns the suggested size and the range of the string that fits.
+    #[allow(dead_code)]
     pub(crate) fn suggest_frame_size(
         &self,
         range: CFRange,
@@ -229,6 +232,7 @@ impl Frame {
         self.frame.get_line_origins(range)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn draw(&self, ctx: &mut CGContextRef) {
         self.frame.draw(ctx)
     }
@@ -252,6 +256,10 @@ impl Line {
             let r = CTLineGetImageBounds(self.0.as_concrete_TypeRef(), std::ptr::null_mut());
             Rect::from_origin_size((r.origin.x, r.origin.y), (r.size.width, r.size.height))
         }
+    }
+
+    pub(crate) fn draw(&self, ctx: &mut CGContextRef) {
+        unsafe { CTLineDraw(self.0.as_concrete_TypeRef(), ctx.as_ptr()) }
     }
 
     pub(crate) fn get_string_index_for_position(&self, position: CGPoint) -> CFIndex {
@@ -403,6 +411,7 @@ extern "C" {
         count: usize,
     ) -> CTParagraphStyleRef;
     fn CTLineGetImageBounds(line: CTLineRef, ctx: *mut c_void) -> CGRect;
+    fn CTLineDraw(line: CTLineRef, ctx: core_graphics::sys::CGContextRef);
     fn CTLineGetTrailingWhitespaceWidth(line: CTLineRef) -> f64;
     fn CTFontCollectionCreateMatchingFontDescriptorsForFamily(
         collection: CTFontCollectionRef,

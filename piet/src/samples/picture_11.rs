@@ -16,7 +16,7 @@ const RED: Color = Color::rgb8(255, 0, 0);
 const BLUE: Color = Color::rgb8(0, 0, 255);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(LIGHT_GREY);
+    rc.clear(None, LIGHT_GREY);
     let layout_en_start = rc
         .text()
         .new_text_layout(TEXT_EN)

@@ -163,6 +163,7 @@ pub enum TextAttribute {
 
 /// A trait for laying out text.
 pub trait TextLayoutBuilder: Sized {
+    /// The type of the generated [`TextLayout`].
     type Out: TextLayout;
 
     /// Set a max width for this layout.
@@ -274,6 +275,9 @@ pub trait TextLayoutBuilder: Sized {
         attribute: impl Into<TextAttribute>,
     ) -> Self;
 
+    /// Attempt to build the [`TextLayout`].
+    ///
+    /// This should only fail in exceptional circumstances.
     fn build(self) -> Result<Self::Out, Error>;
 }
 
@@ -288,7 +292,12 @@ pub enum TextAlignment {
     /// Text is aligned to the right edge in left-to-right scripts, and the
     /// left edge in right-to-left scripts.
     End,
+    /// Lines are centered in the available space.
     Center,
+    /// Line width is increased to fill available space.
+    ///
+    /// This may be achieved through increases in word or character spacing,
+    /// or through ligatures where available.
     Justified,
 }
 
@@ -399,6 +408,12 @@ pub trait TextLayout: Clone {
     ///
     /// For more on text positions, see docs for the [`TextLayout`] trait.
     ///
+    /// ## Notes:
+    ///
+    /// The user is expected to ensure that the provided index is a grapheme
+    /// boundary. If it is a character boundary but *not* a grapheme boundary,
+    /// the return value may be backend-specific.
+    ///
     /// ## Panics:
     ///
     /// This method will panic if the text position is not a character boundary,
@@ -447,11 +462,18 @@ pub trait TextLayout: Clone {
             } else {
                 metrics.end_offset - metrics.trailing_whitespace
             };
-            let start_point = self.hit_test_text_position(line_range_start);
-            let end_point = self.hit_test_text_position(line_range_end);
-            result.push(Rect::new(start_point.point.x, y0, end_point.point.x, y1));
-        }
 
+            let start_x = self.hit_test_text_position(line_range_start).point.x;
+            //HACK: because we don't have affinity, if the line has an emergency
+            //break we need to manually use the layout width as the end point
+            //for the selection rect. See https://github.com/linebender/piet/issues/323
+            let end_x = if line != last_line && metrics.trailing_whitespace == 0 {
+                self.size().width
+            } else {
+                self.hit_test_text_position(line_range_end).point.x
+            };
+            result.push(Rect::new(start_x, y0, end_x, y1));
+        }
         result
     }
 }

@@ -244,14 +244,23 @@ impl<'a> GradientStops for (Color, Color, Color, Color, Color, Color) {
 }
 
 impl UnitPoint {
+    /// `(0.0, 0.0)`
     pub const TOP_LEFT: UnitPoint = UnitPoint::new(0.0, 0.0);
+    /// `(0.5, 0.0)`
     pub const TOP: UnitPoint = UnitPoint::new(0.5, 0.0);
+    /// `(1.0, 0.0)`
     pub const TOP_RIGHT: UnitPoint = UnitPoint::new(1.0, 0.0);
+    /// `(0.0, 0.5)`
     pub const LEFT: UnitPoint = UnitPoint::new(0.0, 0.5);
+    /// `(0.5, 0.5)`
     pub const CENTER: UnitPoint = UnitPoint::new(0.5, 0.5);
+    /// `(1.0, 0.5)`
     pub const RIGHT: UnitPoint = UnitPoint::new(1.0, 0.5);
+    /// `(0.0, 1.0)`
     pub const BOTTOM_LEFT: UnitPoint = UnitPoint::new(0.0, 1.0);
+    /// `(0.5, 1.0)`
     pub const BOTTOM: UnitPoint = UnitPoint::new(0.5, 1.0);
+    /// `(1.0, 1.0)`
     pub const BOTTOM_RIGHT: UnitPoint = UnitPoint::new(1.0, 1.0);
 
     /// Create a new UnitPoint.

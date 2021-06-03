@@ -5,13 +5,13 @@ use std::path::Path;
 use winapi::shared::dxgi::DXGI_MAP_READ;
 
 use piet::{samples, RenderContext};
-use piet_direct2d::D2DRenderContext;
+use piet_direct2d::{D2DRenderContext, D2DText};
 
 const HIDPI: f32 = 2.0;
 const FILE_PREFIX: &str = "d2d-test-";
 
 fn main() {
-    samples::samples_main(run_sample, FILE_PREFIX);
+    samples::samples_main(run_sample, FILE_PREFIX, None);
 }
 
 fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -24,6 +24,7 @@ fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::
     // Create the D2D factory
     let d2d = piet_direct2d::D2DFactory::new()?;
     let dwrite = piet_direct2d::DwriteFactory::new()?;
+    let text = D2DText::new_with_shared_fonts(dwrite, None);
 
     // Initialize a D3D Device
     let (d3d, d3d_ctx) = piet_direct2d::d3d::D3D11Device::create()?;
@@ -47,7 +48,7 @@ fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::
     context.set_target(&target);
     context.set_dpi_scale(HIDPI);
     context.begin_draw();
-    let mut piet_context = D2DRenderContext::new(&d2d, dwrite, &mut context);
+    let mut piet_context = D2DRenderContext::new(&d2d, text, &mut context);
     // TODO: report errors more nicely than these unwraps.
     match sample.draw(&mut piet_context) {
         Ok(()) => (),

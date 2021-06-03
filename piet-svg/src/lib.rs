@@ -68,12 +68,21 @@ impl piet::RenderContext for RenderContext {
         Ok(())
     }
 
-    fn clear(&mut self, color: Color) {
-        let mut rect = svg::node::element::Rectangle::new()
-            .set("width", "100%")
-            .set("height", "100%")
-            .set("fill", fmt_color(&color))
-            .set("fill-opacity", fmt_opacity(&color));
+    fn clear(&mut self, rect: impl Into<Option<Rect>>, color: Color) {
+        let rect = rect.into();
+        let mut rect = match rect {
+            Some(rect) => svg::node::element::Rectangle::new()
+                .set("width", rect.width())
+                .set("height", rect.height())
+                .set("x", rect.x0)
+                .set("y", rect.y0),
+            None => svg::node::element::Rectangle::new()
+                .set("width", "100%")
+                .set("height", "100%"),
+        }
+        .set("fill", fmt_color(&color))
+        .set("fill-opacity", fmt_opacity(&color));
+        //FIXME: I don't think we should be clipping, here?
         if let Some(id) = self.state.clip {
             rect.assign("clip-path", format!("url(#{})", id.to_string()));
         }
@@ -272,6 +281,10 @@ impl piet::RenderContext for RenderContext {
         draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
+    fn capture_image_area(&mut self, _src_rect: impl Into<Rect>) -> Result<Self::Image> {
+        Err(Error::Unimplemented)
+    }
+
     fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
         unimplemented!()
     }
@@ -323,31 +336,32 @@ impl Attrs<'_> {
                 node.assign("stroke-width", width);
             }
             match style.line_join {
-                None | Some(LineJoin::Miter) => {}
-                Some(LineJoin::Round) => {
+                LineJoin::Miter { limit } if limit == LineJoin::DEFAULT_MITER_LIMIT => (),
+                LineJoin::Miter { limit } => {
+                    node.assign("stroke-miterlimit", limit);
+                }
+                LineJoin::Round => {
                     node.assign("stroke-linejoin", "round");
                 }
-                Some(LineJoin::Bevel) => {
+                LineJoin::Bevel => {
                     node.assign("stroke-linejoin", "bevel");
                 }
             }
             match style.line_cap {
-                None | Some(LineCap::Butt) => {}
-                Some(LineCap::Round) => {
+                LineCap::Round => {
                     node.assign("stroke-linecap", "round");
                 }
-                Some(LineCap::Square) => {
+                #[allow(deprecated)]
+                LineCap::Square => {
                     node.assign("stroke-linecap", "square");
                 }
+                LineCap::Butt => (),
             }
-            if let Some((ref array, offset)) = style.dash {
-                node.assign("stroke-dasharray", array.clone());
-                if offset != 0.0 {
-                    node.assign("stroke-dashoffset", offset);
-                }
+            if !style.dash_pattern.is_empty() {
+                node.assign("stroke-dasharray", style.dash_pattern.to_vec());
             }
-            if let Some(limit) = style.miter_limit {
-                node.assign("stroke-miterlimit", limit);
+            if style.dash_offset != 0.0 {
+                node.assign("stroke-dashoffset", style.dash_offset);
             }
         }
     }
@@ -444,16 +458,12 @@ impl IntoBrush<RenderContext> for Brush {
 
 // RGB in hex representation
 fn fmt_color(color: &Color) -> String {
-    match color {
-        Color::Rgba32(x) => format!("#{:06x}", x >> 8),
-    }
+    format!("#{:06x}", color.as_rgba_u32() >> 8)
 }
 
 // Opacity as value from [0, 1]
 fn fmt_opacity(color: &Color) -> String {
-    match color {
-        Color::Rgba32(x) => format!("{}", (x & 0xFF) as f32 / 255.0),
-    }
+    format!("{}", color.as_rgba().3)
 }
 
 /// SVG image (unimplemented)

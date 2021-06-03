@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Types for working with images
+
 #[cfg(feature = "image")]
 use std::error::Error;
 #[cfg(feature = "image")]

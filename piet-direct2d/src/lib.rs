@@ -30,14 +30,14 @@ use piet::{
     StrokeStyle,
 };
 
-use crate::d2d::wrap_unit;
+use crate::d2d::{wrap_unit, Layer};
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use crate::dwrite::DwriteFactory;
-pub use crate::text::{D2DText, D2DTextLayout, D2DTextLayoutBuilder};
+pub use crate::text::{D2DLoadedFonts, D2DText, D2DTextLayout, D2DTextLayoutBuilder};
 
 use crate::conv::{
     affine_to_matrix3x2f, color_to_colorf, convert_stroke_style, gradient_stop_to_d2d,
-    rect_to_rectf, to_point2f,
+    rect_to_rectf, rect_to_rectu, to_point2f, to_point2u,
 };
 use crate::d2d::{Bitmap, Brush, DeviceContext, FillRule, Geometry};
 
@@ -48,6 +48,8 @@ pub struct D2DRenderContext<'a> {
 
     /// The context state stack. There is always at least one, until finishing.
     ctx_stack: Vec<CtxState>,
+
+    layers: Vec<(Geometry, Layer)>,
 
     err: Result<(), Error>,
 
@@ -69,14 +71,14 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
     /// TODO: check signature.
     pub fn new(
         factory: &'a D2DFactory,
-        dwrite: DwriteFactory,
+        text: D2DText,
         rt: &'b mut DeviceContext,
     ) -> D2DRenderContext<'b> {
-        let inner_text = D2DText::new(dwrite);
         D2DRenderContext {
             factory,
-            inner_text,
+            inner_text: text,
             rt,
+            layers: vec![],
             ctx_stack: vec![CtxState::default()],
             err: Ok(()),
             brush_cache: Default::default(),
@@ -88,6 +90,7 @@ impl<'b, 'a: 'b> D2DRenderContext<'a> {
         let old_state = self.ctx_stack.pop().unwrap();
         for _ in 0..old_state.n_layers_pop {
             self.rt.pop_layer();
+            self.layers.pop();
         }
     }
 
@@ -189,8 +192,33 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, color: Color) {
-        self.rt.clear(color_to_colorf(color));
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        // Remove clippings
+        for _ in 0..self.layers.len() {
+            self.rt.pop_layer();
+        }
+
+        // Reset transform to identity
+        let old_transform = self.rt.get_transform();
+        self.rt.set_transform_identity();
+
+        if let Some(rect) = region.into() {
+            // Clear only the given rect
+            self.rt.push_axis_aligned_clip(rect);
+            self.rt.clear(color_to_colorf(color));
+            self.rt.pop_axis_aligned_clip();
+        } else {
+            // Clear whole canvas
+            self.rt.clear(color_to_colorf(color));
+        }
+
+        // Restore transform
+        self.rt.set_transform(&old_transform);
+
+        // Restore clippings
+        for (mask, layer) in self.layers.iter() {
+            self.rt.push_layer_mask(mask, layer);
+        }
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -277,6 +305,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             }
         };
         self.rt.push_layer_mask(&geom, &layer);
+        self.layers.push((geom, layer));
         self.ctx_stack.last_mut().unwrap().n_layers_pop += 1;
     }
 
@@ -422,6 +451,27 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             dst_rect.into(),
             interp,
         );
+    }
+
+    fn capture_image_area(&mut self, rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        let r = rect.into();
+
+        let mut target_bitmap = self.rt.create_blank_bitmap(
+            r.width() as usize,
+            r.height() as usize,
+            D2D1_ALPHA_MODE_PREMULTIPLIED,
+        )?;
+
+        let dest_point = to_point2u((0.0f32, 0.0f32));
+        let src_rect = rect_to_rectu(Rect {
+            x0: r.x0,
+            y0: r.y0,
+            x1: r.width(),
+            y1: r.height(),
+        });
+
+        target_bitmap.copy_from_render_target(dest_point, self.rt, src_rect);
+        Ok(target_bitmap)
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {

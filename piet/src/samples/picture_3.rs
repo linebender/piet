@@ -6,7 +6,7 @@ use crate::{Color, Error, LineCap, LineJoin, RenderContext, StrokeStyle};
 pub const SIZE: Size = Size::new(400., 200.);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
 
     let mut path = BezPath::new();
     path.move_to((0.0, 0.0));
@@ -16,7 +16,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let brush = rc.solid_brush(Color::rgb8(0x00, 0x00, 0xC0));
     for line_cap in &[LineCap::Butt, LineCap::Round, LineCap::Square] {
         let mut x = 5.0;
-        for line_join in &[LineJoin::Bevel, LineJoin::Miter, LineJoin::Round] {
+        for line_join in &[LineJoin::Bevel, LineJoin::default(), LineJoin::Round] {
             let width = 5.0;
             let mut style = StrokeStyle::new();
             rc.with_save(|rc| {
@@ -37,7 +37,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     for i in 0..8 {
         let mut style = StrokeStyle::new();
         dashes.push((i + 1) as f64);
-        style.set_dash(dashes.clone(), 0.0);
+        style.set_dash_pattern(dashes.clone());
         rc.stroke_styled(Line::new((x, y), (x + 50.0, y)), &brush, 2.0, &style);
         y += 10.0;
     }

@@ -101,6 +101,7 @@ impl<T> WrapError<T> for Result<T, JsValue> {
 }
 
 fn convert_line_cap(line_cap: LineCap) -> &'static str {
+    #[allow(deprecated)]
     match line_cap {
         LineCap::Butt => "butt",
         LineCap::Round => "round",
@@ -110,10 +111,24 @@ fn convert_line_cap(line_cap: LineCap) -> &'static str {
 
 fn convert_line_join(line_join: LineJoin) -> &'static str {
     match line_join {
-        LineJoin::Miter => "miter",
+        LineJoin::Miter { .. } => "miter",
         LineJoin::Round => "round",
         LineJoin::Bevel => "bevel",
     }
+}
+
+fn convert_dash_pattern(pattern: &[f64]) -> Float64Array {
+    let len = pattern.len() as u32;
+    let array = Float64Array::new_with_length(len);
+    for (i, elem) in pattern.iter().enumerate() {
+        Reflect::set(
+            array.as_ref(),
+            &JsValue::from(i as u32),
+            &JsValue::from(*elem),
+        )
+        .unwrap();
+    }
+    array
 }
 
 impl RenderContext for WebRenderContext<'_> {
@@ -129,16 +144,18 @@ impl RenderContext for WebRenderContext<'_> {
         std::mem::replace(&mut self.err, Ok(()))
     }
 
-    fn clear(&mut self, color: Color) {
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
         let (width, height) = match self.ctx.canvas() {
             Some(canvas) => (canvas.offset_width(), canvas.offset_height()),
             None => return,
             /* Canvas might be null if the dom node is not in
              * the document; do nothing. */
         };
-        let shape = Rect::new(0.0, 0.0, width as f64, height as f64);
+        let rect = region
+            .into()
+            .unwrap_or_else(|| Rect::new(0.0, 0.0, width as f64, height as f64));
         let brush = self.solid_brush(color);
-        self.fill(shape, &brush);
+        self.fill(rect, &brush);
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -343,6 +360,10 @@ impl RenderContext for WebRenderContext<'_> {
         draw_image(self, image, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
+    fn capture_image_area(&mut self, _rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        Err(Error::Unimplemented)
+    }
+
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
         self.ctx.set_shadow_blur(blur_radius);
@@ -457,40 +478,19 @@ impl WebRenderContext<'_> {
     /// TODO(performance): this is probably expensive enough it makes sense
     /// to at least store the last version and only reset if it's changed.
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
+        let default_style = StrokeStyle::default();
+        let style = style.unwrap_or(&default_style);
+
         self.ctx.set_line_width(width);
+        self.ctx.set_line_join(convert_line_join(style.line_join));
+        self.ctx.set_line_cap(convert_line_cap(style.line_cap));
+        if let Some(limit) = style.miter_limit() {
+            self.ctx.set_miter_limit(limit);
+        }
 
-        let line_join = style
-            .and_then(|style| style.line_join)
-            .unwrap_or(LineJoin::Miter);
-        self.ctx.set_line_join(convert_line_join(line_join));
-
-        let line_cap = style
-            .and_then(|style| style.line_cap)
-            .unwrap_or(LineCap::Butt);
-        self.ctx.set_line_cap(convert_line_cap(line_cap));
-
-        let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
-        self.ctx.set_miter_limit(miter_limit);
-
-        let (dash_segs, dash_offset) = style
-            .and_then(|style| style.dash.as_ref())
-            .map(|dash| {
-                let len = dash.0.len() as u32;
-                let array = Float64Array::new_with_length(len);
-                for (i, elem) in dash.0.iter().enumerate() {
-                    Reflect::set(
-                        array.as_ref(),
-                        &JsValue::from(i as u32),
-                        &JsValue::from(*elem),
-                    )
-                    .unwrap();
-                }
-                (array, dash.1)
-            })
-            .unwrap_or((Float64Array::new_with_length(0), 0.0));
-
+        let dash_segs = convert_dash_pattern(&style.dash_pattern);
         self.ctx.set_line_dash(dash_segs.as_ref()).unwrap();
-        self.ctx.set_line_dash_offset(dash_offset);
+        self.ctx.set_line_dash_offset(style.dash_offset);
     }
 
     fn set_path(&mut self, shape: impl Shape) {

@@ -11,7 +11,7 @@ use cairo::{Context, Filter, Format, ImageSurface, Matrix, SurfacePattern};
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 use piet::{
     Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
-    LineJoin, RenderContext, StrokeStyle, TextLayout,
+    LineJoin, RenderContext, StrokeStyle,
 };
 
 pub use crate::text::{CairoText, CairoTextLayout, CairoTextLayoutBuilder};
@@ -68,15 +68,28 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         Ok(())
     }
 
-    fn clear(&mut self, color: Color) {
-        let rgba = color.as_rgba_u32();
-        self.ctx.set_source_rgba(
-            byte_to_frac(rgba >> 24),
-            byte_to_frac(rgba >> 16),
-            byte_to_frac(rgba >> 8),
-            byte_to_frac(rgba),
-        );
-        self.ctx.paint();
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        let region: Option<Rect> = region.into();
+        let _ = self.with_save(|rc| {
+            rc.ctx.reset_clip();
+            // we DO want to clip the specified region and reset the transformation
+            if let Some(region) = region {
+                rc.transform(rc.current_transform().inverse());
+                rc.clip(region);
+            }
+
+            //prepare the colors etc
+            let rgba = color.as_rgba_u32();
+            rc.ctx.set_source_rgba(
+                byte_to_frac(rgba >> 24),
+                byte_to_frac(rgba >> 16),
+                byte_to_frac(rgba >> 8),
+                byte_to_frac(rgba),
+            );
+            rc.ctx.set_operator(cairo::Operator::Source);
+            rc.ctx.paint();
+            Ok(())
+        });
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -153,15 +166,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         let pos = pos.into();
-        let rect = layout.image_bounds() + pos.to_vec2();
-        let brush = layout.fg_color.make_brush(self, || rect);
-        self.ctx.set_scaled_font(&layout.font);
-        self.set_brush(&*brush);
-
-        for lm in &layout.line_metrics {
-            self.ctx.move_to(pos.x, pos.y + lm.y_offset + lm.baseline);
-            self.ctx.show_text(&layout.text[lm.range()]);
-        }
+        let offset = layout.pango_offset();
+        self.ctx.move_to(pos.x - offset.x, pos.y - offset.y);
+        pangocairo::show_layout(&self.ctx, layout.pango_layout());
     }
 
     fn save(&mut self) -> Result<(), Error> {
@@ -302,6 +309,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.draw_image_inner(&image.0, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
+    fn capture_image_area(&mut self, _src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        Err(Error::Unimplemented)
+    }
+
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
         let (image, origin) = compute_blurred_rect(rect, blur_radius);
@@ -359,25 +370,17 @@ impl<'a> CairoRenderContext<'a> {
 
     /// Set the stroke parameters.
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
+        let default_style = StrokeStyle::default();
+        let style = style.unwrap_or(&default_style);
+
         self.ctx.set_line_width(width);
+        self.ctx.set_line_join(convert_line_join(style.line_join));
+        self.ctx.set_line_cap(convert_line_cap(style.line_cap));
 
-        let line_join = style
-            .and_then(|style| style.line_join)
-            .unwrap_or(LineJoin::Miter);
-        self.ctx.set_line_join(convert_line_join(line_join));
-
-        let line_cap = style
-            .and_then(|style| style.line_cap)
-            .unwrap_or(LineCap::Butt);
-        self.ctx.set_line_cap(convert_line_cap(line_cap));
-
-        let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
-        self.ctx.set_miter_limit(miter_limit);
-
-        match style.and_then(|style| style.dash.as_ref()) {
-            None => self.ctx.set_dash(&[], 0.0),
-            Some((dashes, offset)) => self.ctx.set_dash(dashes, *offset),
+        if let Some(limit) = style.miter_limit() {
+            self.ctx.set_miter_limit(limit);
         }
+        self.ctx.set_dash(&style.dash_pattern, style.dash_offset);
     }
 
     fn set_path(&mut self, shape: impl Shape) {
@@ -450,6 +453,7 @@ impl<'a> CairoRenderContext<'a> {
     }
 }
 
+#[allow(deprecated)]
 fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
     match line_cap {
         LineCap::Butt => cairo::LineCap::Butt,
@@ -460,7 +464,7 @@ fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
 
 fn convert_line_join(line_join: LineJoin) -> cairo::LineJoin {
     match line_join {
-        LineJoin::Miter => cairo::LineJoin::Miter,
+        LineJoin::Miter { .. } => cairo::LineJoin::Miter,
         LineJoin::Round => cairo::LineJoin::Round,
         LineJoin::Bevel => cairo::LineJoin::Bevel,
     }

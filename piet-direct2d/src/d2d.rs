@@ -23,17 +23,17 @@ use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::d2d1::{
     D2D1CreateFactory, ID2D1Bitmap, ID2D1BitmapRenderTarget, ID2D1Brush, ID2D1EllipseGeometry,
     ID2D1Geometry, ID2D1GeometrySink, ID2D1GradientStopCollection, ID2D1Image, ID2D1Layer,
-    ID2D1PathGeometry, ID2D1RectangleGeometry, ID2D1RoundedRectangleGeometry, ID2D1SolidColorBrush,
-    ID2D1StrokeStyle, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BEZIER_SEGMENT,
+    ID2D1PathGeometry, ID2D1RectangleGeometry, ID2D1RenderTarget, ID2D1RoundedRectangleGeometry,
+    ID2D1SolidColorBrush, ID2D1StrokeStyle, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BEZIER_SEGMENT,
     D2D1_BITMAP_INTERPOLATION_MODE, D2D1_BRUSH_PROPERTIES, D2D1_COLOR_F,
     D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DEBUG_LEVEL_WARNING, D2D1_DRAW_TEXT_OPTIONS,
     D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS, D2D1_FACTORY_TYPE_MULTI_THREADED,
     D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_CLOSED,
     D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING, D2D1_GAMMA_2_2,
     D2D1_GRADIENT_STOP, D2D1_LAYER_OPTIONS_NONE, D2D1_LAYER_PARAMETERS,
-    D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_MATRIX_3X2_F, D2D1_POINT_2F,
-    D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_RECT_F, D2D1_SIZE_F,
-    D2D1_SIZE_U, D2D1_STROKE_STYLE_PROPERTIES,
+    D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_MATRIX_3X2_F, D2D1_POINT_2F, D2D1_POINT_2U,
+    D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_RECT_F, D2D1_RECT_U,
+    D2D1_SIZE_F, D2D1_SIZE_U, D2D1_STROKE_STYLE_PROPERTIES,
 };
 use winapi::um::d2d1_1::{
     ID2D1Bitmap1, ID2D1Device, ID2D1DeviceContext, ID2D1Effect, ID2D1Factory1,
@@ -41,6 +41,7 @@ use winapi::um::d2d1_1::{
     D2D1_COMPOSITE_MODE, D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_INTERPOLATION_MODE,
     D2D1_PROPERTY_TYPE_FLOAT,
 };
+use winapi::um::d2d1_1::{D2D1_PRIMITIVE_BLEND_COPY, D2D1_PRIMITIVE_BLEND_SOURCE_OVER};
 use winapi::um::d2d1effects::{CLSID_D2D1GaussianBlur, D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_PIXEL_FORMAT};
 use winapi::Interface;
@@ -116,6 +117,11 @@ pub struct Brush(ComPtr<ID2D1Brush>);
 pub struct Bitmap {
     inner: ComPtr<ID2D1Bitmap1>,
     pub(crate) empty_image: bool,
+}
+
+#[derive(Debug)]
+pub struct Image {
+    inner: ComPtr<ID2D1Image>,
 }
 
 pub struct Effect(ComPtr<ID2D1Effect>);
@@ -438,6 +444,27 @@ impl DeviceContext {
         }
     }
 
+    /// Clip axis aligned clip
+    ///
+    /// Currently this should be for clipping just RenderContext::clear(). If
+    /// this is used for clipping drawing primitives it requires proper stack to
+    /// not interfere with clearing.
+    pub(crate) fn push_axis_aligned_clip(&mut self, rect: Rect) {
+        unsafe {
+            self.0
+                .PushAxisAlignedClip(&rect_to_rectf(rect), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+        }
+    }
+
+    /// Pop axis aligned clip
+    ///
+    /// Currently this should be used for just RenderContext::clear().
+    pub(crate) fn pop_axis_aligned_clip(&mut self) {
+        unsafe {
+            self.0.PopAxisAlignedClip();
+        }
+    }
+
     pub(crate) fn clear(&mut self, color: D2D1_COLOR_F) {
         unsafe {
             self.0.Clear(&color);
@@ -447,6 +474,22 @@ impl DeviceContext {
     pub(crate) fn set_transform(&mut self, transform: &D2D1_MATRIX_3X2_F) {
         unsafe {
             self.0.SetTransform(transform);
+        }
+    }
+
+    pub(crate) fn set_transform_identity(&mut self) {
+        unsafe {
+            self.0.SetTransform(&IDENTITY_MATRIX_3X2_F);
+        }
+    }
+
+    pub(crate) fn get_transform(&mut self) -> D2D1_MATRIX_3X2_F {
+        unsafe {
+            let mut empty = D2D1_MATRIX_3X2_F {
+                matrix: [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+            };
+            self.0.GetTransform(&mut empty);
+            empty
         }
     }
 
@@ -721,6 +764,44 @@ impl DeviceContext {
         }
     }
 
+    pub(crate) fn create_blank_bitmap(
+        &mut self,
+        width: usize,
+        height: usize,
+        alpha_mode: D2D1_ALPHA_MODE,
+    ) -> Result<Bitmap, Error> {
+        // Maybe using TryInto would be more Rust-like.
+        // Note: value is set so that multiplying by 4 (for pitch) is valid.
+        assert!(width != 0 && width <= 0x3fff_ffff);
+        assert!(height != 0 && height <= 0xffff_ffff);
+        let size = D2D1_SIZE_U {
+            width: width as u32,
+            height: height as u32,
+        };
+        let format = D2D1_PIXEL_FORMAT {
+            format: DXGI_FORMAT_R8G8B8A8_UNORM,
+            alphaMode: alpha_mode,
+        };
+        let props = D2D1_BITMAP_PROPERTIES1 {
+            pixelFormat: format,
+            dpiX: 96.0,
+            dpiY: 96.0,
+            bitmapOptions: D2D1_BITMAP_OPTIONS_NONE,
+            colorContext: null_mut(),
+        };
+        unsafe {
+            let mut ptr = null_mut();
+            let hr = self
+                .0
+                .deref()
+                .CreateBitmap(size, std::ptr::null(), 0, &props, &mut ptr);
+            wrap(hr, ptr, |ptr| Bitmap {
+                inner: ptr,
+                empty_image: false,
+            })
+        }
+    }
+
     /// Create a valid empty image
     ///
     /// The image will actually be a 1x1 transparent pixel, but with the `empty_image` flag set so
@@ -950,6 +1031,18 @@ impl<'a> GeometrySink<'a> {
 impl Bitmap {
     pub fn get_size(&self) -> D2D1_SIZE_F {
         unsafe { self.inner.GetSize() }
+    }
+
+    pub(crate) fn copy_from_render_target(
+        &mut self,
+        dest_point: D2D1_POINT_2U,
+        rt: &mut DeviceContext,
+        src_rect: D2D1_RECT_U,
+    ) {
+        unsafe {
+            let rt = rt.get_raw() as *mut _;
+            self.inner.CopyFromRenderTarget(&dest_point, rt, &src_rect);
+        }
     }
 }
 

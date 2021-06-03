@@ -30,6 +30,9 @@ use piet::{
 
 use crate::ct_helpers::{self, AttributedString, FontCollection, Frame, Framesetter, Line};
 
+/// both infinity and f64::MAX produce unpleasant results
+const MAX_LAYOUT_CONSTRAINT: f64 = 1e9;
+
 #[derive(Clone)]
 pub struct CoreGraphicsText {
     shared: SharedTextState,
@@ -163,11 +166,9 @@ impl CoreGraphicsTextLayoutBuilder {
         self.has_set_default_attrs = true;
         let whole_range = self.attr_string.range();
         let font = self.current_font();
-        let ascent = (font.ascent() + 0.5).floor();
-        let descent = (font.descent() + 0.5).floor();
-        let leading = (font.leading() + 0.5).floor();
-        self.default_line_height = ascent + descent + leading;
-        self.default_baseline = ascent;
+        let height = compute_line_height(font.ascent(), font.descent(), font.leading());
+        self.default_line_height = height;
+        self.default_baseline = (font.ascent() + 0.5).floor();
         self.attr_string.set_font(whole_range, &font);
         self.attr_string
             .set_fg_color(whole_range, &self.attrs.defaults.fg_color);
@@ -485,7 +486,7 @@ impl CoreGraphicsTextLayoutBuilder {
         let text = Rc::new(text);
         let attr_string = AttributedString::new(text.as_str());
         CoreGraphicsTextLayoutBuilder {
-            width: f64::INFINITY,
+            width: MAX_LAYOUT_CONSTRAINT,
             alignment: TextAlignment::default(),
             attrs: Default::default(),
             text,
@@ -709,29 +710,34 @@ impl CoreGraphicsTextLayout {
     // this used to be part of the TextLayout trait; see https://github.com/linebender/piet/issues/298
     #[allow(clippy::float_cmp)]
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
-        let width = new_width.into().unwrap_or(f64::INFINITY);
+        let width = new_width.into().unwrap_or(MAX_LAYOUT_CONSTRAINT);
+        let width = if width.is_normal() {
+            width
+        } else {
+            MAX_LAYOUT_CONSTRAINT
+        };
+
         if width.ceil() == self.width_constraint.ceil() {
             return;
         }
 
-        let constraints = CGSize::new(width as CGFloat, CGFloat::INFINITY);
+        let constraints = CGSize::new(width as CGFloat, MAX_LAYOUT_CONSTRAINT);
         let char_range = self.attr_string.range();
-        let (frame_size, _) = self.framesetter.suggest_frame_size(char_range, constraints);
-        let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &frame_size);
+        let rect = CGRect::new(&CGPoint::new(0.0, 0.0), &constraints);
         let path = CGPath::from_rect(rect, None);
         self.width_constraint = width;
 
         let frame = self.framesetter.create_frame(char_range, &path);
-        let (metrics, x_offsets, trailing_ws_width) = build_line_metrics(
+        let layout_metrics = build_line_metrics(
             &frame,
-            frame_size.height,
             &self.text,
             self.default_line_height,
             self.default_baseline,
         );
-        self.line_metrics = metrics.into();
-        self.x_offsets = x_offsets.into();
-        self.trailing_ws_width = trailing_ws_width;
+        self.line_metrics = layout_metrics.line_metrics.into();
+        self.x_offsets = layout_metrics.x_offsets.into();
+        self.trailing_ws_width = layout_metrics.trailing_whitespace;
+        self.frame_size = layout_metrics.layout_size;
         assert!(self.line_metrics.len() > 0);
 
         self.bonus_height = if self.text.is_empty() || util::trailing_nlf(&self.text).is_some() {
@@ -739,8 +745,6 @@ impl CoreGraphicsTextLayout {
         } else {
             0.0
         };
-
-        self.frame_size = Size::new(frame_size.width, frame_size.height);
 
         let mut line_bounds = frame
             .lines()
@@ -756,7 +760,23 @@ impl CoreGraphicsTextLayout {
     }
 
     pub(crate) fn draw(&self, ctx: &mut CGContextRef) {
-        self.unwrap_frame().draw(ctx)
+        let lines = self.unwrap_frame().lines();
+        let lines_len = lines.len();
+        assert!(self.x_offsets.len() >= lines_len);
+        assert!(self.line_metrics.len() >= lines_len);
+
+        for (i, line) in lines.iter().enumerate() {
+            let x = self.x_offsets.get(i).copied().unwrap_or_default();
+            // because coretext has an inverted coordinate system we have to manually flip lines
+            let y_off = self
+                .line_metrics
+                .get(i)
+                .map(|lm| lm.y_offset + lm.baseline)
+                .unwrap_or_default();
+            let y = self.frame_size.height - y_off;
+            ctx.set_text_position(x, y);
+            line.draw(ctx)
+        }
     }
 
     #[inline]
@@ -795,20 +815,29 @@ impl CoreGraphicsTextLayout {
     }
 }
 
+struct LayoutMetrics {
+    line_metrics: Vec<LineMetric>,
+    trailing_whitespace: f64,
+    x_offsets: Vec<f64>,
+    layout_size: Size,
+}
+
 /// Returns metrics, x_offsets, and the max width including trailing whitespace.
 #[allow(clippy::while_let_on_iterator)]
 fn build_line_metrics(
     frame: &Frame,
-    frame_height: f64,
     text: &str,
     default_line_height: f64,
     default_baseline: f64,
-) -> (Vec<LineMetric>, Vec<f64>, f64) {
+) -> LayoutMetrics {
     let line_origins = frame.get_line_origins(CFRange::init(0, 0));
     assert_eq!(frame.lines().len(), line_origins.len());
+
     let mut metrics = Vec::with_capacity(frame.lines().len() + 1);
     let mut x_offsets = Vec::with_capacity(frame.lines().len() + 1);
-    let mut max_width_with_ws = 0.0_f64;
+    let mut cumulative_height = 0.0;
+    let mut max_width = 0f64;
+    let mut max_width_with_ws = 0f64;
 
     let mut chars = text.chars();
     let mut cur_16 = 0;
@@ -834,37 +863,43 @@ fn build_line_metrics(
     for (i, line) in frame.lines().iter().enumerate() {
         let range = line.get_string_range();
 
-        let y_pos = frame_height - line_origins[i].y;
-        let x_offset = line_origins[i].x;
-
         let start_offset = last_line_end;
         let end_offset = utf16_to_utf8((range.location + range.length) as usize);
         last_line_end = end_offset;
 
         let trailing_whitespace = count_trailing_ws(&text[start_offset..end_offset]);
 
-        let typo_bounds = line.get_typographic_bounds();
         let ws_width = line.get_trailing_whitespace_width();
-        max_width_with_ws = max_width_with_ws.max(typo_bounds.width + ws_width);
+        let typo_bounds = line.get_typographic_bounds();
+        max_width_with_ws = max_width_with_ws.max(typo_bounds.width);
+        max_width = max_width.max(typo_bounds.width - ws_width);
 
-        // this may not be exactly right, but i'm also not sure we ever use this?
-        //  see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
-        let ascent = (typo_bounds.ascent + 0.5).floor();
-        let descent = (typo_bounds.descent + 0.5).floor();
-        let leading = (typo_bounds.leading + 0.5).floor();
-        let height = ascent + descent + leading;
-        let y_offset = y_pos - ascent;
+        let baseline = (typo_bounds.ascent + 0.5).floor();
+        let height =
+            compute_line_height(typo_bounds.ascent, typo_bounds.descent, typo_bounds.leading);
+        let y_offset = cumulative_height;
+        cumulative_height += height;
 
         metrics.push(LineMetric {
             start_offset,
             end_offset,
             trailing_whitespace,
-            baseline: typo_bounds.ascent,
+            baseline,
             height,
             y_offset,
         });
-        x_offsets.push(x_offset);
+        x_offsets.push(line_origins[i].x);
     }
+
+    // adjust our x_offsets so that we zero leading whitespace (relevant if right-aligned)
+    let min_x_offset = if x_offsets.is_empty() {
+        0.0
+    } else {
+        x_offsets
+            .iter()
+            .fold(f64::MAX, |mx, this| if *this < mx { *this } else { mx })
+    };
+    x_offsets.iter_mut().for_each(|off| *off -= min_x_offset);
 
     // empty string is treated as a single empty line
     if text.is_empty() {
@@ -896,7 +931,25 @@ fn build_line_metrics(
         metrics.push(newline_eof);
         x_offsets.push(x_offset);
     }
-    (metrics, x_offsets, max_width_with_ws)
+
+    let layout_size = Size::new(max_width, cumulative_height);
+
+    LayoutMetrics {
+        line_metrics: metrics,
+        x_offsets,
+        layout_size,
+        trailing_whitespace: max_width_with_ws,
+    }
+}
+
+// this may not be exactly right, but i'm also not sure we ever use this?
+// see https://stackoverflow.com/questions/5511830/how-does-line-spacing-work-in-core-text-and-why-is-it-different-from-nslayoutm
+fn compute_line_height(ascent: f64, descent: f64, leading: f64) -> f64 {
+    let leading = leading.max(0.0);
+    let leading = (leading + 0.5).floor();
+    leading + (descent + 0.5).floor() + (ascent + 0.5).floor()
+    // in the link they also calculate an ascender delta that is used to adjust line
+    // spacing in some cases, but this feels finicky and we can choose not to do it.
 }
 
 fn count_trailing_ws(s: &str) -> usize {
@@ -992,29 +1045,28 @@ mod tests {
             .build()
             .unwrap();
 
+        assert_eq!(layout.line_count(), 4);
+
         let p1 = layout.hit_test_point(Point::ZERO);
         assert_eq!(p1.idx, 0);
         assert!(p1.is_inside);
-        let p2 = layout.hit_test_point(Point::new(2.0, 19.0));
+        let p2 = layout.hit_test_point(Point::new(2.0, 15.9));
         assert_eq!(p2.idx, 0);
         assert!(p2.is_inside);
 
-        //FIXME: figure out correct multiline behaviour; this should be
-        //before the newline, but other backends aren't doing this right now either?
-
-        //let p3 = layout.hit_test_point(Point::new(50.0, 10.0));
-        //assert_eq!(p3.idx, 1);
-        //assert!(!p3.is_inside);
+        let p3 = layout.hit_test_point(Point::new(50.0, 10.0));
+        assert_eq!(p3.idx, 1);
+        assert!(!p3.is_inside);
 
         let p4 = layout.hit_test_point(Point::new(4.0, 25.0));
         assert_eq!(p4.idx, 2);
         assert!(p4.is_inside);
 
-        let p5 = layout.hit_test_point(Point::new(2.0, 83.0));
+        let p5 = layout.hit_test_point(Point::new(2.0, 64.0));
         assert_eq!(p5.idx, 9);
         assert!(p5.is_inside);
 
-        let p6 = layout.hit_test_point(Point::new(10.0, 83.0));
+        let p6 = layout.hit_test_point(Point::new(10.0, 64.0));
         assert_eq!(p6.idx, 10);
         assert!(p6.is_inside);
     }
@@ -1064,10 +1116,10 @@ mod tests {
             .build()
             .unwrap();
         let p1 = layout.hit_test_text_position(0);
-        assert_close!(p1.point.y, 16.0, 0.5);
+        assert_close!(p1.point.y, 12.0, 0.5);
 
         let p1 = layout.hit_test_text_position(7);
-        assert_close!(p1.point.y, 36.0, 0.5);
+        assert_close!(p1.point.y, 28.0, 0.5);
         // just the general idea that this is the second character
         assert_close!(p1.point.x, 10.0, 5.0);
     }
@@ -1100,5 +1152,19 @@ mod tests {
     fn line_text_empty_string() {
         let layout = CoreGraphicsTextLayoutBuilder::new("").build().unwrap();
         assert_eq!(layout.line_text(0), Some(""));
+    }
+
+    /// Trailing whitespace should all be included in the text of the line,
+    /// and should be reported in the `trailing_whitespace` field of the line metrics.
+    #[test]
+    fn line_test_tabs() {
+        let line_text = "a\t\t\t\t\n";
+        let layout = CoreGraphicsTextLayoutBuilder::new(line_text)
+            .build()
+            .unwrap();
+        assert_eq!(layout.line_count(), 2);
+        assert_eq!(layout.line_text(0), Some(line_text));
+        let metrics = layout.line_metric(0).unwrap();
+        assert_eq!(metrics.trailing_whitespace, line_text.len() - 1);
     }
 }

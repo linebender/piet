@@ -30,11 +30,28 @@ use crate::D2DRenderContext;
 #[derive(Clone)]
 pub struct D2DText {
     dwrite: DwriteFactory,
-    loaded_fonts: Rc<RefCell<LoadedFonts>>,
+    loaded_fonts: D2DLoadedFonts,
+}
+
+/// The set of loaded fonts, shared between `D2DText` instances.
+///
+/// If you are using piet in an application context, you should create
+/// one of these objects and use it anytime you create a `D2DText`.
+#[derive(Clone)]
+pub struct D2DLoadedFonts {
+    inner: Rc<RefCell<LoadedFontsInner>>,
+}
+
+impl Default for D2DLoadedFonts {
+    fn default() -> Self {
+        D2DLoadedFonts {
+            inner: Rc::new(RefCell::new(LoadedFontsInner::default())),
+        }
+    }
 }
 
 #[derive(Default)]
-struct LoadedFonts {
+struct LoadedFontsInner {
     files: Vec<FontFile>,
     // - multiple files can have the same family name, so we don't want this to be a set.
     // - we assume a small number of custom fonts will be loaded; if that isn't true we
@@ -68,7 +85,7 @@ pub struct D2DTextLayoutBuilder {
     text: Rc<dyn TextStorage>,
     layout: Result<dwrite::TextLayout, Error>,
     len_utf16: usize,
-    loaded_fonts: Rc<RefCell<LoadedFonts>>,
+    loaded_fonts: D2DLoadedFonts,
     default_font: FontFamily,
     default_font_size: f64,
     colors: Vec<(Utf16Range, Color)>,
@@ -79,17 +96,29 @@ pub struct D2DTextLayoutBuilder {
 impl D2DText {
     /// Create a new factory that satisfies the piet `Text` trait given
     /// the (platform-specific) dwrite factory.
+    #[deprecated(since = "0.4.1", note = "Use new_with_shared_fonts instead")]
     pub fn new(dwrite: DwriteFactory) -> D2DText {
+        D2DText::new_with_shared_fonts(dwrite, None)
+    }
+
+    /// Create a new text factory.
+    ///
+    /// The `loaded_fonts` object is optional; if you pass `None` we will create a
+    /// new instance for you.
+    pub fn new_with_shared_fonts(
+        dwrite: DwriteFactory,
+        loaded_fonts: Option<D2DLoadedFonts>,
+    ) -> D2DText {
         D2DText {
             dwrite,
-            loaded_fonts: Default::default(),
+            loaded_fonts: loaded_fonts.unwrap_or_default(),
         }
     }
 
     #[cfg(test)]
     pub fn new_for_test() -> D2DText {
         let dwrite = DwriteFactory::new().unwrap();
-        D2DText::new(dwrite)
+        D2DText::new_with_shared_fonts(dwrite, None)
     }
 }
 
@@ -104,14 +133,20 @@ impl Text for D2DText {
     type TextLayout = D2DTextLayout;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        self.dwrite
-            .system_font_collection()
-            .ok()
-            .and_then(|fonts| fonts.font_family(family_name))
+        self.loaded_fonts
+            .inner
+            .borrow()
+            .get(family_name)
+            .or_else(|| {
+                self.dwrite
+                    .system_font_collection()
+                    .ok()
+                    .and_then(|fonts| fonts.font_family(family_name))
+            })
     }
 
     fn load_font(&mut self, data: &[u8]) -> Result<FontFamily, Error> {
-        self.loaded_fonts.borrow_mut().add(data)
+        self.loaded_fonts.inner.borrow_mut().add(data)
     }
 
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
@@ -236,11 +271,11 @@ impl D2DTextLayoutBuilder {
 
             match attr {
                 TextAttribute::FontFamily(font) => {
-                    let is_custom = self.loaded_fonts.borrow().contains(&font);
+                    let is_custom = self.loaded_fonts.inner.borrow().contains(&font);
                     if is_custom {
-                        let mut loaded = self.loaded_fonts.borrow_mut();
+                        let mut loaded = self.loaded_fonts.inner.borrow_mut();
                         layout.set_font_collection(utf16_range, loaded.collection());
-                    } else if !self.loaded_fonts.borrow().is_empty() {
+                    } else if !self.loaded_fonts.inner.borrow().is_empty() {
                         // if we are using custom fonts we also need to set the collection
                         // back to the system collection explicity as needed
                         layout.set_font_collection(utf16_range, &FontCollection::system());
@@ -260,9 +295,13 @@ impl D2DTextLayoutBuilder {
 
     fn get_default_line_height_and_baseline(&self) -> (f64, f64) {
         let family_name = resolve_family_name(&self.default_font);
-        let is_custom = self.loaded_fonts.borrow().contains(&self.default_font);
+        let is_custom = self
+            .loaded_fonts
+            .inner
+            .borrow()
+            .contains(&self.default_font);
         let family = if is_custom {
-            let mut loaded = self.loaded_fonts.borrow_mut();
+            let mut loaded = self.loaded_fonts.inner.borrow_mut();
             loaded.collection().get_font_family_by_name(&family_name)
         } else {
             FontCollection::system().get_font_family_by_name(&family_name)
@@ -451,7 +490,7 @@ fn resolve_family_name(family: &FontFamily) -> &str {
     }
 }
 
-impl LoadedFonts {
+impl LoadedFontsInner {
     fn add(&mut self, font_data: &[u8]) -> Result<FontFamily, Error> {
         let font_data: Arc<Vec<u8>> = Arc::new(font_data.to_owned());
         let font_file = FontFile::new_from_data(font_data).ok_or(Error::FontLoadingFailed)?;
@@ -471,6 +510,13 @@ impl LoadedFonts {
         self.files.push(font_file);
         self.names.push(fam_name.clone());
         Ok(fam_name)
+    }
+
+    fn get(&self, family_name: &str) -> Option<FontFamily> {
+        self.names
+            .iter()
+            .find(|fam| fam.name() == family_name)
+            .cloned()
     }
 
     fn contains(&self, family: &FontFamily) -> bool {

@@ -33,6 +33,7 @@ pub enum ImageFormat {
 }
 
 impl ImageFormat {
+    /// The number of bytes required to represent a pixel in this format.
     pub fn bytes_per_pixel(self) -> usize {
         match self {
             ImageFormat::Grayscale => 1,
@@ -64,6 +65,8 @@ where
 
     /// An associated factory for creating text layouts and related resources.
     type Text: Text<TextLayout = Self::TextLayout>;
+
+    /// The type use to represent text layout objects.
     type TextLayout: TextLayout;
 
     /// The associated type of an image.
@@ -88,15 +91,29 @@ where
     /// Create a new gradient brush.
     fn gradient(&mut self, gradient: impl Into<FixedGradient>) -> Result<Self::Brush, Error>;
 
-    /// Clear the canvas with the given color.
+    /// Replace a region of the canvas with the provided [`Color`].
     ///
-    /// Note: only opaque colors are meaningful.
-    fn clear(&mut self, color: Color);
+    /// The region can be omitted, in which case it will apply to the entire
+    /// canvas.
+    ///
+    /// This operation ignores any existing clipping and transforations.
+    ///
+    /// # Note:
+    ///
+    /// You probably don't want to call this. It is essentially a specialized
+    /// fill method that can be used in GUI contexts for things like clearing
+    /// damage regions. It does not have a good cross-platform implementation,
+    /// and eventually should be deprecated when support is added for blend
+    /// modes, at which point it will be easier to just use [`fill`] for
+    /// everything.
+    ///
+    /// [`fill`]: #method.fill
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color);
 
-    /// Stroke a shape.
+    /// Stroke a [`Shape`], using the default [`StrokeStyle`].
     fn stroke(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>, width: f64);
 
-    /// Stroke a shape, with styled strokes.
+    /// Stroke a [`Shape`], providing a custom [`StrokeStyle`].
     fn stroke_styled(
         &mut self,
         shape: impl Shape,
@@ -105,21 +122,28 @@ where
         style: &StrokeStyle,
     );
 
-    /// Fill a shape, using non-zero fill rule.
+    /// Fill a [`Shape`], using the [non-zero fill rule].
+    ///
+    /// [non-zero fill rule]: https://en.wikipedia.org/wiki/Nonzero-rule
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>);
 
-    /// Fill a shape, using even-odd fill rule
+    /// Fill a shape, using the [even-odd fill rule].
+    ///
+    /// [even-odd fill rule]: https://en.wikipedia.org/wiki/Even–odd_rule
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>);
 
-    /// Clip to a shape.
+    /// Clip to a [`Shape`].
     ///
     /// All subsequent drawing operations up to the next [`restore`](#method.restore)
     /// are clipped by the shape.
     fn clip(&mut self, shape: impl Shape);
 
+    /// Returns a reference to a shared [`Text`] object.
+    ///
+    /// This provides access to the text API.
     fn text(&mut self) -> &mut Self::Text;
 
-    /// Draw a text layout.
+    /// Draw a [`TextLayout`].
     ///
     /// The `pos` parameter specifies the baseline of the left starting place of
     /// the text. Note: this is true even if the text is right-to-left.
@@ -166,7 +190,24 @@ where
     /// until a [`restore`](#method.restore) operation.
     fn transform(&mut self, transform: Affine);
 
-    /// Create a new image from a pixel buffer.
+    /// Create a new [`Image`] from a pixel buffer.
+    ///
+    /// This takes raw pixel data and attempts create an object that the
+    /// platform knows how to draw.
+    ///
+    /// The generated image can be cached and reused. This is a good idea for
+    /// images that are used frequently, because creating the image type may
+    /// be expensive.
+    ///
+    /// To draw the generated image, pass it to [`draw_image`]. To draw a portion
+    /// of the image, use [`draw_image_area`].
+    ///
+    /// If you are trying to create an image from the contents of this
+    /// [`RenderContext`], see [`capture_image_area`].
+    ///
+    /// [`draw_image`]: #method.draw_image
+    /// [`draw_image_area`]: #method.draw_image_area
+    /// [`capture_image_area`]: #method.capture_image_area
     fn make_image(
         &mut self,
         width: usize,
@@ -175,10 +216,10 @@ where
         format: ImageFormat,
     ) -> Result<Self::Image, Error>;
 
-    /// Draw an image.
+    /// Draw an [`Image`] into the provided [`Rect`].
     ///
-    /// The `image` is scaled to the provided `dst_rect`.
-    /// It will be squashed if the aspect ratios don't match.
+    /// The image is scaled to fit the provided [`Rect`]; it will be squashed
+    /// if the aspect ratios don't match.
     fn draw_image(
         &mut self,
         image: &Self::Image,
@@ -186,7 +227,7 @@ where
         interp: InterpolationMode,
     );
 
-    /// Draw a specified area of an image.
+    /// Draw a specified area of an [`Image`].
     ///
     /// The `src_rect` area of `image` is scaled to the provided `dst_rect`.
     /// It will be squashed if the aspect ratios don't match.
@@ -198,6 +239,14 @@ where
         interp: InterpolationMode,
     );
 
+    /// Create an [`Image`] of the specified region of the context.
+    ///
+    /// The `src_rect` area of the current render context will be captured
+    /// as a copy and returned.
+    ///
+    /// This can be used for things like caching expensive drawing operations.
+    fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error>;
+
     /// Draw a rectangle with Gaussian blur.
     ///
     /// The blur radius is sometimes referred to as the "standard deviation" of
@@ -208,15 +257,17 @@ where
     fn current_transform(&self) -> Affine;
 }
 
-/// A trait for various types that can be used as brushes. These include
-/// backend-independent types such `Color` and `LinearGradient`, as well
-/// as the types used to represent these on a specific backend.
+/// A trait for various types that can be used as brushes.
+///
+/// These include backend-independent types such `Color` and `LinearGradient`,
+/// as well as the types used to represent these on a specific backend.
 ///
 /// This is an internal trait that you should not have to implement or think about.
 pub trait IntoBrush<P: RenderContext>
 where
     P: ?Sized,
 {
+    #[doc(hidden)]
     fn make_brush<'a>(&'a self, piet: &mut P, bbox: impl FnOnce() -> Rect) -> Cow<'a, P::Brush>;
 }
 
@@ -257,9 +308,13 @@ impl<P: RenderContext> IntoBrush<P> for Color {
 /// ```
 #[derive(Debug, Clone)]
 pub enum PaintBrush {
+    /// A [`Color`].
     Color(Color),
+    /// A [`LinearGradient`].
     Linear(LinearGradient),
+    /// A [`RadialGradient`].
     Radial(RadialGradient),
+    /// A [`FixedGradient`].
     Fixed(FixedGradient),
 }
 

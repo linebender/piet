@@ -11,7 +11,7 @@ static SAMPLE_AR: &str = r#"لكن لا بد أن أوضح لك أن كل هذه
 const LIGHT_GREY: Color = Color::grey8(0xF0);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
     let text = rc.text();
 
     let en_leading = text

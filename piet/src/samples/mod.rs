@@ -26,11 +26,12 @@ mod picture_11;
 mod picture_12;
 mod picture_13;
 mod picture_14;
+mod picture_15;
 
 type BoxErr = Box<dyn std::error::Error>;
 
 /// The total number of samples in this module.
-pub const SAMPLE_COUNT: usize = 15;
+pub const SAMPLE_COUNT: usize = 16;
 
 /// file we save an os fingerprint to
 pub const GENERATED_BY: &str = "GENERATED_BY";
@@ -53,6 +54,7 @@ pub fn get<R: RenderContext>(number: usize) -> Result<SamplePicture<R>, BoxErr> 
         12 => SamplePicture::new(picture_12::SIZE, picture_12::draw),
         13 => SamplePicture::new(picture_13::SIZE, picture_13::draw),
         14 => SamplePicture::new(picture_14::SIZE, picture_14::draw),
+        15 => SamplePicture::new(picture_15::SIZE, picture_15::draw),
         _ => return Err(format!("No sample #{} exists", number).into()),
     })
 }
@@ -78,8 +80,15 @@ struct Args {
 /// takes a number and a path, executes the corresponding sample, and saves a
 /// PNG to the path.
 ///
-/// The `prefix` argument is used for the file names of failure cases.
-pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> ! {
+/// - The `prefix` argument is used for the file names of failure cases.
+/// - The `env_info` argument is optional additional information about the
+///   testing environment, such as the versions of various dependencies; this
+///   will be appended to the GENERATED_BY file.
+pub fn samples_main(
+    f: fn(usize, &Path) -> Result<(), BoxErr>,
+    prefix: &str,
+    env_info: Option<&str>,
+) -> ! {
     let inner = move || -> Result<(), BoxErr> {
         let args = Args::from_env()?;
 
@@ -94,7 +103,7 @@ pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> 
         }
 
         if args.all {
-            write_os_info(&args.out_dir)?;
+            write_os_info(&args.out_dir, env_info)?;
             run_all(|number| f(number, &args.out_dir))?;
         } else if let Some(number) = args.number {
             f(number, &args.out_dir)?;
@@ -106,8 +115,8 @@ pub fn samples_main(f: fn(usize, &Path) -> Result<(), BoxErr>, prefix: &str) -> 
                 let info_one = read_os_info(compare_dir)?;
                 let info_two = read_os_info(&args.out_dir)?;
                 println!("Compared {} snapshots", results.len());
-                print!("base: {}", info_one);
-                println!("rev : {}", info_two);
+                print!("base:\n{}", info_one);
+                println!("rev:\n{}", info_two);
             }
 
             for (number, result) in results.iter() {
@@ -168,7 +177,7 @@ impl Args {
             all: args.contains("--all"),
             out_dir: out_dir.unwrap_or_else(|| PathBuf::from(".")),
             compare_dir: args.opt_value_from_str("--compare")?,
-            number: args.free_from_str()?,
+            number: args.opt_free_from_str()?,
         };
 
         if !(args.help || args.all || args.number.is_some() || args.compare_dir.is_some()) {
@@ -344,9 +353,16 @@ fn extract_number(path: &Path) -> Option<usize> {
     stripped.parse().ok()
 }
 
-fn write_os_info(base_dir: &Path) -> std::io::Result<()> {
+fn write_os_info(base_dir: &Path, env_info: Option<&str>) -> std::io::Result<()> {
     let path = base_dir.join(GENERATED_BY);
-    std::fs::write(&path, make_os_info_string().as_bytes())
+    let mut buf = make_os_info_string();
+    if let Some(env_info) = env_info {
+        buf.push_str(env_info);
+        if buf.as_bytes().last() != Some(&b'\n') {
+            buf.push('\n');
+        }
+    }
+    std::fs::write(&path, buf.as_bytes())
 }
 
 fn read_os_info(base_dir: &Path) -> std::io::Result<String> {
@@ -355,7 +371,6 @@ fn read_os_info(base_dir: &Path) -> std::io::Result<String> {
 }
 
 /// Get info about the system used to create these samples.
-//TODO: include info about generic fonts? anything else?
 fn make_os_info_string() -> String {
     let info = os_info::get();
     format!("{} {}\n", info.os_type(), info.version())

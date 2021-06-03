@@ -11,7 +11,7 @@ static TEXT: &str = r#"100200300400500
 600700800900950"#;
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
-    rc.clear(Color::WHITE);
+    rc.clear(None, Color::WHITE);
     let text = rc.text();
     let font = text
         .load_font(include_bytes!(

@@ -18,6 +18,7 @@ use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::gradient::CGGradientDrawingOptions;
 use core_graphics::image::CGImage;
+use foreign_types::ForeignTypeRef;
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
@@ -134,12 +135,30 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     type Text = CoreGraphicsText;
     type TextLayout = CoreGraphicsTextLayout;
     type Image = CoreGraphicsImage;
-    //type StrokeStyle = StrokeStyle;
 
-    fn clear(&mut self, color: Color) {
+    fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
+        // save cannot fail
+        let _ = self.save();
+        // remove any existing clip
+        unsafe {
+            CGContextResetClip(self.ctx.as_ptr());
+        }
+        // remove the current transform
+        let current_xform = self.current_transform();
+        let xform = current_xform.inverse();
+        self.transform(xform);
+
+        let region = region
+            .into()
+            .map(to_cgrect)
+            .unwrap_or_else(|| self.ctx.clip_bounding_box());
         let (r, g, b, a) = color.as_rgba();
+        self.ctx
+            .set_blend_mode(core_graphics::context::CGBlendMode::Copy);
         self.ctx.set_rgb_fill_color(r, g, b, a);
-        self.ctx.fill_rect(self.ctx.clip_bounding_box());
+        self.ctx.fill_rect(region);
+        // restore cannot fail, because we saved at the start of the method
+        self.restore().unwrap();
     }
 
     fn solid_brush(&mut self, color: Color) -> Brush {
@@ -369,6 +388,32 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         }
     }
 
+    fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        let src_rect = src_rect.into();
+        if src_rect.width() < 1.0 || src_rect.height() < 1.0 {
+            return Err(Error::InvalidInput);
+        }
+
+        if src_rect.width() > self.ctx.width() as f64
+            || src_rect.height() > self.ctx.height() as f64
+        {
+            return Err(Error::InvalidInput);
+        }
+
+        let full_image = self.ctx.create_image().ok_or(Error::InvalidInput)?;
+
+        if src_rect.width().round() as usize == self.ctx.width()
+            && src_rect.height().round() as usize == self.ctx.height()
+        {
+            return Ok(CoreGraphicsImage::NonEmpty(full_image));
+        }
+
+        full_image
+            .cropped(to_cgrect(src_rect))
+            .map(CoreGraphicsImage::NonEmpty)
+            .ok_or(Error::InvalidInput)
+    }
+
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let (image, rect) = compute_blurred_rect(rect, blur_radius);
         let cg_rect = to_cgrect(rect);
@@ -413,13 +458,14 @@ impl Image for CoreGraphicsImage {
 
 fn convert_line_join(line_join: LineJoin) -> CGLineJoin {
     match line_join {
-        LineJoin::Miter => CGLineJoin::CGLineJoinMiter,
+        LineJoin::Miter { .. } => CGLineJoin::CGLineJoinMiter,
         LineJoin::Round => CGLineJoin::CGLineJoinRound,
         LineJoin::Bevel => CGLineJoin::CGLineJoinBevel,
     }
 }
 
 fn convert_line_cap(line_cap: LineCap) -> CGLineCap {
+    #[allow(deprecated)]
     match line_cap {
         LineCap::Butt => CGLineCap::CGLineCapButt,
         LineCap::Round => CGLineCap::CGLineCapRound,
@@ -440,25 +486,19 @@ impl<'a> CoreGraphicsContext<'a> {
 
     /// Set the stroke parameters.
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
+        let default_style = StrokeStyle::default();
+        let style = style.unwrap_or(&default_style);
         self.ctx.set_line_width(width);
 
-        let line_join = style
-            .and_then(|style| style.line_join)
-            .unwrap_or(LineJoin::Miter);
-        self.ctx.set_line_join(convert_line_join(line_join));
+        self.ctx.set_line_join(convert_line_join(style.line_join));
+        self.ctx.set_line_cap(convert_line_cap(style.line_cap));
 
-        let line_cap = style
-            .and_then(|style| style.line_cap)
-            .unwrap_or(LineCap::Butt);
-        self.ctx.set_line_cap(convert_line_cap(line_cap));
-
-        let miter_limit = style.and_then(|style| style.miter_limit).unwrap_or(10.0);
-        self.ctx.set_miter_limit(miter_limit);
-
-        match style.and_then(|style| style.dash.as_ref()) {
-            None => self.ctx.set_line_dash(0.0, &[]),
-            Some((dashes, offset)) => self.ctx.set_line_dash(*offset, dashes),
+        if let Some(limit) = style.miter_limit() {
+            self.ctx.set_miter_limit(limit);
         }
+
+        self.ctx
+            .set_line_dash(style.dash_offset, &style.dash_pattern);
     }
 
     fn set_path(&mut self, shape: impl Shape) {
@@ -549,6 +589,11 @@ pub fn unpremultiply_rgba(data: &mut [u8]) {
     }
 }
 
+#[link(name = "CoreGraphics", kind = "framework")]
+extern "C" {
+    fn CGContextResetClip(c: core_graphics::sys::CGContextRef);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -621,5 +666,30 @@ mod tests {
         assert_affine_eq!(piet.current_transform(), one * one);
         piet.restore().unwrap();
         assert_affine_eq!(piet.current_transform(), Affine::default());
+    }
+
+    #[test]
+    fn capture_image_area() {
+        let mut ctx = make_context((400.0, 400.0));
+        let mut piet = CoreGraphicsContext::new_y_down(&mut ctx, None);
+
+        assert!(piet
+            .capture_image_area(Rect::new(0.0, 0.0, 0.0, 0.0))
+            .is_err());
+        assert!(piet
+            .capture_image_area(Rect::new(0.0, 0.0, 500.0, 400.0))
+            .is_err());
+        assert!(piet
+            .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
+            .is_ok());
+
+        let copy = piet
+            .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
+            .unwrap();
+        piet.draw_image(
+            &copy,
+            Rect::new(0.0, 0.0, 400.0, 400.0),
+            InterpolationMode::Bilinear,
+        );
     }
 }

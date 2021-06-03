@@ -141,7 +141,8 @@ impl<'a> BitmapTarget<'a> {
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
     pub fn render_context(&mut self) -> D2DRenderContext {
-        D2DRenderContext::new(self.d2d, self.dwrite.clone(), &mut self.context)
+        let text = D2DText::new_with_shared_fonts(self.dwrite.clone(), None);
+        D2DRenderContext::new(self.d2d, text, &mut self.context)
     }
 
     /// Get an in-memory pixel buffer from the bitmap.
@@ -220,7 +221,7 @@ impl<'a> BitmapTarget<'a> {
     /// Stub for feature is missing
     #[cfg(not(feature = "png"))]
     pub fn save_to_file<P: AsRef<Path>>(self, _path: P) -> Result<(), piet::Error> {
-        Err(piet::Error::MissingFeature)
+        Err(piet::Error::MissingFeature("png"))
     }
 }
 
