@@ -22,13 +22,24 @@ pub enum InterpolationMode {
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum ImageFormat {
-    /// 1 byte per pixel
+    /// 1 byte per pixel.
+    ///
+    /// For example, a white pixel has value 0xff.
     Grayscale,
     /// 3 bytes per pixel, in RGB order.
+    ///
+    /// For example, a red pixel consists of three bytes `[0xff, 0, 0]` independent of the system's
+    /// endianness.
     Rgb,
     /// 4 bytes per pixel, in RGBA order, with separate alpha.
+    ///
+    /// For example, a full-intensity red pixel with 50% transparency consists of four bytes
+    /// `[0xff, 0, 0, 0x80]` independent of the system's endianness.
     RgbaSeparate,
     /// 4 bytes per pixel, in RGBA order, with premultiplied alpha.
+    ///
+    /// For example, a full-intensity red pixel with 50% transparency consists of four bytes
+    /// `[0x80, 0, 0, 0x80]` independent of the system's endianness.
     RgbaPremul,
 }
 
