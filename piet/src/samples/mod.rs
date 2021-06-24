@@ -153,7 +153,7 @@ pub fn samples_main(
 
 impl<T> SamplePicture<T> {
     fn new(size: Size, draw_f: fn(&mut T) -> Result<(), Error>) -> Self {
-        SamplePicture { size, draw_f }
+        SamplePicture { draw_f, size }
     }
 
     /// The size of the context expected by this sample, in pixels.

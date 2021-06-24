@@ -72,9 +72,9 @@ impl ImageBuf {
         assert_eq!(pixels.len(), width * height * format.bytes_per_pixel());
         ImageBuf {
             pixels,
-            format,
             width,
             height,
+            format,
         }
     }
 
