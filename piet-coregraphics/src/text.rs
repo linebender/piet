@@ -1081,14 +1081,14 @@ mod tests {
             .unwrap();
         let pt = layout.hit_test_point(Point::new(0.0, 5.0));
         assert_eq!(pt.idx, 0);
-        assert_eq!(pt.is_inside, true);
+        assert!(pt.is_inside);
         let next_to_last = layout.frame_size.width - 10.0;
         let pt = layout.hit_test_point(Point::new(next_to_last, 0.0));
         assert_eq!(pt.idx, 4);
-        assert_eq!(pt.is_inside, true);
+        assert!(pt.is_inside);
         let pt = layout.hit_test_point(Point::new(100.0, 5.0));
         assert_eq!(pt.idx, 5);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
     }
 
     #[test]

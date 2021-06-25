@@ -12,6 +12,7 @@ use super::{text_width, LineMetric};
 
 // NOTE font_size is used only for heuristic purposes, prefer actual web-api for height and
 // baseline when available.
+#[allow(clippy::branches_sharing_code)] // clearer as written
 pub(crate) fn calculate_line_metrics(
     text: &str,
     ctx: &CanvasRenderingContext2d,
