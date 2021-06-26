@@ -24,3 +24,8 @@ xi-unicode = "0.3.0"
 [dev-dependencies]
 piet = { version = "0.4.0", path = "../piet", features = ["samples"] }
 cairo-rs = { version = "0.9.1", default-features = false, features = ["png"] }
+criterion = "0.3"
+
+[[bench]]
+name = "make_image"
+harness = false
