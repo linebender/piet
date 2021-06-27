@@ -190,7 +190,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     }
 
     fn finish(&mut self) -> Result<(), Error> {
-        self.ctx.get_target().flush();
+        self.ctx.target().flush();
         self.status()
     }
 
@@ -234,11 +234,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         // Confident no borrow errors because we just created it.
         let bytes_per_pixel = format.bytes_per_pixel();
         let bytes_per_row = width * bytes_per_pixel;
-        let stride = image.get_stride() as usize;
+        let stride = image.stride() as usize;
         {
-            let mut data = image
-                .get_data()
-                .map_err(|e| Error::BackendError(Box::new(e)))?;
+            let mut data = image.data().map_err(|e| Error::BackendError(Box::new(e)))?;
             for y in 0..height {
                 let src_off = y * bytes_per_row;
                 let dst_off = y * stride;
@@ -333,7 +331,7 @@ impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
 
 impl Image for CairoImage {
     fn size(&self) -> Size {
-        Size::new(self.0.get_width().into(), self.0.get_height().into())
+        Size::new(self.0.width().into(), self.0.height().into())
     }
 }
 
@@ -363,8 +361,8 @@ impl<'a> CairoRenderContext<'a> {
                 byte_to_frac(rgba >> 8),
                 byte_to_frac(rgba),
             ),
-            Brush::Linear(ref linear) => self.ctx.set_source(linear),
-            Brush::Radial(ref radial) => self.ctx.set_source(radial),
+            Brush::Linear(ref linear) => self.ctx.set_source(linear).unwrap(),
+            Brush::Radial(ref radial) => self.ctx.set_source(radial).unwrap(),
         }
     }
 
@@ -423,7 +421,7 @@ impl<'a> CairoRenderContext<'a> {
     ) {
         let src_rect = match src_rect {
             Some(src_rect) => src_rect,
-            None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
+            None => Size::new(image.width() as f64, image.height() as f64).to_rect(),
         };
         // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
         // either the source or destination is empty, and early-return if so.
@@ -446,8 +444,8 @@ impl<'a> CairoRenderContext<'a> {
                 dst_rect.y0 - scale_y * src_rect.y0,
             );
             rc.ctx.scale(scale_x, scale_y);
-            rc.ctx.set_source(&surface_pattern);
-            rc.ctx.paint();
+            rc.ctx.set_source(&surface_pattern).unwrap();
+            rc.ctx.paint().unwrap();
             Ok(())
         });
     }
@@ -492,8 +490,8 @@ fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
     // TODO: maybe not panic on error (but likely to happen only in extreme cases such as OOM)
     let mut image =
         ImageSurface::create(Format::A8, size.width as i32, size.height as i32).unwrap();
-    let stride = image.get_stride() as usize;
-    let mut data = image.get_data().unwrap();
+    let stride = image.stride() as usize;
+    let mut data = image.data().unwrap();
     let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut *data);
     std::mem::drop(data);
     let origin = rect_exp.origin();
