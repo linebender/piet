@@ -482,51 +482,6 @@ impl TextLayout for CairoTextLayout {
 
         HitTestPosition::new(point, line_number)
     }
-
-    fn rects_for_range(&self, range: impl RangeBounds<usize>) -> Vec<Rect> {
-        let text_len = self.text().len();
-        let mut range = piet::util::resolve_range(range, text_len);
-        range.start = range.start.min(text_len);
-        range.end = range.end.min(text_len);
-
-        if range.start >= range.end {
-            return Vec::new();
-        }
-
-        let first_line = self.hit_test_text_position(range.start).line;
-        let last_line = self.hit_test_text_position(range.end).line;
-
-        let mut result = Vec::new();
-
-        for line in first_line..=last_line {
-            let metrics = self.line_metric(line).unwrap();
-            let y0 = metrics.y_offset;
-            let y1 = y0 + metrics.height;
-            let line_range_start = if line == first_line {
-                range.start
-            } else {
-                metrics.start_offset
-            };
-
-            let line_range_end = if line == last_line {
-                range.end
-            } else {
-                metrics.end_offset - metrics.trailing_whitespace
-            };
-
-            let start_x = self.hit_test_text_position(line_range_start).point.x;
-            //HACK: because we don't have affinity, if the line has an emergency
-            //break we need to manually use the layout width as the end point
-            //for the selection rect. See https://github.com/linebender/piet/issues/323
-            let end_x = if line != last_line && metrics.trailing_whitespace == 0 {
-                self.size().width
-            } else {
-                self.hit_test_text_position(line_range_end).point.x
-            };
-            result.push(Rect::new(start_x, y0, end_x, y1));
-        }
-        result
-    }
 }
 
 impl CairoTextLayout {
