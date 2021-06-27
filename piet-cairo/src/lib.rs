@@ -87,8 +87,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                 byte_to_frac(rgba),
             );
             rc.ctx.set_operator(cairo::Operator::Source);
-            rc.ctx.paint();
-            Ok(())
+            rc.ctx.paint().map_err(convert_error)
         });
     }
 
@@ -121,7 +120,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_brush(&*brush);
         self.ctx.set_fill_rule(cairo::FillRule::Winding);
-        self.ctx.fill();
+        self.ctx.fill().unwrap();
     }
 
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
@@ -129,7 +128,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_brush(&*brush);
         self.ctx.set_fill_rule(cairo::FillRule::EvenOdd);
-        self.ctx.fill();
+        self.ctx.fill().unwrap();
     }
 
     fn clip(&mut self, shape: impl Shape) {
@@ -143,7 +142,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_stroke(width, None);
         self.set_brush(&*brush);
-        self.ctx.stroke();
+        self.ctx.stroke().unwrap();
     }
 
     fn stroke_styled(
@@ -157,7 +156,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_stroke(width, Some(style));
         self.set_brush(&*brush);
-        self.ctx.stroke();
+        self.ctx.stroke().unwrap();
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -168,22 +167,21 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let pos = pos.into();
         let offset = layout.pango_offset();
         self.ctx.move_to(pos.x - offset.x, pos.y - offset.y);
-        pangocairo::show_layout(&self.ctx, layout.pango_layout());
+        pangocairo::show_layout(self.ctx, layout.pango_layout());
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        self.ctx.save();
+        self.ctx.save().map_err(convert_error)?;
         let state = self.transform_stack.last().copied().unwrap_or_default();
         self.transform_stack.push(state);
-        self.status()
+        Ok(())
     }
 
     fn restore(&mut self) -> Result<(), Error> {
         if self.transform_stack.pop().is_some() {
             // we're defensive about calling restore on the inner context,
             // because an unbalanced call will trigger a panic in cairo-rs
-            self.ctx.restore();
-            self.status()
+            self.ctx.restore().map_err(convert_error)
         } else {
             Err(Error::StackUnbalance)
         }
@@ -191,7 +189,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn finish(&mut self) -> Result<(), Error> {
         self.ctx.target().flush();
-        self.status()
+        Ok(())
     }
 
     fn transform(&mut self, transform: Affine) {
@@ -315,7 +313,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let brush = brush.make_brush(self, || rect);
         let (image, origin) = compute_blurred_rect(rect, blur_radius);
         self.set_brush(&*brush);
-        self.ctx.mask_surface(&image, origin.x, origin.y);
+        self.ctx.mask_surface(&image, origin.x, origin.y).unwrap();
     }
 }
 
@@ -496,4 +494,8 @@ fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
     std::mem::drop(data);
     let origin = rect_exp.origin();
     (image, origin)
+}
+
+fn convert_error(err: cairo::Error) -> Error {
+    Error::BackendError(err.into())
 }
