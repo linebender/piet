@@ -100,10 +100,11 @@ pub struct GradientStop {
 
 /// A flexible, ergonomic way to describe gradient stops.
 pub trait GradientStops {
-    #[allow(clippy::wrong_self_convention)]
     /// Convert into a vector of gradient steps.
     ///
     /// Note: this method may be renamed `into_vec` in a future release.
+    //TODO: rename to into_vec
+    #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop>;
 }
 
@@ -209,6 +210,7 @@ impl<'a> GradientStops for &'a [Color] {
 }
 
 impl<'a> GradientStops for (Color, Color) {
+    #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1];
         GradientStops::to_vec(stops)
@@ -216,6 +218,7 @@ impl<'a> GradientStops for (Color, Color) {
 }
 
 impl<'a> GradientStops for (Color, Color, Color) {
+    #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2];
         GradientStops::to_vec(stops)
@@ -223,6 +226,7 @@ impl<'a> GradientStops for (Color, Color, Color) {
 }
 
 impl<'a> GradientStops for (Color, Color, Color, Color) {
+    #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2, self.3];
         GradientStops::to_vec(stops)
@@ -230,6 +234,7 @@ impl<'a> GradientStops for (Color, Color, Color, Color) {
 }
 
 impl<'a> GradientStops for (Color, Color, Color, Color, Color) {
+    #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2, self.3, self.4];
         GradientStops::to_vec(stops)
@@ -237,6 +242,7 @@ impl<'a> GradientStops for (Color, Color, Color, Color, Color) {
 }
 
 impl<'a> GradientStops for (Color, Color, Color, Color, Color, Color) {
+    #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2, self.3, self.4, self.5];
         GradientStops::to_vec(stops)

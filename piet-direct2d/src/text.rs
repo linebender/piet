@@ -826,11 +826,11 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(48.0, 0.0));
         assert_eq!(pt.idx, 10); // last text position
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
 
         let pt = layout.hit_test_point(Point::new(-1.0, 0.0));
         assert_eq!(pt.idx, 0); // first text position
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
     }
 
     #[test]
@@ -1071,10 +1071,10 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(1.0, -13.0)); // under
         assert_eq!(pt.idx, 0);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
         let pt = layout.hit_test_point(Point::new(1.0, 1.0));
         assert_eq!(pt.idx, 0);
-        assert_eq!(pt.is_inside, true);
+        assert!(pt.is_inside);
         let pt = layout.hit_test_point(Point::new(1.0, 00.0));
         assert_eq!(pt.idx, 0);
         let pt = layout.hit_test_point(Point::new(1.0, 20.0));
@@ -1090,15 +1090,15 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(1.0, 68.0));
         assert_eq!(pt.idx, 15);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
 
         let pt = layout.hit_test_point(Point::new(22.0, 68.0));
         assert_eq!(pt.idx, 19);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
 
         let pt = layout.hit_test_point(Point::new(24.0, 68.0));
         assert_eq!(pt.idx, 19);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
 
         // under
         let piet_layout = text.new_text_layout("piet ").build().unwrap();
@@ -1106,15 +1106,15 @@ mod test {
 
         let pt = layout.hit_test_point(Point::new(1.0, -14.0)); // under
         assert_eq!(pt.idx, 0);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
 
         let pt = layout.hit_test_point(Point::new(23.0, -14.0)); // under
         assert_eq!(pt.idx, 5);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
 
         let pt = layout.hit_test_point(Point::new(27.0, -14.0)); // under
         assert_eq!(pt.idx, 5);
-        assert_eq!(pt.is_inside, false);
+        assert!(!pt.is_inside);
     }
 
     #[test]
