@@ -25,6 +25,7 @@
 //! [unit square]: https://en.wikipedia.org/wiki/Unit_square
 
 use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
 
 use kurbo::{Point, Rect, Size, Vec2};
 
@@ -450,4 +451,19 @@ fn equalize_sides_preserving_center(rect: Rect, new_len: f64) -> Rect {
     let size = Size::new(new_len, new_len);
     let origin = rect.center() - size.to_vec2() / 2.;
     Rect::from_origin_size(origin, size)
+}
+
+impl PartialEq for GradientStop {
+    fn eq(&self, other: &GradientStop) -> bool {
+        self.color == other.color && self.pos.to_bits() == other.pos.to_bits()
+    }
+}
+
+impl Eq for GradientStop {}
+
+impl Hash for GradientStop {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.color.hash(state);
+        self.pos.to_bits().hash(state);
+    }
 }
