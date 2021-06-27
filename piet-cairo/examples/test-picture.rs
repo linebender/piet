@@ -26,7 +26,7 @@ fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Err
 
     let surface = ImageSurface::create(Format::ARgb32, size.width as i32, size.height as i32)
         .expect("Can't create surface");
-    let cr = Context::new(&surface);
+    let cr = Context::new(&surface).unwrap();
     cr.scale(HIDPI, HIDPI);
     let mut piet_context = CairoRenderContext::new(&cr);
     sample.draw(&mut piet_context)?;
