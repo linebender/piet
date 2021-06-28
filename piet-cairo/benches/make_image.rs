@@ -1,8 +1,8 @@
-use std::convert::{TryFrom, TryInto};
-use piet::{ImageFormat, RenderContext};
-use piet_cairo::CairoRenderContext;
 use cairo::{Context, Format, ImageSurface};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use piet::{ImageFormat, RenderContext};
+use piet_cairo::CairoRenderContext;
+use std::convert::{TryFrom, TryInto};
 
 fn fill_random(data: &mut [u8]) {
     // A simple LCG with parameters from Wikipedia. See glibc/ ANSI C, CodeWarrior, ... in
@@ -36,7 +36,8 @@ pub fn bench_make_image(c: &mut Criterion) {
         fill_random(&mut data[..]);
 
         c.bench_function(&format!("make_image_{}_{:?}", name, format), |b| {
-            let unused_surface = ImageSurface::create(Format::ARgb32, 1, 1).expect("Can't create surface");
+            let unused_surface =
+                ImageSurface::create(Format::ARgb32, 1, 1).expect("Can't create surface");
             let cr = Context::new(&unused_surface);
             let mut piet_context = CairoRenderContext::new(&cr);
 
