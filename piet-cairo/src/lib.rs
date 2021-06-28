@@ -531,18 +531,18 @@ fn convert_error(err: cairo::Error) -> Error {
     Error::BackendError(err.into())
 }
 
-fn write_rgba(data: &mut [u8], x: usize, r: u8, g: u8, b: u8, a: u8) {
+fn write_rgba(data: &mut [u8], column: usize, r: u8, g: u8, b: u8, a: u8) {
     // From the cairo docs for CAIRO_FORMAT_ARGB32:
     // > each pixel is a 32-bit quantity, with alpha in the upper 8 bits, then red,
     // > then green, then blue. The 32-bit quantities are stored native-endian.
     let (a, r, g, b) = (u32::from(a), u32::from(r), u32::from(g), u32::from(b));
     let pixel = a << 24 | r << 16 | g << 8 | b;
 
-    data[4 * x..4 * (x + 1)].copy_from_slice(&pixel.to_ne_bytes());
+    data[4 * column..4 * (column + 1)].copy_from_slice(&pixel.to_ne_bytes());
 }
 
-fn write_rgb(data: &mut [u8], x: usize, r: u8, g: u8, b: u8) {
+fn write_rgb(data: &mut [u8], column: usize, r: u8, g: u8, b: u8) {
     // From the cairo docs for CAIRO_FORMAT_RGB24:
     //  each pixel is a 32-bit quantity, with the upper 8 bits unused.
-    write_rgba(data, x, r, g, b, 0);
+    write_rgba(data, column, r, g, b, 0);
 }
