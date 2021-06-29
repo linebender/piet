@@ -38,7 +38,7 @@ pub fn bench_make_image(c: &mut Criterion) {
         c.bench_function(&format!("make_image_{}_{:?}", name, format), |b| {
             let unused_surface =
                 ImageSurface::create(Format::ARgb32, 1, 1).expect("Can't create surface");
-            let cr = Context::new(&unused_surface);
+            let cr = Context::new(&unused_surface).unwrap();
             let mut piet_context = CairoRenderContext::new(&cr);
 
             let width = black_box(width.try_into().unwrap());
