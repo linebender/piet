@@ -47,6 +47,10 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
         self
     }
 
+    fn tab_width(self, _width: f64) -> Self {
+        self
+    }
+
     fn alignment(self, _alignment: piet::TextAlignment) -> Self {
         self
     }

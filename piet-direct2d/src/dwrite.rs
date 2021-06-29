@@ -341,6 +341,12 @@ impl TextLayout {
         }
     }
 
+    pub(crate) fn set_incremental_tab_stop(&self, distance: f32) {
+        unsafe {
+            self.0.SetIncrementalTabStop(distance);
+        }
+    }
+
     /// Set the weight for a range of this layout. `start` and `len` are in utf16.
     pub(crate) fn set_weight(&mut self, range: Utf16Range, weight: FontWeight) {
         let weight = weight.to_raw() as DWRITE_FONT_WEIGHT;

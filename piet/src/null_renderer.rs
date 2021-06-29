@@ -157,6 +157,10 @@ impl TextLayoutBuilder for NullTextLayoutBuilder {
         self
     }
 
+    fn tab_width(self, _width: f64) -> Self {
+        self
+    }
+
     fn alignment(self, _alignment: crate::TextAlignment) -> Self {
         self
     }

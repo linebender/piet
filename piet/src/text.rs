@@ -175,6 +175,12 @@ pub trait TextLayoutBuilder: Sized {
     /// default behaviour.
     fn max_width(self, width: f64) -> Self;
 
+    /// Set the base tabulator width.
+    ///
+    /// The width specified here controls the max width for tab characters
+    /// in the final layout.
+    fn tab_width(self, width: f64) -> Self;
+
     /// Set the [`TextAlignment`] to be used for this layout.
     ///
     /// [`TextAlignment`]: enum.TextAlignment.html

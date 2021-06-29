@@ -514,6 +514,10 @@ impl TextLayoutBuilder for CoreGraphicsTextLayoutBuilder {
         self
     }
 
+    fn tab_width(self, _width: f64) -> Self {
+        self
+    }
+
     fn alignment(mut self, alignment: piet::TextAlignment) -> Self {
         self.alignment = alignment;
         self
