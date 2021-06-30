@@ -516,7 +516,12 @@ fn compute_blurred_rect(rect: Rect, radius: f64) -> Result<(ImageSurface, Point)
     match ImageSurface::create(Format::A8, size.width as i32, size.height as i32) {
         Ok(mut image) => {
             let stride = image.stride() as usize;
-            //TODO: This can still panic.
+            // An error is returned when either:
+            //      The reference to image is dropped (it isnt since its still in scope),
+            //      There is an error on image (there isnt since we havnt used it yet),
+            //      The pointer to the image is null aka the surface isnt an imagesurface (it is an imagesurface),
+            //      Or the surface is finished (it isnt, we know because we dont finish it).
+            // Since we know none of these cases should happen, we know that this should not panic.
             let mut data = image.data().unwrap();
             let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut *data);
             std::mem::drop(data);
