@@ -26,6 +26,7 @@ pub struct CairoRenderContext<'a> {
     // by cairo. Instead we maintain our own stack, which will contain
     // only those transforms applied by us.
     transform_stack: Vec<Affine>,
+    error: Result<(), cairo::Error>,
 }
 
 impl<'a> CairoRenderContext<'a> {}
@@ -65,7 +66,10 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     type Image = CairoImage;
 
     fn status(&mut self) -> Result<(), Error> {
-        Ok(())
+        match self.error {
+            Ok(_) => Ok(()),
+            Err(err) => Err(Error::BackendError(err.into())),
+        }
     }
 
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color) {
@@ -87,8 +91,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
                 byte_to_frac(rgba),
             );
             rc.ctx.set_operator(cairo::Operator::Source);
-            rc.ctx.paint();
-            Ok(())
+            rc.ctx.paint().map_err(convert_error)
         });
     }
 
@@ -121,7 +124,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_brush(&*brush);
         self.ctx.set_fill_rule(cairo::FillRule::Winding);
-        self.ctx.fill();
+        self.error = self.ctx.fill();
     }
 
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
@@ -129,7 +132,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_brush(&*brush);
         self.ctx.set_fill_rule(cairo::FillRule::EvenOdd);
-        self.ctx.fill();
+        self.error = self.ctx.fill();
     }
 
     fn clip(&mut self, shape: impl Shape) {
@@ -143,7 +146,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_stroke(width, None);
         self.set_brush(&*brush);
-        self.ctx.stroke();
+        self.error = self.ctx.stroke();
     }
 
     fn stroke_styled(
@@ -157,7 +160,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.set_path(shape);
         self.set_stroke(width, Some(style));
         self.set_brush(&*brush);
-        self.ctx.stroke();
+        self.error = self.ctx.stroke();
     }
 
     fn text(&mut self) -> &mut Self::Text {
@@ -168,30 +171,29 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let pos = pos.into();
         let offset = layout.pango_offset();
         self.ctx.move_to(pos.x - offset.x, pos.y - offset.y);
-        pangocairo::show_layout(&self.ctx, layout.pango_layout());
+        pangocairo::show_layout(self.ctx, layout.pango_layout());
     }
 
     fn save(&mut self) -> Result<(), Error> {
-        self.ctx.save();
+        self.ctx.save().map_err(convert_error)?;
         let state = self.transform_stack.last().copied().unwrap_or_default();
         self.transform_stack.push(state);
-        self.status()
+        Ok(())
     }
 
     fn restore(&mut self) -> Result<(), Error> {
         if self.transform_stack.pop().is_some() {
             // we're defensive about calling restore on the inner context,
             // because an unbalanced call will trigger a panic in cairo-rs
-            self.ctx.restore();
-            self.status()
+            self.ctx.restore().map_err(convert_error)
         } else {
             Err(Error::StackUnbalance)
         }
     }
 
     fn finish(&mut self) -> Result<(), Error> {
-        self.ctx.get_target().flush();
-        self.status()
+        self.ctx.target().flush();
+        Ok(())
     }
 
     fn transform(&mut self, transform: Affine) {
@@ -234,11 +236,9 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         // Confident no borrow errors because we just created it.
         let bytes_per_pixel = format.bytes_per_pixel();
         let bytes_per_row = width * bytes_per_pixel;
-        let stride = image.get_stride() as usize;
+        let stride = image.stride() as usize;
         {
-            let mut data = image
-                .get_data()
-                .map_err(|e| Error::BackendError(Box::new(e)))?;
+            let mut data = image.data().map_err(|e| Error::BackendError(Box::new(e)))?;
             for y in 0..height {
                 let src_off = y * bytes_per_row;
                 let data = &mut data[y * stride..];
@@ -331,9 +331,16 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
-        let (image, origin) = compute_blurred_rect(rect, blur_radius);
-        self.set_brush(&*brush);
-        self.ctx.mask_surface(&image, origin.x, origin.y);
+        match compute_blurred_rect(rect, blur_radius) {
+            Ok((image, origin)) => {
+                self.set_brush(&*brush);
+                self.error = self
+                    .ctx
+                    .mask_surface(&image, origin.x, origin.y)
+                    .map_err(cairo::Error::into);
+            }
+            Err(err) => self.error = Err(err),
+        }
     }
 }
 
@@ -349,7 +356,7 @@ impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
 
 impl Image for CairoImage {
     fn size(&self) -> Size {
-        Size::new(self.0.get_width().into(), self.0.get_height().into())
+        Size::new(self.0.width().into(), self.0.height().into())
     }
 }
 
@@ -364,6 +371,7 @@ impl<'a> CairoRenderContext<'a> {
             ctx,
             text: CairoText::new(),
             transform_stack: Vec::new(),
+            error: Ok(()),
         }
     }
 
@@ -379,8 +387,8 @@ impl<'a> CairoRenderContext<'a> {
                 byte_to_frac(rgba >> 8),
                 byte_to_frac(rgba),
             ),
-            Brush::Linear(ref linear) => self.ctx.set_source(linear),
-            Brush::Radial(ref radial) => self.ctx.set_source(radial),
+            Brush::Linear(ref linear) => self.error = self.ctx.set_source(linear),
+            Brush::Radial(ref radial) => self.error = self.ctx.set_source(radial),
         }
     }
 
@@ -439,7 +447,7 @@ impl<'a> CairoRenderContext<'a> {
     ) {
         let src_rect = match src_rect {
             Some(src_rect) => src_rect,
-            None => Size::new(image.get_width() as f64, image.get_height() as f64).to_rect(),
+            None => Size::new(image.width() as f64, image.height() as f64).to_rect(),
         };
         // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
         // either the source or destination is empty, and early-return if so.
@@ -462,8 +470,8 @@ impl<'a> CairoRenderContext<'a> {
                 dst_rect.y0 - scale_y * src_rect.y0,
             );
             rc.ctx.scale(scale_x, scale_y);
-            rc.ctx.set_source(&surface_pattern);
-            rc.ctx.paint();
+            rc.error = rc.ctx.set_source(&surface_pattern);
+            rc.error = rc.ctx.paint();
             Ok(())
         });
     }
@@ -503,17 +511,29 @@ fn affine_to_matrix(affine: Affine) -> Matrix {
     }
 }
 
-fn compute_blurred_rect(rect: Rect, radius: f64) -> (ImageSurface, Point) {
+fn compute_blurred_rect(rect: Rect, radius: f64) -> Result<(ImageSurface, Point), cairo::Error> {
     let size = piet::util::size_for_blurred_rect(rect, radius);
-    // TODO: maybe not panic on error (but likely to happen only in extreme cases such as OOM)
-    let mut image =
-        ImageSurface::create(Format::A8, size.width as i32, size.height as i32).unwrap();
-    let stride = image.get_stride() as usize;
-    let mut data = image.get_data().unwrap();
-    let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut *data);
-    std::mem::drop(data);
-    let origin = rect_exp.origin();
-    (image, origin)
+    match ImageSurface::create(Format::A8, size.width as i32, size.height as i32) {
+        Ok(mut image) => {
+            let stride = image.stride() as usize;
+            // An error is returned when either:
+            //      The reference to image is dropped (it isnt since its still in scope),
+            //      There is an error on image (there isnt since we havnt used it yet),
+            //      The pointer to the image is null aka the surface isnt an imagesurface (it is an imagesurface),
+            //      Or the surface is finished (it isnt, we know because we dont finish it).
+            // Since we know none of these cases should happen, we know that this should not panic.
+            let mut data = image.data().unwrap();
+            let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut *data);
+            std::mem::drop(data);
+            let origin = rect_exp.origin();
+            Ok((image, origin))
+        }
+        Err(err) => Err(err),
+    }
+}
+
+fn convert_error(err: cairo::Error) -> Error {
+    Error::BackendError(err.into())
 }
 
 fn write_rgba(data: &mut [u8], column: usize, r: u8, g: u8, b: u8, a: u8) {

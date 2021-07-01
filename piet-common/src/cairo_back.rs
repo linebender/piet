@@ -79,7 +79,7 @@ impl Device {
         pix_scale: f64,
     ) -> Result<BitmapTarget, piet::Error> {
         let surface = ImageSurface::create(Format::ARgb32, width as i32, height as i32).unwrap();
-        let cr = Context::new(&surface);
+        let cr = Context::new(&surface).unwrap();
         cr.scale(pix_scale, pix_scale);
         let phantom = Default::default();
         Ok(BitmapTarget {
@@ -112,9 +112,9 @@ impl<'a> BitmapTarget<'a> {
             return Err(piet::Error::NotSupported);
         }
         self.surface.flush();
-        let stride = self.surface.get_stride() as usize;
-        let width = self.surface.get_width() as usize;
-        let height = self.surface.get_height() as usize;
+        let stride = self.surface.stride() as usize;
+        let width = self.surface.width() as usize;
+        let height = self.surface.height() as usize;
         let size = width * height * 4;
         if buf.len() < size {
             return Err(piet::Error::InvalidInput);
@@ -168,8 +168,8 @@ impl<'a> BitmapTarget<'a> {
     // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
     #[allow(clippy::wrong_self_convention)]
     pub fn to_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
-        let width = self.surface.get_width() as usize;
-        let height = self.surface.get_height() as usize;
+        let width = self.surface.width() as usize;
+        let height = self.surface.height() as usize;
         let mut buf = vec![0; width * height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(ImageBuf::from_raw(buf, fmt, width, height))
@@ -178,8 +178,8 @@ impl<'a> BitmapTarget<'a> {
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
-        let height = self.surface.get_height();
-        let width = self.surface.get_width();
+        let height = self.surface.height();
+        let width = self.surface.width();
         let image = self.to_image_buf(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);

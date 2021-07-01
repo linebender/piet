@@ -7,7 +7,8 @@ use std::rc::Rc;
 
 use glib::translate::{from_glib_full, ToGlibPtr};
 
-use pango::{AttrList, FontMapExt};
+use pango::prelude::FontMapExt;
+use pango::AttrList;
 use pango_sys::pango_attr_insert_hyphens_new;
 use pangocairo::FontMap;
 
@@ -62,7 +63,7 @@ struct AttributeWithRange {
 }
 
 impl AttributeWithRange {
-    fn into_pango(self) -> Option<PangoAttribute> {
+    fn into_pango(self) -> PangoAttribute {
         let mut pango_attribute = match &self.attribute {
             TextAttribute::FontFamily(family) => {
                 let family = family.name();
@@ -70,12 +71,12 @@ impl AttributeWithRange {
                  * NOTE: If the family fails to resolve we just don't apply the attribute.
                  * That allows Pango to use its default font of choice to render that text
                  */
-                PangoAttribute::new_family(family)?
+                PangoAttribute::new_family(family)
             }
 
             TextAttribute::FontSize(size) => {
                 let size = (size * PANGO_SCALE) as i32;
-                PangoAttribute::new_size_absolute(size).unwrap()
+                PangoAttribute::new_size_absolute(size)
             }
 
             TextAttribute::Weight(weight) => {
@@ -106,7 +107,7 @@ impl AttributeWithRange {
                     }
                 }
 
-                PangoAttribute::new_weight(pango_weights[closest_index].1).unwrap()
+                PangoAttribute::new_weight(pango_weights[closest_index].1)
             }
 
             TextAttribute::TextColor(text_color) => {
@@ -116,7 +117,6 @@ impl AttributeWithRange {
                     (g as u16 * 256) + (g as u16),
                     (b as u16 * 256) + (b as u16),
                 )
-                .unwrap()
             }
 
             TextAttribute::Style(style) => {
@@ -124,7 +124,7 @@ impl AttributeWithRange {
                     FontStyle::Regular => PangoStyle::Normal,
                     FontStyle::Italic => PangoStyle::Italic,
                 };
-                PangoAttribute::new_style(style).unwrap()
+                PangoAttribute::new_style(style)
             }
 
             &TextAttribute::Underline(underline) => {
@@ -133,11 +133,11 @@ impl AttributeWithRange {
                 } else {
                     PangoUnderline::None
                 };
-                PangoAttribute::new_underline(underline).unwrap()
+                PangoAttribute::new_underline(underline)
             }
 
             &TextAttribute::Strikethrough(strikethrough) => {
-                PangoAttribute::new_strikethrough(strikethrough).unwrap()
+                PangoAttribute::new_strikethrough(strikethrough)
             }
         };
 
@@ -146,7 +146,7 @@ impl AttributeWithRange {
             pango_attribute.set_end_index(range.end.try_into().unwrap());
         }
 
-        Some(pango_attribute)
+        pango_attribute
     }
 }
 
@@ -154,7 +154,7 @@ impl CairoText {
     /// Create a new factory that satisfies the piet `Text` trait.
     #[allow(clippy::new_without_default)]
     pub fn new() -> CairoText {
-        let fontmap = FontMap::get_default().unwrap();
+        let fontmap = FontMap::default().unwrap();
         CairoText {
             pango_context: fontmap.create_context().unwrap(),
         }
@@ -278,59 +278,54 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
 
     fn build(self) -> Result<Self::Out, Error> {
         let pango_attributes = AttrList::new();
-        let add_attribute = |attribute| {
-            if let Some(attribute) = attribute {
-                pango_attributes.insert(attribute);
-            }
-        };
 
         if let Some(attr) = unsafe { from_glib_full(pango_attr_insert_hyphens_new(0)) } {
             pango_attributes.insert(attr);
         }
 
-        add_attribute(
+        pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::FontFamily(self.defaults.font),
                 range: None,
             }
             .into_pango(),
         );
-        add_attribute(
+        pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::FontSize(self.defaults.font_size),
                 range: None,
             }
             .into_pango(),
         );
-        add_attribute(
+        pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::Weight(self.defaults.weight),
                 range: None,
             }
             .into_pango(),
         );
-        add_attribute(
+        pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::TextColor(self.defaults.fg_color),
                 range: None,
             }
             .into_pango(),
         );
-        add_attribute(
+        pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::Style(self.defaults.style),
                 range: None,
             }
             .into_pango(),
         );
-        add_attribute(
+        pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::Underline(self.defaults.underline),
                 range: None,
             }
             .into_pango(),
         );
-        add_attribute(
+        pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::Strikethrough(self.defaults.strikethrough),
                 range: None,
@@ -339,7 +334,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         );
 
         for attribute in self.attributes {
-            add_attribute(attribute.into_pango());
+            pango_attributes.insert(attribute.into_pango());
         }
 
         self.pango_layout.set_attributes(Some(&pango_attributes));
@@ -415,43 +410,38 @@ impl TextLayout for CairoTextLayout {
 
         let line = self
             .pango_layout
-            .get_line(line_number.try_into().unwrap())
+            .line(line_number.try_into().unwrap())
             .unwrap();
 
         let line_text = self.line_text(line_number).unwrap();
         let line_start_idx = self.line_metric(line_number).unwrap().start_offset;
-        // pango-rs uses an option here when it should return a (bool, i32, i32);
-        // this is an error on their part, I think
-        // FIXME: when https://github.com/gtk-rs/gtk-rs/pull/375 is released
-        // we can improve this.
-        let (rel_idx, is_inside_x) = match line.x_to_index(x as i32) {
-            Some((idx, trailing)) => {
-                let idx = idx as usize - line_start_idx;
-                let trailing_len: usize = (&line_text[idx..])
-                    .chars()
-                    .take(trailing as usize)
-                    .map(char::len_utf8)
-                    .sum();
-                (idx + trailing_len, true)
-            }
-            None => {
-                let hit_is_left = x <= 0;
-                let hard_break_len = match line_text.as_bytes() {
-                    [.., b'\r', b'\n'] => 2,
-                    [.., b'\n'] => 1,
-                    _ => 0,
-                };
-                let idx = if hit_is_left == self.is_rtl {
-                    line_text.len().saturating_sub(hard_break_len)
-                } else {
-                    0
-                };
-                (idx, false)
+
+        let hitpos = line.x_to_index(x as i32);
+        let rel_idx = if hitpos.is_inside {
+            let idx = hitpos.index as usize - line_start_idx;
+            let trailing_len: usize = (&line_text[idx..])
+                .chars()
+                .take(hitpos.trailing as usize)
+                .map(char::len_utf8)
+                .sum();
+            idx + trailing_len
+        } else {
+            let hit_is_left = x <= 0;
+            let hard_break_len = match line_text.as_bytes() {
+                [.., b'\r', b'\n'] => 2,
+                [.., b'\n'] => 1,
+                _ => 0,
+            };
+            if hit_is_left == self.is_rtl {
+                line_text.len().saturating_sub(hard_break_len)
+            } else {
+                0
             }
         };
+
         let is_inside_y = point.y >= 0. && point.y <= self.size.height;
 
-        HitTestPoint::new(line_start_idx + rel_idx, is_inside_x && is_inside_y)
+        HitTestPoint::new(line_start_idx + rel_idx, hitpos.is_inside && is_inside_y)
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
@@ -515,9 +505,9 @@ impl CairoTextLayout {
         let mut y_offset = 0.;
         let mut widest_logical_width = 0;
         let mut widest_whitespaceless_width = 0;
-        let mut iterator = self.pango_layout.get_iter().unwrap();
+        let mut iterator = self.pango_layout.iter().unwrap();
         loop {
-            let line = iterator.get_line_readonly().unwrap();
+            let line = iterator.line_readonly().unwrap();
 
             //FIXME: replace this when pango 0.10.0 lands
             let (start_offset, end_offset) = unsafe {
@@ -536,7 +526,7 @@ impl CairoTextLayout {
                 _ => end_offset,
             };
 
-            let logical_rect = iterator.get_line_extents().1;
+            let logical_rect = iterator.line_extents().1;
             if logical_rect.width > widest_logical_width {
                 widest_logical_width = logical_rect.width;
             }
@@ -559,7 +549,7 @@ impl CairoTextLayout {
                 start_offset,
                 end_offset,
                 trailing_whitespace,
-                baseline: (iterator.get_baseline() as f64 / PANGO_SCALE) - y_offset,
+                baseline: (iterator.baseline() as f64 / PANGO_SCALE) - y_offset,
                 height: logical_rect.height as f64 / PANGO_SCALE,
                 y_offset,
             });
@@ -574,7 +564,7 @@ impl CairoTextLayout {
         self.line_metrics = line_metrics.into();
         self.x_offsets = x_offsets.into();
 
-        let (ink_extent, logical_extent) = self.pango_layout.get_extents();
+        let (ink_extent, logical_extent) = self.pango_layout.extents();
         let ink_extent = to_kurbo_rect(ink_extent);
         let logical_extent = to_kurbo_rect(logical_extent);
 
