@@ -8,7 +8,8 @@ members = [
     "piet-direct2d",
     "piet-web",
     "piet-web/examples/basic",
-    "piet-svg"
+    "piet-svg",
+    "piet-pathfinder"
 ]
 
 default-members = [
