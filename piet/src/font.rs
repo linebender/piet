@@ -84,7 +84,7 @@ impl FontFamily {
             FontFamilyInner::SansSerif => "sans-serif",
             FontFamilyInner::SystemUi => "system-ui",
             FontFamilyInner::Monospace => "monospace",
-            FontFamilyInner::Named(s) => &s,
+            FontFamilyInner::Named(s) => s,
         }
     }
 
