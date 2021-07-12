@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use glib::translate::{from_glib_full, ToGlibPtr};
 
+use pango::prelude::FontFamilyExt;
 use pango::prelude::FontMapExt;
 use pango::AttrList;
 use pango_sys::pango_attr_insert_hyphens_new;
@@ -166,7 +167,12 @@ impl Text for CairoText {
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        //TODO: Veryify that a family exists with the requested name
+        // The pango documentation says this is always a stirng, and never null. I trust them on that.
+        // Would be weird to have a font family without a name anyways.
+        self.pango_context
+            .list_families()
+            .iter()
+            .find(|family| family.name().unwrap().as_str() == family_name);
         Some(FontFamily::new_unchecked(family_name))
     }
 
