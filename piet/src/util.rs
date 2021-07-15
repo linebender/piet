@@ -167,7 +167,9 @@ impl LayoutDefaults {
     pub fn set(&mut self, val: impl Into<TextAttribute>) {
         match val.into() {
             TextAttribute::FontFamily(t) => self.font = t,
-            TextAttribute::FontSize(size) => self.font_size = if size <= 0.0 { 12.0 } else { size },
+            TextAttribute::FontSize(size) => {
+                self.font_size = if size <= 0.0 { DEFAULT_FONT_SIZE } else { size }
+            }
             TextAttribute::Weight(weight) => self.weight = weight,
             TextAttribute::Style(style) => self.style = style,
             TextAttribute::Underline(flag) => self.underline = flag,
