@@ -167,8 +167,7 @@ impl Text for CairoText {
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        // The pango documentation says this is always a stirng, and never null. I trust them on that.
-        // Would be weird to have a font family without a name anyways.
+        // The pango documentation says this is always a string, and never null.
         self.pango_context
             .list_families()
             .iter()
