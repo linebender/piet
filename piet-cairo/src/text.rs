@@ -175,42 +175,48 @@ impl Text for CairoText {
         let font = FontDescription::from_string(family_name);
 
         println!("request: {:?}", family_name);
-
         let best_match = self
             .pango_context
-            .list_families()
+            .font_description()
             .iter()
-            .map(|family| {
-                println!("Family: {:?}", family.name());
-                family
-                    .list_faces()
+            .cloned()
+            .chain(
+                self.pango_context
+                    .list_families()
                     .iter()
-                    .map(|fontface| (family.clone(), fontface.clone()))
-                    .collect::<Vec<(pango::FontFamily, FontFace)>>()
-            })
-            .flatten()
-            .map(|(family, fontface)| {
-                fontface.describe().map(|fontdesc| {
-                    println!(
-                        "Family/Fontdesc: {:?}/{:?}",
-                        family.name(),
-                        fontdesc.to_str()
-                    );
+                    .map(|family| {
+                        println!("Family: {:?}", family.name());
+                        family
+                            .list_faces()
+                            .iter()
+                            .map(|fontface| (family.clone(), fontface.clone()))
+                            .collect::<Vec<(pango::FontFamily, FontFace)>>()
+                    })
+                    .flatten()
+                    .map(|(family, fontface)| {
+                        fontface.describe().map(|fontdesc| {
+                            println!(
+                                "Family/Fontdesc: {:?}/{:?}",
+                                family.name(),
+                                fontdesc.to_str()
+                            );
 
-                    (family, fontdesc)
-                })
-            })
-            .flatten()
+                            fontdesc
+                        })
+                    })
+                    .flatten(),
+            )
             .max_by(|a, b| {
-                if font.better_match(Some(&a.1), &b.1) {
+                if font.better_match(Some(a), b) {
                     Ordering::Less
                 } else {
                     Ordering::Greater
                 }
             });
-        best_match.clone().map(|(family, _)| {
-            println!("result: {:?}", family.name());
-            FontFamily::new_unchecked(family.name().unwrap().as_str())
+
+        best_match.clone().map(|fontdesc| {
+            println!("result: {:?}", fontdesc.to_str());
+            FontFamily::new_unchecked(fontdesc.to_str().as_str())
         });
 
         println!(
@@ -223,7 +229,7 @@ impl Text for CairoText {
                 .name()
         );
 
-        best_match.map(|(family, _)| FontFamily::new_unchecked(family.name().unwrap().as_str()))
+        best_match.map(|fontdesc| FontFamily::new_unchecked(fontdesc.to_str().as_str()))
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
