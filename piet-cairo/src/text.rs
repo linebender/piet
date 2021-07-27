@@ -174,11 +174,14 @@ impl Text for CairoText {
 
         let font = FontDescription::from_string(family_name);
 
+        println!("AA");
+
         let best_match = self
             .pango_context
             .list_families()
             .iter()
             .map(|family| {
+                println!("Family: {:?}", family.name());
                 family
                     .list_faces()
                     .iter()
@@ -186,7 +189,17 @@ impl Text for CairoText {
                     .collect::<Vec<(pango::FontFamily, FontFace)>>()
             })
             .flatten()
-            .map(|(family, fontface)| fontface.describe().map(|fontdesc| (family, fontdesc)))
+            .map(|(family, fontface)| {
+                fontface.describe().map(|fontdesc| {
+                    println!(
+                        "Family/Fontdesc: {:?}/{:?}",
+                        family.name(),
+                        fontdesc.to_str()
+                    );
+
+                    (family, fontdesc)
+                })
+            })
             .flatten()
             .max_by(|a, b| {
                 if font.better_match(Some(&a.1), &b.1) {
