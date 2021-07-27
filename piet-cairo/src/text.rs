@@ -209,7 +209,10 @@ impl Text for CairoText {
                 }
             });
 
-        best_match.map(|(family, _)| FontFamily::new_unchecked(family.name().unwrap().as_str()))
+        best_match.map(|(family, _)| {
+            println!("result: {:?}", family.name());
+            FontFamily::new_unchecked(family.name().unwrap().as_str())
+        })
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
