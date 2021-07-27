@@ -178,10 +178,6 @@ impl Text for CairoText {
             .pango_context
             .list_families()
             .iter()
-            .filter(|family| {
-                family.name().unwrap().contains(family_name)
-                    || family_name.contains(family.name().unwrap().as_str())
-            })
             .map(|family| {
                 family
                     .list_faces()
