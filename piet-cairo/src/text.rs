@@ -174,7 +174,7 @@ impl Text for CairoText {
 
         let font = FontDescription::from_string(family_name);
 
-        println!("AA");
+        println!("request: {:?}", family_name);
 
         let best_match = self
             .pango_context
@@ -208,11 +208,22 @@ impl Text for CairoText {
                     Ordering::Greater
                 }
             });
-
-        best_match.map(|(family, _)| {
+        best_match.clone().map(|(family, _)| {
             println!("result: {:?}", family.name());
             FontFamily::new_unchecked(family.name().unwrap().as_str())
-        })
+        });
+
+        println!(
+            "result2: {:?}",
+            self.pango_context
+                .font_map()
+                .unwrap()
+                .family(family_name)
+                .unwrap()
+                .name()
+        );
+
+        best_match.map(|(family, _)| FontFamily::new_unchecked(family.name().unwrap().as_str()))
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
