@@ -1,5 +1,6 @@
 //! Text functionality for Piet cairo backend
 
+use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::fmt;
 use std::ops::{Range, RangeBounds};
@@ -7,9 +8,11 @@ use std::rc::Rc;
 
 use glib::translate::{from_glib_full, ToGlibPtr};
 
+use pango::prelude::FontFaceExt;
 use pango::prelude::FontFamilyExt;
 use pango::prelude::FontMapExt;
-use pango::AttrList;
+use pango::FontDescription;
+use pango::{AttrList, FontFace};
 use pango_sys::pango_attr_insert_hyphens_new;
 use pangocairo::FontMap;
 
@@ -168,11 +171,36 @@ impl Text for CairoText {
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
         // The pango documentation says this is always a string, and never null.
-        self.pango_context
+
+        let font = FontDescription::from_string(family_name);
+
+        let best_match = self
+            .pango_context
             .list_families()
             .iter()
-            .find(|family| family.name().unwrap().as_str() == family_name);
-        Some(FontFamily::new_unchecked(family_name))
+            .filter(|family| {
+                family.name().unwrap().contains(family_name)
+                    || family_name.contains(family.name().unwrap().as_str())
+            })
+            .map(|family| {
+                family
+                    .list_faces()
+                    .iter()
+                    .map(|fontface| (family.clone(), fontface.clone()))
+                    .collect::<Vec<(pango::FontFamily, FontFace)>>()
+            })
+            .flatten()
+            .map(|(family, fontface)| fontface.describe().map(|fontdesc| (family, fontdesc)))
+            .flatten()
+            .max_by(|a, b| {
+                if font.better_match(Some(&a.1), &b.1) {
+                    Ordering::Less
+                } else {
+                    Ordering::Greater
+                }
+            });
+
+        best_match.map(|(family, _)| FontFamily::new_unchecked(family.name().unwrap().as_str()))
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
