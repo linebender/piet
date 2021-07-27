@@ -219,16 +219,6 @@ impl Text for CairoText {
             FontFamily::new_unchecked(fontdesc.to_str().as_str())
         });
 
-        println!(
-            "result2: {:?}",
-            self.pango_context
-                .font_map()
-                .unwrap()
-                .family(family_name)
-                .unwrap()
-                .name()
-        );
-
         best_match.map(|fontdesc| FontFamily::new_unchecked(fontdesc.to_str().as_str()))
     }
 
