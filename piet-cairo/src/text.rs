@@ -187,7 +187,7 @@ impl Text for CairoText {
             .map(|font| {
                 println!("request: {:?}", font.describe().unwrap().to_str());
 
-                font.describe().unwrap()
+                (glib::GString::from("system-ui"), font.describe().unwrap())
             })
             .chain(
                 self.pango_context
@@ -210,25 +210,24 @@ impl Text for CairoText {
                                 fontdesc.to_str()
                             );
 
-                            fontdesc
+                            (family.name().unwrap(), fontdesc)
                         })
                     })
                     .flatten(),
             )
             .max_by(|a, b| {
-                if font.better_match(Some(a), b) {
+                if font.better_match(Some(&a.1), &b.1) {
                     Ordering::Less
                 } else {
                     Ordering::Greater
                 }
             });
 
-        best_match.clone().map(|fontdesc| {
-            println!("result: {:?}", fontdesc.to_str());
-            FontFamily::new_unchecked(fontdesc.to_str().as_str())
+        best_match.clone().map(|(family, _)| {
+            println!("result: {:?}", family);
         });
 
-        best_match.map(|fontdesc| FontFamily::new_unchecked(fontdesc.to_str().as_str()))
+        best_match.map(|(family, _)| FontFamily::new_unchecked(family.as_str()))
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
@@ -402,6 +401,12 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         self.pango_layout.set_wrap(pango::WrapMode::WordChar);
         self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
 
+        self.pango_layout
+            .attributes()
+            .unwrap()
+            .attributes()
+            .iter()
+            .for_each(|f| println!("{:?}", f));
         println!("final attributes{:?}", self.pango_layout.attributes());
 
         // invalid until update_width() is called
