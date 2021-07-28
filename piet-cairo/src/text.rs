@@ -8,9 +8,9 @@ use std::rc::Rc;
 
 use glib::translate::{from_glib_full, ToGlibPtr};
 
-use pango::prelude::FontFaceExt;
 use pango::prelude::FontFamilyExt;
 use pango::prelude::FontMapExt;
+use pango::prelude::{FontExt, FontFaceExt};
 use pango::FontDescription;
 use pango::{AttrList, FontFace};
 use pango_sys::pango_attr_insert_hyphens_new;
@@ -177,9 +177,18 @@ impl Text for CairoText {
         println!("request: {:?}", family_name);
         let best_match = self
             .pango_context
-            .font_description()
+            .font_map()
+            .unwrap()
+            .load_font(
+                &self.pango_context,
+                &FontDescription::from_string("system-ui"),
+            )
             .iter()
-            .cloned()
+            .map(|font| {
+                println!("request: {:?}", font.describe().unwrap().to_str());
+
+                font.describe().unwrap()
+            })
             .chain(
                 self.pango_context
                     .list_families()
