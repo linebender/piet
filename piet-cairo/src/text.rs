@@ -211,8 +211,8 @@ impl Text for CairoText {
                     Ordering::Equal
                 }
             });
-
-        best_match.map(|(family, _)| FontFamily::new_unchecked(family.as_str()))
+        Some(FontFamily::new_unchecked(family_name))
+        // best_match.map(|(family, _)| FontFamily::new_unchecked(family.as_str()))
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
@@ -381,7 +381,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         for attribute in self.attributes {
             pango_attributes.insert(attribute.into_pango());
         }
-
+        println!("{:?}", self.pango_layout.font_description());
         self.pango_layout.set_attributes(Some(&pango_attributes));
         self.pango_layout.set_wrap(pango::WrapMode::WordChar);
         self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
