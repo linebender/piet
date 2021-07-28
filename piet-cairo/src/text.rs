@@ -208,13 +208,17 @@ impl Text for CairoText {
                 //We can only use `better_match` with 2 args if the first argument matches matches
                 if font.better_match(None, &a.1) {
                     if font.better_match(Some(&a.1), &b.1) {
+                        println!("{:?}>{:?}", a.1.to_str(), b.1.to_str());
                         Ordering::Less
                     } else {
+                        println!("{:?}<{:?}", a.1.to_str(), b.1.to_str());
                         Ordering::Greater
                     }
                 } else if font.better_match(None, &b.1) {
+                    println!("{:?}<<{:?}", a.1.to_str(), b.1.to_str());
                     Ordering::Less
                 } else {
+                    println!("{:?}={:?}", a.1.to_str(), b.1.to_str());
                     Ordering::Equal
                 }
             });
