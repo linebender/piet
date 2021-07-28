@@ -222,11 +222,7 @@ impl Text for CairoText {
             "{:?}",
             self.pango_context.font_description().unwrap().to_str()
         );
-        println!(
-            "{:?}",
-            best_match.map(|(family, _)| FontFamily::new_unchecked(family.as_str()))
-        );
-        Some(FontFamily::new_unchecked(family_name))
+        best_match.map(|(family, _)| FontFamily::new_unchecked(family.as_str()))
     }
 
     fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily, Error> {
