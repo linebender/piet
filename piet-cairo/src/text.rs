@@ -8,11 +8,11 @@ use std::rc::Rc;
 
 use glib::translate::{from_glib_full, ToGlibPtr};
 
+use pango::prelude::FontFaceExt;
 use pango::prelude::FontFamilyExt;
 use pango::prelude::FontMapExt;
-use pango::prelude::{FontExt, FontFaceExt};
+use pango::AttrList;
 use pango::FontDescription;
-use pango::{AttrList, FontFace};
 use pango_sys::pango_attr_insert_hyphens_new;
 use pangocairo::FontMap;
 
@@ -170,62 +170,47 @@ impl Text for CairoText {
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        // The pango documentation says this is always a string, and never null.
+        // We first do a case-insensitive match for the familly name
+        // After that we get the family which has the best matching  font description.
 
         let font = FontDescription::from_string(family_name);
-
-        println!("request: {:?}", family_name);
+        let target_lowercase = family_name.to_lowercase();
         let best_match = self
             .pango_context
-            .font_map()
-            .unwrap()
-            .load_font(
-                &self.pango_context,
-                &FontDescription::from_string("system-ui"),
-            )
+            .list_families()
             .iter()
-            .map(|font| {
-                println!("request: {:?}", font.describe().unwrap().to_str());
-
-                (glib::GString::from("system-ui"), font.describe().unwrap())
+            .filter(|family| {
+                let family_lowercase = family.name().unwrap().to_lowercase();
+                family_lowercase.contains(target_lowercase.as_str())
+                    || target_lowercase.contains(family_lowercase.as_str())
             })
-            .chain(
-                self.pango_context
-                    .list_families()
+            .map(|family| {
+                family
+                    .list_faces()
                     .iter()
-                    .map(|family| {
-                        println!("Family: {:?}", family.name());
-                        family
-                            .list_faces()
-                            .iter()
-                            .map(|fontface| (family.clone(), fontface.clone()))
-                            .collect::<Vec<(pango::FontFamily, FontFace)>>()
+                    .map(|fontface| {
+                        fontface
+                            .describe()
+                            .map(|fontdesc| (family.name().unwrap(), fontdesc))
                     })
                     .flatten()
-                    .map(|(family, fontface)| {
-                        fontface.describe().map(|fontdesc| {
-                            println!(
-                                "Family/Fontdesc: {:?}/{:?}",
-                                family.name(),
-                                fontdesc.to_str()
-                            );
-
-                            (family.name().unwrap(), fontdesc)
-                        })
-                    })
-                    .flatten(),
-            )
+                    .collect::<Vec<(glib::GString, FontDescription)>>()
+            })
+            .flatten()
             .max_by(|a, b| {
-                if font.better_match(Some(&a.1), &b.1) {
+                //We can only use `better_match` with 2 args if the first argument matches matches
+                if font.better_match(None, &a.1) {
+                    if font.better_match(Some(&a.1), &b.1) {
+                        Ordering::Less
+                    } else {
+                        Ordering::Greater
+                    }
+                } else if font.better_match(None, &b.1) {
                     Ordering::Less
                 } else {
-                    Ordering::Greater
+                    Ordering::Equal
                 }
             });
-
-        best_match.clone().map(|(family, _)| {
-            println!("result: {:?}", family);
-        });
 
         best_match.map(|(family, _)| FontFamily::new_unchecked(family.as_str()))
     }
@@ -400,14 +385,6 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         self.pango_layout.set_attributes(Some(&pango_attributes));
         self.pango_layout.set_wrap(pango::WrapMode::WordChar);
         self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
-
-        self.pango_layout
-            .attributes()
-            .unwrap()
-            .attributes()
-            .iter()
-            .for_each(|f| println!("{:?}", f));
-        println!("final attributes{:?}", self.pango_layout.attributes());
 
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
