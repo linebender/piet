@@ -402,6 +402,8 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         self.pango_layout.set_wrap(pango::WrapMode::WordChar);
         self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
 
+        println!("final attributes{:?}", self.pango_layout.attributes());
+
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
             is_rtl: util::first_strong_rtl(self.text.as_str()),
