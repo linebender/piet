@@ -381,10 +381,11 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
         for attribute in self.attributes {
             pango_attributes.insert(attribute.into_pango());
         }
-        println!("{:?}", self.pango_layout.font_description());
+        println!("1:{:?}", self.pango_layout.font_description());
         self.pango_layout.set_attributes(Some(&pango_attributes));
         self.pango_layout.set_wrap(pango::WrapMode::WordChar);
         self.pango_layout.set_ellipsize(pango::EllipsizeMode::None);
+        println!("2:{:?}", self.pango_layout.font_description());
 
         // invalid until update_width() is called
         let mut layout = CairoTextLayout {
