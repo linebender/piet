@@ -475,12 +475,12 @@ fn convert_line_cap(line_cap: LineCap) -> CGLineCap {
 
 impl<'a> CoreGraphicsContext<'a> {
     fn set_fill_color(&mut self, color: &Color) {
-        let (r, g, b, a) = Color::as_rgba(&color);
+        let (r, g, b, a) = Color::as_rgba(color);
         self.ctx.set_rgb_fill_color(r, g, b, a);
     }
 
     fn set_stroke_color(&mut self, color: &Color) {
-        let (r, g, b, a) = Color::as_rgba(&color);
+        let (r, g, b, a) = Color::as_rgba(color);
         self.ctx.set_rgb_stroke_color(r, g, b, a);
     }
 

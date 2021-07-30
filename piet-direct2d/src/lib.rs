@@ -621,7 +621,7 @@ fn draw_image<'a>(
     };
     let src_rect = src_rect.map(rect_to_rectf);
     rt.draw_bitmap(
-        &image,
+        image,
         &rect_to_rectf(dst_rect),
         1.0,
         interp,

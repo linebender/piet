@@ -302,9 +302,9 @@ impl D2DTextLayoutBuilder {
             .contains(&self.default_font);
         let family = if is_custom {
             let mut loaded = self.loaded_fonts.inner.borrow_mut();
-            loaded.collection().get_font_family_by_name(&family_name)
+            loaded.collection().get_font_family_by_name(family_name)
         } else {
-            FontCollection::system().get_font_family_by_name(&family_name)
+            FontCollection::system().get_font_family_by_name(family_name)
         };
 
         let family = match family {
