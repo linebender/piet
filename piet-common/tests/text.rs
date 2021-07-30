@@ -405,7 +405,7 @@ fn emergency_break_selections() {
     let mut factory = make_factory();
     let mono_width = factory.get_mono_width(16.0);
 
-    let text = std::iter::repeat('a').take(20).collect::<String>();
+    let text = "a".repeat(20);
     let layout_width = mono_width * 6.5;
     let layout = factory.make_layout(&text, FontFamily::MONOSPACE, 16.0, layout_width);
     assert_eq!(layout.line_count(), 4);

@@ -458,7 +458,7 @@ impl WebRenderContext<'_> {
     /// Web canvas is super stateful, and we're trying to have more retained stuff.
     /// This is part of the impedance matching.
     fn set_brush(&mut self, brush: &Brush, is_fill: bool) {
-        let value = self.brush_value(&brush);
+        let value = self.brush_value(brush);
         if is_fill {
             self.ctx.set_fill_style(&value);
         } else {

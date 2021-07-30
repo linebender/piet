@@ -262,10 +262,6 @@ impl Default for LineCap {
 impl std::ops::Deref for StrokeDash {
     type Target = [f64];
     fn deref(&self) -> &Self::Target {
-        if let Some(alloc) = &self.alloc {
-            &alloc
-        } else {
-            self.slice
-        }
+        self.alloc.as_deref().unwrap_or(self.slice)
     }
 }

@@ -228,7 +228,7 @@ fn compare_snapshots(
             }
         };
 
-        let result = compare_files(*number, &base_path, rev_path, prefix)?;
+        let result = compare_files(*number, base_path, rev_path, prefix)?;
         failures.insert(*number, result);
     }
 
