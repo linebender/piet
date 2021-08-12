@@ -75,5 +75,7 @@ features = [
 
 [dev-dependencies]
 static_assertions = "1.1.0"
+
+[target.'cfg(not(target_arch="wasm32"))'.dependencies]
 rand = "0.8.4"
 rand_distr = "0.4.1"
