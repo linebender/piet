@@ -2,10 +2,8 @@
 //! Piet Mondrian's squares.
 // TODO: Remove all the wasm32 cfg guards once this compiles with piet-web
 
-#[cfg(not(target_arch = "wasm32"))]
 use piet::{kurbo::Rect, Color, RenderContext};
 use piet_common::kurbo::{Point, Size};
-#[cfg(not(target_arch = "wasm32"))]
 use piet_common::Device;
 use rand::{prelude::*, random};
 use rand_distr::Normal;
@@ -18,35 +16,32 @@ const DPI: f64 = 96.;
 /// Feature "png" needed for save_to_file() and it's disabled by default for optional dependencies
 /// cargo run --example mondrian --features png
 fn main() {
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let mut device = Device::new().unwrap();
-        let mut bitmap = device.bitmap_target(WIDTH, HEIGHT, 1.0).unwrap();
-        let mut rc = bitmap.render_context();
-        Mondrian {
-            split_count: ((WIDTH + HEIGHT) as f64 * 0.5 * 0.02) as usize,
-            border: 0.5,
-            min_gap: 0.3,
-            skip_prob: 0.6,
-            color_proportion: 0.2,
-            stroke_width: 0.1,
-            colors: vec![
-                Color::BLACK,
-                Color::rgb8(19, 86, 162),
-                Color::rgb8(247, 216, 66),
-                Color::rgb8(212, 9, 32),
-            ],
-            white: Color::rgb8(242, 245, 241),
-        }
-        .generate(Size::new(WIDTH as f64, HEIGHT as f64), &mut rc);
-
-        rc.finish().unwrap();
-        std::mem::drop(rc);
-
-        bitmap
-            .save_to_file("temp-image.png")
-            .expect("file save error");
+    let mut device = Device::new().unwrap();
+    let mut bitmap = device.bitmap_target(WIDTH, HEIGHT, 1.0).unwrap();
+    let mut rc = bitmap.render_context();
+    Mondrian {
+        split_count: ((WIDTH + HEIGHT) as f64 * 0.5 * 0.02) as usize,
+        border: 0.5,
+        min_gap: 0.3,
+        skip_prob: 0.6,
+        color_proportion: 0.2,
+        stroke_width: 0.1,
+        colors: vec![
+            Color::BLACK,
+            Color::rgb8(19, 86, 162),
+            Color::rgb8(247, 216, 66),
+            Color::rgb8(212, 9, 32),
+        ],
+        white: Color::rgb8(242, 245, 241),
     }
+    .generate(Size::new(WIDTH as f64, HEIGHT as f64), &mut rc);
+
+    rc.finish().unwrap();
+    std::mem::drop(rc);
+
+    bitmap
+        .save_to_file("temp-image.png")
+        .expect("file save error");
 }
 
 /// Generate a Piet Mondrian-style picture.
@@ -62,7 +57,6 @@ fn main() {
 ///     very thin rectangle, or randomly some of the time.
 ///  4. Color in a proportion (e.g. 1/6th) of the rectangles with the chosen colors.
 ///  5. Done :)
-#[cfg(not(target_arch = "wasm32"))]
 struct Mondrian {
     /// controls the number of splits of the canvas
     split_count: usize,
@@ -82,7 +76,6 @@ struct Mondrian {
     white: Color,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl Mondrian {
     fn generate(&self, size: Size, ctx: &mut impl RenderContext) {
         // Start with single rect over whole picture
