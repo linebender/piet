@@ -272,7 +272,7 @@ impl Line {
     /// There is a 'secondary' offset that is not returned by the core-text crate,
     /// that is used for BiDi. We can worry about that when we worry about *that*.
     /// There are docs at:
-    /// https://developer.apple.com/documentation/coretext/1509629-ctlinegetoffsetforstringindex
+    /// <https://developer.apple.com/documentation/coretext/1509629-ctlinegetoffsetforstringindex>
     pub(crate) fn get_offset_for_string_index(&self, index: CFIndex) -> CGFloat {
         self.0.get_string_offset_for_string_index(index)
     }
