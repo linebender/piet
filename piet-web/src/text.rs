@@ -49,7 +49,7 @@ pub struct WebTextLayoutBuilder {
     defaults: util::LayoutDefaults,
 }
 
-/// https://developer.mozilla.org/en-US/docs/Web/CSS/font-style
+/// <https://developer.mozilla.org/en-US/docs/Web/CSS/font-style>
 #[derive(Clone)]
 enum FontStyle {
     Normal,

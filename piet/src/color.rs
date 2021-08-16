@@ -123,7 +123,7 @@ impl Color {
     ///
     /// Currently out-of-gamut values are clipped to the nearest sRGB color,
     /// which is perhaps not ideal (the clipping might change the hue). See
-    /// https://github.com/d3/d3-color/issues/33 for discussion.
+    /// <https://github.com/d3/d3-color/issues/33> for discussion.
     #[allow(non_snake_case)]
     #[allow(clippy::many_single_char_names)]
     #[allow(clippy::unreadable_literal)]
