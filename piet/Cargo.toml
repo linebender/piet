@@ -15,7 +15,7 @@ include = ["src/**/*", "Cargo.toml", "snapshots/resources/*"]
 image = { version = "0.23.10", optional = true, default-features = false }
 kurbo = "0.8.1"
 pico-args = { version = "0.4.0", optional = true }
-png = { version = "0.16.2", optional = true }
+png = { version = "0.17", optional = true }
 os_info = { version = "3.0.0", optional = true, default-features = false }
 unic-bidi = "0.9"
 

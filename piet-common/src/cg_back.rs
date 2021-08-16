@@ -163,7 +163,7 @@ impl<'a> BitmapTarget<'a> {
         piet_coregraphics::unpremultiply_rgba(&mut data);
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
-        encoder.set_color(ColorType::RGBA);
+        encoder.set_color(ColorType::Rgba);
         encoder.set_depth(png::BitDepth::Eight);
         encoder
             .write_header()

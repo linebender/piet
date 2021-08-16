@@ -265,11 +265,11 @@ fn compare_files(
 
 fn get_png_data(path: &Path) -> Result<(png::OutputInfo, Vec<u8>), BoxErr> {
     let decoder = png::Decoder::new(File::open(path)?);
-    let (info, mut reader) = decoder.read_info()?;
+    let mut reader = decoder.read_info()?;
     // Allocate the output buffer.
-    let mut buf = vec![0; info.buffer_size()];
+    let mut buf = vec![0; reader.output_buffer_size()];
     // Read the next frame. An APNG might contain multiple frames.
-    reader.next_frame(&mut buf)?;
+    let info = reader.next_frame(&mut buf)?;
     Ok((info, buf))
 }
 

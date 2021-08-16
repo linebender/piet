@@ -36,7 +36,7 @@ serde = ["piet/serde"]
 piet = { version = "0.4.0", path = "../piet" }
 piet-web = { version = "0.4.0", path = "../piet-web", optional = true }
 cfg-if = "1.0"
-png = { version = "0.16.1", optional = true }
+png = { version = "0.17", optional = true }
 
 [target.'cfg(target_os="linux")'.dependencies]
 piet-cairo = { version = "0.4.0", path = "../piet-cairo" }
