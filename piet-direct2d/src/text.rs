@@ -94,13 +94,6 @@ pub struct D2DTextLayoutBuilder {
 }
 
 impl D2DText {
-    /// Create a new factory that satisfies the piet `Text` trait given
-    /// the (platform-specific) dwrite factory.
-    #[deprecated(since = "0.4.1", note = "Use new_with_shared_fonts instead")]
-    pub fn new(dwrite: DwriteFactory) -> D2DText {
-        D2DText::new_with_shared_fonts(dwrite, None)
-    }
-
     /// Create a new text factory.
     ///
     /// The `loaded_fonts` object is optional; if you pass `None` we will create a

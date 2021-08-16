@@ -190,17 +190,6 @@ impl StrokeStyle {
         self
     }
 
-    /// Builder-style method to set the line dash.
-    ///
-    /// Dash style is represented as a vector of alternating on-off lengths,
-    /// and an offset length.
-    #[deprecated(since = "0.4.0", note = "Use dash_offset and dash_lengths instead")]
-    #[doc(hidden)]
-    pub fn dash(mut self, dashes: Vec<f64>, offset: f64) -> Self {
-        self.dash_pattern.alloc = Some(dashes.into());
-        self.dash_offset(offset)
-    }
-
     /// Set the [`LineJoin`].
     pub fn set_line_join(&mut self, line_join: LineJoin) {
         self.line_join = line_join;
@@ -209,16 +198,6 @@ impl StrokeStyle {
     /// Set the [`LineCap`].
     pub fn set_line_cap(&mut self, line_cap: LineCap) {
         self.line_cap = line_cap;
-    }
-
-    #[deprecated(
-        since = "0.4.0",
-        note = "Use set_dash_offset and set_dash_pattern instead"
-    )]
-    #[doc(hidden)]
-    pub fn set_dash(&mut self, dashes: Vec<f64>, offset: f64) {
-        self.dash_offset = offset;
-        self.dash_pattern.alloc = Some(dashes.into());
     }
 
     /// Set the dash offset.

@@ -477,7 +477,6 @@ impl<'a> CairoRenderContext<'a> {
     }
 }
 
-#[allow(deprecated)]
 fn convert_line_cap(line_cap: LineCap) -> cairo::LineCap {
     match line_cap {
         LineCap::Butt => cairo::LineCap::Butt,
