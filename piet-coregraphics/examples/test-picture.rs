@@ -38,7 +38,7 @@ fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Err
     let w = BufWriter::new(file);
 
     let mut encoder = png::Encoder::new(w, size.width as u32, size.height as u32);
-    encoder.set_color(png::ColorType::RGBA);
+    encoder.set_color(png::ColorType::Rgba);
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header()?;
 

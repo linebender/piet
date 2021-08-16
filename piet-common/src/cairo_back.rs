@@ -183,7 +183,7 @@ impl<'a> BitmapTarget<'a> {
         let image = self.to_image_buf(ImageFormat::RgbaPremul)?;
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
-        encoder.set_color(ColorType::RGBA);
+        encoder.set_color(ColorType::Rgba);
         encoder
             .write_header()
             .map_err(Into::<Box<_>>::into)?
