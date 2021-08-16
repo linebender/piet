@@ -101,7 +101,6 @@ impl<T> WrapError<T> for Result<T, JsValue> {
 }
 
 fn convert_line_cap(line_cap: LineCap) -> &'static str {
-    #[allow(deprecated)]
     match line_cap {
         LineCap::Butt => "butt",
         LineCap::Round => "round",

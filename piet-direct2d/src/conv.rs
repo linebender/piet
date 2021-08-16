@@ -148,7 +148,6 @@ pub(crate) fn gradient_stop_to_d2d(stop: &GradientStop) -> D2D1_GRADIENT_STOP {
     }
 }
 
-#[allow(deprecated)]
 fn convert_line_cap(line_cap: LineCap) -> D2D1_CAP_STYLE {
     match line_cap {
         LineCap::Butt => D2D1_CAP_STYLE_FLAT,

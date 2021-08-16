@@ -351,7 +351,6 @@ impl Attrs<'_> {
                 LineCap::Round => {
                     node.assign("stroke-linecap", "round");
                 }
-                #[allow(deprecated)]
                 LineCap::Square => {
                     node.assign("stroke-linecap", "square");
                 }
