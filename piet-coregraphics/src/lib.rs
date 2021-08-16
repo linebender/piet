@@ -465,7 +465,6 @@ fn convert_line_join(line_join: LineJoin) -> CGLineJoin {
 }
 
 fn convert_line_cap(line_cap: LineCap) -> CGLineCap {
-    #[allow(deprecated)]
     match line_cap {
         LineCap::Butt => CGLineCap::CGLineCapButt,
         LineCap::Round => CGLineCap::CGLineCapRound,

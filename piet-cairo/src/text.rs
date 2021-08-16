@@ -5,7 +5,7 @@ use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 
-use glib::translate::{from_glib_full, ToGlibPtr};
+use glib::translate::from_glib_full;
 
 use pango::prelude::FontMapExt;
 use pango::AttrList;
@@ -510,14 +510,9 @@ impl CairoTextLayout {
             let line = iterator.line_readonly().unwrap();
 
             //FIXME: replace this when pango 0.10.0 lands
-            let (start_offset, end_offset) = unsafe {
-                let raw_line = line.to_glib_none();
-
-                let start_offset = (*raw_line.0).start_index as usize;
-                let length = (*raw_line.0).length as usize;
-
-                (start_offset, start_offset + length)
-            };
+            let start_offset: usize = line.start_index().try_into().unwrap();
+            let length: usize = line.length().try_into().unwrap();
+            let end_offset = start_offset + length;
 
             //Pango likes to give us the line range *without* the newline char(s)
             let end_offset = match self.text.as_bytes()[end_offset..] {
