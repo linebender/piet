@@ -1,6 +1,6 @@
 [package]
 name = "piet-direct2d"
-version = "0.4.1"
+version = "0.5.0-pre1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Direct2D backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"

@@ -48,7 +48,7 @@ piet-coregraphics = { version = "=0.5.0-pre1", path = "../piet-coregraphics" }
 core-graphics = { version = "0.22.2" }
 
 [target.'cfg(target_os="windows")'.dependencies]
-piet-direct2d = { version = "0.4.1", path = "../piet-direct2d" }
+piet-direct2d = { version = "=0.5.0-pre1", path = "../piet-direct2d" }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 piet-web = { version = "=0.5.0-pre1", path = "../piet-web" }
