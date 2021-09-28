@@ -35,7 +35,7 @@ cfg_if::cfg_if! {
      if #[cfg(any(feature = "web", target_arch = "wasm32"))] {
         #[path = "web_back.rs"]
         mod backend;
-    } else if #[cfg(target_os = "linux")] {
+    } else if #[cfg(any(target_os = "linux", target_os = "openbsd"))] {
         #[path = "cairo_back.rs"]
         mod backend;
     } else if #[cfg(target_os = "macos")] {

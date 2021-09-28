@@ -623,7 +623,7 @@ mod test {
     }
 
     #[test]
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "openbsd"))]
     fn test_hit_test_point_complex_1() {
         // this input caused an infinite loop in the binary search when test position
         // > 21.0 && < 28.0
