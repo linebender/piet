@@ -26,6 +26,12 @@ On macOS with Homebrew, the following should work:
 brew install cairo
 ```
 
+On OpenBSD, the library can be installed from official packages:
+```shell
+pkg_add cairo
+```
+A pkg-config file is provided as usual and cairo-rs will build as expected.
+
 TODO: nicer installation instructions (contributions welcome)
 
 [Cairo]: https://www.cairographics.org/
