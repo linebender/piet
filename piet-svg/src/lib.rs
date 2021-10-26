@@ -466,6 +466,7 @@ fn fmt_opacity(color: &Color) -> String {
 }
 
 /// SVG image (unimplemented)
+#[derive(Clone)]
 pub struct SvgImage(());
 
 impl Image for SvgImage {

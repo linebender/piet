@@ -25,7 +25,9 @@ use crate::util::unpremul;
 use crate::{Color, ImageFormat, RenderContext};
 
 /// A trait for a backend's bitmap image type.
-pub trait Image {
+/// 
+/// This is cheaply clonable.
+pub trait Image: Clone {
     /// The size of the image
     fn size(&self) -> Size;
 }

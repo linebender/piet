@@ -66,6 +66,7 @@ pub enum Brush {
     Gradient(CanvasGradient),
 }
 
+#[derive(Clone)]
 pub struct WebImage {
     /// We use a canvas element for now, but could be ImageData or ImageBitmap,
     /// so consider an enum.
