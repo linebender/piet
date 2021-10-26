@@ -114,6 +114,7 @@ pub enum Brush {
 }
 
 /// A core-graphics image
+#[derive(Clone)]
 pub enum CoreGraphicsImage {
     /// Empty images are not supported for core-graphics, so we need a variant here to handle that
     /// case.

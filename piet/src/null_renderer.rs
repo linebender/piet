@@ -22,6 +22,7 @@ pub struct NullRenderContext(NullText);
 #[doc(hidden)]
 pub struct NullBrush;
 #[doc(hidden)]
+#[derive(Clone)]
 pub struct NullImage;
 
 #[derive(Clone)]

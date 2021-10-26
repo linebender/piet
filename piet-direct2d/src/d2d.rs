@@ -114,6 +114,7 @@ pub struct Layer(ComPtr<ID2D1Layer>);
 #[derive(Clone)]
 pub struct Brush(ComPtr<ID2D1Brush>);
 
+#[derive(Clone)]
 pub struct Bitmap {
     inner: ComPtr<ID2D1Bitmap1>,
     pub(crate) empty_image: bool,

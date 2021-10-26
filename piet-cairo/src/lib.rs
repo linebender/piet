@@ -38,6 +38,7 @@ pub enum Brush {
     Radial(cairo::RadialGradient),
 }
 
+#[derive(Clone)]
 pub struct CairoImage(ImageSurface);
 
 // we call this with different types of gradient that have `add_color_stop_rgba` fns,
