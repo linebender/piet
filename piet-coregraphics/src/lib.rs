@@ -87,6 +87,7 @@ impl<'a> CoreGraphicsContext<'a> {
         text: Option<CoreGraphicsText>,
     ) -> CoreGraphicsContext {
         ctx.save();
+        ctx.set_allows_font_smoothing(false);
         if let Some(height) = height {
             let xform = Affine::FLIP_Y * Affine::translate((0.0, -height));
             ctx.concat_ctm(to_cgaffine(xform));
