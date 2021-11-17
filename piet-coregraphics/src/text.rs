@@ -6,7 +6,7 @@ use std::ops::{DerefMut, Range, RangeBounds};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use associative_cache::{AssociativeCache, Capacity1024, HashFourWay, RoundRobinReplacement};
+use associative_cache::{AssociativeCache, Capacity64, HashFourWay, RoundRobinReplacement};
 use core_foundation::base::TCFType;
 use core_foundation::dictionary::{CFDictionary, CFMutableDictionary};
 use core_foundation::number::CFNumber;
@@ -48,17 +48,12 @@ struct SharedTextState {
     inner: Arc<Mutex<TextState>>,
 }
 
+type Cache<K, V> = AssociativeCache<K, V, Capacity64, HashFourWay, RoundRobinReplacement>;
+
 struct TextState {
     collection: FontCollection,
-    family_cache: AssociativeCache<
-        String,
-        Option<FontFamily>,
-        Capacity1024,
-        HashFourWay,
-        RoundRobinReplacement,
-    >,
-    font_cache:
-        AssociativeCache<CoreTextFontKey, CTFont, Capacity1024, HashFourWay, RoundRobinReplacement>,
+    family_cache: Cache<String, Option<FontFamily>>,
+    font_cache: Cache<CoreTextFontKey, CTFont>,
 }
 
 #[derive(Clone)]
