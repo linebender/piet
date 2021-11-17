@@ -1,11 +1,12 @@
 //! Text related stuff for the coregraphics backend
 
-use std::collections::HashMap;
 use std::fmt;
-use std::ops::{Range, RangeBounds};
+use std::hash::{Hash, Hasher};
+use std::ops::{DerefMut, Range, RangeBounds};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use associative_cache::{AssociativeCache, Capacity1024, HashFourWay, RoundRobinReplacement};
 use core_foundation::base::TCFType;
 use core_foundation::dictionary::{CFDictionary, CFMutableDictionary};
 use core_foundation::number::CFNumber;
@@ -49,7 +50,15 @@ struct SharedTextState {
 
 struct TextState {
     collection: FontCollection,
-    family_cache: HashMap<String, Option<FontFamily>>,
+    family_cache: AssociativeCache<
+        String,
+        Option<FontFamily>,
+        Capacity1024,
+        HashFourWay,
+        RoundRobinReplacement,
+    >,
+    font_cache:
+        AssociativeCache<CoreTextFontKey, CTFont, Capacity1024, HashFourWay, RoundRobinReplacement>,
 }
 
 #[derive(Clone)]
@@ -90,6 +99,7 @@ pub struct CoreGraphicsTextLayoutBuilder {
     default_baseline: f64,
     default_line_height: f64,
     attrs: Attributes,
+    shared: SharedTextState,
 }
 
 /// A helper type for storing and resolving attributes
@@ -100,6 +110,113 @@ struct Attributes {
     size: Option<Span<f64>>,
     weight: Option<Span<FontWeight>>,
     style: Option<Span<FontStyle>>,
+}
+
+#[derive(Clone)]
+struct CoreTextFontKey {
+    font: FontFamily,
+    weight: FontWeight,
+    italic: bool,
+    size: f64,
+}
+
+impl PartialEq for CoreTextFontKey {
+    fn eq(&self, other: &CoreTextFontKey) -> bool {
+        self.font == other.font
+            && self.weight == other.weight
+            && self.italic == other.italic
+            && self.size.to_bits() == other.size.to_bits()
+    }
+}
+
+impl Eq for CoreTextFontKey {}
+
+impl Hash for CoreTextFontKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.font.hash(state);
+        self.weight.hash(state);
+        self.italic.hash(state);
+        self.size.to_bits().hash(state);
+    }
+}
+
+impl CoreTextFontKey {
+    fn create_ct_font(&self) -> CTFont {
+        // 'wght' as an int
+        const WEIGHT_AXIS_TAG: i32 = make_opentype_tag("wght") as i32;
+        // taken from android:
+        // https://api.skia.org/classSkFont.html#aa85258b584e9c693d54a8624e0fe1a15
+        const SLANT_TANGENT: f64 = 0.25;
+
+        unsafe {
+            let family_key =
+                CFString::wrap_under_create_rule(font_descriptor::kCTFontFamilyNameAttribute);
+            let family_name = ct_helpers::ct_family_name(&self.font, self.size);
+            let weight_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontWeightTrait);
+            let weight = convert_to_coretext(self.weight);
+
+            let traits_key =
+                CFString::wrap_under_create_rule(font_descriptor::kCTFontTraitsAttribute);
+            let mut traits = CFMutableDictionary::new();
+            traits.set(weight_key, weight.as_CFType());
+            if self.italic {
+                let symbolic_traits_key =
+                    CFString::wrap_under_create_rule(font_descriptor::kCTFontSymbolicTrait);
+                let symbolic_traits = CFNumber::from(font_descriptor::kCTFontItalicTrait as i32);
+                traits.set(symbolic_traits_key, symbolic_traits.as_CFType());
+            }
+
+            let attributes = CFDictionary::from_CFType_pairs(&[
+                (family_key, family_name.as_CFType()),
+                (traits_key, traits.as_CFType()),
+            ]);
+            let descriptor = font_descriptor::new_from_attributes(&attributes);
+            let font = font::new_from_descriptor(&descriptor, self.size);
+
+            let needs_synthetic_ital = self.italic && !font.symbolic_traits().is_italic();
+            let has_var_axes = font.get_variation_axes().is_some();
+
+            if !(needs_synthetic_ital | has_var_axes) {
+                return font;
+            }
+
+            let affine = if needs_synthetic_ital {
+                Affine::new([1.0, 0.0, SLANT_TANGENT, 1.0, 0., 0.])
+            } else {
+                Affine::default()
+            };
+
+            let variation_axes = font
+                .get_variation_axes()
+                .map(|axes| {
+                    axes.iter()
+                        .flat_map(|dict| {
+                            // for debugging, this is how you get the name for the axis
+                            //let name = dict.find(ct_helpers::kCTFontVariationAxisNameKey).and_then(|v| v.downcast::<CFString>());
+                            dict.find(ct_helpers::kCTFontVariationAxisIdentifierKey)
+                                .and_then(|v| v.downcast::<CFNumber>().and_then(|num| num.to_i32()))
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+
+            // only set weight axis if it exists, and we're not a system font (things get weird)
+            let descriptor = if variation_axes.contains(&WEIGHT_AXIS_TAG) && !self.font.is_generic()
+            {
+                let weight_axis_id: CFNumber = WEIGHT_AXIS_TAG.into();
+                let descriptor = font_descriptor::CTFontDescriptorCreateCopyWithVariation(
+                    descriptor.as_concrete_TypeRef(),
+                    weight_axis_id.as_concrete_TypeRef(),
+                    self.weight.to_raw() as _,
+                );
+                font_descriptor::CTFontDescriptor::wrap_under_create_rule(descriptor)
+            } else {
+                descriptor
+            };
+
+            ct_helpers::make_font(&descriptor, self.size, affine)
+        }
+    }
 }
 
 /// during construction, `Span`s represent font attributes that have been applied
@@ -232,88 +349,17 @@ impl CoreGraphicsTextLayoutBuilder {
         self.attrs.next_span_end(max)
     }
 
-    /// returns the fully constructed font object, including weight and size.
+    /// Returns the fully constructed font object, including weight and size.
     ///
     /// This is stateful; it depends on the current attributes being correct
     /// for the range that begins at `self.last_resolved_pos`.
     fn current_font(&self) -> CTFont {
-        //TODO: this is where caching would happen, if we were implementing caching;
-        //store a tuple of attributes resolved to a generated CTFont.
-
-        // 'wght' as an int
-        const WEIGHT_AXIS_TAG: i32 = make_opentype_tag("wght") as i32;
-        // taken from android:
-        // https://api.skia.org/classSkFont.html#aa85258b584e9c693d54a8624e0fe1a15
-        const SLANT_TANGENT: f64 = 0.25;
-
-        unsafe {
-            let family_key =
-                CFString::wrap_under_create_rule(font_descriptor::kCTFontFamilyNameAttribute);
-            let family_name = ct_helpers::ct_family_name(self.attrs.font(), self.attrs.size());
-            let weight_key = CFString::wrap_under_create_rule(font_descriptor::kCTFontWeightTrait);
-            let weight = convert_to_coretext(self.attrs.weight());
-
-            let traits_key =
-                CFString::wrap_under_create_rule(font_descriptor::kCTFontTraitsAttribute);
-            let mut traits = CFMutableDictionary::new();
-            traits.set(weight_key, weight.as_CFType());
-            if self.attrs.italic() {
-                let symbolic_traits_key =
-                    CFString::wrap_under_create_rule(font_descriptor::kCTFontSymbolicTrait);
-                let symbolic_traits = CFNumber::from(font_descriptor::kCTFontItalicTrait as i32);
-                traits.set(symbolic_traits_key, symbolic_traits.as_CFType());
-            }
-
-            let attributes = CFDictionary::from_CFType_pairs(&[
-                (family_key, family_name.as_CFType()),
-                (traits_key, traits.as_CFType()),
-            ]);
-            let descriptor = font_descriptor::new_from_attributes(&attributes);
-            let font = font::new_from_descriptor(&descriptor, self.attrs.size());
-
-            let needs_synthetic_ital = self.attrs.italic() && !font.symbolic_traits().is_italic();
-            let has_var_axes = font.get_variation_axes().is_some();
-
-            if !(needs_synthetic_ital | has_var_axes) {
-                return font;
-            }
-
-            let affine = if needs_synthetic_ital {
-                Affine::new([1.0, 0.0, SLANT_TANGENT, 1.0, 0., 0.])
-            } else {
-                Affine::default()
-            };
-
-            let variation_axes = font
-                .get_variation_axes()
-                .map(|axes| {
-                    axes.iter()
-                        .flat_map(|dict| {
-                            // for debugging, this is how you get the name for the axis
-                            //let name = dict.find(ct_helpers::kCTFontVariationAxisNameKey).and_then(|v| v.downcast::<CFString>());
-                            dict.find(ct_helpers::kCTFontVariationAxisIdentifierKey)
-                                .and_then(|v| v.downcast::<CFNumber>().and_then(|num| num.to_i32()))
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
-
-            // only set weight axis if it exists, and we're not a system font (things get weird)
-            let descriptor =
-                if variation_axes.contains(&WEIGHT_AXIS_TAG) && !self.attrs.font().is_generic() {
-                    let weight_axis_id: CFNumber = WEIGHT_AXIS_TAG.into();
-                    let descriptor = font_descriptor::CTFontDescriptorCreateCopyWithVariation(
-                        descriptor.as_concrete_TypeRef(),
-                        weight_axis_id.as_concrete_TypeRef(),
-                        self.attrs.weight().to_raw() as _,
-                    );
-                    font_descriptor::CTFontDescriptor::wrap_under_create_rule(descriptor)
-                } else {
-                    descriptor
-                };
-
-            ct_helpers::make_font(&descriptor, self.attrs.size(), affine)
-        }
+        self.shared.get_ct_font(&CoreTextFontKey {
+            font: self.attrs.font().to_owned(),
+            weight: self.attrs.weight(),
+            italic: self.attrs.italic(),
+            size: self.attrs.size(),
+        })
     }
 
     /// After we have added a span, check to see if any of our attributes are no
@@ -429,7 +475,8 @@ impl CoreGraphicsText {
         let collection = FontCollection::new_with_all_fonts();
         let inner = Arc::new(Mutex::new(TextState {
             collection,
-            family_cache: HashMap::new(),
+            family_cache: Default::default(),
+            font_cache: Default::default(),
         }));
         CoreGraphicsText {
             shared: SharedTextState { inner },
@@ -448,11 +495,11 @@ impl Text for CoreGraphicsText {
     type TextLayoutBuilder = CoreGraphicsTextLayoutBuilder;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        self.shared.get_font(family_name)
+        self.shared.get_font_family(family_name)
     }
 
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder {
-        CoreGraphicsTextLayoutBuilder::new(text)
+        CoreGraphicsTextLayoutBuilder::new(text, self.shared.clone())
     }
 
     fn load_font(&mut self, data: &[u8]) -> Result<FontFamily, Error> {
@@ -463,29 +510,42 @@ impl Text for CoreGraphicsText {
 }
 
 impl SharedTextState {
-    /// return the family object for this family name, if it exists.
+    /// Return the family object for this family name, if it exists.
     ///
     /// This hits a cache before doing a lookup with the system.
-    fn get_font(&mut self, family_name: &str) -> Option<FontFamily> {
+    fn get_font_family(&self, family_name: &str) -> Option<FontFamily> {
         let mut inner = self.inner.lock().unwrap();
-        match inner.family_cache.get(family_name) {
-            Some(family) => family.clone(),
-            None => {
-                let maybe_family = inner.collection.font_for_family_name(family_name);
-                inner
-                    .family_cache
-                    .insert(family_name.to_owned(), maybe_family.clone());
-                maybe_family
-            }
-        }
+        let obj = inner.deref_mut();
+        let family_cache = &mut obj.family_cache;
+        let collection = &mut obj.collection;
+        family_cache
+            .entry(family_name)
+            .or_insert_with(
+                || family_name.to_owned(),
+                || collection.font_for_family_name(family_name),
+            )
+            .clone()
+    }
+
+    /// Return a CTFont handle for this key (combination of font and the attributes).
+    ///
+    /// This hits a cache before creating the CTFont.
+    fn get_ct_font(&self, key: &CoreTextFontKey) -> CTFont {
+        let mut inner = self.inner.lock().unwrap();
+        inner
+            .font_cache
+            .entry(key)
+            .or_insert_with(|| key.to_owned(), || key.create_ct_font())
+            .clone()
     }
 }
 
 impl CoreGraphicsTextLayoutBuilder {
-    fn new(text: impl TextStorage) -> Self {
+    fn new(text: impl TextStorage, shared: SharedTextState) -> Self {
         let text = Rc::new(text);
         let attr_string = AttributedString::new(text.as_str());
         CoreGraphicsTextLayoutBuilder {
+            shared,
             width: MAX_LAYOUT_CONSTRAINT,
             alignment: TextAlignment::default(),
             attrs: Default::default(),
@@ -997,7 +1057,8 @@ mod tests {
     fn line_offsets() {
         let text = "hi\ni'm\n😀 four\nlines";
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new(text)
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout(text)
             .font(a_font, 16.0)
             .build()
             .unwrap();
@@ -1011,7 +1072,8 @@ mod tests {
     fn metrics() {
         let text = "🤡:\na string\nwith a number \n of lines";
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new(text)
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout(text)
             .font(a_font, 16.0)
             .build()
             .unwrap();
@@ -1040,7 +1102,8 @@ mod tests {
     fn basic_hit_testing() {
         let text = "1\n😀\n8\nA";
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new(text)
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout(text)
             .font(a_font, 16.0)
             .build()
             .unwrap();
@@ -1075,7 +1138,8 @@ mod tests {
     fn hit_test_end_of_single_line() {
         let text = "hello";
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new(text)
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout(text)
             .font(a_font, 16.0)
             .build()
             .unwrap();
@@ -1094,7 +1158,8 @@ mod tests {
     #[test]
     fn hit_test_empty_string() {
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new("")
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout("")
             .font(a_font, 12.0)
             .build()
             .unwrap();
@@ -1111,7 +1176,8 @@ mod tests {
     fn hit_test_text_position() {
         let text = "aaaaa\nbbbbb";
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new(text)
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout(text)
             .font(a_font, 16.0)
             .build()
             .unwrap();
@@ -1128,7 +1194,8 @@ mod tests {
     fn hit_test_text_position_astral_plane() {
         let text = "👾🤠\n🤖🎃👾";
         let a_font = FontFamily::new_unchecked("Helvetica");
-        let layout = CoreGraphicsTextLayoutBuilder::new(text)
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout(text)
             .font(a_font, 16.0)
             .build()
             .unwrap();
@@ -1150,7 +1217,10 @@ mod tests {
 
     #[test]
     fn line_text_empty_string() {
-        let layout = CoreGraphicsTextLayoutBuilder::new("").build().unwrap();
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout("")
+            .build()
+            .unwrap();
         assert_eq!(layout.line_text(0), Some(""));
     }
 
@@ -1159,7 +1229,8 @@ mod tests {
     #[test]
     fn line_test_tabs() {
         let line_text = "a\t\t\t\t\n";
-        let layout = CoreGraphicsTextLayoutBuilder::new(line_text)
+        let layout = CoreGraphicsText::new_with_unique_state()
+            .new_text_layout(line_text)
             .build()
             .unwrap();
         assert_eq!(layout.line_count(), 2);
