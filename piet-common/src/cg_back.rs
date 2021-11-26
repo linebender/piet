@@ -104,6 +104,8 @@ impl<'a> BitmapTarget<'a> {
     }
 
     /// Get an in-memory pixel buffer from the bitmap.
+    ///
+    /// Note: caller is responsible for making sure the requested `ImageFormat` is supported.
     // Clippy complains about a to_xxx method taking &mut self. Semantically speaking, this is not
     // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
     #[allow(clippy::wrong_self_convention)]
@@ -118,6 +120,8 @@ impl<'a> BitmapTarget<'a> {
     /// Get raw RGBA pixels from the bitmap by copying them into `buf`. If all the pixels were
     /// copied, returns the number of bytes written. If `buf` wasn't big enough, returns an error
     /// and doesn't write anything.
+    ///
+    /// Note: caller is responsible for making sure the requested `ImageFormat` is supported.
     pub fn copy_raw_pixels(
         &mut self,
         fmt: ImageFormat,
