@@ -4,13 +4,17 @@
 //! graphics API, in the tradition of [`PostScript`]. It is built on top of
 //! [`kurbo`], a 2D geometry library.
 //!
-//! The main interface is the [`RenderContext`] trait.
+//! The main interface is the [`RenderContext`] trait. Another useful place
+//! to look at if you're getting started would be the `Device` and
+//! `BitmapTarget` documentation on [`piet-common`], to create `RenderContext`
+//! objects and extract rendered pixels from them.
 //!
 //! This API can be implemented on various platforms, allowing drawing code
 //! to be reused in an approximately consistent way. Various such implementations
 //! exist, such as [`piet-cairo`], [`piet-coregraphics`], and [`piet-direct2d`].
 //!
 //! [`PostScript`]: https://en.wikipedia.org/wiki/PostScript
+//! [`piet-common`]: https://docs.rs/piet-common
 //! [`piet-cairo`]: https://crates.io/crates/piet-cairo
 //! [`piet-coregraphics`]: https://crates.io/crates/piet-coregraphics
 //! [`piet-direct2d`]: https://crates.io/crates/piet-direct2d
