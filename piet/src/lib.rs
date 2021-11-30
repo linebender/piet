@@ -4,10 +4,7 @@
 //! graphics API, in the tradition of [`PostScript`]. It is built on top of
 //! [`kurbo`], a 2D geometry library.
 //!
-//! The main interface is the [`RenderContext`] trait. Another useful place
-//! to look at if you're getting started would be the `Device` and
-//! `BitmapTarget` documentation on [`piet-common`], to create `RenderContext`
-//! objects and extract rendered pixels from them.
+//! The main interface is the [`RenderContext`] trait.
 //!
 //! This API can be implemented on various platforms, allowing drawing code
 //! to be reused in an approximately consistent way. Various such implementations
