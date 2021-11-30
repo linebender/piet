@@ -13,6 +13,11 @@
 //! to be reused in an approximately consistent way. Various such implementations
 //! exist, such as [`piet-cairo`], [`piet-coregraphics`], and [`piet-direct2d`].
 //!
+//! If you are interested in using piet to target multiple platforms,
+//! [`piet-common`] is a utility crate that re-exports an appropriate
+//! backend based on the compile target, and provides convenience
+//! types and methods for setting up a [`RenderContext`].
+//!
 //! [`PostScript`]: https://en.wikipedia.org/wiki/PostScript
 //! [`piet-common`]: https://docs.rs/piet-common
 //! [`piet-cairo`]: https://crates.io/crates/piet-cairo
