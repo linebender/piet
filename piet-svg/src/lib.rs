@@ -6,13 +6,12 @@
 
 mod text;
 
-use std::borrow::Cow;
-use std::{io, mem};
+use std::{borrow::Cow, fmt, io, mem};
 
 use piet::kurbo::{Affine, Point, Rect, Shape, Size};
 use piet::{
-    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
-    LineJoin, StrokeStyle,
+    Color, Error, FixedGradient, FontStyle, Image, ImageFormat, InterpolationMode, IntoBrush,
+    LineCap, LineJoin, StrokeStyle, TextAlignment, TextLayout as _,
 };
 use svg::node::Node;
 
@@ -31,12 +30,15 @@ pub struct RenderContext {
 
 impl RenderContext {
     /// Construct an empty `RenderContext`
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new(size: Option<Size>) -> Self {
+        let mut doc = svg::Document::new();
+        if let Some(size) = size {
+            doc = doc.set("viewBox", (0, 0, size.width, size.height));
+        }
         Self {
             stack: Vec::new(),
             state: State::default(),
-            doc: svg::Document::new(),
+            doc,
             next_id: 0,
             text: Text::new(),
         }
@@ -47,6 +49,11 @@ impl RenderContext {
     /// Additional rendering can be done afterwards.
     pub fn write(&self, writer: impl io::Write) -> io::Result<()> {
         svg::write(writer, &self.doc)
+    }
+
+    /// Returns an object that can write the svg somewhere.
+    pub fn display(&self) -> &impl fmt::Display {
+        &self.doc
     }
 
     fn new_id(&mut self) -> Id {
@@ -223,8 +230,61 @@ impl piet::RenderContext for RenderContext {
         &mut self.text
     }
 
-    fn draw_text(&mut self, _layout: &Self::TextLayout, _pos: impl Into<Point>) {
-        unimplemented!()
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
+        let pos = pos.into();
+
+        let color = {
+            let (r, g, b, a) = layout.text_color.as_rgba8();
+            format!("rgba({}, {}, {}, {})", r, g, b, a as f64 / (255. * 0.01))
+        };
+
+        let mut x = pos.x;
+        // SVG doesn't do multiline text, and so doesn't have a concept of text width. We can do
+        // alignment though, using text-anchor.
+        let anchor = match (layout.max_width, layout.alignment) {
+            (width, TextAlignment::End) if width.is_finite() && width > 0. => {
+                x += width;
+                format!("text-anchor:end")
+            }
+            (width, TextAlignment::Center) if width.is_finite() && width > 0. => {
+                x += width * 0.5;
+                format!("text-anchor:middle")
+            }
+            _ => "".into(),
+        };
+
+        let text = svg::node::element::Text::new()
+            .set("x", x)
+            .set("y", pos.y)
+            .set(
+                "style",
+                format!(
+                    "font-size:{}pt;\
+                        font-family:\"{}\";\
+                        font-weight:{};\
+                        font-style:{};\
+                        text-decoration:{};\
+                        fill:{};\
+                        {}",
+                    layout.font_size,
+                    layout.font_family.name(),
+                    layout.font_weight.to_raw(),
+                    match layout.font_style {
+                        FontStyle::Regular => "normal",
+                        FontStyle::Italic => "italic",
+                    },
+                    match (layout.underline, layout.strikethrough) {
+                        (false, false) => "none",
+                        (false, true) => "line-through",
+                        (true, false) => "underline",
+                        (true, true) => "underline line-through",
+                    },
+                    color,
+                    anchor,
+                ),
+            )
+            .add(svg::node::Text::new(layout.text()));
+        self.doc.append(text);
     }
 
     fn save(&mut self) -> Result<()> {

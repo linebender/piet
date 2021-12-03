@@ -10,7 +10,9 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
+font-kit = "0.10.1"
 piet = { version = "=0.5.0", path = "../piet" }
+rustybuzz = "0.4.0"
 svg = "0.10.0"
 
 [dev-dependencies]
