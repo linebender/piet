@@ -345,8 +345,9 @@ impl piet::RenderContext for RenderContext {
         Err(Error::Unimplemented)
     }
 
-    fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
-        unimplemented!()
+    fn blurred_rect(&mut self, rect: Rect, _blur_radius: f64, brush: &impl IntoBrush<Self>) {
+        // TODO blur (perhaps using SVG filters)
+        self.fill(rect, brush)
     }
 }
 

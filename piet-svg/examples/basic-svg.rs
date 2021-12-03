@@ -9,7 +9,7 @@ fn main() {
         .nth(1)
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(0);
-    let mut piet = piet_svg::RenderContext::new();
+    let mut piet = piet_svg::RenderContext::new(None);
     samples::get(test_picture_number)
         .unwrap()
         .draw(&mut piet)
