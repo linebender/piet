@@ -1,7 +1,17 @@
 //! Text functionality for Piet svg backend
 
-use std::{fs, ops::RangeBounds, sync::Arc};
+use std::{
+    collections::HashSet,
+    fs, io,
+    ops::RangeBounds,
+    sync::{Arc, Mutex},
+};
 
+use font_kit::{
+    handle::Handle,
+    source::{Source, SystemSource},
+    sources::{mem::MemSource, multi::MultiSource},
+};
 use piet::kurbo::{Point, Rect, Size};
 use piet::{
     Color, Error, FontFamily, FontStyle, FontWeight, HitTestPoint, HitTestPosition, LineMetric,
@@ -12,13 +22,36 @@ use rustybuzz::{Face, UnicodeBuffer};
 type Result<T> = std::result::Result<T, Error>;
 
 /// SVG text (unimplemented)
-#[derive(Debug, Clone)]
-pub struct Text;
+#[derive(Clone)]
+pub struct Text {
+    source: Arc<Mutex<MultiSource>>,
+    /// Fonts we have seen this frame, and so need to embed in the SVG.
+    ///
+    /// We only include named font families - system defaults like SANS_SERIF are assumed to be
+    /// present on the target system.
+    pub(crate) seen_fonts: Arc<Mutex<HashSet<FontFace>>>,
+}
 
 impl Text {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        Text
+        Text {
+            source: Arc::new(Mutex::new(MultiSource::from_sources(vec![
+                Box::new(SystemSource::new()),
+                Box::new(MemSource::empty()),
+            ]))),
+            seen_fonts: Arc::new(Mutex::new(HashSet::new())),
+        }
+    }
+
+    pub(crate) fn font_data(&self, face: &FontFace) -> Result<Arc<Vec<u8>>> {
+        let handle = self
+            .source
+            .lock()
+            .unwrap()
+            .select_best_match(&[face.to_fk_family()], &face.to_props())
+            .map_err(|_| Error::FontLoadingFailed)?;
+        load_font_data(handle).map_err(|_| Error::FontLoadingFailed)
     }
 }
 
@@ -26,45 +59,64 @@ impl piet::Text for Text {
     type TextLayout = TextLayout;
     type TextLayoutBuilder = TextLayoutBuilder;
 
-    fn font_family(&mut self, _family_name: &str) -> Option<FontFamily> {
-        Some(FontFamily::default())
+    fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
+        use font_kit::{family_name::FamilyName, properties::Properties};
+
+        if let Ok(_) = self
+            .source
+            .lock()
+            .unwrap()
+            .select_best_match(&[FamilyName::Title(family_name.into())], &Properties::new())
+        {
+            Some(FontFamily::new_unchecked(family_name))
+        } else {
+            None
+        }
     }
 
-    fn load_font(&mut self, _data: &[u8]) -> Result<FontFamily> {
-        Ok(FontFamily::default())
+    fn load_font(&mut self, data: &[u8]) -> Result<FontFamily> {
+        let mut multi_source = self.source.lock().unwrap();
+        let source = multi_source
+            .find_source_mut::<MemSource>()
+            .expect("mem source");
+        let font = source
+            .add_font(Handle::Memory {
+                bytes: Arc::new(data.into()),
+                font_index: 0,
+            })
+            .map_err(|_| Error::FontLoadingFailed)?;
+        Ok(FontFamily::new_unchecked(font.family_name()))
     }
 
     fn new_text_layout(&mut self, text: impl TextStorage) -> TextLayoutBuilder {
-        TextLayoutBuilder::new(text)
+        TextLayoutBuilder::new(text, self.clone())
     }
 }
 
 pub struct TextLayoutBuilder {
     text: Arc<dyn TextStorage>,
     alignment: TextAlignment,
-    font_family: FontFamily,
+    font_face: FontFace,
     font_size: f64,
-    font_weight: FontWeight,
-    font_style: FontStyle,
     text_color: Color,
     underline: bool,
     strikethrough: bool,
     max_width: f64,
+    ctx: Text,
 }
 
 impl TextLayoutBuilder {
-    fn new(text: impl TextStorage) -> Self {
+    fn new(text: impl TextStorage, ctx: Text) -> Self {
         Self {
             text: Arc::new(text),
             alignment: TextAlignment::default(),
-            font_family: FontFamily::default(),
             font_size: 12.,
-            font_weight: FontWeight::default(),
-            font_style: FontStyle::default(),
+            font_face: FontFace::default(),
             text_color: Color::BLACK,
             underline: false,
             strikethrough: false,
             max_width: f64::INFINITY,
+            ctx,
         }
     }
 }
@@ -85,11 +137,11 @@ impl piet::TextLayoutBuilder for TextLayoutBuilder {
 
     fn default_attribute(mut self, attribute: impl Into<TextAttribute>) -> Self {
         match attribute.into() {
-            TextAttribute::FontFamily(font) => self.font_family = font,
+            TextAttribute::FontFamily(font) => self.font_face.family = font,
             TextAttribute::FontSize(size) => self.font_size = size,
-            TextAttribute::Weight(weight) => self.font_weight = weight,
+            TextAttribute::Weight(weight) => self.font_face.weight = weight,
             TextAttribute::TextColor(color) => self.text_color = color,
-            TextAttribute::Style(style) => self.font_style = style,
+            TextAttribute::Style(style) => self.font_face.style = style,
             TextAttribute::Underline(underline) => self.underline = underline,
             TextAttribute::Strikethrough(strikethrough) => self.strikethrough = strikethrough,
         }
@@ -122,9 +174,7 @@ pub struct TextLayout {
     pub(crate) max_width: f64,
     pub(crate) alignment: TextAlignment,
     pub(crate) font_size: f64,
-    pub(crate) font_family: FontFamily,
-    pub(crate) font_weight: FontWeight,
-    pub(crate) font_style: FontStyle,
+    pub(crate) font_face: FontFace,
     pub(crate) text_color: Color,
     pub(crate) underline: bool,
     pub(crate) strikethrough: bool,
@@ -138,21 +188,22 @@ impl TextLayout {
     /// will depend on available fonts, conformance of renderer, DPI, etc), but it is the best we
     /// can do.
     fn from_builder(builder: TextLayoutBuilder) -> Result<Self> {
-        let (face_bytes, idx) = load_fontface(
-            &builder.font_family,
-            builder.font_weight,
-            builder.font_style,
-        )?;
-        let mut face = Face::from_slice(&face_bytes, idx).ok_or(Error::FontLoadingFailed)?;
-        let px_per_em = 96. / 72. * builder.font_size;
+        let face_bytes = builder
+            .font_face
+            .load(&mut *builder.ctx.source.lock().unwrap())?;
+        let mut face = Face::from_slice(&face_bytes, 0).ok_or(Error::FontLoadingFailed)?;
+        // number of pixels in a point
+        // I think we're OK to assume 96 DPI, because the actual SVG renderer will scale for HIDPI
+        // displays.
+        const DPI: f64 = 96.;
+        const POINTS_PER_INCH: f64 = 72.;
+        let px_per_em = DPI / POINTS_PER_INCH * builder.font_size;
         let px_per_unit = px_per_em / face.units_per_em() as f64;
         face.set_pixels_per_em(Some((px_per_em as u16, px_per_em as u16)));
-        // number of pixels in a point
-        // 96 = dpi, 72 = points per inch
 
         let mut uni = UnicodeBuffer::new();
 
-        // full text
+        // shape the full text
         uni.push_str(builder.text.as_str());
         let layout = rustybuzz::shape(&face, &[], uni);
         let width = layout
@@ -168,10 +219,8 @@ impl TextLayout {
             text: builder.text,
             max_width: builder.max_width,
             alignment: builder.alignment,
-            font_family: builder.font_family,
+            font_face: builder.font_face,
             font_size: builder.font_size,
-            font_weight: builder.font_weight,
-            font_style: builder.font_style,
             text_color: builder.text_color,
             underline: builder.underline,
             strikethrough: builder.strikethrough,
@@ -235,40 +284,72 @@ impl piet::TextLayout for TextLayout {
     }
 }
 
-/// Returns (face data, idx).
-fn load_fontface(
-    family: &FontFamily,
-    weight: FontWeight,
-    style: FontStyle,
-) -> Result<(Arc<Vec<u8>>, u32)> {
-    use font_kit::{
-        family_name::FamilyName,
-        handle::Handle,
-        properties::{Properties, Style},
-    };
+/// All the info required to indentify a font face. Basically, everythinge except the size.
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
+pub(crate) struct FontFace {
+    pub family: FontFamily,
+    pub weight: FontWeight,
+    pub style: FontStyle,
+}
 
-    let mut props = Properties::new();
-    props.weight.0 = weight.to_raw() as f32;
-    props.style = match style {
-        FontStyle::Regular => Style::Normal,
-        FontStyle::Italic => Style::Italic,
-    };
+impl FontFace {
+    /// Load raw font data for `self`.
+    fn load(&self, source: &impl Source) -> Result<Arc<Vec<u8>>> {
+        load_font_data(self.find_handle(source)?).map_err(|_| Error::FontLoadingFailed)
+    }
 
-    let source = font_kit::source::SystemSource::new();
-    let font_handle = source
-        .select_best_match(
-            &[
-                FamilyName::Title(family.name().to_string()),
-                FamilyName::SansSerif,
-            ],
-            &props,
-        )
-        .map_err(|_| Error::FontLoadingFailed)?;
-    Ok(match font_handle {
-        Handle::Path { path, font_index } => {
-            let bytes = fs::read(path).map_err(|_| Error::FontLoadingFailed)?;
-            (Arc::new(bytes), font_index)
+    fn find_handle(&self, source: &impl Source) -> Result<Handle> {
+        source
+            .select_best_match(&[self.to_fk_family()], &self.to_props())
+            .map_err(|_| Error::FontLoadingFailed)
+    }
+
+    fn to_fk_family(&self) -> font_kit::family_name::FamilyName {
+        use font_kit::family_name::FamilyName;
+        if self.family == FontFamily::SANS_SERIF || self.family == FontFamily::SYSTEM_UI {
+            FamilyName::SansSerif
+        } else if self.family == FontFamily::SERIF {
+            FamilyName::Serif
+        } else if self.family == FontFamily::MONOSPACE {
+            FamilyName::Monospace
+        } else {
+            FamilyName::Title(self.family.name().to_owned())
         }
-        Handle::Memory { bytes, font_index } => (bytes, font_index),
+    }
+
+    fn to_props(&self) -> font_kit::properties::Properties {
+        use font_kit::properties::{Properties, Style};
+
+        let mut props = Properties::new();
+        props.weight.0 = self.weight.to_raw() as f32;
+        props.style = match self.style {
+            FontStyle::Regular => Style::Normal,
+            FontStyle::Italic => Style::Italic,
+        };
+        props
+    }
+}
+
+pub(crate) fn load_font_data(handle: Handle) -> io::Result<Arc<Vec<u8>>> {
+    // Load font data
+    Ok(match handle {
+        Handle::Path { path, font_index } => {
+            if font_index > 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "font collections not supported",
+                ));
+            }
+            Arc::new(fs::read(path)?)
+        }
+        Handle::Memory { bytes, font_index } => {
+            if font_index > 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "font collections not supported",
+                ));
+            }
+            bytes
+        }
     })
 }

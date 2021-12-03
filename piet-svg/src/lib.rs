@@ -6,7 +6,7 @@
 
 mod text;
 
-use std::{borrow::Cow, fmt, io, mem};
+use std::{borrow::Cow, fmt, fmt::Write, io, mem};
 
 use piet::kurbo::{Affine, Point, Rect, Shape, Size};
 use piet::{
@@ -235,12 +235,13 @@ impl piet::RenderContext for RenderContext {
 
         let color = {
             let (r, g, b, a) = layout.text_color.as_rgba8();
-            format!("rgba({}, {}, {}, {})", r, g, b, a as f64 / (255. * 0.01))
+            format!("rgba({}, {}, {}, {})", r, g, b, a as f64 * (100. / 255.))
         };
 
         let mut x = pos.x;
         // SVG doesn't do multiline text, and so doesn't have a concept of text width. We can do
-        // alignment though, using text-anchor.
+        // alignment though, using text-anchor. TODO eventually we should generate a separate text
+        // span for each line (having laid out the multiline text ourselves.
         let anchor = match (layout.max_width, layout.alignment) {
             (width, TextAlignment::End) if width.is_finite() && width > 0. => {
                 x += width;
@@ -253,9 +254,18 @@ impl piet::RenderContext for RenderContext {
             _ => "",
         };
 
+        // If we are using a named font, then mark it for inclusion.
+        if !layout.font_face.family.is_generic() {
+            self.text()
+                .seen_fonts
+                .lock()
+                .unwrap()
+                .insert(layout.font_face.clone());
+        }
+
         let text = svg::node::element::Text::new()
             .set("x", x)
-            .set("y", pos.y)
+            .set("y", pos.y + layout.size().height)
             .set(
                 "style",
                 format!(
@@ -267,9 +277,9 @@ impl piet::RenderContext for RenderContext {
                         fill:{};\
                         {}",
                     layout.font_size,
-                    layout.font_family.name(),
-                    layout.font_weight.to_raw(),
-                    match layout.font_style {
+                    layout.font_face.family.name(),
+                    layout.font_face.weight.to_raw(),
+                    match layout.font_face.style {
                         FontStyle::Regular => "normal",
                         FontStyle::Italic => "italic",
                     },
@@ -299,6 +309,41 @@ impl piet::RenderContext for RenderContext {
     }
 
     fn finish(&mut self) -> Result<()> {
+        let text = (*self.text()).clone();
+        let mut seen_fonts = text.seen_fonts.lock().unwrap();
+        if !seen_fonts.is_empty() {
+            // include fonts
+            let mut style = String::new();
+            for face in &*seen_fonts {
+                if face.family.name().contains('"') {
+                    panic!("font family name contains `\"`");
+                }
+                // TODO convert font to woff2 to save space in svg output, maybe
+                writeln!(
+                    &mut style,
+                    "@font-face {{\n\
+                        font-family: \"{}\";\n\
+                        font-weight: {};\n\
+                        font-style: {};\n\
+                        src: url(\"data:application/x-font-opentype;charset=utf-8;base64,{}\");\n\
+                    }}",
+                    face.family.name(),
+                    face.weight.to_raw(),
+                    match face.style {
+                        FontStyle::Regular => "normal",
+                        FontStyle::Italic => "italic",
+                    },
+                    base64::display::Base64Display::with_config(
+                        &text.font_data(face)?,
+                        base64::STANDARD
+                    ),
+                )
+                .unwrap();
+            }
+            self.doc.append(svg::node::element::Style::new(style));
+        }
+
+        seen_fonts.clear();
         Ok(())
     }
 
