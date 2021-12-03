@@ -244,13 +244,13 @@ impl piet::RenderContext for RenderContext {
         let anchor = match (layout.max_width, layout.alignment) {
             (width, TextAlignment::End) if width.is_finite() && width > 0. => {
                 x += width;
-                format!("text-anchor:end")
+                "text-anchor:end"
             }
             (width, TextAlignment::Center) if width.is_finite() && width > 0. => {
                 x += width * 0.5;
-                format!("text-anchor:middle")
+                "text-anchor:middle"
             }
-            _ => "".into(),
+            _ => "",
         };
 
         let text = svg::node::element::Text::new()
