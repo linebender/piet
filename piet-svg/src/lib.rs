@@ -1,6 +1,4 @@
 //! SVG output support for piet
-//!
-//! Text and images are unimplemented and will always return errors.
 
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
@@ -8,6 +6,7 @@ mod text;
 
 use std::{borrow::Cow, fmt, fmt::Write, io, mem};
 
+use image::{DynamicImage, GenericImageView, ImageBuffer};
 use piet::kurbo::{Affine, Point, Rect, Shape, Size};
 use piet::{
     Color, Error, FixedGradient, FontStyle, Image, ImageFormat, InterpolationMode, IntoBrush,
@@ -357,12 +356,44 @@ impl piet::RenderContext for RenderContext {
 
     fn make_image(
         &mut self,
-        _width: usize,
-        _height: usize,
-        _buf: &[u8],
-        _format: ImageFormat,
+        width: usize,
+        height: usize,
+        buf: &[u8],
+        format: ImageFormat,
     ) -> Result<Self::Image> {
-        Err(Error::NotSupported)
+        Ok(SvgImage(match format {
+            ImageFormat::Grayscale => {
+                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                    .ok_or(Error::InvalidInput)?;
+                DynamicImage::ImageLuma8(image)
+            }
+            ImageFormat::Rgb => {
+                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                    .ok_or(Error::InvalidInput)?;
+                DynamicImage::ImageRgb8(image)
+            }
+            ImageFormat::RgbaSeparate => {
+                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                    .ok_or(Error::InvalidInput)?;
+                DynamicImage::ImageRgba8(image)
+            }
+            ImageFormat::RgbaPremul => {
+                use image::Rgba;
+                use piet::util::unpremul;
+
+                let mut image =
+                    ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf.to_owned())
+                        .ok_or(Error::InvalidInput)?;
+                for px in image.pixels_mut() {
+                    px[0] = unpremul(px[0], px[3]);
+                    px[1] = unpremul(px[1], px[3]);
+                    px[2] = unpremul(px[2], px[3]);
+                }
+                DynamicImage::ImageRgba8(image)
+            }
+            // future-proof
+            _ => return Err(Error::Unimplemented),
+        }))
     }
 
     #[inline]
@@ -397,13 +428,34 @@ impl piet::RenderContext for RenderContext {
 }
 
 fn draw_image(
-    _ctx: &mut RenderContext,
-    _image: &<RenderContext as piet::RenderContext>::Image,
+    ctx: &mut RenderContext,
+    image: &<RenderContext as piet::RenderContext>::Image,
     _src_rect: Option<Rect>,
-    _dst_rect: Rect,
+    dst_rect: Rect,
     _interp: InterpolationMode,
 ) {
-    unimplemented!()
+    use base64::write::EncoderStringWriter;
+    use image::ImageOutputFormat;
+
+    let mut writer = EncoderStringWriter::new(base64::STANDARD);
+    image
+        .0
+        .write_to(&mut writer, ImageOutputFormat::Png)
+        .unwrap();
+
+    // TODO when src_rect.is_some()
+    // TODO maybe we could use css 'image-rendering' to control interpolation?
+    let node = svg::node::element::Image::new()
+        .set("x", dst_rect.x0)
+        .set("y", dst_rect.y0)
+        .set("width", dst_rect.x1 - dst_rect.x0)
+        .set("height", dst_rect.y1 - dst_rect.y0)
+        .set(
+            "href",
+            format!("data:image/png;base64,{}", writer.into_inner()),
+        );
+
+    ctx.doc.append(node);
 }
 
 #[derive(Default)]
@@ -571,13 +623,16 @@ fn fmt_opacity(color: &Color) -> String {
     format!("{}", color.as_rgba().3)
 }
 
-/// SVG image (unimplemented)
 #[derive(Clone)]
-pub struct SvgImage(());
+pub struct SvgImage(image::DynamicImage);
 
 impl Image for SvgImage {
     fn size(&self) -> Size {
-        todo!()
+        let (width, height) = self.0.dimensions();
+        Size {
+            width: width as _,
+            height: height as _,
+        }
     }
 }
 

@@ -62,11 +62,12 @@ impl piet::Text for Text {
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
         use font_kit::{family_name::FamilyName, properties::Properties};
 
-        if let Ok(_) = self
+        if self
             .source
             .lock()
             .unwrap()
             .select_best_match(&[FamilyName::Title(family_name.into())], &Properties::new())
+            .is_ok()
         {
             Some(FontFamily::new_unchecked(family_name))
         } else {
@@ -190,7 +191,7 @@ impl TextLayout {
     fn from_builder(builder: TextLayoutBuilder) -> Result<Self> {
         let face_bytes = builder
             .font_face
-            .load(&mut *builder.ctx.source.lock().unwrap())?;
+            .load(&*builder.ctx.source.lock().unwrap())?;
         let mut face = Face::from_slice(&face_bytes, 0).ok_or(Error::FontLoadingFailed)?;
         // number of pixels in a point
         // I think we're OK to assume 96 DPI, because the actual SVG renderer will scale for HIDPI
