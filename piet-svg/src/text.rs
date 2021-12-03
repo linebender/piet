@@ -129,7 +129,6 @@ pub struct TextLayout {
     pub(crate) underline: bool,
     pub(crate) strikethrough: bool,
     size: Size,
-    face: (Arc<Vec<u8>>, u32),
 }
 
 impl TextLayout {
@@ -176,7 +175,6 @@ impl TextLayout {
             text_color: builder.text_color,
             underline: builder.underline,
             strikethrough: builder.strikethrough,
-            face: (face_bytes, idx),
             size,
         })
     }
