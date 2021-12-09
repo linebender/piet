@@ -2,6 +2,8 @@
 
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
+#[cfg(feature = "evcxr")]
+mod evcxr;
 mod text;
 
 use std::{borrow::Cow, fmt, fmt::Write, io, mem};
@@ -15,11 +17,17 @@ use piet::{
 use svg::node::Node;
 
 pub use crate::text::{Text, TextLayout};
+// re-export piet
+pub use piet;
+
+#[cfg(feature = "evcxr")]
+pub use evcxr::draw_evcxr;
 
 type Result<T> = std::result::Result<T, Error>;
 
 /// `piet::RenderContext` for generating SVG images
 pub struct RenderContext {
+    size: Option<Size>,
     stack: Vec<State>,
     state: State,
     doc: svg::Document,
@@ -29,18 +37,27 @@ pub struct RenderContext {
 
 impl RenderContext {
     /// Construct an empty `RenderContext`
-    pub fn new(size: Option<Size>) -> Self {
-        let mut doc = svg::Document::new();
-        if let Some(size) = size {
-            doc = doc.set("viewBox", (0, 0, size.width, size.height));
-        }
+    pub fn new() -> Self {
         Self {
+            size: None,
             stack: Vec::new(),
             state: State::default(),
-            doc,
+            doc: svg::Document::new(),
             next_id: 0,
             text: Text::new(),
         }
+    }
+
+    /// Set the size that the SVG should render to
+    pub fn set_size(&mut self, size: Size) {
+        self.size = Some(size);
+    }
+
+    /// If a specific sized svg was requested, return that `Size`.
+    ///
+    /// The size is used to set the view box for the svg.
+    pub fn size(&self) -> Option<Size> {
+        self.size
     }
 
     /// Write graphics rendered so far to an `std::io::Write` impl, such as `std::fs::File`
@@ -254,15 +271,13 @@ impl piet::RenderContext for RenderContext {
         };
 
         // If we are using a named font, then mark it for inclusion.
-        if !layout.font_face.family.is_generic() {
-            self.text()
-                .seen_fonts
-                .lock()
-                .unwrap()
-                .insert(layout.font_face.clone());
-        }
+        self.text()
+            .seen_fonts
+            .lock()
+            .unwrap()
+            .insert(layout.font_face.clone());
 
-        let text = svg::node::element::Text::new()
+        let mut text = svg::node::element::Text::new()
             .set("x", x)
             .set("y", pos.y + layout.size().height)
             .set(
@@ -293,6 +308,14 @@ impl piet::RenderContext for RenderContext {
                 ),
             )
             .add(svg::node::Text::new(layout.text()));
+
+        let affine = self.current_transform();
+        if affine != Affine::IDENTITY {
+            text.assign("transform", xf_val(&affine));
+        }
+        if let Some(id) = self.state.clip {
+            text.assign("clip-path", format!("url(#{})", id.to_string()));
+        }
         self.doc.append(text);
     }
 
@@ -308,6 +331,14 @@ impl piet::RenderContext for RenderContext {
     }
 
     fn finish(&mut self) -> Result<()> {
+        if let Some(size) = self.size {
+            self.doc.assign("viewBox", (0, 0, size.width, size.height));
+            self.doc.assign(
+                "style",
+                format!("width:{}px;height:{}px;", size.width, size.height),
+            );
+        }
+
         let text = (*self.text()).clone();
         let mut seen_fonts = text.seen_fonts.lock().unwrap();
         if !seen_fonts.is_empty() {
