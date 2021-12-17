@@ -390,17 +390,6 @@ enum FailureReason {
     },
 }
 
-#[derive(Debug, Clone)]
-struct ComparisonError {
-    number: usize,
-    reason: FailureReason,
-}
-
-#[derive(Debug, Clone)]
-struct SnapshotError {
-    failures: Vec<ComparisonError>,
-}
-
 impl std::fmt::Display for FailureReason {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
