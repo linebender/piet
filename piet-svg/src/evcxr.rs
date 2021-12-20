@@ -1,3 +1,11 @@
+//! Helpers to make the SVG output of `piet-svg` easier to use from within `evcxr_jupyter`.
+//!
+//! [`evcxr`] is a Rust REPL. It also provides a Rust kernel for the [Jupyter Notebook] through
+//! `evcxr_jupyter`.
+//!
+//! [`evcxr`]: https://github.com/google/evcxr
+//! [Jupyter Notebook]: https://jupyter-notebook.readthedocs.io/en/stable/notebook.html
+
 use piet::RenderContext;
 
 impl evcxr_runtime::Display for crate::RenderContext {
