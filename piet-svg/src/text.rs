@@ -242,7 +242,7 @@ impl piet::TextLayout for TextLayout {
     }
 
     fn image_bounds(&self) -> Rect {
-        Rect::from((Point::from((0., 0.)), self.size()))
+        self.size().to_rect()
     }
 
     fn line_text(&self, line_number: usize) -> Option<&str> {
