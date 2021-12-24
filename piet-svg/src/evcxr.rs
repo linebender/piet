@@ -6,7 +6,7 @@
 //! [`evcxr`]: https://github.com/google/evcxr
 //! [Jupyter Notebook]: https://jupyter-notebook.readthedocs.io/en/stable/notebook.html
 
-use piet::RenderContext;
+use piet::{kurbo::Size, RenderContext};
 
 impl evcxr_runtime::Display for crate::RenderContext {
     fn evcxr_display(&self) {
@@ -20,8 +20,11 @@ impl evcxr_runtime::Display for crate::RenderContext {
 /// Runs the function `f`, and displays the resulting `SVG`.
 ///
 /// For use within `evcxr_jupyter`.
-pub fn draw_evcxr(f: impl FnOnce(&mut crate::RenderContext)) -> impl evcxr_runtime::Display {
-    let mut ctx = crate::RenderContext::new();
+pub fn draw_evcxr(
+    size: Size,
+    f: impl FnOnce(&mut crate::RenderContext),
+) -> impl evcxr_runtime::Display {
+    let mut ctx = crate::RenderContext::new(size);
     f(&mut ctx);
     ctx.finish().unwrap();
     ctx

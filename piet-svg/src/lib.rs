@@ -27,7 +27,7 @@ type Result<T> = std::result::Result<T, Error>;
 
 /// `piet::RenderContext` for generating SVG images
 pub struct RenderContext {
-    size: Option<Size>,
+    size: Size,
     stack: Vec<State>,
     state: State,
     doc: svg::Document,
@@ -37,9 +37,9 @@ pub struct RenderContext {
 
 impl RenderContext {
     /// Construct an empty `RenderContext`
-    pub fn new() -> Self {
+    pub fn new(size: Size) -> Self {
         Self {
-            size: None,
+            size,
             stack: Vec::new(),
             state: State::default(),
             doc: svg::Document::new(),
@@ -48,15 +48,10 @@ impl RenderContext {
         }
     }
 
-    /// Set the size that the SVG should render to
-    pub fn set_size(&mut self, size: Size) {
-        self.size = Some(size);
-    }
-
-    /// If a specific sized svg was requested, return that `Size`.
+    /// The size that the SVG will render at.
     ///
     /// The size is used to set the view box for the svg.
-    pub fn size(&self) -> Option<Size> {
+    pub fn size(&self) -> Size {
         self.size
     }
 
@@ -331,13 +326,12 @@ impl piet::RenderContext for RenderContext {
     }
 
     fn finish(&mut self) -> Result<()> {
-        if let Some(size) = self.size {
-            self.doc.assign("viewBox", (0, 0, size.width, size.height));
-            self.doc.assign(
-                "style",
-                format!("width:{}px;height:{}px;", size.width, size.height),
-            );
-        }
+        self.doc
+            .assign("viewBox", (0, 0, self.size.width, self.size.height));
+        self.doc.assign(
+            "style",
+            format!("width:{}px;height:{}px;", self.size.width, self.size.height),
+        );
 
         let text = (*self.text()).clone();
         let mut seen_fonts = text.seen_fonts.lock().unwrap();
