@@ -43,7 +43,7 @@ piet-cairo = { version = "=0.5.0", path = "../piet-cairo" }
 cairo-rs = { version = "0.14.0", default_features = false }
 cairo-sys-rs = { version = "0.14.0" }
 
-[target.'cfg(target_os="macos")'.dependencies]
+[target.'cfg(any(target_os="macos", target_os="ios"))'.dependencies]
 piet-coregraphics = { version = "=0.5.0", path = "../piet-coregraphics" }
 core-graphics = { version = "0.22.2" }
 

@@ -38,7 +38,7 @@ cfg_if::cfg_if! {
     } else if #[cfg(any(target_os = "linux", target_os = "openbsd"))] {
         #[path = "cairo_back.rs"]
         mod backend;
-    } else if #[cfg(target_os = "macos")] {
+    } else if #[cfg(any(target_os = "macos", target_os = "ios"))] {
         #[path = "cg_back.rs"]
         mod backend;
     } else if #[cfg(target_os = "windows")] {
