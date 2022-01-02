@@ -1,27 +1,33 @@
 //! SVG output support for piet
-//!
-//! Text and images are unimplemented and will always return errors.
 
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
+#[cfg(feature = "evcxr")]
+mod evcxr;
 mod text;
 
-use std::borrow::Cow;
-use std::{io, mem};
+use std::{borrow::Cow, fmt, fmt::Write, io, mem};
 
+use image::{DynamicImage, GenericImageView, ImageBuffer};
 use piet::kurbo::{Affine, Point, Rect, Shape, Size};
 use piet::{
-    Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
-    LineJoin, StrokeStyle,
+    Color, Error, FixedGradient, FontStyle, Image, ImageFormat, InterpolationMode, IntoBrush,
+    LineCap, LineJoin, StrokeStyle, TextAlignment, TextLayout as _,
 };
 use svg::node::Node;
 
 pub use crate::text::{Text, TextLayout};
+// re-export piet
+pub use piet;
+
+#[cfg(feature = "evcxr")]
+pub use evcxr::draw_evcxr;
 
 type Result<T> = std::result::Result<T, Error>;
 
 /// `piet::RenderContext` for generating SVG images
 pub struct RenderContext {
+    size: Size,
     stack: Vec<State>,
     state: State,
     doc: svg::Document,
@@ -31,9 +37,9 @@ pub struct RenderContext {
 
 impl RenderContext {
     /// Construct an empty `RenderContext`
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new(size: Size) -> Self {
         Self {
+            size,
             stack: Vec::new(),
             state: State::default(),
             doc: svg::Document::new(),
@@ -42,11 +48,23 @@ impl RenderContext {
         }
     }
 
+    /// The size that the SVG will render at.
+    ///
+    /// The size is used to set the view box for the svg.
+    pub fn size(&self) -> Size {
+        self.size
+    }
+
     /// Write graphics rendered so far to an `std::io::Write` impl, such as `std::fs::File`
     ///
     /// Additional rendering can be done afterwards.
     pub fn write(&self, writer: impl io::Write) -> io::Result<()> {
         svg::write(writer, &self.doc)
+    }
+
+    /// Returns an object that can write the svg somewhere.
+    pub fn display(&self) -> &impl fmt::Display {
+        &self.doc
     }
 
     fn new_id(&mut self) -> Id {
@@ -223,8 +241,77 @@ impl piet::RenderContext for RenderContext {
         &mut self.text
     }
 
-    fn draw_text(&mut self, _layout: &Self::TextLayout, _pos: impl Into<Point>) {
-        unimplemented!()
+    fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
+        let pos = pos.into();
+
+        let color = {
+            let (r, g, b, a) = layout.text_color.as_rgba8();
+            format!("rgba({}, {}, {}, {})", r, g, b, a as f64 * (100. / 255.))
+        };
+
+        let mut x = pos.x;
+        // SVG doesn't do multiline text, and so doesn't have a concept of text width. We can do
+        // alignment though, using text-anchor. TODO eventually we should generate a separate text
+        // span for each line (having laid out the multiline text ourselves.
+        let anchor = match (layout.max_width, layout.alignment) {
+            (width, TextAlignment::End) if width.is_finite() && width > 0. => {
+                x += width;
+                "text-anchor:end"
+            }
+            (width, TextAlignment::Center) if width.is_finite() && width > 0. => {
+                x += width * 0.5;
+                "text-anchor:middle"
+            }
+            _ => "",
+        };
+
+        // If we are using a named font, then mark it for inclusion.
+        self.text()
+            .seen_fonts
+            .lock()
+            .unwrap()
+            .insert(layout.font_face.clone());
+
+        let mut text = svg::node::element::Text::new()
+            .set("x", x)
+            .set("y", pos.y + layout.size().height)
+            .set(
+                "style",
+                format!(
+                    "font-size:{}pt;\
+                        font-family:\"{}\";\
+                        font-weight:{};\
+                        font-style:{};\
+                        text-decoration:{};\
+                        fill:{};\
+                        {}",
+                    layout.font_size,
+                    layout.font_face.family.name(),
+                    layout.font_face.weight.to_raw(),
+                    match layout.font_face.style {
+                        FontStyle::Regular => "normal",
+                        FontStyle::Italic => "italic",
+                    },
+                    match (layout.underline, layout.strikethrough) {
+                        (false, false) => "none",
+                        (false, true) => "line-through",
+                        (true, false) => "underline",
+                        (true, true) => "underline line-through",
+                    },
+                    color,
+                    anchor,
+                ),
+            )
+            .add(svg::node::Text::new(layout.text()));
+
+        let affine = self.current_transform();
+        if affine != Affine::IDENTITY {
+            text.assign("transform", xf_val(&affine));
+        }
+        if let Some(id) = self.state.clip {
+            text.assign("clip-path", format!("url(#{})", id.to_string()));
+        }
+        self.doc.append(text);
     }
 
     fn save(&mut self) -> Result<()> {
@@ -239,6 +326,48 @@ impl piet::RenderContext for RenderContext {
     }
 
     fn finish(&mut self) -> Result<()> {
+        self.doc
+            .assign("viewBox", (0, 0, self.size.width, self.size.height));
+        self.doc.assign(
+            "style",
+            format!("width:{}px;height:{}px;", self.size.width, self.size.height),
+        );
+
+        let text = (*self.text()).clone();
+        let mut seen_fonts = text.seen_fonts.lock().unwrap();
+        if !seen_fonts.is_empty() {
+            // include fonts
+            let mut style = String::new();
+            for face in &*seen_fonts {
+                if face.family.name().contains('"') {
+                    panic!("font family name contains `\"`");
+                }
+                // TODO convert font to woff2 to save space in svg output, maybe
+                writeln!(
+                    &mut style,
+                    "@font-face {{\n\
+                        font-family: \"{}\";\n\
+                        font-weight: {};\n\
+                        font-style: {};\n\
+                        src: url(\"data:application/x-font-opentype;charset=utf-8;base64,{}\");\n\
+                    }}",
+                    face.family.name(),
+                    face.weight.to_raw(),
+                    match face.style {
+                        FontStyle::Regular => "normal",
+                        FontStyle::Italic => "italic",
+                    },
+                    base64::display::Base64Display::with_config(
+                        &text.font_data(face)?,
+                        base64::STANDARD
+                    ),
+                )
+                .unwrap();
+            }
+            self.doc.append(svg::node::element::Style::new(style));
+        }
+
+        seen_fonts.clear();
         Ok(())
     }
 
@@ -252,12 +381,44 @@ impl piet::RenderContext for RenderContext {
 
     fn make_image(
         &mut self,
-        _width: usize,
-        _height: usize,
-        _buf: &[u8],
-        _format: ImageFormat,
+        width: usize,
+        height: usize,
+        buf: &[u8],
+        format: ImageFormat,
     ) -> Result<Self::Image> {
-        Err(Error::NotSupported)
+        Ok(SvgImage(match format {
+            ImageFormat::Grayscale => {
+                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                    .ok_or(Error::InvalidInput)?;
+                DynamicImage::ImageLuma8(image)
+            }
+            ImageFormat::Rgb => {
+                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                    .ok_or(Error::InvalidInput)?;
+                DynamicImage::ImageRgb8(image)
+            }
+            ImageFormat::RgbaSeparate => {
+                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                    .ok_or(Error::InvalidInput)?;
+                DynamicImage::ImageRgba8(image)
+            }
+            ImageFormat::RgbaPremul => {
+                use image::Rgba;
+                use piet::util::unpremul;
+
+                let mut image =
+                    ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf.to_owned())
+                        .ok_or(Error::InvalidInput)?;
+                for px in image.pixels_mut() {
+                    px[0] = unpremul(px[0], px[3]);
+                    px[1] = unpremul(px[1], px[3]);
+                    px[2] = unpremul(px[2], px[3]);
+                }
+                DynamicImage::ImageRgba8(image)
+            }
+            // future-proof
+            _ => return Err(Error::Unimplemented),
+        }))
     }
 
     #[inline]
@@ -285,19 +446,41 @@ impl piet::RenderContext for RenderContext {
         Err(Error::Unimplemented)
     }
 
-    fn blurred_rect(&mut self, _rect: Rect, _blur_radius: f64, _brush: &impl IntoBrush<Self>) {
-        unimplemented!()
+    fn blurred_rect(&mut self, rect: Rect, _blur_radius: f64, brush: &impl IntoBrush<Self>) {
+        // TODO blur (perhaps using SVG filters)
+        self.fill(rect, brush)
     }
 }
 
 fn draw_image(
-    _ctx: &mut RenderContext,
-    _image: &<RenderContext as piet::RenderContext>::Image,
+    ctx: &mut RenderContext,
+    image: &<RenderContext as piet::RenderContext>::Image,
     _src_rect: Option<Rect>,
-    _dst_rect: Rect,
+    dst_rect: Rect,
     _interp: InterpolationMode,
 ) {
-    unimplemented!()
+    use base64::write::EncoderStringWriter;
+    use image::ImageOutputFormat;
+
+    let mut writer = EncoderStringWriter::new(base64::STANDARD);
+    image
+        .0
+        .write_to(&mut writer, ImageOutputFormat::Png)
+        .unwrap();
+
+    // TODO when src_rect.is_some()
+    // TODO maybe we could use css 'image-rendering' to control interpolation?
+    let node = svg::node::element::Image::new()
+        .set("x", dst_rect.x0)
+        .set("y", dst_rect.y0)
+        .set("width", dst_rect.x1 - dst_rect.x0)
+        .set("height", dst_rect.y1 - dst_rect.y0)
+        .set(
+            "href",
+            format!("data:image/png;base64,{}", writer.into_inner()),
+        );
+
+    ctx.doc.append(node);
 }
 
 #[derive(Default)]
@@ -465,13 +648,16 @@ fn fmt_opacity(color: &Color) -> String {
     format!("{}", color.as_rgba().3)
 }
 
-/// SVG image (unimplemented)
 #[derive(Clone)]
-pub struct SvgImage(());
+pub struct SvgImage(image::DynamicImage);
 
 impl Image for SvgImage {
     fn size(&self) -> Size {
-        todo!()
+        let (width, height) = self.0.dimensions();
+        Size {
+            width: width as _,
+            height: height as _,
+        }
     }
 }
 
