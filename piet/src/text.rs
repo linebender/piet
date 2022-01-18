@@ -141,6 +141,7 @@ impl std::ops::Deref for dyn TextStorage {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 /// Attributes that can be applied to text.
 pub enum TextAttribute {
     /// The font family.
