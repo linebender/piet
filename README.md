@@ -1,4 +1,5 @@
-![image of piet logo](./misc/piet logo.png)
+![image of piet logo](/misc/piet logo.png)
+
 # Piet: a 2D graphics abstraction
 [![Crates.io](https://img.shields.io/crates/v/piet)](https://crates.io/crates/piet)
 [![Documentation](https://docs.rs/piet/badge.svg)](https://docs.rs/piet)
