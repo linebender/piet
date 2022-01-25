@@ -2,11 +2,9 @@
 
 //! core graphics gradient support
 
-use core_foundation::array::CFArray;
 use core_graphics::{
     base::CGFloat,
-    color::CGColor,
-    color_space::{kCGColorSpaceSRGB, CGColorSpace},
+    color_space::CGColorSpace,
     context::CGContextRef,
     geometry::CGPoint,
     gradient::{CGGradient, CGGradientDrawingOptions},
@@ -63,21 +61,16 @@ impl Gradient {
 }
 
 fn new_cg_gradient(stops: &[GradientStop]) -> CGGradient {
-    unsafe {
-        //FIXME: is this expensive enough we should be reusing it?
-        let space = CGColorSpace::create_with_name(kCGColorSpaceSRGB).unwrap();
-        let mut colors = Vec::<CGColor>::new();
-        let mut locations = Vec::<CGFloat>::new();
-        for GradientStop { pos, color } in stops {
-            let (r, g, b, a) = Color::as_rgba(color);
-            let color = CGColor::rgb(r, g, b, a);
-            colors.push(color);
-            locations.push(*pos as CGFloat);
-        }
-
-        let colors = CFArray::from_CFTypes(&colors);
-        CGGradient::create_with_colors(&space, &colors, &locations)
+    //FIXME: is this expensive enough we should be reusing it?
+    let space = CGColorSpace::create_device_rgb();
+    let mut components = Vec::<CGFloat>::new();
+    let mut locations = Vec::<CGFloat>::new();
+    for GradientStop { pos, color } in stops {
+        let (r, g, b, a) = Color::as_rgba(color);
+        components.extend_from_slice(&[r, g, b, a]);
+        locations.push(*pos as CGFloat);
     }
+    CGGradient::create_with_color_components(&space, &components, &locations, locations.len())
 }
 
 fn to_cgpoint(point: Point) -> CGPoint {
