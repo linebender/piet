@@ -15,7 +15,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let text = rc.text();
     let _ = text.load_font(include_bytes!(
         "../../snapshots/resources/Anaheim-Regular.ttf"
-    ));
+    )); // SEEING AN ERROR? run `git submodule update --init`
     let font = text
         .load_font(include_bytes!("../../snapshots/resources/Anaheim-Bold.ttf"))
         .unwrap_or(FontFamily::SYSTEM_UI);
