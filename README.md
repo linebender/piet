@@ -17,6 +17,15 @@ the basis of [Druid], a cross-platform GUI toolkit.
 
 A companion for Bézier path representation and geometry is [kurbo].
 
+## Getting started
+
+Running the examples requires that submodules be checked out. From the root
+directory, run
+
+```sh
+git submodule update --init
+```
+
 ## Backends
 
 *For cross-platform use, the [`piet-common`][] crate reexports the most
