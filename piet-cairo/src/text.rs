@@ -5,11 +5,8 @@ use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 
-use glib::translate::from_glib_full;
-
 use pango::prelude::FontMapExt;
-use pango::AttrList;
-use pango_sys::pango_attr_insert_hyphens_new;
+use pango::{AttrColor, AttrInt, AttrList, AttrSize, AttrString};
 use pangocairo::FontMap;
 
 use piet::kurbo::{Point, Rect, Size, Vec2};
@@ -64,19 +61,19 @@ struct AttributeWithRange {
 
 impl AttributeWithRange {
     fn into_pango(self) -> PangoAttribute {
-        let mut pango_attribute = match &self.attribute {
+        let mut pango_attribute: PangoAttribute = match &self.attribute {
             TextAttribute::FontFamily(family) => {
                 let family = family.name();
                 /*
                  * NOTE: If the family fails to resolve we just don't apply the attribute.
                  * That allows Pango to use its default font of choice to render that text
                  */
-                PangoAttribute::new_family(family)
+                AttrString::new_family(family).into()
             }
 
             TextAttribute::FontSize(size) => {
                 let size = (size * PANGO_SCALE) as i32;
-                PangoAttribute::new_size_absolute(size)
+                AttrSize::new_size_absolute(size).into()
             }
 
             TextAttribute::Weight(weight) => {
@@ -107,16 +104,17 @@ impl AttributeWithRange {
                     }
                 }
 
-                PangoAttribute::new_weight(pango_weights[closest_index].1)
+                AttrInt::new_weight(pango_weights[closest_index].1).into()
             }
 
             TextAttribute::TextColor(text_color) => {
                 let (r, g, b, _) = text_color.as_rgba8();
-                PangoAttribute::new_foreground(
+                AttrColor::new_foreground(
                     (r as u16 * 256) + (r as u16),
                     (g as u16 * 256) + (g as u16),
                     (b as u16 * 256) + (b as u16),
                 )
+                .into()
             }
 
             TextAttribute::Style(style) => {
@@ -124,7 +122,7 @@ impl AttributeWithRange {
                     FontStyle::Regular => PangoStyle::Normal,
                     FontStyle::Italic => PangoStyle::Italic,
                 };
-                PangoAttribute::new_style(style)
+                AttrInt::new_style(style).into()
             }
 
             &TextAttribute::Underline(underline) => {
@@ -133,11 +131,11 @@ impl AttributeWithRange {
                 } else {
                     PangoUnderline::None
                 };
-                PangoAttribute::new_underline(underline)
+                AttrInt::new_underline(underline).into()
             }
 
             &TextAttribute::Strikethrough(strikethrough) => {
-                PangoAttribute::new_strikethrough(strikethrough)
+                AttrInt::new_strikethrough(strikethrough).into()
             }
         };
 
@@ -279,10 +277,7 @@ impl TextLayoutBuilder for CairoTextLayoutBuilder {
     fn build(self) -> Result<Self::Out, Error> {
         let pango_attributes = AttrList::new();
 
-        if let Some(attr) = unsafe { from_glib_full(pango_attr_insert_hyphens_new(0)) } {
-            pango_attributes.insert(attr);
-        }
-
+        pango_attributes.insert(pango::AttrInt::new_insert_hyphens(false));
         pango_attributes.insert(
             AttributeWithRange {
                 attribute: TextAttribute::FontFamily(self.defaults.font),
@@ -470,14 +465,14 @@ impl TextLayout for CairoTextLayout {
 
         let pos_rect = self.pango_layout.index_to_pos(idx as i32);
         let x = if hack_around_eol {
-            pos_rect.x + pos_rect.width
+            pos_rect.x() + pos_rect.width()
         } else {
-            pos_rect.x
+            pos_rect.x()
         };
 
         let point = Point::new(
             (x as f64 / PANGO_SCALE) - self.pango_offset.x,
-            (pos_rect.y as f64 / PANGO_SCALE) + metric.baseline - self.pango_offset.y,
+            (pos_rect.y() as f64 / PANGO_SCALE) + metric.baseline - self.pango_offset.y,
         );
 
         HitTestPosition::new(point, line_number)
@@ -522,8 +517,8 @@ impl CairoTextLayout {
             };
 
             let logical_rect = iterator.line_extents().1;
-            if logical_rect.width > widest_logical_width {
-                widest_logical_width = logical_rect.width;
+            if logical_rect.width() > widest_logical_width {
+                widest_logical_width = logical_rect.width();
             }
 
             let line_text = &self.text[start_offset..end_offset];
@@ -535,20 +530,20 @@ impl CairoTextLayout {
                 //FIXME: this probably isn't correct for RTL
                 line.index_to_x((start_offset + trimmed_len) as i32, false)
             } else {
-                logical_rect.width
+                logical_rect.width()
             };
             widest_whitespaceless_width = widest_whitespaceless_width.max(non_ws_width);
 
-            x_offsets.push(logical_rect.x);
+            x_offsets.push(logical_rect.x());
             line_metrics.push(LineMetric {
                 start_offset,
                 end_offset,
                 trailing_whitespace,
                 baseline: (iterator.baseline() as f64 / PANGO_SCALE) - y_offset,
-                height: logical_rect.height as f64 / PANGO_SCALE,
+                height: logical_rect.height() as f64 / PANGO_SCALE,
                 y_offset,
             });
-            y_offset += logical_rect.height as f64 / PANGO_SCALE;
+            y_offset += logical_rect.height() as f64 / PANGO_SCALE;
 
             if !iterator.next_line() {
                 break;
@@ -576,8 +571,11 @@ impl CairoTextLayout {
 
 fn to_kurbo_rect(r: pango::Rectangle) -> Rect {
     Rect::from_origin_size(
-        (r.x as f64 / PANGO_SCALE, r.y as f64 / PANGO_SCALE),
-        (r.width as f64 / PANGO_SCALE, r.height as f64 / PANGO_SCALE),
+        (r.x() as f64 / PANGO_SCALE, r.y() as f64 / PANGO_SCALE),
+        (
+            r.width() as f64 / PANGO_SCALE,
+            r.height() as f64 / PANGO_SCALE,
+        ),
     )
 }
 
