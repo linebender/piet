@@ -459,14 +459,23 @@ fn draw_image(
     dst_rect: Rect,
     _interp: InterpolationMode,
 ) {
-    use base64::write::EncoderStringWriter;
-    use image::ImageOutputFormat;
+    use image::ImageEncoder as _;
 
-    let mut writer = EncoderStringWriter::new(base64::STANDARD);
-    image
-        .0
-        .write_to(&mut writer, ImageOutputFormat::Png)
+    let mut writer = base64::write::EncoderStringWriter::from(
+        String::from("data:image/png;base64,"),
+        base64::STANDARD,
+    );
+
+    image::codecs::png::PngEncoder::new(&mut writer)
+        .write_image(
+            image.0.as_bytes(),
+            image.0.width(),
+            image.0.height(),
+            image.0.color(),
+        )
         .unwrap();
+
+    let data_url = writer.into_inner();
 
     // TODO when src_rect.is_some()
     // TODO maybe we could use css 'image-rendering' to control interpolation?
@@ -475,10 +484,7 @@ fn draw_image(
         .set("y", dst_rect.y0)
         .set("width", dst_rect.x1 - dst_rect.x0)
         .set("height", dst_rect.y1 - dst_rect.y0)
-        .set(
-            "href",
-            format!("data:image/png;base64,{}", writer.into_inner()),
-        );
+        .set("href", data_url);
 
     ctx.doc.append(node);
 }
