@@ -160,7 +160,7 @@ impl ImageBuf {
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageBuf {
         fn has_alpha_channel(color: image::ColorType) -> bool {
             use image::ColorType::*;
-            matches!(color, La8 | Rgba8 | La16 | Rgba16 | Bgra8)
+            matches!(color, La8 | Rgba8 | La16 | Rgba16)
         }
 
         if has_alpha_channel(image_data.color()) {
