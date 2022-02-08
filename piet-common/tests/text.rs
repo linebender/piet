@@ -216,8 +216,7 @@ fn hit_test_point_rounding() {
 }
 
 #[test]
-//FIXME: wasm is failing this, and i haven't investigated
-//#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 fn hit_test_point_outside() {
     let mut factory = make_factory();
     let unit_width = factory.get_mono_width(12.0);
