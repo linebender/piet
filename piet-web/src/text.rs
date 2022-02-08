@@ -232,36 +232,40 @@ impl TextLayout for WebTextLayout {
 
         self.ctx.set_font(&self.font_setting);
 
-        // check out of bounds above top
-        // out of bounds on bottom during iteration
-        let mut is_y_inside = true;
-        if point.y < -1.0 * first_baseline {
-            is_y_inside = false
-        };
+        // Get the top line metric.
+        let first_y_offset = self
+            .line_metrics
+            .get(0)
+            .map(|lm| lm.y_offset)
+            .unwrap_or(0.0);
 
-        let mut lm = self
+        // Check point Y is within the top bound of the top line.
+        let mut is_y_inside = point.y >= first_y_offset;
+
+        // Get the first bottom line metric that overshoots point Y.
+        let bottom_lm = self
             .line_metrics
             .iter()
-            .skip_while(|l| l.y_offset + l.height < point.y);
-        let lm = lm
-            .next()
+            // Find line that overshoots point Y.
+            .find(|lm| lm.y_offset + lm.height >= point.y)
             .or_else(|| {
-                // This means it went over the last line, so return the last line.
+                // In this case we went over the last line, so return it.
                 is_y_inside = false;
                 self.line_metrics.last()
             })
             .cloned()
             .unwrap_or_else(|| {
+                // In this case, we have no line metrics, so return a default.
                 is_y_inside = false;
                 Default::default()
             });
 
-        // Then for the line, do hit test point
-        // Trailing whitespace is remove for the line
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        // For the bottom line, hit test the line point.
+        // Trailing whitespace is removed for the line.
+        let line = &self.text[bottom_lm.start_offset..bottom_lm.end_offset];
 
         let mut htp = hit_test_line_point(&self.ctx, line, point);
-        htp.idx += lm.start_offset;
+        htp.idx += bottom_lm.start_offset;
 
         if !is_y_inside {
             htp.is_inside = false;
