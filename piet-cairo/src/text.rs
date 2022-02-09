@@ -504,12 +504,11 @@ impl CairoTextLayout {
         loop {
             let line = iterator.line_readonly().unwrap();
 
-            //FIXME: replace this when pango 0.10.0 lands
             let start_offset: usize = line.start_index().try_into().unwrap();
             let length: usize = line.length().try_into().unwrap();
             let end_offset = start_offset + length;
 
-            //Pango likes to give us the line range *without* the newline char(s)
+            // Pango likes to give us the line range *without* the newline char(s).
             let end_offset = match self.text.as_bytes()[end_offset..] {
                 [b'\r', b'\n', ..] => end_offset + 2,
                 [b'\r', ..] | [b'\n', ..] => end_offset + 1,
