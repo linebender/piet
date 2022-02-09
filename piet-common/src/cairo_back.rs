@@ -113,56 +113,58 @@ impl<'a> BitmapTarget<'a> {
         if fmt != ImageFormat::RgbaPremul {
             return Err(piet::Error::NotSupported);
         }
+
+        // Ensure the surface is ready to be read from.
         self.surface.flush();
+
+        // Get the surface dimensions.
         let stride = self.surface.stride() as usize;
         let width = self.surface.width() as usize;
         let height = self.surface.height() as usize;
-        let size = width * height * 4;
-        if buf.len() < size {
+
+        // Get the expected destination and source buffer lengths.
+        let dst_len = width * height * 4;
+        let src_len = height.saturating_sub(1) * stride + width * 4;
+
+        // Validate that the buffer we will be writing into has at least the
+        // required length to be filled.
+        if buf.len() < dst_len {
             return Err(piet::Error::InvalidInput);
         }
-        unsafe {
-            // Cairo's rust wrapper has extra safety checks that we want to avoid: it won't let us
-            // get the data from an ImageSurface that's still referenced by a context. The C docs
-            // don't seem to think that's a problem, as long as we call flush (which we already
-            // did), and promise not to mutate anything.
-            // https://www.cairographics.org/manual/cairo-Image-Surfaces.html#cairo-image-surface-get-data
-            //
-            // TODO: we can simplify this once cairo makes a release containing
-            // https://github.com/gtk-rs/cairo/pull/330
-            let data_len = height.saturating_sub(1) * stride + width * 4;
-            let data = {
-                let data_ptr = cairo_sys::cairo_image_surface_get_data(self.surface.to_raw_none());
-                assert!(!data_ptr.is_null(), "surface is finished");
-                std::slice::from_raw_parts(data_ptr, data_len)
-            };
 
-            // A sanity check for all the unsafe indexing that follows.
-            assert!(data.get(data_len - 1).is_some());
-            assert!(buf.get(size - 1).is_some());
+        // Copy the the image surface data to the destination buffer.
+        self.surface
+            .with_data(|src| {
+                // Sanity check for all the unsafe indexing that follows.
+                debug_assert!(src.len() >= src_len);
+                debug_assert!(buf.len() >= dst_len);
 
-            for y in 0..height {
-                let src_off = y * stride;
-                let dst_off = y * width * 4;
-                for x in 0..width {
-                    // These unchecked indexes allow the autovectorizer to shine.
-                    // Note that dst_off maxes out at (height - 1) * width * 4, and so
-                    // dst_off + x * 4 + 3 maxes out at height * width * 4 - 1, which is size - 1.
-                    // Also, src_off maxes out at (height - 1) * stride, and so
-                    // src_off + x * 4 + 3 maxes out at (height - 1) * stride + width * 4 - 1,
-                    // which is data_len - 1.
-                    *buf.get_unchecked_mut(dst_off + x * 4 + 0) =
-                        *data.get_unchecked(src_off + x * 4 + 2);
-                    *buf.get_unchecked_mut(dst_off + x * 4 + 1) =
-                        *data.get_unchecked(src_off + x * 4 + 1);
-                    *buf.get_unchecked_mut(dst_off + x * 4 + 2) =
-                        *data.get_unchecked(src_off + x * 4 + 0);
-                    *buf.get_unchecked_mut(dst_off + x * 4 + 3) =
-                        *data.get_unchecked(src_off + x * 4 + 3);
+                unsafe {
+                    for y in 0..height {
+                        let src_off = y * stride;
+                        let dst_off = y * width * 4;
+                        for x in 0..width {
+                            // These unchecked indexes allow the autovectorizer to shine.
+                            // Note that dst_off maxes out at (height - 1) * width * 4, and so
+                            // dst_off + x * 4 + 3 maxes out at height * width * 4 - 1, which is size - 1.
+                            // Also, src_off maxes out at (height - 1) * stride, and so
+                            // src_off + x * 4 + 3 maxes out at (height - 1) * stride + width * 4 - 1,
+                            // which is data_len - 1.
+                            *buf.get_unchecked_mut(dst_off + x * 4 + 0) =
+                                *src.get_unchecked(src_off + x * 4 + 2);
+                            *buf.get_unchecked_mut(dst_off + x * 4 + 1) =
+                                *src.get_unchecked(src_off + x * 4 + 1);
+                            *buf.get_unchecked_mut(dst_off + x * 4 + 2) =
+                                *src.get_unchecked(src_off + x * 4 + 0);
+                            *buf.get_unchecked_mut(dst_off + x * 4 + 3) =
+                                *src.get_unchecked(src_off + x * 4 + 3);
+                        }
+                    }
                 }
-            }
-        }
-        Ok(size)
+            })
+            .map_err(|err| piet::Error::BackendError(Box::new(err)))?;
+
+        Ok(dst_len)
     }
 
     /// Get an in-memory pixel buffer from the bitmap.
