@@ -4,8 +4,8 @@
 //!
 //! 1. clear ignores clipping and transforms
 
-use crate::kurbo::{Affine, Circle, Rect, Size};
-use crate::{Color, Error, RenderContext};
+use piet::kurbo::{Affine, Circle, Rect, Size};
+use piet::{Color, Error, RenderContext};
 
 pub const SIZE: Size = Size::new(400., 400.);
 

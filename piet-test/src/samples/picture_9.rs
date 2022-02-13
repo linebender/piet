@@ -1,7 +1,7 @@
 //! Verifying line metrics and text layout geometry behave as intended.
 
-use crate::kurbo::{Line, Size, Vec2};
-use crate::{
+use piet::kurbo::{Line, Size, Vec2};
+use piet::{
     Color, Error, FontFamily, RenderContext, Text, TextAlignment, TextAttribute, TextLayout,
     TextLayoutBuilder,
 };

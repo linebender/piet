@@ -31,7 +31,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --out=cairo_samples --compare=./piet/snapshots/cairo
+          args: --bin samples-cairo --features cairo -- --all --out=cairo_samples --compare=./piet-test/snapshots/cairo
         if: contains(matrix.os, 'ubuntu')
 
       - name: upload failures (ubuntu+cairo)
@@ -45,7 +45,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
+          args: --bin samples-coregraphics --features coregraphics -- --all --out=coregraphics_samples --compare=./piet-test/snapshots/coregraphics
         if: contains(matrix.os, 'macOS')
 
       - name: upload failures (macOS)
@@ -59,7 +59,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --out=d2d_samples --compare=./piet/snapshots/d2d
+          args: --bin samples-direct2d --features direct2d -- --all --out=d2d_samples --compare=./piet-test/snapshots/d2d
         if: contains(matrix.os, 'windows')
 
       - name: upload failures (d2d)

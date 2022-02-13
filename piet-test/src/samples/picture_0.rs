@@ -1,7 +1,7 @@
 //! A wide assortment of graphics meant to show off many different uses of piet
 
-use crate::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Size, Vec2};
-use crate::{
+use piet::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Size, Vec2};
+use piet::{
     Color, Error, FontFamily, ImageFormat, InterpolationMode, RenderContext, Text, TextAttribute,
     TextLayout, TextLayoutBuilder,
 };

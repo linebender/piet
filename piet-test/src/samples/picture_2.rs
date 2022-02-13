@@ -1,7 +1,7 @@
 //! A bunch of image test cases.
 
-use crate::kurbo::{Rect, Size};
-use crate::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
+use piet::kurbo::{Rect, Size};
+use piet::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
 
 pub const SIZE: Size = Size::new(400., 200.);
 
@@ -67,6 +67,7 @@ fn make_image_data(width: usize, height: usize, format: ImageFormat) -> Vec<u8> 
                     result[ix + 2] = b;
                 }
                 ImageFormat::Grayscale => result[ix] = a,
+                other => unimplemented!("image format: {:?}", other),
             }
         }
     }

@@ -22,9 +22,6 @@ pub enum Error {
     MissingFont,
     /// Font data could not be loaded.
     FontLoadingFailed,
-    /// The arguments provided to the CLI were invalid.
-    #[cfg(feature = "samples")]
-    InvalidSampleArgs,
 }
 
 impl fmt::Display for Error {
@@ -44,8 +41,6 @@ impl fmt::Display for Error {
                 write!(f, "Backend error: ")?;
                 e.fmt(f)
             }
-            #[cfg(feature = "samples")]
-            Error::InvalidSampleArgs => write!(f, "Must pass either --all or a number"),
         }
     }
 }
