@@ -30,6 +30,12 @@ On OpenBSD, the library can be installed from official packages:
 ```shell
 pkg_add cairo
 ```
+
+On FreeBSD, the library can be installed with `pkg`:
+```shell
+pkg install cairo
+```
+
 A pkg-config file is provided as usual and cairo-rs will build as expected.
 
 TODO: nicer installation instructions (contributions welcome)
