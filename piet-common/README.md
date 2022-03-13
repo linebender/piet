@@ -4,7 +4,7 @@
 [Piet][] 2D graphics API, for the current platform.
 
 On Windows, the backend will be [piet-direct2d][], on macOS
-[piet-coregraphics][], and on linux as well as OpenBSD [piet-cairo][].
+[piet-coregraphics][], and on Linux, OpenBSD and FreeBSD [piet-cairo][].
 The [piet-web][] backend can be selected with the `web` feature.
 
 [Piet]: https://crates.io/crates/piet
