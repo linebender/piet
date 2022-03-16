@@ -14,6 +14,7 @@ use piet::{
     LineJoin, RenderContext, StrokeStyle,
 };
 
+pub use cairo;
 pub use crate::text::{CairoText, CairoTextLayout, CairoTextLayoutBuilder};
 
 pub struct CairoRenderContext<'a> {
