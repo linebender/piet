@@ -15,6 +15,7 @@ use piet::{
 };
 
 pub use cairo;
+
 pub use crate::text::{CairoText, CairoTextLayout, CairoTextLayoutBuilder};
 
 pub struct CairoRenderContext<'a> {
