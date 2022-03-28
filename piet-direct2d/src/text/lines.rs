@@ -40,9 +40,9 @@ pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec
 // with offsets
 fn len_and_ws_len_utf8(s: &str, total_len_16: u32, ws_len_16: u32) -> (usize, usize) {
     let non_ws_len_16 = (total_len_16 - ws_len_16) as usize;
-    let non_ws_len_8 = util::count_until_utf16(s, non_ws_len_16).unwrap_or_else(|| s.len());
+    let non_ws_len_8 = util::count_until_utf16(s, non_ws_len_16).unwrap_or(s.len());
     let s = &s[non_ws_len_8..];
-    let ws_len_8 = util::count_until_utf16(s, ws_len_16 as usize).unwrap_or_else(|| s.len());
+    let ws_len_8 = util::count_until_utf16(s, ws_len_16 as usize).unwrap_or(s.len());
     (non_ws_len_8, ws_len_8)
 }
 

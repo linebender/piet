@@ -681,8 +681,7 @@ impl TextLayout for CoreGraphicsTextLayout {
                 let utf16_range = line.get_string_range();
                 let rel_offset = (n - utf16_range.location) as usize;
                 metric.start_offset
-                    + util::count_until_utf16(line_text, rel_offset)
-                        .unwrap_or_else(|| line_text.len())
+                    + util::count_until_utf16(line_text, rel_offset).unwrap_or(line_text.len())
             }
             // some other value; should never happen
             _ => panic!("gross violation of api contract"),

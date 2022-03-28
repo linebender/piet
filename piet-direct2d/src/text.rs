@@ -385,8 +385,8 @@ impl TextLayout for D2DTextLayout {
         } as usize;
 
         // Convert text position from utf-16 code units to utf-8 code units.
-        let text_position = util::count_until_utf16(&self.text, text_position_16)
-            .unwrap_or_else(|| self.text.len());
+        let text_position =
+            util::count_until_utf16(&self.text, text_position_16).unwrap_or(self.text.len());
 
         HitTestPoint::new(text_position, htp.is_inside)
     }

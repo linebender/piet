@@ -18,7 +18,7 @@ pub(crate) fn get_grapheme_boundaries(
 ) -> Option<GraphemeBoundaries> {
     let mut graphemes = UnicodeSegmentation::grapheme_indices(text, true);
     let (text_position, _) = graphemes.nth(grapheme_position)?;
-    let (next_text_position, _) = graphemes.next().unwrap_or_else(|| (text.len(), ""));
+    let (next_text_position, _) = graphemes.next().unwrap_or((text.len(), ""));
 
     let curr_edge = hit_test_line_position(ctx, text, text_position);
     let next_edge = hit_test_line_position(ctx, text, next_text_position);
