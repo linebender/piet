@@ -97,10 +97,11 @@ pub trait Text: Clone {
     /// The returned object is a [`TextLayoutBuilder`]; methods on that type
     /// can be used to customize the layout.
     ///
-    /// The text is a type that impls `Into<Arc<str>>`. This is an optimization;
-    /// because the layout object needs to retain the text, if the caller wants
-    /// to avoid duplicate data they can use an `Arc`. If this doesn't matter,
-    /// they can pass a `&str`, which the layout will retain.
+    /// Internally, the `text` argument will be stored in an `Rc` or `Arc`, so that
+    /// the layout can be cheaply cloned. To avoid duplicating the storage of text
+    /// (which is likely also owned elsewhere in your application) you can pass
+    /// a type such as `Rc<str>` or `Rc<String>`; alternatively you can just use
+    /// `String` or `&static str`.
     ///
     /// [`TextLayoutBuilder`]: trait.TextLayoutBuilder.html
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder;
