@@ -156,8 +156,9 @@ where
 
     /// Draw a [`TextLayout`].
     ///
-    /// The `pos` parameter specifies the baseline of the left starting place of
-    /// the text. Note: this is true even if the text is right-to-left.
+    /// The `pos` parameter specifies the upper-left corner of the layout object
+    /// (even for right-to-left text). To draw on a baseline, you can use
+    /// [TextLayout::line_metric] to get the baseline position of a specific line.
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>);
 
     /// Save the context state.
