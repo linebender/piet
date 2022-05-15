@@ -390,26 +390,35 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
 
     fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
         let src_rect = src_rect.into();
-        if src_rect.width() < 1.0 || src_rect.height() < 1.0 {
+
+        // When creating a CoreGraphicsContext, we a transformation matrix is applied to map
+        // between piet's coordinate system and CoreGraphic's coordinate system
+        // (see [`CoreGraphicsContext::new_impl`] for details). Since the `src_rect` we receive
+        // as parameter is in piet's coordinate system, we need to first convert it to the CG one,
+        // as otherwise our captured image area would be wrong.
+        let transformation_matrix = self.ctx.get_ctm();
+        let src_cgrect = to_cgrect(src_rect).apply_transform(&transformation_matrix);
+
+        if src_cgrect.size.width < 1.0 || src_cgrect.size.height < 1.0 {
             return Err(Error::InvalidInput);
         }
 
-        if src_rect.width() > self.ctx.width() as f64
-            || src_rect.height() > self.ctx.height() as f64
+        if src_cgrect.size.width > self.ctx.width() as f64
+            || src_cgrect.size.height > self.ctx.height() as f64
         {
             return Err(Error::InvalidInput);
         }
 
         let full_image = self.ctx.create_image().ok_or(Error::InvalidInput)?;
 
-        if src_rect.width().round() as usize == self.ctx.width()
-            && src_rect.height().round() as usize == self.ctx.height()
+        if src_cgrect.size.width.round() as usize == self.ctx.width()
+            && src_cgrect.size.height.round() as usize == self.ctx.height()
         {
             return Ok(CoreGraphicsImage::NonEmpty(full_image));
         }
 
         full_image
-            .cropped(to_cgrect(src_rect))
+            .cropped(src_cgrect)
             .map(CoreGraphicsImage::NonEmpty)
             .ok_or(Error::InvalidInput)
     }

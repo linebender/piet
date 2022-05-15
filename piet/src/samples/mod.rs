@@ -28,6 +28,7 @@ mod picture_12;
 mod picture_13;
 mod picture_14;
 mod picture_15;
+mod picture_16;
 
 type BoxErr = Box<dyn std::error::Error>;
 
@@ -60,6 +61,7 @@ pub fn get<R: RenderContext>(number: usize) -> Result<SamplePicture<R>, BoxErr> 
         13 => SamplePicture::new(picture_13::SIZE, picture_13::draw),
         14 => SamplePicture::new(picture_14::SIZE, picture_14::draw),
         15 => SamplePicture::new(picture_15::SIZE, picture_15::draw),
+        16 => SamplePicture::new(picture_16::SIZE, picture_16::draw),
         _ => return Err(format!("No sample #{} exists", number).into()),
     })
 }
