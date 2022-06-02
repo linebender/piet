@@ -479,12 +479,20 @@ fn draw_image(
 
     // TODO when src_rect.is_some()
     // TODO maybe we could use css 'image-rendering' to control interpolation?
-    let node = svg::node::element::Image::new()
+    let mut node = svg::node::element::Image::new()
         .set("x", dst_rect.x0)
         .set("y", dst_rect.y0)
         .set("width", dst_rect.x1 - dst_rect.x0)
         .set("height", dst_rect.y1 - dst_rect.y0)
         .set("href", data_url);
+
+    let affine = piet::RenderContext::current_transform(ctx);
+    if affine != Affine::IDENTITY {
+        node.assign("transform", xf_val(&affine));
+    }
+    if let Some(id) = ctx.state.clip {
+        node.assign("clip-path", format!("url(#{})", id.to_string()));
+    }
 
     ctx.doc.append(node);
 }
