@@ -45,7 +45,7 @@ produce an image file called `coregraphics-test-0.png`.
 
 #### `piet-direct2d` [![crates.io](https://img.shields.io/crates/v/piet-direct2d)](https://crates.io/crates/piet-direct2d)
 
-The `piet-direct2d` create works on Windows only. A simple test of the direct2d
+The `piet-direct2d` crate works on Windows only. A simple test of the direct2d
 backend is to run `cargo run --example test-picture 0`, which should
 produce an image called `d2d-test-0.png`.
 
