@@ -37,7 +37,7 @@ type BoxErr = Box<dyn std::error::Error>;
 pub const DEFAULT_SCALE: f64 = 2.0;
 
 /// The total number of samples in this module.
-pub const SAMPLE_COUNT: usize = 16;
+pub const SAMPLE_COUNT: usize = 17;
 
 /// file we save an os fingerprint to
 pub const GENERATED_BY: &str = "GENERATED_BY";

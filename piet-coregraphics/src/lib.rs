@@ -391,7 +391,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
         let src_rect = src_rect.into();
 
-        // When creating a CoreGraphicsContext, we a transformation matrix is applied to map
+        // When creating a CoreGraphicsContext, a transformation matrix is applied to map
         // between piet's coordinate system and CoreGraphic's coordinate system
         // (see [`CoreGraphicsContext::new_impl`] for details). Since the `src_rect` we receive
         // as parameter is in piet's coordinate system, we need to first convert it to the CG one,
