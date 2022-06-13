@@ -6,7 +6,7 @@ mod text;
 
 use std::borrow::Cow;
 
-use cairo::{Context, Filter, Format, ImageSurface, Matrix, SurfacePattern};
+use cairo::{Context, Filter, Format, ImageSurface, Matrix, Rectangle, SurfacePattern};
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 use piet::{
@@ -328,8 +328,47 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         self.draw_image_inner(&image.0, Some(src_rect.into()), dst_rect.into(), interp);
     }
 
-    fn capture_image_area(&mut self, _src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
-        Err(Error::Unimplemented)
+    fn capture_image_area(&mut self, src_rect: impl Into<Rect>) -> Result<Self::Image, Error> {
+        let src_rect: Rect = src_rect.into();
+
+        // In order to capture the correct image area, we first need to convert from
+        // user space (the logical rectangle) to device space (the "physical" rectangle).
+        // For example, in a HiDPI (2x) setting, a user-space rectangle of 20x20 would be
+        // 40x40 in device space.
+        let user_rect = Rectangle {
+            x: src_rect.x0,
+            y: src_rect.y0,
+            width: src_rect.width(),
+            height: src_rect.height(),
+        };
+        let device_rect = self.user_to_device(&user_rect);
+
+        // This is the surface to which we draw the captured image area
+        let target_surface = ImageSurface::create(
+            Format::ARgb32,
+            device_rect.width as i32,
+            device_rect.height as i32,
+        )
+        .map_err(convert_error)?;
+        let target_ctx = Context::new(&target_surface).map_err(convert_error)?;
+
+        // Since we (potentially) don't want to capture the entire surface, we crop the
+        // source surface to the requested "sub-surface" using `create_for_rectangle`.
+        let cropped_source_surface = self
+            .ctx
+            .target()
+            .create_for_rectangle(device_rect)
+            .map_err(convert_error)?;
+
+        // Finally, we fill the entirety of the target surface (via the target context)
+        // with the select region of the source surface.
+        target_ctx
+            .set_source_surface(&cropped_source_surface, 0.0, 0.0)
+            .map_err(convert_error)?;
+        target_ctx.rectangle(0.0, 0.0, device_rect.width, device_rect.height);
+        target_ctx.fill().map_err(convert_error)?;
+
+        Ok(CairoImage(target_surface))
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
@@ -477,6 +516,17 @@ impl<'a> CairoRenderContext<'a> {
             rc.error = rc.ctx.paint();
             Ok(())
         });
+    }
+
+    fn user_to_device(&self, user_rect: &Rectangle) -> Rectangle {
+        let (x, y) = self.ctx.user_to_device(user_rect.x, user_rect.y);
+        let (width, height) = self.ctx.user_to_device(user_rect.width, user_rect.height);
+        Rectangle {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 }
 
