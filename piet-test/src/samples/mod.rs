@@ -7,8 +7,8 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 
-use crate::kurbo::Size;
-use crate::{Error, RenderContext};
+use piet::kurbo::Size;
+use piet::{Error, RenderContext};
 
 mod picture_0;
 mod picture_1;
@@ -85,6 +85,7 @@ struct Args {
 ///   testing environment, such as the versions of various dependencies; this
 ///   will be appended to the GENERATED_BY file.
 pub fn samples_main(
+    binary: &str,
     f: fn(usize, &Path) -> Result<(), BoxErr>,
     prefix: &str,
     env_info: Option<&str>,
@@ -94,7 +95,7 @@ pub fn samples_main(
 
         if args.help {
             eprintln!("Piet Sample Image Generator\n");
-            print_help_text();
+            print_help_text(binary);
             std::process::exit(1);
         }
 
@@ -144,7 +145,7 @@ pub fn samples_main(
             eprintln!("caused by: {}", err);
             e = err;
         }
-        print_help_text();
+        print_help_text(binary);
         std::process::exit(1);
     } else {
         std::process::exit(0);
@@ -181,7 +182,7 @@ impl Args {
         };
 
         if !(args.help || args.all || args.number.is_some() || args.compare_dir.is_some()) {
-            Err(Box::new(Error::InvalidSampleArgs))
+            Err("Must pass either --all or a number".into())
         } else {
             Ok(args)
         }
@@ -411,16 +412,16 @@ impl std::fmt::Display for FailureReason {
     }
 }
 
-fn print_help_text() {
+fn print_help_text(binary: &str) {
     eprintln!(
         "Options:
 
-$ ./test_picture {{<number> | --all}} [--out=<dir>] [--compare=<dir>] [--help]
+$ ./{binary} {{<number> | --all}} [--out=<dir>] [--compare=<dir>] [--help]
 
 Required Args
     --all | <number> If 'all', generate all the example pictures. If a number,
                      then generate that number picture (number must be between
-                     0 and {}
+                     0 and {sample_idx_max}
 
 Optional Args
     --out=<dir>      Save the results to the directory 'dir'. Defaults to the
@@ -432,6 +433,7 @@ Optional Args
 Flags
     --help           Print this help message and exit.
     ",
-        SAMPLE_COUNT - 1
+        binary = binary,
+        sample_idx_max = SAMPLE_COUNT - 1
     );
 }

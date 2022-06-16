@@ -1,7 +1,7 @@
 //! Rendering a cubic Bézier curve with its control points and handles
 
-use crate::kurbo::{BezPath, Line, Point, Size};
-use crate::{Color, Error, RenderContext};
+use piet::kurbo::{BezPath, Line, Point, Size};
+use piet::{Color, Error, RenderContext};
 
 pub const SIZE: Size = Size::new(400., 200.);
 

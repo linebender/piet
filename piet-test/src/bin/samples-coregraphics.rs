@@ -8,14 +8,15 @@ use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::CGContext;
 
 use piet::kurbo::Size;
-use piet::{samples, RenderContext};
+use piet::RenderContext;
 use piet_coregraphics::CoreGraphicsContext;
+use piet_test::samples;
 
 const SCALE: f64 = 2.0;
 const FILE_PREFIX: &str = "coregraphics-test-";
 
 fn main() {
-    samples::samples_main(run_sample, FILE_PREFIX, None);
+    samples::samples_main("samples-coregraphics", run_sample, FILE_PREFIX, None);
 }
 
 fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
@@ -33,17 +34,18 @@ fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Err
 
     piet_context.finish()?;
     std::mem::drop(piet_context);
-    let mut data = cg_ctx.data().to_vec();
-    let file = File::create(path)?;
-    let w = BufWriter::new(file);
 
-    let mut encoder = png::Encoder::new(w, size.width as u32, size.height as u32);
-    encoder.set_color(png::ColorType::Rgba);
-    encoder.set_depth(png::BitDepth::Eight);
-    let mut writer = encoder.write_header()?;
+    let mut raw_pixels = cg_ctx.data().to_vec();
+    piet_coregraphics::unpremultiply_rgba(&mut raw_pixels);
 
-    piet_coregraphics::unpremultiply_rgba(&mut data);
-    writer.write_image_data(&data).map_err(Into::into)
+    image::save_buffer(
+        &path,
+        &raw_pixels,
+        size.width as u32,
+        size.height as u32,
+        image::ColorType::Rgba8,
+    )?;
+    Ok(())
 }
 
 fn make_cg_ctx(size: Size) -> CGContext {

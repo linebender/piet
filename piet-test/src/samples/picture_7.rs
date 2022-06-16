@@ -1,7 +1,7 @@
 //! Text layouts
 
-use crate::kurbo::{Rect, Size};
-use crate::{Color, Error, RenderContext, Text, TextAlignment, TextAttribute, TextLayoutBuilder};
+use piet::kurbo::{Rect, Size};
+use piet::{Color, Error, RenderContext, Text, TextAlignment, TextAttribute, TextLayoutBuilder};
 
 pub const SIZE: Size = Size::new(800., 800.);
 static SAMPLE_EN: &str = r#"This essay is an effort to build an ironic political myth faithful to feminism, socialism, and materialism. Perhaps more faithful as blasphemy is faithful, than as reverent worship and identification. Blasphemy has always seemed to require taking things very seriously. I know no better stance to adopt from within the secular-religious, evangelical traditions of United States politics, including the politics of socialist-feminism."#;

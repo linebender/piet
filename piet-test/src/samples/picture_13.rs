@@ -1,7 +1,7 @@
 //! Using custom font families.
 
-use crate::kurbo::{Size, Vec2};
-use crate::{
+use piet::kurbo::{Size, Vec2};
+use piet::{
     Color, Error, FontFamily, FontStyle, FontWeight, RenderContext, Text, TextLayout,
     TextLayoutBuilder,
 };

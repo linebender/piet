@@ -1,0 +1,37 @@
+[package]
+name = "piet-test"
+version = "0.0.0"
+edition = "2018"
+publish = false
+
+[[bin]]
+name = "samples-cairo"
+required-features = ["cairo"]
+
+[[bin]]
+name = "samples-direct2d"
+required-features = ["direct2d"]
+
+[[bin]]
+name = "samples-coregraphics"
+required-features = ["coregraphics"]
+
+[features]
+cairo = ["piet-cairo", "cairo-rs"]
+direct2d = ["piet-direct2d", "winapi"]
+coregraphics = ["piet-coregraphics", "core-graphics"]
+
+[dependencies]
+piet = { path = "../piet" }
+piet-cairo = { path = "../piet-cairo", optional = true }
+piet-direct2d = { path = "../piet-direct2d", optional = true }
+piet-coregraphics = { path = "../piet-coregraphics", optional = true }
+
+png = "0.17"
+pico-args = "0.4.0"
+os_info = { version = "3.0.0", default-features = false }
+image = { version = "0.24", default-features = false, features = ["png"] }
+
+core-graphics = { version = "0.22.2", optional = true }
+winapi = { version = "0.3.8", features = ["dxgi"], optional = true  }
+cairo-rs = { version = "0.15.1", default-features = false, features = ["png"], optional = true }

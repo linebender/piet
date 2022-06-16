@@ -1,7 +1,7 @@
 //! Show the relationship between the layout rect and the inking/image rect.
 
-use crate::kurbo::{Size, Vec2};
-use crate::{Color, Error, RenderContext, Text, TextAttribute, TextLayout, TextLayoutBuilder};
+use piet::kurbo::{Size, Vec2};
+use piet::{Color, Error, RenderContext, Text, TextAttribute, TextLayout, TextLayoutBuilder};
 
 pub const SIZE: Size = Size::new(400., 400.);
 

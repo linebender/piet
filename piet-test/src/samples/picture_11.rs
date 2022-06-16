@@ -1,7 +1,7 @@
 //! Visualize results of hit-testing
 
-use crate::kurbo::{Circle, Line, Point, Size};
-use crate::{Color, Error, RenderContext, Text, TextLayout, TextLayoutBuilder};
+use piet::kurbo::{Circle, Line, Point, Size};
+use piet::{Color, Error, RenderContext, Text, TextLayout, TextLayoutBuilder};
 
 pub const SIZE: Size = Size::new(880., 800.);
 pub const DOT_RADIUS: f64 = 2.0;
@@ -20,25 +20,25 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     let layout_en_start = rc
         .text()
         .new_text_layout(TEXT_EN)
-        .alignment(crate::TextAlignment::Start)
+        .alignment(piet::TextAlignment::Start)
         .max_width(200.0)
         .build()?;
     let layout_en_center = rc
         .text()
         .new_text_layout(TEXT_EN)
-        .alignment(crate::TextAlignment::Center)
+        .alignment(piet::TextAlignment::Center)
         .max_width(200.0)
         .build()?;
     let layout_ar_start = rc
         .text()
         .new_text_layout(TEXT_AR)
-        .alignment(crate::TextAlignment::Start)
+        .alignment(piet::TextAlignment::Start)
         .max_width(200.0)
         .build()?;
     let layout_ar_just = rc
         .text()
         .new_text_layout(TEXT_AR)
-        .alignment(crate::TextAlignment::Justified)
+        .alignment(piet::TextAlignment::Justified)
         .max_width(200.0)
         .build()?;
     let ar_y = ((SIZE.height - layout_ar_start.size().height * 2.0) / 2.0 - 32.0).max(0.0);

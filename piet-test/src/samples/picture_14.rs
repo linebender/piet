@@ -1,7 +1,7 @@
 //! Setting font weight when a variable font has a 'wght' axis
 
-use crate::kurbo::{Size, Vec2};
-use crate::{
+use piet::kurbo::{Size, Vec2};
+use piet::{
     Color, Error, FontFamily, FontWeight, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
 

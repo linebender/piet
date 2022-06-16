@@ -1,7 +1,7 @@
 //! Gradients.
 
-use crate::kurbo::{Circle, Point, Rect, RoundedRect, Size, Vec2};
-use crate::{
+use piet::kurbo::{Circle, Point, Rect, RoundedRect, Size, Vec2};
+use piet::{
     Color, Error, FixedGradient, FixedLinearGradient, FixedRadialGradient, GradientStop, LineCap,
     LineJoin, RenderContext, StrokeStyle,
 };

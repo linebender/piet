@@ -1,12 +1,12 @@
 [package]
 name = "piet-common"
 version = "0.5.0"
+edition = "2018"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Selection of a single preferred back-end for piet"
+readme = "README.md"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/linebender/piet"
-readme = "README.md"
-edition = "2018"
 keywords = ["graphics", "2d"]
 
 [features]
@@ -35,6 +35,7 @@ serde = ["piet/serde"]
 [dependencies]
 piet = { version = "=0.5.0", path = "../piet" }
 piet-web = { version = "=0.5.0", path = "../piet-web", optional = true }
+
 cfg-if = "1.0"
 png = { version = "0.17", optional = true }
 

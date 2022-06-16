@@ -1,7 +1,7 @@
 //! range attributes should override default attributes
 
-use crate::kurbo::{Size, Vec2};
-use crate::{
+use piet::kurbo::{Size, Vec2};
+use piet::{
     Color, Error, FontFamily, RenderContext, Text, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 

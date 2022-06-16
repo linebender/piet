@@ -16,5 +16,6 @@ default-members = [
     "piet-common",
     "piet-web",
     "piet-web/examples/basic",
-    "piet-svg"
+    "piet-svg",
+    "piet-test"
 ]

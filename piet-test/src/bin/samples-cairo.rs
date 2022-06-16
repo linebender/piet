@@ -6,15 +6,16 @@ use std::process::Command;
 
 use cairo::{Context, Format, ImageSurface};
 
-use piet::{samples, RenderContext};
+use piet::RenderContext;
 use piet_cairo::CairoRenderContext;
+use piet_test::samples;
 
 const HIDPI: f64 = 2.0;
 const FILE_PREFIX: &str = "cairo-test-";
 
 fn main() {
     let sys_info = additional_system_info();
-    samples::samples_main(run_sample, FILE_PREFIX, Some(&sys_info));
+    samples::samples_main("samples-cairo", run_sample, FILE_PREFIX, Some(&sys_info));
 }
 
 fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {

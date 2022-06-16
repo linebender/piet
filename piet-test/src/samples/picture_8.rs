@@ -1,7 +1,7 @@
 //! Styled text
 
-use crate::kurbo::Size;
-use crate::{
+use piet::kurbo::Size;
+use piet::{
     Color, Error, FontFamily, FontStyle, FontWeight, RenderContext, Text, TextAlignment,
     TextAttribute, TextLayoutBuilder,
 };

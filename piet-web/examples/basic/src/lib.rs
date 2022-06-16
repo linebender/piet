@@ -4,7 +4,8 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlCanvasElement};
 
-use piet::{samples, RenderContext};
+use piet::RenderContext;
+use piet_test::samples;
 use piet_web::WebRenderContext;
 
 //TODO: figure out how to dynamically select the sample?
