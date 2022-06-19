@@ -96,6 +96,18 @@ pub(crate) fn affine_to_matrix3x2f(affine: Affine) -> D2D1_MATRIX_3X2_F {
     }
 }
 
+// TODO: Needs tests
+pub(crate) fn matrix3x2f_to_affine(matrix: D2D1_MATRIX_3X2_F) -> Affine {
+    Affine::new([
+        matrix.matrix[0][0] as f64,
+        matrix.matrix[0][1] as f64,
+        matrix.matrix[1][0] as f64,
+        matrix.matrix[1][1] as f64,
+        matrix.matrix[2][0] as f64,
+        matrix.matrix[2][1] as f64,
+    ])
+}
+
 // TODO: consider adding to kurbo.
 pub(crate) fn rect_to_rectf(rect: Rect) -> D2D1_RECT_F {
     D2D1_RECT_F {

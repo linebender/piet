@@ -37,7 +37,7 @@ pub use crate::text::{D2DLoadedFonts, D2DText, D2DTextLayout, D2DTextLayoutBuild
 
 use crate::conv::{
     affine_to_matrix3x2f, color_to_colorf, convert_stroke_style, gradient_stop_to_d2d,
-    rect_to_rectf, rect_to_rectu, to_point2f, to_point2u,
+    matrix3x2f_to_affine, rect_to_rectf, rect_to_rectu, to_point2f, to_point2u,
 };
 use crate::d2d::{Bitmap, Brush, DeviceContext, FillRule, Geometry};
 
@@ -335,6 +335,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // Move this code into impl to avoid duplication with transform?
         self.rt
             .set_transform(&affine_to_matrix3x2f(self.current_transform()));
+
         Ok(())
     }
 
@@ -456,21 +457,50 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn capture_image_area(&mut self, rect: impl Into<Rect>) -> Result<Self::Image, Error> {
         let r = rect.into();
 
+        let (dpi_scale_x, _) = self.rt.get_dpi_scale();
+        let dpi_scale = dpi_scale_x as f64;
+
+        let transform_matrix = self.rt.get_transform();
+        let affine_transform = matrix3x2f_to_affine(transform_matrix);
+
+        let device_size = Point {
+            x: r.width() * dpi_scale,
+            y: r.height() * dpi_scale,
+        };
+        // TODO: This transformation is untested with the current test pictures
+        let device_size = affine_transform * device_size;
+
+        let device_origin = Point {
+            x: r.x0 * dpi_scale,
+            y: r.y0 * dpi_scale,
+        };
+        // TODO: This transformation is untested with the current test pictures
+        let device_origin = affine_transform * device_origin;
+
         let mut target_bitmap = self.rt.create_blank_bitmap(
-            r.width() as usize,
-            r.height() as usize,
+            device_size.x as usize,
+            device_size.y as usize,
             D2D1_ALPHA_MODE_PREMULTIPLIED,
+            dpi_scale_x,
         )?;
 
-        let dest_point = to_point2u((0.0f32, 0.0f32));
-        let src_rect = rect_to_rectu(Rect {
-            x0: r.x0,
-            y0: r.y0,
-            x1: r.width(),
-            y1: r.height(),
-        });
+        // TODO: I don't understand why I a src_rect that's 2.0 * dpi_scale * device_size
+        //       in order for `copy_from_render_target` to copy the right portion. Pretty
+        //       sure I'm doing something wrong here. Maybe someone who knows d2d better can
+        //       help out?
+        let magic_multiplier_why = 2.0;
 
-        target_bitmap.copy_from_render_target(dest_point, self.rt, src_rect);
+        let src_rect = Rect {
+            x0: device_origin.x,
+            y0: device_origin.y,
+            x1: device_size.x * magic_multiplier_why,
+            y1: device_size.y * magic_multiplier_why,
+        };
+
+        let d2d_dest_point = to_point2u((0.0f32, 0.0f32));
+        let d2d_src_rect = rect_to_rectu(src_rect);
+        target_bitmap.copy_from_render_target(d2d_dest_point, self.rt, d2d_src_rect);
+
         Ok(target_bitmap)
     }
 

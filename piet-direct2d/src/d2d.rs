@@ -428,6 +428,16 @@ impl DeviceContext {
         }
     }
 
+    pub fn get_dpi_scale(&self) -> (f32, f32) {
+        let mut dpi_x = 0.0f32;
+        let mut dpi_y = 0.0f32;
+        unsafe {
+            self.0.GetDpi(&mut dpi_x, &mut dpi_y);
+        }
+        // https://docs.microsoft.com/en-us/windows/win32/direct2d/direct2d-and-high-dpi
+        (dpi_x / 96., dpi_y / 96.)
+    }
+
     /// Begin drawing.
     ///
     /// This must be done before any piet drawing operations.
@@ -775,6 +785,7 @@ impl DeviceContext {
         width: usize,
         height: usize,
         alpha_mode: D2D1_ALPHA_MODE,
+        dpi_scale: f32,
     ) -> Result<Bitmap, Error> {
         // Maybe using TryInto would be more Rust-like.
         // Note: value is set so that multiplying by 4 (for pitch) is valid.
@@ -790,8 +801,8 @@ impl DeviceContext {
         };
         let props = D2D1_BITMAP_PROPERTIES1 {
             pixelFormat: format,
-            dpiX: 96.0,
-            dpiY: 96.0,
+            dpiX: 96.0 * dpi_scale,
+            dpiY: 96.0 * dpi_scale,
             bitmapOptions: D2D1_BITMAP_OPTIONS_NONE,
             colorContext: null_mut(),
         };
