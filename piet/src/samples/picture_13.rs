@@ -6,7 +6,7 @@ use crate::{
     TextLayoutBuilder,
 };
 
-pub const SIZE: Size = Size::new(480., 560.);
+pub const SIZE: Size = Size::new(240., 280.);
 
 static TEXT: &str = r#"Philosophers often behave like little children who scribble some marks on a piece of paper at random and then ask the grown-up "What's that?" — It happened like this: the grown-up had drawn pictures for the child several times and said "this is a man," "this is a house," etc. And then the child makes some marks too and asks: what's this then?"#;
 

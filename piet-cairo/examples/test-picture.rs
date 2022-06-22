@@ -9,7 +9,8 @@ use cairo::{Context, Format, ImageSurface};
 use piet::{samples, RenderContext};
 use piet_cairo::CairoRenderContext;
 
-const HIDPI: f64 = 2.0;
+// TODO: Improve support for fractional scaling where sample size ends up fractional.
+const SCALE: f64 = 2.0;
 const FILE_PREFIX: &str = "cairo-test-";
 
 fn main() {
@@ -19,7 +20,7 @@ fn main() {
 
 fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let sample = samples::get(idx)?;
-    let size = sample.size();
+    let size = sample.size() * SCALE;
 
     let file_name = format!("{}{}.png", FILE_PREFIX, idx);
     let path = base_dir.join(file_name);
@@ -27,7 +28,7 @@ fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Err
     let surface = ImageSurface::create(Format::ARgb32, size.width as i32, size.height as i32)
         .expect("Can't create surface");
     let cr = Context::new(&surface).unwrap();
-    cr.scale(HIDPI, HIDPI);
+    cr.scale(SCALE, SCALE);
     let mut piet_context = CairoRenderContext::new(&cr);
     sample.draw(&mut piet_context)?;
     piet_context.finish()?;

@@ -3,7 +3,7 @@
 use crate::kurbo::{Circle, Line, Point, Size};
 use crate::{Color, Error, RenderContext, Text, TextLayout, TextLayoutBuilder};
 
-pub const SIZE: Size = Size::new(880., 800.);
+pub const SIZE: Size = Size::new(440., 400.);
 pub const DOT_RADIUS: f64 = 2.0;
 pub const TEST_ADVANCE: f64 = 23.4;
 

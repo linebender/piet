@@ -3,7 +3,7 @@
 use crate::kurbo::{BezPath, Line, Point, Size};
 use crate::{Color, Error, RenderContext};
 
-pub const SIZE: Size = Size::new(400., 200.);
+pub const SIZE: Size = Size::new(200., 100.);
 
 // TODO: this will eventually become a `kurbo::Shape`.
 fn circle<V: Into<Point>>(center: V, radius: f64, num_segments: usize) -> BezPath {

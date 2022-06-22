@@ -7,7 +7,7 @@
 use crate::kurbo::{Affine, Circle, Rect, Size};
 use crate::{Color, Error, RenderContext};
 
-pub const SIZE: Size = Size::new(400., 400.);
+pub const SIZE: Size = Size::new(200., 200.);
 
 const RED: Color = Color::rgb8(255, 0, 0);
 const BLUE: Color = Color::rgb8(0, 0, 255);

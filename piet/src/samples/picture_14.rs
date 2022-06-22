@@ -5,7 +5,7 @@ use crate::{
     Color, Error, FontFamily, FontWeight, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
 
-pub const SIZE: Size = Size::new(480., 560.);
+pub const SIZE: Size = Size::new(240., 280.);
 
 static TEXT: &str = r#"100200300400500
 600700800900950"#;

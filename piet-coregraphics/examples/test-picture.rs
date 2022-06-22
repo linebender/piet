@@ -11,6 +11,7 @@ use piet::kurbo::Size;
 use piet::{samples, RenderContext};
 use piet_coregraphics::CoreGraphicsContext;
 
+// TODO: Improve support for fractional scaling where sample size ends up fractional.
 const SCALE: f64 = 2.0;
 const FILE_PREFIX: &str = "coregraphics-test-";
 
@@ -20,14 +21,13 @@ fn main() {
 
 fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let sample = samples::get(idx)?;
-    let size = sample.size();
+    let size = sample.size() * SCALE;
 
     let file_name = format!("{}{}.png", FILE_PREFIX, idx);
     let path = base_dir.join(file_name);
 
     let mut cg_ctx = make_cg_ctx(size);
-    let mut piet_context =
-        CoreGraphicsContext::new_y_up(&mut cg_ctx, size.height * SCALE.recip(), None);
+    let mut piet_context = CoreGraphicsContext::new_y_up(&mut cg_ctx, sample.size().height, None);
 
     sample.draw(&mut piet_context)?;
 
