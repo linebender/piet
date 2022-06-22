@@ -36,7 +36,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(240.., FontFamily::SYSTEM_UI)
         .build()?;
 
-    let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);
+    let y_pos = ((SIZE.height - layout.size().height) / 2.0).max(0.0);
     let text_pos = Vec2::new(16.0, y_pos);
     rc.draw_text(&layout, text_pos.to_point());
 

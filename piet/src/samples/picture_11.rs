@@ -41,7 +41,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .alignment(crate::TextAlignment::Justified)
         .max_width(200.0)
         .build()?;
-    let ar_y = ((SIZE.height - layout_ar_start.size().height * 2.0) / 2.0 - 32.0).max(0.0);
+    let ar_y = ((SIZE.height - layout_ar_start.size().height) - 32.0).max(0.0);
 
     visualize_hit_testing(rc, layout_en_start, Point::new(16.0, 32.0))?;
     visualize_hit_testing(rc, layout_en_center, Point::new(232.0, 32.0))?;

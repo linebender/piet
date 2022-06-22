@@ -24,7 +24,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(280.., TextAttribute::FontSize(18.0))
         .build()?;
 
-    let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);
+    let y_pos = ((SIZE.height - layout.size().height) / 2.0).max(0.0);
     let text_pos = Vec2::new(16.0, y_pos);
 
     let sel_one = layout.rects_for_range(10..72);
