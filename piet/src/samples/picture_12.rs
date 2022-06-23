@@ -5,7 +5,7 @@ use crate::{
     Color, Error, FontFamily, RenderContext, Text, TextAttribute, TextLayout, TextLayoutBuilder,
 };
 
-pub const SIZE: Size = Size::new(480., 560.);
+pub const SIZE: Size = Size::new(240., 280.);
 
 static TEXT: &str = r#"The idea of "structurelessness," however, has moved from a healthy counter to those tendencies to becoming a goddess in its own right. The idea is as little examined as the term is much used, but it has become an intrinsic and unquestioned part of women's liberation ideology. For the early development of the movement this did not much matter."#;
 
@@ -24,7 +24,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(280.., TextAttribute::FontSize(18.0))
         .build()?;
 
-    let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);
+    let y_pos = ((SIZE.height - layout.size().height) / 2.0).max(0.0);
     let text_pos = Vec2::new(16.0, y_pos);
 
     let sel_one = layout.rects_for_range(10..72);

@@ -3,7 +3,7 @@
 use crate::kurbo::{Rect, Size};
 use crate::{Color, Error, ImageFormat, InterpolationMode, RenderContext};
 
-pub const SIZE: Size = Size::new(400., 200.);
+pub const SIZE: Size = Size::new(200., 100.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(None, Color::WHITE);

@@ -7,7 +7,8 @@ use winapi::shared::dxgi::DXGI_MAP_READ;
 use piet::{samples, RenderContext};
 use piet_direct2d::{D2DRenderContext, D2DText};
 
-const HIDPI: f32 = 2.0;
+// TODO: Improve support for fractional scaling where sample size ends up fractional.
+const SCALE: f32 = 2.0;
 const FILE_PREFIX: &str = "d2d-test-";
 
 fn main() {
@@ -16,7 +17,7 @@ fn main() {
 
 fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let sample = samples::get(number)?;
-    let size = sample.size();
+    let size = sample.size() * SCALE as f64;
 
     let file_name = format!("{}{}.png", FILE_PREFIX, number);
     let path = base_dir.join(file_name);
@@ -43,10 +44,10 @@ fn run_sample(number: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::
         .unwrap();
 
     // Bind the backing texture to a D2D Bitmap
-    let target = unsafe { context.create_bitmap_from_dxgi(&tex.as_dxgi(), HIDPI)? };
+    let target = unsafe { context.create_bitmap_from_dxgi(&tex.as_dxgi(), SCALE)? };
 
     context.set_target(&target);
-    context.set_dpi_scale(HIDPI);
+    context.set_dpi_scale(SCALE);
     context.begin_draw();
     let mut piet_context = D2DRenderContext::new(&d2d, text, &mut context);
     // TODO: report errors more nicely than these unwraps.

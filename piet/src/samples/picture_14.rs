@@ -5,7 +5,7 @@ use crate::{
     Color, Error, FontFamily, FontWeight, RenderContext, Text, TextLayout, TextLayoutBuilder,
 };
 
-pub const SIZE: Size = Size::new(480., 560.);
+pub const SIZE: Size = Size::new(240., 280.);
 
 static TEXT: &str = r#"100200300400500
 600700800900950"#;
@@ -35,7 +35,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(28..31, FontWeight::EXTRA_BLACK)
         .build()?;
 
-    let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);
+    let y_pos = ((SIZE.height - layout.size().height) / 2.0).max(0.0);
     let text_pos = Vec2::new(16.0, y_pos);
     rc.draw_text(&layout, text_pos.to_point());
 

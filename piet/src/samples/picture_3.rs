@@ -3,7 +3,7 @@
 use crate::kurbo::{Affine, BezPath, Line, Size};
 use crate::{Color, Error, LineCap, LineJoin, RenderContext, StrokeStyle};
 
-pub const SIZE: Size = Size::new(400., 200.);
+pub const SIZE: Size = Size::new(200., 100.);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(None, Color::WHITE);

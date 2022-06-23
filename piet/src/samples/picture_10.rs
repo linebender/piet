@@ -3,7 +3,7 @@
 use crate::kurbo::{Size, Vec2};
 use crate::{Color, Error, RenderContext, Text, TextAttribute, TextLayout, TextLayoutBuilder};
 
-pub const SIZE: Size = Size::new(400., 400.);
+pub const SIZE: Size = Size::new(200., 200.);
 
 static SAMPLE_EN: &str = r#"ḧ́ͥm̾ͭpͭ̒ͦ̎ḧ̐̈̾̆͊
  ch̯͈̙̯̼̠a͚͉o̺̮̳̮̩s̪͇.̥̩̹"#;

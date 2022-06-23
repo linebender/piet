@@ -6,7 +6,7 @@ use crate::{
     TextLayout, TextLayoutBuilder,
 };
 
-pub const SIZE: Size = Size::new(480., 560.);
+pub const SIZE: Size = Size::new(240., 280.);
 
 static TEXT: &str = r#"Philosophers often behave like little children who scribble some marks on a piece of paper at random and then ask the grown-up "What's that?" — It happened like this: the grown-up had drawn pictures for the child several times and said "this is a man," "this is a house," etc. And then the child makes some marks too and asks: what's this then?"#;
 
@@ -36,7 +36,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
         .range_attribute(240.., FontFamily::SYSTEM_UI)
         .build()?;
 
-    let y_pos = ((SIZE.height - layout.size().height * 2.0) / 4.0).max(0.0);
+    let y_pos = ((SIZE.height - layout.size().height) / 2.0).max(0.0);
     let text_pos = Vec2::new(16.0, y_pos);
     rc.draw_text(&layout, text_pos.to_point());
 

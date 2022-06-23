@@ -6,7 +6,7 @@ use crate::{
     TextLayoutBuilder,
 };
 
-pub const SIZE: Size = Size::new(464., 800.);
+pub const SIZE: Size = Size::new(232., 400.);
 
 static SAMPLE_EN: &str = r#"1nnyyÊbbbb soft break
 2nnyyÊbbbb

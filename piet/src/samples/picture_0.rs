@@ -12,7 +12,7 @@ const BLUE_ALPHA: Color = Color::rgba8(0x00, 0x00, 0x80, 0xC0);
 const RED_ALPHA: Color = Color::rgba8(0x80, 0x00, 0x00, 0xC0);
 const YELLOW_ALPHA: Color = Color::rgba8(0xCF, 0xCF, 0x00, 0x60);
 
-pub const SIZE: Size = Size::new(400., 200.);
+pub const SIZE: Size = Size::new(200., 100.);
 
 pub fn draw(rc: &mut impl RenderContext) -> Result<(), Error> {
     rc.clear(None, Color::WHITE);
