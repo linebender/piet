@@ -481,10 +481,6 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             device_size.x as usize,
             device_size.y as usize,
             D2D1_ALPHA_MODE_PREMULTIPLIED,
-            // Here we force a 1.0 dpi scale, because we're already doing all of
-            // the dpi calculations manually. For some reason I can't get this part
-            // to work if I pass the dpi scale of render context bitmap.
-            1.0,
         )?;
 
         let src_rect = Rect {
