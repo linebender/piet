@@ -457,8 +457,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn capture_image_area(&mut self, rect: impl Into<Rect>) -> Result<Self::Image, Error> {
         let r = rect.into();
 
-        let (dpi_scale_x, _) = self.rt.get_dpi_scale();
-        let dpi_scale = dpi_scale_x as f64;
+        let (dpi_scale, _) = self.rt.get_dpi_scale();
+        let dpi_scale = dpi_scale as f64;
 
         let transform_matrix = self.rt.get_transform();
         let affine_transform = matrix3x2f_to_affine(transform_matrix);
@@ -481,20 +481,17 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             device_size.x as usize,
             device_size.y as usize,
             D2D1_ALPHA_MODE_PREMULTIPLIED,
-            dpi_scale_x,
+            // Here we force a 1.0 dpi scale, because we're already doing all of
+            // the dpi calculations manually. For some reason I can't get this part
+            // to work if I pass the dpi scale of render context bitmap.
+            1.0,
         )?;
-
-        // TODO: I don't understand why I a src_rect that's 2.0 * dpi_scale * device_size
-        //       in order for `copy_from_render_target` to copy the right portion. Pretty
-        //       sure I'm doing something wrong here. Maybe someone who knows d2d better can
-        //       help out?
-        let magic_multiplier_why = 2.0;
 
         let src_rect = Rect {
             x0: device_origin.x,
             y0: device_origin.y,
-            x1: device_size.x * magic_multiplier_why,
-            y1: device_size.y * magic_multiplier_why,
+            x1: device_size.x * dpi_scale,
+            y1: device_size.y * dpi_scale,
         };
 
         let d2d_dest_point = to_point2u((0.0f32, 0.0f32));
