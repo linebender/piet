@@ -22,4 +22,4 @@ associative-cache = "1.0"
 
 [dev-dependencies]
 piet = { version = "=0.5.0", path = "../piet", features = ["samples"] }
-png = "0.17"
+piet-common = { version = "=0.5.0", path = "../piet-common", features = ["png"] }
