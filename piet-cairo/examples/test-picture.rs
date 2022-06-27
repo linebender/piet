@@ -1,13 +1,10 @@
 //! Basic example of rendering on Cairo.
 
-use std::fs::File;
 use std::path::Path;
 use std::process::Command;
 
-use cairo::{Context, Format, ImageSurface};
-
 use piet::{samples, RenderContext};
-use piet_cairo::CairoRenderContext;
+use piet_common::Device;
 
 // TODO: Improve support for fractional scaling where sample size ends up fractional.
 const SCALE: f64 = 2.0;
@@ -25,18 +22,16 @@ fn run_sample(idx: usize, base_dir: &Path) -> Result<(), Box<dyn std::error::Err
     let file_name = format!("{}{}.png", FILE_PREFIX, idx);
     let path = base_dir.join(file_name);
 
-    let surface = ImageSurface::create(Format::ARgb32, size.width as i32, size.height as i32)
-        .expect("Can't create surface");
-    let cr = Context::new(&surface).unwrap();
-    cr.scale(SCALE, SCALE);
-    let mut piet_context = CairoRenderContext::new(&cr);
+    let mut device = Device::new()?;
+    let mut target = device.bitmap_target(size.width as usize, size.height as usize, SCALE)?;
+    let mut piet_context = target.render_context();
+
     sample.draw(&mut piet_context)?;
+
     piet_context.finish()?;
-    surface.flush();
+    std::mem::drop(piet_context);
 
-    let mut file = File::create(path)?;
-
-    surface.write_to_png(&mut file).map_err(Into::into)
+    target.save_to_file(path).map_err(Into::into)
 }
 
 fn additional_system_info() -> String {

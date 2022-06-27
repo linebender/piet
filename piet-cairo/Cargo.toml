@@ -21,7 +21,7 @@ xi-unicode = "0.3.0"
 
 [dev-dependencies]
 piet = { version = "=0.5.0", path = "../piet", features = ["samples"] }
-cairo-rs = { version = "0.15.1", default-features = false, features = ["png"] }
+piet-common = { version = "=0.5.0", path = "../piet-common", features = ["png"] }
 criterion = "0.3"
 
 [[bench]]
