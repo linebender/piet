@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use crate::kurbo::Size;
 use crate::{Error, RenderContext};
@@ -29,6 +30,10 @@ mod picture_14;
 mod picture_15;
 
 type BoxErr = Box<dyn std::error::Error>;
+
+/// The default scale factor to use when none is specified.
+// TODO: Improve support for fractional scaling where sample size ends up fractional.
+pub const DEFAULT_SCALE: f64 = 2.0;
 
 /// The total number of samples in this module.
 pub const SAMPLE_COUNT: usize = 16;
@@ -72,6 +77,7 @@ struct Args {
     out_dir: PathBuf,
     number: Option<usize>,
     compare_dir: Option<PathBuf>,
+    scale: f64,
 }
 
 /// A shared `main` fn for diferent backends.
@@ -85,7 +91,7 @@ struct Args {
 ///   testing environment, such as the versions of various dependencies; this
 ///   will be appended to the GENERATED_BY file.
 pub fn samples_main(
-    f: fn(usize, &Path) -> Result<(), BoxErr>,
+    f: fn(usize, f64, &Path) -> Result<(), BoxErr>,
     prefix: &str,
     env_info: Option<&str>,
 ) -> ! {
@@ -102,15 +108,20 @@ pub fn samples_main(
             std::fs::create_dir_all(&args.out_dir)?;
         }
 
+        let call_f = |number| {
+            let filename = get_filename(prefix, args.scale, number, false);
+            f(number, args.scale, &args.out_dir.join(filename))
+        };
+
         if args.all {
             write_os_info(&args.out_dir, env_info)?;
-            run_all(|number| f(number, &args.out_dir))?;
+            run_all(call_f)?;
         } else if let Some(number) = args.number {
-            f(number, &args.out_dir)?;
+            call_f(number)?;
         }
 
         if let Some(compare_dir) = args.compare_dir.as_ref() {
-            let results = compare_snapshots(compare_dir, &args.out_dir, prefix)?;
+            let results = compare_snapshots(compare_dir, &args.out_dir, prefix, args.scale)?;
             if args.all {
                 let info_one = read_os_info(compare_dir)?;
                 let info_two = read_os_info(&args.out_dir)?;
@@ -171,6 +182,7 @@ impl Args {
     fn from_env() -> Result<Args, BoxErr> {
         let mut args = pico_args::Arguments::from_env();
         let out_dir: Option<PathBuf> = args.opt_value_from_str("--out")?;
+        let scale = args.opt_value_from_fn("--scale", f64::from_str)?;
 
         let args = Args {
             help: args.contains("--help"),
@@ -178,6 +190,7 @@ impl Args {
             out_dir: out_dir.unwrap_or_else(|| PathBuf::from(".")),
             compare_dir: args.opt_value_from_str("--compare")?,
             number: args.opt_free_from_str()?,
+            scale: scale.unwrap_or(DEFAULT_SCALE),
         };
 
         if !(args.help || args.all || args.number.is_some() || args.compare_dir.is_some()) {
@@ -210,14 +223,26 @@ fn run_all(f: impl Fn(usize) -> Result<(), BoxErr>) -> Result<(), BoxErr> {
     }
 }
 
+fn get_filename(prefix: &str, scale: f64, number: usize, diff: bool) -> String {
+    // The filename is generated in such a way that different scales of the same image
+    // can be more easily compared as they are next to each other with alphabetical sorting.
+    // prefix-05-1.00.png
+    // prefix-05-2.00.png
+    match diff {
+        false => format!("{}-{:0>2}-{:.2}.png", prefix, number, scale),
+        true => format!("{}-{:0>2}-{:.2}-diff.png", prefix, number, scale),
+    }
+}
+
 fn compare_snapshots(
     base: &Path,
     revised: &Path,
     prefix: &str,
+    scale: f64,
 ) -> Result<BTreeMap<usize, Option<FailureReason>>, BoxErr> {
     let mut failures = BTreeMap::new();
-    let base_paths = get_sample_files(base)?;
-    let rev_paths = get_sample_files(revised)?;
+    let base_paths = get_sample_files(base, scale)?;
+    let rev_paths = get_sample_files(revised, scale)?;
 
     for (number, base_path) in &base_paths {
         let rev_path = match rev_paths.get(number) {
@@ -228,7 +253,7 @@ fn compare_snapshots(
             }
         };
 
-        let result = compare_files(*number, base_path, rev_path, prefix)?;
+        let result = compare_files(*number, base_path, rev_path, prefix, scale)?;
         failures.insert(*number, result);
     }
 
@@ -244,6 +269,7 @@ fn compare_files(
     p1: &Path,
     p2: &Path,
     prefix: &str,
+    scale: f64,
 ) -> Result<Option<FailureReason>, BoxErr> {
     let (one_info, one) = get_png_data(p1)?;
     let (two_info, two) = get_png_data(p2)?;
@@ -259,7 +285,7 @@ fn compare_files(
         one_info.color_type, two_info.color_type,
         "color types should always match"
     );
-    let err_write_path = p2.with_file_name(&format!("{}{}-diff.png", prefix, number));
+    let err_write_path = p2.with_file_name(&get_filename(prefix, scale, number, true));
     compare_pngs(one_info, &one, &two, err_write_path)
 }
 
@@ -334,22 +360,26 @@ fn compare_pngs(
     }))
 }
 
-fn get_sample_files(in_dir: &Path) -> Result<BTreeMap<usize, PathBuf>, BoxErr> {
+fn get_sample_files(in_dir: &Path, scale: f64) -> Result<BTreeMap<usize, PathBuf>, BoxErr> {
     let mut out = BTreeMap::new();
+    let stem_suffix = format!("-{:.2}", scale);
     for entry in std::fs::read_dir(in_dir)? {
         let path = entry?.path();
-        if let Some(number) = extract_number(&path) {
+        if let Some(number) = extract_number(&path, &stem_suffix) {
             out.insert(number, path);
         }
     }
     Ok(out)
 }
 
-/// Extract the '12' from a path to a file like 'cairo-test-12'
-fn extract_number(path: &Path) -> Option<usize> {
+/// Extract the '12' from a path to a file like 'cairo-test-12-2.0.png'
+fn extract_number(path: &Path, stem_suffix: &str) -> Option<usize> {
     let stem = path.file_stem()?;
     let stem_str = stem.to_str()?;
-    let stripped = stem_str.split('-').last()?;
+    if !stem_str.ends_with(stem_suffix) {
+        return None;
+    }
+    let stripped = stem_str.split('-').nth_back(1)?;
     stripped.parse().ok()
 }
 
@@ -428,10 +458,12 @@ Optional Args
     --compare=<dir>  Compare the results with those found in 'dir'. If the results
                      differ, then print an explanation and exit with a non-zero
                      status.
+    --scale=<f64>    Specify the pixel scaling multiplier. Defaults to {:.2}.
 
 Flags
     --help           Print this help message and exit.
     ",
-        SAMPLE_COUNT - 1
+        SAMPLE_COUNT - 1,
+        DEFAULT_SCALE
     );
 }
