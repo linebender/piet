@@ -12,6 +12,8 @@ use core_graphics::{color_space::CGColorSpace, context::CGContext};
 #[cfg(feature = "png")]
 use png::{ColorType, Encoder};
 
+#[cfg(feature = "png")]
+use piet::util;
 use piet::{Error, ImageBuf, ImageFormat};
 #[doc(hidden)]
 pub use piet_coregraphics::*;
@@ -164,7 +166,7 @@ impl<'a> BitmapTarget<'a> {
         let height = self.ctx.height() as usize;
         let mut data = vec![0; width * height * 4];
         self.copy_raw_pixels(ImageFormat::RgbaPremul, &mut data)?;
-        piet_coregraphics::unpremultiply_rgba(&mut data);
+        util::unpremultiply_rgba(&mut data);
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::Rgba);

@@ -204,6 +204,18 @@ pub fn unpremul(x: u8, a: u8) -> u8 {
     }
 }
 
+/// Takes a buffer of premultiplied RGBA pixels and unpremultiplies them in place.
+pub fn unpremultiply_rgba(data: &mut [u8]) {
+    for i in (0..data.len()).step_by(4) {
+        let a = data[i + 3];
+        if a != 0 {
+            for x in &mut data[i..(i + 3)] {
+                *x = unpremul(*x, a);
+            }
+        }
+    }
+}
+
 /// A heurstic for text direction; returns `true` if, while enumerating characters
 /// in this string, a character in the 'R' (strong right-to-left) category is
 /// encountered before any character in the 'L' (strong left-to-right) category is.
