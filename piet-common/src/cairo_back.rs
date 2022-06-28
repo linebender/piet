@@ -186,8 +186,8 @@ impl<'a> BitmapTarget<'a> {
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
-        let width = self.surface.width();
-        let height = self.surface.height();
+        let width = self.surface.width() as usize;
+        let height = self.surface.height() as usize;
         let mut data = vec![0; width * height * 4];
         self.copy_raw_pixels(ImageFormat::RgbaPremul, &mut data)?;
         util::unpremultiply_rgba(&mut data);
