@@ -142,16 +142,14 @@ impl<'a> BitmapTarget<'a> {
         if buf.len() < size {
             return Err(piet::Error::InvalidInput);
         }
-        if stride != width * 4 {
+        let used_stride = width * 4;
+        if stride != used_stride {
             for y in 0..height {
-                let src_off = y * stride;
-                let dst_off = y * width * 4;
-                for x in 0..width {
-                    buf[dst_off + x * 4 + 0] = data[src_off + x * 4 + 2];
-                    buf[dst_off + x * 4 + 1] = data[src_off + x * 4 + 1];
-                    buf[dst_off + x * 4 + 2] = data[src_off + x * 4 + 0];
-                    buf[dst_off + x * 4 + 3] = data[src_off + x * 4 + 3];
-                }
+                let src_start = y * stride;
+                let src_end = src_start + used_stride;
+                let dst_start = y * used_stride;
+                let dst_end = dst_start + used_stride;
+                buf[dst_start..dst_end].copy_from_slice(&data[src_start..src_end])
             }
         } else {
             buf.copy_from_slice(data);
