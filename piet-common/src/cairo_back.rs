@@ -13,6 +13,8 @@ use std::io::BufWriter;
 use std::marker::PhantomData;
 use std::path::Path;
 
+#[cfg(feature = "png")]
+use piet::util;
 use piet::{ImageBuf, ImageFormat};
 #[doc(hidden)]
 pub use piet_cairo::*;
@@ -184,16 +186,19 @@ impl<'a> BitmapTarget<'a> {
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
-        let height = self.surface.height();
-        let width = self.surface.width();
-        let image = self.to_image_buf(ImageFormat::RgbaPremul)?;
+        let width = self.surface.width() as usize;
+        let height = self.surface.height() as usize;
+        let mut data = vec![0; width * height * 4];
+        self.copy_raw_pixels(ImageFormat::RgbaPremul, &mut data)?;
+        util::unpremultiply_rgba(&mut data);
         let file = BufWriter::new(File::create(path).map_err(Into::<Box<_>>::into)?);
         let mut encoder = Encoder::new(file, width as u32, height as u32);
         encoder.set_color(ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
         encoder
             .write_header()
             .map_err(Into::<Box<_>>::into)?
-            .write_image_data(image.raw_pixels())
+            .write_image_data(&data)
             .map_err(Into::<Box<_>>::into)?;
         Ok(())
     }

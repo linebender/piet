@@ -22,7 +22,6 @@ use foreign_types::ForeignTypeRef;
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
-use piet::util::unpremul;
 use piet::{
     Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap,
     LineJoin, RenderContext, RoundInto, StrokeStyle,
@@ -575,18 +574,6 @@ fn to_cgrect(rect: impl Into<Rect>) -> CGRect {
 fn to_cgaffine(affine: Affine) -> CGAffineTransform {
     let [a, b, c, d, tx, ty] = affine.as_coeffs();
     CGAffineTransform::new(a, b, c, d, tx, ty)
-}
-
-#[allow(dead_code)]
-pub fn unpremultiply_rgba(data: &mut [u8]) {
-    for i in (0..data.len()).step_by(4) {
-        let a = data[i + 3];
-        if a != 0 {
-            for x in &mut data[i..(i + 3)] {
-                *x = unpremul(*x, a);
-            }
-        }
-    }
 }
 
 #[link(name = "CoreGraphics", kind = "framework")]
