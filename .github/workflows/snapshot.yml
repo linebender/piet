@@ -27,11 +27,18 @@ jobs:
           profile: minimal
           override: true
 
-      - name: generate and compare (ubuntu+cairo)
+      - name: generate and compare (1.00) (ubuntu+cairo)
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --out=cairo_samples --compare=./piet/snapshots/cairo
+          args: --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=1 --out=cairo_samples --compare=./piet/snapshots/cairo
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: generate and compare (2.00) (ubuntu+cairo)
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=2 --out=cairo_samples --compare=./piet/snapshots/cairo
         if: contains(matrix.os, 'ubuntu')
 
       - name: upload failures (ubuntu+cairo)
@@ -41,11 +48,18 @@ jobs:
           path: cairo_samples
         if: contains(matrix.os, 'ubuntu') && failure()
 
-      - name: generate and compare (macOS)
+      - name: generate and compare (1.00) (macOS)
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
+          args: --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=1 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
+        if: contains(matrix.os, 'macOS')
+
+      - name: generate and compare (2.00) (macOS)
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=2 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
         if: contains(matrix.os, 'macOS')
 
       - name: upload failures (macOS)
@@ -55,11 +69,18 @@ jobs:
           path: coregraphics_samples
         if: contains(matrix.os, 'macOS') && failure()
 
-      - name: generate and compare (d2d)
+      - name: generate and compare (1.00) (d2d)
         uses: actions-rs/cargo@v1
         with:
           command: run
-          args: --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --out=d2d_samples --compare=./piet/snapshots/d2d
+          args: --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=1 --out=d2d_samples --compare=./piet/snapshots/d2d
+        if: contains(matrix.os, 'windows')
+
+      - name: generate and compare (2.00) (d2d)
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=2 --out=d2d_samples --compare=./piet/snapshots/d2d
         if: contains(matrix.os, 'windows')
 
       - name: upload failures (d2d)
