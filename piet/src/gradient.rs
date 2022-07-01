@@ -210,7 +210,7 @@ impl<'a> GradientStops for &'a [Color] {
     }
 }
 
-impl<'a> GradientStops for (Color, Color) {
+impl GradientStops for (Color, Color) {
     #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1];
@@ -218,7 +218,7 @@ impl<'a> GradientStops for (Color, Color) {
     }
 }
 
-impl<'a> GradientStops for (Color, Color, Color) {
+impl GradientStops for (Color, Color, Color) {
     #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2];
@@ -226,7 +226,7 @@ impl<'a> GradientStops for (Color, Color, Color) {
     }
 }
 
-impl<'a> GradientStops for (Color, Color, Color, Color) {
+impl GradientStops for (Color, Color, Color, Color) {
     #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2, self.3];
@@ -234,7 +234,7 @@ impl<'a> GradientStops for (Color, Color, Color, Color) {
     }
 }
 
-impl<'a> GradientStops for (Color, Color, Color, Color, Color) {
+impl GradientStops for (Color, Color, Color, Color, Color) {
     #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2, self.3, self.4];
@@ -242,7 +242,7 @@ impl<'a> GradientStops for (Color, Color, Color, Color, Color) {
     }
 }
 
-impl<'a> GradientStops for (Color, Color, Color, Color, Color, Color) {
+impl GradientStops for (Color, Color, Color, Color, Color, Color) {
     #[allow(clippy::wrong_self_convention)]
     fn to_vec(self) -> Vec<GradientStop> {
         let stops: &[Color] = &[self.0, self.1, self.2, self.3, self.4, self.5];
