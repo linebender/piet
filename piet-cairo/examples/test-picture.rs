@@ -1,5 +1,6 @@
 //! Basic example of rendering on Cairo.
 
+use std::fmt::Write as _;
 use std::path::Path;
 use std::process::Command;
 
@@ -43,7 +44,7 @@ fn additional_system_info() -> String {
 
 fn append_lib_version(package_name: &str, buf: &mut String) {
     let version = get_version_from_apt(package_name);
-    buf.push_str(&format!("{:16}", package_name));
+    write!(buf, "{:16}", package_name).expect("Failed to write package name to string");
     buf.push_str(version.as_deref().unwrap_or("not found"));
     buf.push('\n')
 }
