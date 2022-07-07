@@ -236,7 +236,7 @@ impl RenderContext for WebRenderContext<'_> {
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>) {
         // TODO: bounding box for text
         self.ctx.save();
-        self.ctx.set_font(&layout.font.get_font_string());
+        self.ctx.set_font(&layout.font_setting);
         let brush = layout.color().make_brush(self, || layout.size().to_rect());
         self.set_brush(&brush, true);
         let pos = pos.into();

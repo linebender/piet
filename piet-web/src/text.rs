@@ -3,7 +3,6 @@
 mod grapheme;
 mod lines;
 
-use std::borrow::Cow;
 use std::fmt;
 use std::ops::RangeBounds;
 use std::rc::Rc;
@@ -37,6 +36,7 @@ pub struct WebTextLayout {
 
     // Calculated on build
     pub(crate) line_metrics: Vec<LineMetric>,
+    pub(crate) font_setting: Rc<str>,
     size: Size,
     trailing_ws_width: f64,
     color: Color,
@@ -118,22 +118,6 @@ impl WebFont {
         self.size = size;
         self
     }
-
-    pub(crate) fn get_font_string(&self) -> String {
-        let style_str = match self.style {
-            FontStyle::Normal => Cow::from("normal"),
-            FontStyle::Italic => Cow::from("italic"),
-            FontStyle::Oblique(None) => Cow::from("italic"),
-            FontStyle::Oblique(Some(angle)) => Cow::from(format!("oblique {}deg", angle)),
-        };
-        format!(
-            "{} {} {}px \"{}\"",
-            style_str,
-            self.weight,
-            self.size,
-            self.family.name()
-        )
-    }
 }
 
 impl TextLayoutBuilder for WebTextLayoutBuilder {
@@ -169,10 +153,28 @@ impl TextLayoutBuilder for WebTextLayoutBuilder {
             .with_weight(self.defaults.weight)
             .with_style(self.defaults.style);
 
+        let build_font_setting = |style: &dyn fmt::Display| {
+            format!(
+                r#"{} {} {}px "{}""#,
+                style,
+                font.weight,
+                font.size,
+                font.family.name()
+            )
+        };
+        let font_setting = match font.style {
+            FontStyle::Normal => build_font_setting(&"normal"),
+            FontStyle::Italic => build_font_setting(&"italic"),
+            FontStyle::Oblique(None) => build_font_setting(&"oblique"),
+            FontStyle::Oblique(Some(angle)) => {
+                build_font_setting(&format_args!("oblique {}deg", angle))
+            }
+        };
         let mut layout = WebTextLayout {
             ctx: self.ctx,
             font,
             text: self.text,
+            font_setting: font_setting.into(),
             line_metrics: Vec::new(),
             size: Size::ZERO,
             trailing_ws_width: 0.0,
@@ -223,50 +225,47 @@ impl TextLayout for WebTextLayout {
     }
 
     fn hit_test_point(&self, point: Point) -> HitTestPoint {
-        self.ctx.set_font(&self.font.get_font_string());
-        // internal logic is using grapheme clusters, but return the text position associated
-        // with the border of the grapheme cluster.
-
         // null case
         if self.text.is_empty() {
             return HitTestPoint::default();
         }
 
-        // this assumes that all heights/baselines are the same.
-        // Uses line bounding box to do hit testpoint, but with coordinates starting at 0.0 at
-        // first baseline
-        let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
+        self.ctx.set_font(&self.font_setting);
 
-        // check out of bounds above top
-        // out of bounds on bottom during iteration
-        let mut is_y_inside = true;
-        if point.y < -1.0 * first_baseline {
-            is_y_inside = false
-        };
+        // Get the top line metric.
+        let first_y_offset = self
+            .line_metrics
+            .get(0)
+            .map(|lm| lm.y_offset)
+            .unwrap_or(0.0);
 
-        let mut lm = self
+        // Check point Y is within the top bound of the top line.
+        let mut is_y_inside = point.y >= first_y_offset;
+
+        // Get the first bottom line metric that overshoots point Y.
+        let bottom_lm = self
             .line_metrics
             .iter()
-            .skip_while(|l| l.y_offset + l.height < point.y);
-        let lm = lm
-            .next()
+            // Find line that overshoots point Y.
+            .find(|lm| lm.y_offset + lm.height >= point.y)
             .or_else(|| {
-                // This means it went over the last line, so return the last line.
+                // In this case we went over the last line, so return it.
                 is_y_inside = false;
                 self.line_metrics.last()
             })
             .cloned()
             .unwrap_or_else(|| {
+                // In this case, we have no line metrics, so return a default.
                 is_y_inside = false;
                 Default::default()
             });
 
-        // Then for the line, do hit test point
-        // Trailing whitespace is remove for the line
-        let line = &self.text[lm.start_offset..lm.end_offset];
+        // For the bottom line, hit test the line point.
+        // Trailing whitespace is removed for the line.
+        let line = &self.text[bottom_lm.start_offset..bottom_lm.end_offset];
 
         let mut htp = hit_test_line_point(&self.ctx, line, point);
-        htp.idx += lm.start_offset;
+        htp.idx += bottom_lm.start_offset;
 
         if !is_y_inside {
             htp.is_inside = false;
@@ -276,7 +275,7 @@ impl TextLayout for WebTextLayout {
     }
 
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition {
-        self.ctx.set_font(&self.font.get_font_string());
+        self.ctx.set_font(&self.font_setting);
         let idx = idx.min(self.text.len());
         assert!(self.text.is_char_boundary(idx));
         // first need to find line it's on, and get line start offset
@@ -311,8 +310,8 @@ impl WebTextLayout {
 
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
         // various functions like `text_width` are stateful, and require
-        // the context to be configured correcttly.
-        self.ctx.set_font(&self.font.get_font_string());
+        // the context to be configured correctly.
+        self.ctx.set_font(&self.font_setting);
         let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
         let mut line_metrics =
             lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
