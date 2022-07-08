@@ -174,7 +174,7 @@ impl AttributedString {
         }
     }
 
-    pub(crate) fn set_fg_color(&mut self, range: CFRange, color: &Color) {
+    pub(crate) fn set_fg_color(&mut self, range: CFRange, color: Color) {
         let (r, g, b, a) = color.as_rgba();
         let color = CGColor::rgb(r, g, b, a);
         unsafe {

@@ -466,7 +466,7 @@ impl D2DTextLayout {
     fn resolve_colors_if_needed(&self, ctx: &mut D2DRenderContext) {
         if self.needs_to_set_colors.replace(false) {
             for (range, color) in self.colors.as_ref() {
-                let brush = ctx.solid_brush(color.clone());
+                let brush = ctx.solid_brush(*color);
                 self.layout.borrow_mut().set_foregound_brush(*range, brush)
             }
         }
