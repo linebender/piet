@@ -187,9 +187,29 @@ impl Color {
         Color::from_rgba32_u32((self.as_rgba_u32() & !0xff) | a)
     }
 
+    /// Change just the red value of a color
+    ///
+    /// The `r` value represents red as a u8 from 0 to 255.
+    pub const fn with_r8(self, r: u8) -> Color {
+        Color::from_rgba32_u32((self.as_rgba_u32() & !0xff000000) | (r as u32) << 24)
+    }
+
+    /// Change just the green value of a color
+    ///
+    /// The `g` value represents green as a u8 from 0 to 255.
+    pub const fn with_g8(self, g: u8) -> Color {
+        Color::from_rgba32_u32((self.as_rgba_u32() & !0xff0000) | (g as u32) << 16)
+    }
+
+    /// Change just the blue value of a color
+    ///
+    /// The `b` value represents blue as a u8 from 0 to 255.
+    pub const fn with_b8(self, b: u8) -> Color {
+        Color::from_rgba32_u32((self.as_rgba_u32() & !0xff00) | (b as u32) << 8)
+    }
 
     /// Change just the alpha value of a color
-    /// 
+    ///
     /// The `a` value represents alpha as a u8 from 0 to 255.
     pub const fn with_a8(self, a: u8) -> Color {
         Color::from_rgba32_u32((self.as_rgba_u32() & !0xff) | a as u32)
@@ -362,5 +382,27 @@ mod tests {
         assert!(Color::from_hex_str("#0f").is_err());
         assert!(Color::from_hex_str("x0f").is_err());
         assert!(Color::from_hex_str("#0afa1").is_err());
+    }
+
+    #[test]
+    fn change_subcolor_values() {
+        let color = Color::from_rgba32_u32(0x11aa22bb);
+
+        assert_eq!(
+            color.clone().with_r8(0xff),
+            Color::from_rgba32_u32(0xffaa22bb)
+        );
+        assert_eq!(
+            color.clone().with_g8(0xff),
+            Color::from_rgba32_u32(0x11ff22bb)
+        );
+        assert_eq!(
+            color.clone().with_b8(0xff),
+            Color::from_rgba32_u32(0x11aaffbb)
+        );
+        assert_eq!(
+            color.clone().with_a8(0xff),
+            Color::from_rgba32_u32(0x11aa22ff)
+        );
     }
 }
