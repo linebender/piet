@@ -469,6 +469,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         };
         // TODO: This transformation is untested with the current test pictures
         let device_size = affine_transform * device_size;
+        let device_size = device_size.to_vec2().to_size();
 
         let device_origin = Point {
             x: r.x0 * dpi_scale,
@@ -478,17 +479,12 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let device_origin = affine_transform * device_origin;
 
         let mut target_bitmap = self.rt.create_blank_bitmap(
-            device_size.x as usize,
-            device_size.y as usize,
+            device_size.width as usize,
+            device_size.height as usize,
             D2D1_ALPHA_MODE_PREMULTIPLIED,
         )?;
 
-        let src_rect = Rect {
-            x0: device_origin.x,
-            y0: device_origin.y,
-            x1: device_size.x * dpi_scale,
-            y1: device_size.y * dpi_scale,
-        };
+        let src_rect = Rect::from_origin_size(device_origin, device_size);
 
         let d2d_dest_point = to_point2u((0.0f32, 0.0f32));
         let d2d_src_rect = rect_to_rectu(src_rect);
