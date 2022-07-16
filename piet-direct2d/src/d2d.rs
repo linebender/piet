@@ -428,6 +428,16 @@ impl DeviceContext {
         }
     }
 
+    pub fn get_dpi_scale(&self) -> (f32, f32) {
+        let mut dpi_x = 0.0f32;
+        let mut dpi_y = 0.0f32;
+        unsafe {
+            self.0.GetDpi(&mut dpi_x, &mut dpi_y);
+        }
+        // https://docs.microsoft.com/en-us/windows/win32/direct2d/direct2d-and-high-dpi
+        (dpi_x / 96., dpi_y / 96.)
+    }
+
     /// Begin drawing.
     ///
     /// This must be done before any piet drawing operations.
