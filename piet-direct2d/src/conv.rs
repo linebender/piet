@@ -156,7 +156,7 @@ pub(crate) fn color_to_colorf(color: Color) -> D2D1_COLOR_F {
 pub(crate) fn gradient_stop_to_d2d(stop: &GradientStop) -> D2D1_GRADIENT_STOP {
     D2D1_GRADIENT_STOP {
         position: stop.pos,
-        color: color_to_colorf(stop.color.clone()),
+        color: color_to_colorf(stop.color),
     }
 }
 

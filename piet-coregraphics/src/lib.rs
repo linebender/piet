@@ -176,7 +176,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         self.set_path(shape);
         match brush.as_ref() {
             Brush::Solid(color) => {
-                self.set_fill_color(color);
+                self.set_fill_color(*color);
                 self.ctx.fill_path();
             }
             Brush::Gradient(grad) => {
@@ -193,7 +193,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         self.set_path(shape);
         match brush.as_ref() {
             Brush::Solid(color) => {
-                self.set_fill_color(color);
+                self.set_fill_color(*color);
                 self.ctx.fill_path();
             }
             Brush::Gradient(grad) => {
@@ -216,7 +216,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         self.set_stroke(width.round_into(), None);
         match brush.as_ref() {
             Brush::Solid(color) => {
-                self.set_stroke_color(color);
+                self.set_stroke_color(*color);
                 self.ctx.stroke_path();
             }
             Brush::Gradient(grad) => {
@@ -241,7 +241,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         self.set_stroke(width.round_into(), Some(style));
         match brush.as_ref() {
             Brush::Solid(color) => {
-                self.set_stroke_color(color);
+                self.set_stroke_color(*color);
                 self.ctx.stroke_path();
             }
             Brush::Gradient(grad) => {
@@ -482,12 +482,12 @@ fn convert_line_cap(line_cap: LineCap) -> CGLineCap {
 }
 
 impl<'a> CoreGraphicsContext<'a> {
-    fn set_fill_color(&mut self, color: &Color) {
+    fn set_fill_color(&mut self, color: Color) {
         let (r, g, b, a) = Color::as_rgba(color);
         self.ctx.set_rgb_fill_color(r, g, b, a);
     }
 
-    fn set_stroke_color(&mut self, color: &Color) {
+    fn set_stroke_color(&mut self, color: Color) {
         let (r, g, b, a) = Color::as_rgba(color);
         self.ctx.set_rgb_stroke_color(r, g, b, a);
     }

@@ -283,7 +283,7 @@ impl CoreGraphicsTextLayoutBuilder {
         self.default_baseline = (font.ascent() + 0.5).floor();
         self.attr_string.set_font(whole_range, &font);
         self.attr_string
-            .set_fg_color(whole_range, &self.attrs.defaults.fg_color);
+            .set_fg_color(whole_range, self.attrs.defaults.fg_color);
         self.attr_string
             .set_underline(whole_range, self.attrs.defaults.underline);
     }
@@ -294,7 +294,7 @@ impl CoreGraphicsTextLayoutBuilder {
         let range = CFRange::init(utf16_start as isize, utf16_len as isize);
         match attr {
             TextAttribute::TextColor(color) => {
-                self.attr_string.set_fg_color(range, &color);
+                self.attr_string.set_fg_color(range, color);
             }
             TextAttribute::Underline(flag) => self.attr_string.set_underline(range, flag),
             _ => unreachable!(),

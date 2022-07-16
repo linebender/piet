@@ -98,8 +98,8 @@ impl piet::RenderContext for RenderContext {
                 .set("width", "100%")
                 .set("height", "100%"),
         }
-        .set("fill", fmt_color(&color))
-        .set("fill-opacity", fmt_opacity(&color));
+        .set("fill", fmt_color(color))
+        .set("fill-opacity", fmt_opacity(color));
         //FIXME: I don't think we should be clipping, here?
         if let Some(id) = self.state.clip {
             rect.assign("clip-path", format!("url(#{})", id.to_string()));
@@ -128,8 +128,8 @@ impl piet::RenderContext for RenderContext {
                     gradient.append(
                         svg::node::element::Stop::new()
                             .set("offset", stop.pos)
-                            .set("stop-color", fmt_color(&stop.color))
-                            .set("stop-opacity", fmt_opacity(&stop.color)),
+                            .set("stop-color", fmt_color(stop.color))
+                            .set("stop-opacity", fmt_opacity(stop.color)),
                     );
                 }
                 self.doc.append(gradient);
@@ -147,8 +147,8 @@ impl piet::RenderContext for RenderContext {
                     gradient.append(
                         svg::node::element::Stop::new()
                             .set("offset", stop.pos)
-                            .set("stop-color", fmt_color(&stop.color))
-                            .set("stop-opacity", fmt_opacity(&stop.color)),
+                            .set("stop-color", fmt_color(stop.color))
+                            .set("stop-opacity", fmt_opacity(stop.color)),
                     );
                 }
                 self.doc.append(gradient);
@@ -629,14 +629,14 @@ enum BrushKind {
 impl Brush {
     fn color(&self) -> svg::node::Value {
         match self.kind {
-            BrushKind::Solid(ref color) => fmt_color(color).into(),
+            BrushKind::Solid(color) => fmt_color(color).into(),
             BrushKind::Ref(id) => format!("url(#{})", id.to_string()).into(),
         }
     }
 
     fn opacity(&self) -> Option<svg::node::Value> {
         match self.kind {
-            BrushKind::Solid(ref color) => Some(fmt_opacity(color).into()),
+            BrushKind::Solid(color) => Some(fmt_opacity(color).into()),
             BrushKind::Ref(_) => None,
         }
     }
@@ -653,12 +653,12 @@ impl IntoBrush<RenderContext> for Brush {
 }
 
 // RGB in hex representation
-fn fmt_color(color: &Color) -> String {
+fn fmt_color(color: Color) -> String {
     format!("#{:06x}", color.as_rgba_u32() >> 8)
 }
 
 // Opacity as value from [0, 1]
-fn fmt_opacity(color: &Color) -> String {
+fn fmt_opacity(color: Color) -> String {
     format!("{}", color.as_rgba().3)
 }
 

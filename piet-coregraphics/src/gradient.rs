@@ -66,7 +66,7 @@ fn new_cg_gradient(stops: &[GradientStop]) -> CGGradient {
     let mut components = Vec::<CGFloat>::new();
     let mut locations = Vec::<CGFloat>::new();
     for GradientStop { pos, color } in stops {
-        let (r, g, b, a) = Color::as_rgba(color);
+        let (r, g, b, a) = Color::as_rgba(*color);
         components.extend_from_slice(&[r, g, b, a]);
         locations.push(*pos as CGFloat);
     }

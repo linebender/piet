@@ -237,7 +237,8 @@ impl RenderContext for WebRenderContext<'_> {
         // TODO: bounding box for text
         self.ctx.save();
         self.ctx.set_font(&layout.font.get_font_string());
-        let brush = layout.color().make_brush(self, || layout.size().to_rect());
+        let color = layout.color();
+        let brush = color.make_brush(self, || layout.size().to_rect());
         self.set_brush(&brush, true);
         let pos = pos.into();
         for lm in &layout.line_metrics {

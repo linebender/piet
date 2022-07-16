@@ -80,7 +80,7 @@ impl Mondrian {
     fn generate(&self, size: Size, ctx: &mut impl RenderContext) {
         // Start with single rect over whole picture
         let mut rects = vec![ColorRect {
-            color: self.white.clone(),
+            color: self.white,
             rect: Rect::new(0., 0., size.width, size.height).inset(-self.border * DPI),
         }];
         let mut rng = thread_rng();
@@ -116,7 +116,7 @@ impl Mondrian {
         .unwrap();
         'a: for color in &self.colors {
             for _ in 0..(n.sample(&mut rng).exp().round() as usize) {
-                rects[i].color = color.clone();
+                rects[i].color = *color;
                 i += 1;
                 // bail rather than panic if we run out of rectangles
                 if i >= rects.len() {
@@ -157,7 +157,7 @@ impl ColorRect {
         {
             Either::Left(IntoIterator::into_iter([
                 ColorRect {
-                    color: self.color.clone(),
+                    color: self.color,
                     rect: Rect {
                         x0: self.rect.x0,
                         y0: self.rect.y0,
@@ -188,7 +188,7 @@ impl ColorRect {
         {
             Either::Left(IntoIterator::into_iter([
                 ColorRect {
-                    color: self.color.clone(),
+                    color: self.color,
                     rect: Rect {
                         x0: self.rect.x0,
                         y0: self.rect.y0,

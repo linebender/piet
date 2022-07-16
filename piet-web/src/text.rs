@@ -305,8 +305,8 @@ impl WebTextLayout {
         self.size
     }
 
-    pub(crate) fn color(&self) -> &Color {
-        &self.color
+    pub(crate) fn color(&self) -> Color {
+        self.color
     }
 
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {

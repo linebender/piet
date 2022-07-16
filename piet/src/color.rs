@@ -7,7 +7,7 @@ use std::fmt::{Debug, Formatter};
 /// Currently this is only a 32 bit RGBA value, but it will likely
 /// extend to some form of wide-gamut colorspace, and in the meantime
 /// is useful for giving programs proper type.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum Color {
     #[doc(hidden)]
@@ -188,14 +188,14 @@ impl Color {
     }
 
     /// Convert a color value to a 32-bit rgba value.
-    pub fn as_rgba_u32(&self) -> u32 {
-        match *self {
+    pub fn as_rgba_u32(self) -> u32 {
+        match self {
             Color::Rgba32(rgba) => rgba,
         }
     }
 
     /// Convert a color value to four 8-bit rgba values.
-    pub fn as_rgba8(&self) -> (u8, u8, u8, u8) {
+    pub fn as_rgba8(self) -> (u8, u8, u8, u8) {
         let rgba = self.as_rgba_u32();
         (
             (rgba >> 24 & 255) as u8,
@@ -206,7 +206,7 @@ impl Color {
     }
 
     /// Convert a color value to four f64 values, each in the range 0.0 to 1.0.
-    pub fn as_rgba(&self) -> (f64, f64, f64, f64) {
+    pub fn as_rgba(self) -> (f64, f64, f64, f64) {
         let rgba = self.as_rgba_u32();
         (
             (rgba >> 24) as f64 / 255.0,
