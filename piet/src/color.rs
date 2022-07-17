@@ -388,21 +388,9 @@ mod tests {
     fn change_subcolor_values() {
         let color = Color::from_rgba32_u32(0x11aa22bb);
 
-        assert_eq!(
-            color.clone().with_r8(0xff),
-            Color::from_rgba32_u32(0xffaa22bb)
-        );
-        assert_eq!(
-            color.clone().with_g8(0xff),
-            Color::from_rgba32_u32(0x11ff22bb)
-        );
-        assert_eq!(
-            color.clone().with_b8(0xff),
-            Color::from_rgba32_u32(0x11aaffbb)
-        );
-        assert_eq!(
-            color.clone().with_a8(0xff),
-            Color::from_rgba32_u32(0x11aa22ff)
-        );
+        assert_eq!(color.with_r8(0xff), Color::from_rgba32_u32(0xffaa22bb));
+        assert_eq!(color.with_g8(0xff), Color::from_rgba32_u32(0x11ff22bb));
+        assert_eq!(color.with_b8(0xff), Color::from_rgba32_u32(0x11aaffbb));
+        assert_eq!(color.with_a8(0xff), Color::from_rgba32_u32(0x11aa22ff));
     }
 }
