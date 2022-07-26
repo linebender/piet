@@ -26,11 +26,12 @@ use winapi::um::d2d1::{
     ID2D1PathGeometry, ID2D1RectangleGeometry, ID2D1RenderTarget, ID2D1RoundedRectangleGeometry,
     ID2D1SolidColorBrush, ID2D1StrokeStyle, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BEZIER_SEGMENT,
     D2D1_BITMAP_INTERPOLATION_MODE, D2D1_BRUSH_PROPERTIES, D2D1_COLOR_F,
-    D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DEBUG_LEVEL_NONE, D2D1_DEBUG_LEVEL_WARNING,
-    D2D1_DRAW_TEXT_OPTIONS, D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS,
-    D2D1_FACTORY_TYPE_MULTI_THREADED, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
-    D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING,
-    D2D1_GAMMA_2_2, D2D1_GRADIENT_STOP, D2D1_LAYER_OPTIONS_NONE, D2D1_LAYER_PARAMETERS,
+    D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DEBUG_LEVEL_INFORMATION,
+    D2D1_DEBUG_LEVEL_NONE, D2D1_DEBUG_LEVEL_WARNING, D2D1_DRAW_TEXT_OPTIONS,
+    D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS, D2D1_FACTORY_TYPE_MULTI_THREADED,
+    D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_CLOSED,
+    D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING, D2D1_GAMMA_2_2,
+    D2D1_GRADIENT_STOP, D2D1_LAYER_OPTIONS_NONE, D2D1_LAYER_PARAMETERS,
     D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_MATRIX_3X2_F, D2D1_POINT_2F, D2D1_POINT_2U,
     D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_RECT_F, D2D1_RECT_U,
     D2D1_SIZE_F, D2D1_SIZE_U, D2D1_STROKE_STYLE_PROPERTIES,
@@ -232,7 +233,7 @@ impl D2DFactory {
                     // The debug layer should never be active in the release version of an application.
                     // https://docs.microsoft.com/en-us/windows/win32/Direct2D/direct2ddebuglayer-overview
                     debugLevel: match cfg!(debug_assertions) {
-                        true => D2D1_DEBUG_LEVEL_WARNING,
+                        true => D2D1_DEBUG_LEVEL_INFORMATION,
                         false => D2D1_DEBUG_LEVEL_NONE,
                     },
                 },
@@ -1047,6 +1048,10 @@ impl<'a> GeometrySink<'a> {
 impl Bitmap {
     pub fn get_size(&self) -> D2D1_SIZE_F {
         unsafe { self.inner.GetSize() }
+    }
+
+    pub(crate) unsafe fn get_comptr(&self) -> &ComPtr<ID2D1Bitmap1> {
+        &self.inner
     }
 
     pub(crate) fn copy_from_render_target(
