@@ -439,6 +439,14 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     fn status(&mut self) -> Result<(), Error> {
         Ok(())
     }
+
+    fn blur_image(
+        &mut self,
+        _image: &Self::Image,
+        _blur_radius: f64,
+    ) -> Result<Self::Image, Error> {
+        Err(Error::Unimplemented)
+    }
 }
 
 impl<'a> IntoBrush<CoreGraphicsContext<'a>> for Brush {

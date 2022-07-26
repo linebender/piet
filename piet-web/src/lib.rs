@@ -378,6 +378,14 @@ impl RenderContext for WebRenderContext<'_> {
             .fill_rect(rect.x0, rect.y0, rect.width(), rect.height());
         self.ctx.set_shadow_color("none");
     }
+
+    fn blur_image(
+        &mut self,
+        _image: &Self::Image,
+        _blur_radius: f64,
+    ) -> Result<Self::Image, Error> {
+        Err(Error::Unimplemented)
+    }
 }
 
 fn draw_image(

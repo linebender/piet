@@ -384,6 +384,14 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
             Err(err) => self.error = Err(err),
         }
     }
+
+    fn blur_image(
+        &mut self,
+        _image: &Self::Image,
+        _blur_radius: f64,
+    ) -> Result<Self::Image, Error> {
+        Err(Error::Unimplemented)
+    }
 }
 
 impl<'a> IntoBrush<CairoRenderContext<'a>> for Brush {
