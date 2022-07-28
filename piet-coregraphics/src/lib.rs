@@ -382,8 +382,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     ) {
         if let CoreGraphicsImage::NonEmpty(image) = image {
             if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
-                // TODO: apply interpolation mode
-                self.ctx.draw_image(to_cgrect(dst_rect), &cropped);
+               self.draw_image(&CoreGraphicsImage::NonEmpty(cropped), dst_rect, _interp);
             }
         }
     }
