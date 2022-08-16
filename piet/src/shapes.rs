@@ -108,7 +108,7 @@ impl LineJoin {
 }
 
 /// Options for the cap of stroked lines.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LineCap {
     /// The stroke is squared off at the endpoint of the path.
     Butt,

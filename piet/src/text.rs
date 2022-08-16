@@ -543,7 +543,7 @@ impl LineMetric {
 ///
 /// [`TextLayout`]: ../piet/trait.TextLayout.html
 /// [`TextLayout::hit_test_point`]: ../piet/trait.TextLayout.html#tymethod.hit_test_point
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct HitTestPoint {
     /// The index representing the grapheme boundary closest to the `Point`.

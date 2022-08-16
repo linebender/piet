@@ -211,7 +211,7 @@ impl RenderContext for WebRenderContext<'_> {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, None);
-        self.set_brush(&*brush.deref(), false);
+        self.set_brush(brush.deref(), false);
         self.ctx.stroke();
     }
 
@@ -225,7 +225,7 @@ impl RenderContext for WebRenderContext<'_> {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, Some(style));
-        self.set_brush(&*brush.deref(), false);
+        self.set_brush(brush.deref(), false);
         self.ctx.stroke();
     }
 
