@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// A requested interpolation mode for drawing images.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum InterpolationMode {
     /// Don't interpolate, use nearest neighbor.
     NearestNeighbor,
@@ -19,7 +19,7 @@ pub enum InterpolationMode {
 }
 
 /// The pixel format for bitmap images.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum ImageFormat {
     /// 1 byte per pixel.

@@ -15,7 +15,7 @@ pub enum Color {
 }
 
 /// Errors that can occur when parsing a hex color.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ColorParseError {
     /// The input string has an incorrect length
     WrongSize(usize),
