@@ -445,7 +445,99 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         _image: &Self::Image,
         _blur_radius: f64,
     ) -> Result<Self::Image, Error> {
-        Err(Error::Unimplemented)
+        // Set image parameters
+        let size = _image.size();
+        let width = size.width as usize;
+        let height = size.height as usize;
+        let image_channel_count: usize = 4;
+
+        // Calcuale blur parameters
+        let blur_radius_min: usize = 2;
+        let blur_increment_size: usize = 3;
+        let blur_iterations: usize =
+            (_blur_radius as usize - blur_radius_min) / blur_increment_size;
+
+        let image = _image.as_ref().ok_or(Error::InvalidInput)?;
+        let data = image.data();
+        let source_data = data.bytes();
+
+        let mut blurred_surface_data = source_data.to_vec();
+        let mut inner_blur_loop = |current_pass_radius: usize| {
+            let original_surface_data_copy: Vec<u8> = blurred_surface_data.to_vec();
+
+            // precompute loop constants
+            let edge_offset = current_pass_radius * image_channel_count;
+            let width_offset_adjusted =
+                width * image_channel_count - edge_offset - image_channel_count;
+            let height_offset_adjusted =
+                height * image_channel_count - edge_offset - image_channel_count;
+            let current_pass_radius_offset = current_pass_radius * image_channel_count;
+
+            //parse colum elements (down)
+            for j in (0..(height * image_channel_count)).step_by(image_channel_count) {
+                //parse row elements (to the right)
+                for i in (0..(width * image_channel_count)).step_by(image_channel_count) {
+                    for k in 0..(image_channel_count - 1) {
+                        let x = if edge_offset > i {
+                            if width_offset_adjusted > edge_offset {
+                                edge_offset
+                            } else {
+                                width_offset_adjusted
+                            }
+                        } else {
+                            if width_offset_adjusted > i {
+                                i
+                            } else {
+                                width_offset_adjusted
+                            }
+                        };
+                        // let x = (width_offset_adjusted).min(edge_offset.max(i));
+                        let y = (height_offset_adjusted).min((edge_offset).max(j));
+
+                        let mut sum: f32 = 0.; // channel accumulator
+
+                        // add the channel value from the current pixel
+                        sum += (original_surface_data_copy[k + y * width + x] as f32) * 0.25;
+
+                        // add the channel values from the surrounding four corner pixels at radius distance
+                        sum += original_surface_data_copy[k
+                            + (y - current_pass_radius_offset) * width
+                            + x
+                            - current_pass_radius_offset]
+                            as f32
+                            * 0.1875; // top left pixel
+                        sum += original_surface_data_copy[k
+                            + (y - current_pass_radius_offset) * width
+                            + x
+                            + current_pass_radius_offset]
+                            as f32
+                            * 0.1875; // top right pixel
+                        sum += original_surface_data_copy[k
+                            + (y + current_pass_radius_offset) * width
+                            + x
+                            - current_pass_radius_offset]
+                            as f32
+                            * 0.1875; // bottom left pixel
+                        sum += original_surface_data_copy[k
+                            + (y + current_pass_radius_offset) * width
+                            + x
+                            + current_pass_radius_offset]
+                            as f32
+                            * 0.1875; // bottom right pixel
+
+                        blurred_surface_data[k + j * width + i] = sum as u8;
+                    }
+                }
+            }
+        };
+
+        for i in (blur_radius_min..(blur_increment_size * blur_iterations))
+            .step_by(blur_increment_size)
+        {
+            inner_blur_loop(i);
+        }
+
+        self.make_image(width, height, &blurred_surface_data, ImageFormat::RgbaPremul)
     }
 }
 
