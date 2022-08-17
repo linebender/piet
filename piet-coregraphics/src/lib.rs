@@ -382,7 +382,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
     ) {
         if let CoreGraphicsImage::NonEmpty(image) = image {
             if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
-               self.draw_image(&CoreGraphicsImage::NonEmpty(cropped), dst_rect, _interp);
+                self.draw_image(&CoreGraphicsImage::NonEmpty(cropped), dst_rect, _interp);
             }
         }
     }
