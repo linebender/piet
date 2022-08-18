@@ -48,6 +48,7 @@ pub struct CoreGraphicsContext<'a> {
     // by CTContextGetCTM. Instead we maintain our own stack, which will contain
     // only those transforms applied by us.
     transform_stack: Vec<Affine>,
+    y_down: bool,
 }
 
 impl<'a> CoreGraphicsContext<'a> {
@@ -64,7 +65,7 @@ impl<'a> CoreGraphicsContext<'a> {
         height: f64,
         text: Option<CoreGraphicsText>,
     ) -> CoreGraphicsContext {
-        Self::new_impl(ctx, Some(height), text)
+        Self::new_impl(ctx, Some(height), text, false)
     }
 
     /// Create a new context with the y-origin at the bottom right corner.
@@ -77,13 +78,14 @@ impl<'a> CoreGraphicsContext<'a> {
         ctx: &mut CGContextRef,
         text: Option<CoreGraphicsText>,
     ) -> CoreGraphicsContext {
-        Self::new_impl(ctx, None, text)
+        Self::new_impl(ctx, None, text, true)
     }
 
     fn new_impl(
         ctx: &mut CGContextRef,
         height: Option<f64>,
         text: Option<CoreGraphicsText>,
+        y_down: bool,
     ) -> CoreGraphicsContext {
         ctx.save();
         if let Some(height) = height {
@@ -96,6 +98,7 @@ impl<'a> CoreGraphicsContext<'a> {
             ctx,
             text,
             transform_stack: Vec::new(),
+            y_down,
         }
     }
 }
@@ -395,7 +398,17 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         // (see [`CoreGraphicsContext::new_impl`] for details). Since the `src_rect` we receive
         // as parameter is in piet's coordinate system, we need to first convert it to the CG one,
         // as otherwise our captured image area would be wrong.
-        let transformation_matrix = self.ctx.get_ctm();
+
+        let transformation_matrix = if self.y_down {
+            self.ctx.get_ctm()
+        } else {
+            self.ctx.save();
+            self.ctx.translate(src_rect.x0, -src_rect.y0);
+            let matrix = self.ctx.get_ctm();
+            self.ctx.restore();
+            matrix
+        };
+
         let src_cgrect = to_cgrect(src_rect).apply_transform(&transformation_matrix);
 
         if src_cgrect.size.width < 1.0 || src_cgrect.size.height < 1.0 {
