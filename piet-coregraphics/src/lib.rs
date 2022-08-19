@@ -134,17 +134,10 @@ impl CoreGraphicsImage {
             false => CoreGraphicsImage::YUp(image),
         }
     }
-    fn as_ref(&self) -> Option<&CGImage> {
+    pub fn as_ref(&self) -> Option<&CGImage> {
         match self {
             CoreGraphicsImage::Empty => None,
             CoreGraphicsImage::YUp(image) | CoreGraphicsImage::YDown(image) => Some(image),
-        }
-    }
-    pub fn copy_image(&self) -> Option<CGImage> {
-        if let CoreGraphicsImage::YUp(image) | CoreGraphicsImage::YDown(image) = self {
-            Some(image.clone())
-        } else {
-            None
         }
     }
 }
