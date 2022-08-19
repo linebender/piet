@@ -731,8 +731,12 @@ mod tests {
         let copy = piet
             .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
             .unwrap();
+
+        let unwrapped_copy = copy.as_ref().unwrap();
+        let rewrapped_copy = CoreGraphicsImage::from_cgimage_and_ydir(unwrapped_copy.clone(), true);
+
         piet.draw_image(
-            &copy,
+            &rewrapped_copy,
             Rect::new(0.0, 0.0, 400.0, 400.0),
             InterpolationMode::Bilinear,
         );
