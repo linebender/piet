@@ -21,7 +21,10 @@ use web_sys::{
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
 
 use piet::util::unpremul;
-use piet::{Color, Error, FixedGradient, GradientStop, Image, ImageFormat, InterpolationMode, IntoBrush, LineCap, LineJoin, RenderContext, StrokeDash, StrokeStyle};
+use piet::{
+    Color, Error, FixedGradient, GradientStop, Image, ImageFormat, InterpolationMode, IntoBrush,
+    LineCap, LineJoin, RenderContext, StrokeDash, StrokeStyle,
+};
 
 pub use text::{WebFont, WebTextLayout, WebTextLayoutBuilder};
 
@@ -282,7 +285,8 @@ impl RenderContext for WebRenderContext<'_> {
 
     fn save(&mut self) -> Result<(), Error> {
         self.ctx.save();
-        self.canvas_states.push(self.canvas_states.last().unwrap().clone());
+        self.canvas_states
+            .push(self.canvas_states.last().unwrap().clone());
         Ok(())
     }
 
@@ -531,7 +535,8 @@ impl WebRenderContext<'_> {
         }
 
         if style.dash_pattern != canvas_state.line_dash {
-            self.ctx.set_line_dash(convert_dash_pattern(&style.dash_pattern).as_ref()).unwrap();
+            let dash_segs = convert_dash_pattern(&style.dash_pattern);
+            self.ctx.set_line_dash(dash_segs.as_ref()).unwrap();
             canvas_state.line_dash = style.dash_pattern.clone();
         }
 
