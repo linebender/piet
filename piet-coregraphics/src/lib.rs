@@ -134,7 +134,7 @@ impl CoreGraphicsImage {
             false => CoreGraphicsImage::YUp(image),
         }
     }
-    pub fn as_ref(&self) -> Option<&CGImage> {
+    pub fn as_cgimage(&self) -> Option<&CGImage> {
         match self {
             CoreGraphicsImage::Empty => None,
             CoreGraphicsImage::YUp(image) | CoreGraphicsImage::YDown(image) => Some(image),
@@ -758,7 +758,7 @@ mod tests {
             .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
             .unwrap();
 
-        let unwrapped_copy = copy.as_ref().unwrap();
+        let unwrapped_copy = copy.as_cgimage().unwrap();
         let rewrapped_copy = CoreGraphicsImage::from_cgimage_and_ydir(unwrapped_copy.clone(), true);
 
         piet.draw_image(
