@@ -466,9 +466,35 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             ));
         }
 
-        match full_image.cropped(src_cgrect) {
-            Some(image) => Ok(CoreGraphicsImage::from_cgimage_and_ydir(image, self.y_down)),
-            None => Err(Error::InvalidInput),
+        let cropped_image_result = full_image.cropped(src_cgrect);
+        if let Some(image) = cropped_image_result {
+            // CGImage::cropped calls CGImageCreateWithImageInRect to set the bounds of the image,
+            // but it does not affect the underlying image data. This causes issues when using the
+            // captured images if the image's width does not match the original context's row size.
+            // To fix this, we create a new image-sized bitmap context, paint the image to it, and
+            // then re-capture. This forces coregraphics to resize the image to its specified bounds.
+            let cropped_image_size = Size::new(src_cgrect.size.width, src_cgrect.size.height);
+            let cropped_image_rect = Rect::from_origin_size(Point::ZERO, cropped_image_size);
+            let cropped_image_context = core_graphics::context::CGContext::create_bitmap_context(
+                None,
+                cropped_image_size.width as usize,
+                cropped_image_size.height as usize,
+                8,
+                0,
+                &core_graphics::color_space::CGColorSpace::create_device_rgb(),
+                core_graphics::base::kCGImageAlphaPremultipliedLast,
+            );
+            cropped_image_context.draw_image(to_cgrect(cropped_image_rect), &image);
+            let cropped_image = cropped_image_context
+                .create_image()
+                .expect("Failed to capture cropped image from resize context");
+
+            Ok(CoreGraphicsImage::from_cgimage_and_ydir(
+                cropped_image,
+                self.y_down,
+            ))
+        } else {
+            Err(Error::InvalidInput)
         }
     }
 
