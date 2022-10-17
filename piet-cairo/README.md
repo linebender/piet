@@ -36,6 +36,11 @@ On FreeBSD, the library can be installed with `pkg`:
 pkg install cairo
 ```
 
+On NetBSD, the library can be installed with:
+```shell
+pkgin install cairo
+```
+
 A pkg-config file is provided as usual and cairo-rs will build as expected.
 
 TODO: nicer installation instructions (contributions welcome)
