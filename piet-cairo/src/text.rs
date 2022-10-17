@@ -414,7 +414,7 @@ impl TextLayout for CairoTextLayout {
         let hitpos = line.x_to_index(x as i32);
         let rel_idx = if hitpos.is_inside {
             let idx = hitpos.index as usize - line_start_idx;
-            let trailing_len: usize = (&line_text[idx..])
+            let trailing_len: usize = line_text[idx..]
                 .chars()
                 .take(hitpos.trailing as usize)
                 .map(char::len_utf8)
