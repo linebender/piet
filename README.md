@@ -30,7 +30,7 @@ git submodule update --init
 
 ### Piet is in maintenance mode.
 
-Piet has largely stabalized, and no major API additions are planned by the
+Piet has largely stabilized, and no major API additions are planned by the
 original developers. Bug fixes and performance improvements are welcome.
 
 If there is a significant feature you would like to add that can be discussed.
