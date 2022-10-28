@@ -21,7 +21,7 @@ use rustybuzz::{Face, UnicodeBuffer};
 
 type Result<T> = std::result::Result<T, Error>;
 
-/// SVG text (unimplemented)
+/// SVG text (partially implemented)
 #[derive(Clone)]
 pub struct Text {
     source: Arc<Mutex<MultiSource>>,

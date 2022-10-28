@@ -31,8 +31,6 @@ pub struct CairoRenderContext<'a> {
     error: Result<(), cairo::Error>,
 }
 
-impl<'a> CairoRenderContext<'a> {}
-
 #[derive(Clone)]
 pub enum Brush {
     Solid(u32),
