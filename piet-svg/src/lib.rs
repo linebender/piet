@@ -272,9 +272,17 @@ impl piet::RenderContext for RenderContext {
             .unwrap()
             .insert(layout.font_face.clone());
 
+        // We use the top of the text for y position, but SVG uses baseline, so we need to convert
+        // between the two.
+        //
+        // `dominant-baseline` gets us most of the way (to the top of the ascender), so we add a
+        // small fiddle factor in to cover the difference between the top of the line and the top
+        // of the ascender (currently 6% of the font height, calcuated by eye).
+        let y = pos.y + 0.06 * layout.size().height;
         let mut text = svg::node::element::Text::new()
             .set("x", x)
-            .set("y", pos.y + layout.size().height)
+            .set("y", y)
+            .set("dominant-baseline", "hanging")
             .set(
                 "style",
                 format!(
