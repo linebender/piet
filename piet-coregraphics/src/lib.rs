@@ -48,6 +48,8 @@ pub struct CoreGraphicsContext<'a> {
     // by CTContextGetCTM. Instead we maintain our own stack, which will contain
     // only those transforms applied by us.
     transform_stack: Vec<Affine>,
+    y_down: bool,
+    height: f64,
 }
 
 impl<'a> CoreGraphicsContext<'a> {
@@ -64,7 +66,7 @@ impl<'a> CoreGraphicsContext<'a> {
         height: f64,
         text: Option<CoreGraphicsText>,
     ) -> CoreGraphicsContext {
-        Self::new_impl(ctx, Some(height), text)
+        Self::new_impl(ctx, Some(height), text, false)
     }
 
     /// Create a new context with the y-origin at the bottom right corner.
@@ -77,13 +79,14 @@ impl<'a> CoreGraphicsContext<'a> {
         ctx: &mut CGContextRef,
         text: Option<CoreGraphicsText>,
     ) -> CoreGraphicsContext {
-        Self::new_impl(ctx, None, text)
+        Self::new_impl(ctx, None, text, true)
     }
 
     fn new_impl(
         ctx: &mut CGContextRef,
         height: Option<f64>,
         text: Option<CoreGraphicsText>,
+        y_down: bool,
     ) -> CoreGraphicsContext {
         ctx.save();
         if let Some(height) = height {
@@ -96,6 +99,8 @@ impl<'a> CoreGraphicsContext<'a> {
             ctx,
             text,
             transform_stack: Vec::new(),
+            y_down,
+            height: height.unwrap_or_default(),
         }
     }
 }
@@ -118,14 +123,21 @@ pub enum CoreGraphicsImage {
     /// Empty images are not supported for core-graphics, so we need a variant here to handle that
     /// case.
     Empty,
-    NonEmpty(CGImage),
+    YUp(CGImage),
+    YDown(CGImage),
 }
 
 impl CoreGraphicsImage {
-    fn as_ref(&self) -> Option<&CGImage> {
+    fn from_cgimage_and_ydir(image: CGImage, y_down: bool) -> Self {
+        match y_down {
+            true => CoreGraphicsImage::YDown(image),
+            false => CoreGraphicsImage::YUp(image),
+        }
+    }
+    pub fn as_cgimage(&self) -> Option<&CGImage> {
         match self {
             CoreGraphicsImage::Empty => None,
-            CoreGraphicsImage::NonEmpty(img) => Some(img),
+            CoreGraphicsImage::YUp(image) | CoreGraphicsImage::YDown(image) => Some(image),
         }
     }
 }
@@ -340,19 +352,29 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             should_interpolate,
             rendering_intent,
         );
-        Ok(CoreGraphicsImage::NonEmpty(image))
+
+        Ok(CoreGraphicsImage::from_cgimage_and_ydir(image, self.y_down))
     }
 
     fn draw_image(
         &mut self,
-        image: &Self::Image,
+        src_image: &Self::Image,
         rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        let image = match image.as_ref() {
-            Some(img) => img,
-            None => return,
+        let image_y_down: bool;
+        let image = match src_image {
+            CoreGraphicsImage::YDown(img) => {
+                image_y_down = true;
+                img
+            }
+            CoreGraphicsImage::YUp(img) => {
+                image_y_down = false;
+                img
+            }
+            CoreGraphicsImage::Empty => return,
         };
+
         self.ctx.save();
         //https://developer.apple.com/documentation/coregraphics/cginterpolationquality?language=objc
         let quality = match interp {
@@ -363,13 +385,19 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         };
         self.ctx.set_interpolation_quality(quality);
         let rect = rect.into();
-        // CGImage is drawn flipped by default; it's easier for us to handle
-        // this transformation if we're drawing into a rect at the origin, so
-        // we convert our origin into a translation of the drawing context.
-        self.ctx.translate(rect.min_x(), rect.max_y());
-        self.ctx.scale(1.0, -1.0);
-        self.ctx
-            .draw_image(to_cgrect(rect.with_origin(Point::ZERO)), image);
+
+        if self.y_down && !image_y_down {
+            // The CGImage does not need to be inverted, draw it directly to the context.
+            self.ctx.draw_image(to_cgrect(rect), image);
+        } else {
+            // The CGImage needs to be flipped, which we do by translating the drawing rect to be
+            // centered around the origin before inverting the context.
+            self.ctx.translate(rect.min_x(), rect.max_y());
+            self.ctx.scale(1.0, -1.0);
+            self.ctx
+                .draw_image(to_cgrect(rect.with_origin(Point::ZERO)), image);
+        }
+
         self.ctx.restore();
     }
 
@@ -378,12 +406,15 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         image: &Self::Image,
         src_rect: impl Into<Rect>,
         dst_rect: impl Into<Rect>,
-        _interp: InterpolationMode,
+        interp: InterpolationMode,
     ) {
-        if let CoreGraphicsImage::NonEmpty(image) = image {
+        if let CoreGraphicsImage::YDown(image) = image {
             if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
-                // TODO: apply interpolation mode
-                self.ctx.draw_image(to_cgrect(dst_rect), &cropped);
+                self.draw_image(&CoreGraphicsImage::YDown(cropped), dst_rect, interp);
+            }
+        } else if let CoreGraphicsImage::YUp(image) = image {
+            if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
+                self.draw_image(&CoreGraphicsImage::YUp(cropped), dst_rect, interp);
             }
         }
     }
@@ -396,8 +427,23 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         // (see [`CoreGraphicsContext::new_impl`] for details). Since the `src_rect` we receive
         // as parameter is in piet's coordinate system, we need to first convert it to the CG one,
         // as otherwise our captured image area would be wrong.
-        let transformation_matrix = self.ctx.get_ctm();
-        let src_cgrect = to_cgrect(src_rect).apply_transform(&transformation_matrix);
+        let src_cgrect = if self.y_down {
+            // If the active context is y-down (Piet's default) then we can use the context's
+            // transformation matrix directly.
+            let matrix = self.ctx.get_ctm();
+            to_cgrect(src_rect).apply_transform(&matrix)
+        } else {
+            // Otherwise the active context is y-up (macOS default in coregraphics), and we need to
+            // temporarily translate and flip the context to capture the correct area.
+            let y_dir_adjusted_src_rect = Rect::new(
+                src_rect.x0,
+                self.height - src_rect.y0,
+                src_rect.x1,
+                self.height - src_rect.y1,
+            );
+            let matrix = self.ctx.get_ctm();
+            to_cgrect(y_dir_adjusted_src_rect).apply_transform(&matrix)
+        };
 
         if src_cgrect.size.width < 1.0 || src_cgrect.size.height < 1.0 {
             return Err(Error::InvalidInput);
@@ -414,13 +460,42 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         if src_cgrect.size.width.round() as usize == self.ctx.width()
             && src_cgrect.size.height.round() as usize == self.ctx.height()
         {
-            return Ok(CoreGraphicsImage::NonEmpty(full_image));
+            return Ok(CoreGraphicsImage::from_cgimage_and_ydir(
+                full_image,
+                self.y_down,
+            ));
         }
 
-        full_image
-            .cropped(src_cgrect)
-            .map(CoreGraphicsImage::NonEmpty)
-            .ok_or(Error::InvalidInput)
+        let cropped_image_result = full_image.cropped(src_cgrect);
+        if let Some(image) = cropped_image_result {
+            // CGImage::cropped calls CGImageCreateWithImageInRect to set the bounds of the image,
+            // but it does not affect the underlying image data. This causes issues when using the
+            // captured images if the image's width does not match the original context's row size.
+            // To fix this, we create a new image-sized bitmap context, paint the image to it, and
+            // then re-capture. This forces coregraphics to resize the image to its specified bounds.
+            let cropped_image_size = Size::new(src_cgrect.size.width, src_cgrect.size.height);
+            let cropped_image_rect = Rect::from_origin_size(Point::ZERO, cropped_image_size);
+            let cropped_image_context = core_graphics::context::CGContext::create_bitmap_context(
+                None,
+                cropped_image_size.width as usize,
+                cropped_image_size.height as usize,
+                8,
+                0,
+                &core_graphics::color_space::CGColorSpace::create_device_rgb(),
+                core_graphics::base::kCGImageAlphaPremultipliedLast,
+            );
+            cropped_image_context.draw_image(to_cgrect(cropped_image_rect), &image);
+            let cropped_image = cropped_image_context
+                .create_image()
+                .expect("Failed to capture cropped image from resize context");
+
+            Ok(CoreGraphicsImage::from_cgimage_and_ydir(
+                cropped_image,
+                self.y_down,
+            ))
+        } else {
+            Err(Error::InvalidInput)
+        }
     }
 
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
@@ -458,7 +533,7 @@ impl Image for CoreGraphicsImage {
         // the issue would only be accuracy of the size.
         match self {
             CoreGraphicsImage::Empty => Size::new(0., 0.),
-            CoreGraphicsImage::NonEmpty(image) => {
+            CoreGraphicsImage::YDown(image) | CoreGraphicsImage::YUp(image) => {
                 Size::new(image.width() as f64, image.height() as f64)
             }
         }
@@ -682,8 +757,12 @@ mod tests {
         let copy = piet
             .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
             .unwrap();
+
+        let unwrapped_copy = copy.as_cgimage().unwrap();
+        let rewrapped_copy = CoreGraphicsImage::from_cgimage_and_ydir(unwrapped_copy.clone(), true);
+
         piet.draw_image(
-            &copy,
+            &rewrapped_copy,
             Rect::new(0.0, 0.0, 400.0, 400.0),
             InterpolationMode::Bilinear,
         );
