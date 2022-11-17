@@ -784,7 +784,7 @@ impl DeviceContext {
         &mut self,
         width: usize,
         height: usize,
-        alpha_mode: D2D1_ALPHA_MODE,
+        dpi_scale: f32,
     ) -> Result<Bitmap, Error> {
         // Maybe using TryInto would be more Rust-like.
         // Note: value is set so that multiplying by 4 (for pitch) is valid.
@@ -794,18 +794,17 @@ impl DeviceContext {
             width: width as u32,
             height: height as u32,
         };
-        let format = D2D1_PIXEL_FORMAT {
-            format: DXGI_FORMAT_R8G8B8A8_UNORM,
-            alphaMode: alpha_mode,
-        };
-        let props = D2D1_BITMAP_PROPERTIES1 {
-            pixelFormat: format,
-            dpiX: 96.0,
-            dpiY: 96.0,
-            bitmapOptions: D2D1_BITMAP_OPTIONS_NONE,
-            colorContext: null_mut(),
-        };
+
         unsafe {
+            let pixel_format = self.0.GetPixelFormat();
+            let props = D2D1_BITMAP_PROPERTIES1 {
+                pixelFormat: pixel_format,
+                dpiX: dpi_scale * 96.0,
+                dpiY: dpi_scale * 96.0,
+                bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET,
+                colorContext: null_mut(),
+            };
+
             let mut ptr = null_mut();
             let hr = self
                 .0

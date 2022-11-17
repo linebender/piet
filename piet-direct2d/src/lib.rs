@@ -481,14 +481,25 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let mut target_bitmap = self.rt.create_blank_bitmap(
             device_size.width as usize,
             device_size.height as usize,
-            D2D1_ALPHA_MODE_PREMULTIPLIED,
+            dpi_scale as f32,
         )?;
 
         let src_rect = Rect::from_origin_size(device_origin, device_size);
 
         let d2d_dest_point = to_point2u((0.0f32, 0.0f32));
         let d2d_src_rect = rect_to_rectu(src_rect);
+
+        // Clear layers from the render target
+        for _ in 0..self.layers.len() {
+            self.rt.pop_layer();
+        }
+
         target_bitmap.copy_from_render_target(d2d_dest_point, self.rt, d2d_src_rect);
+
+        // Restore cleared layers
+        for (mask, layer) in self.layers.iter() {
+            self.rt.push_layer_mask(mask, layer);
+        }
 
         Ok(target_bitmap)
     }
