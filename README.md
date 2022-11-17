@@ -26,6 +26,21 @@ directory, run
 git submodule update --init
 ```
 
+## Contributing
+
+### Piet is in maintenance mode.
+
+Piet has largely stabilized, and no major API additions are planned by the
+original developers. Bug fixes and performance improvements are welcome.
+
+If there is a significant feature you would like to add that can be discussed.
+For a new feature to be considered, there must be a plan for how it would be
+implemented in at least the coregraphics, direct2d, and cairo backends, and the
+actual implementation should include support for at least two of these.
+
+For questions and discussions we use a zulip chat instance at [xi.zulipchat.com][zulip]
+under the #piet stream.
+
 ## Backends
 
 *For cross-platform use, the [`piet-common`][] crate reexports the most
@@ -51,12 +66,6 @@ produce an image called `d2d-test-0.png`.
 
 #### `piet-svg` [![crates.io](https://img.shields.io/crates/v/piet-svg)](https://crates.io/crates/piet-svg)
 #### `piet-web` [![crates.io](https://img.shields.io/crates/v/piet-web)](https://crates.io/crates/piet-web)
-
-## Contributing
-
-Contributions are welcome! It's in early stages, so there are lots of opportunities to fill things out.
-
-You can find other collaborators at [xi.zulipchat.com][zulip] under the #druid stream.
 
 ## Inspirations
 
