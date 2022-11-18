@@ -49,8 +49,8 @@ fn draw_cubic_bezier<V: Into<Point>>(
     rc.stroke(&path, &curve_brush, 3.0);
 
     let handle_brush = rc.solid_brush(Color::rgb8(0x00, 0x00, 0x80));
-    rc.stroke(&Line::new(p0, p1), &handle_brush, 1.0);
-    rc.stroke(&Line::new(p2, p3), &handle_brush, 1.0);
+    rc.stroke(Line::new(p0, p1), &handle_brush, 1.0);
+    rc.stroke(Line::new(p2, p3), &handle_brush, 1.0);
 
     for p in [p0, p1, p2, p3].iter() {
         let dot = circle(*p, 1.5, 20);
