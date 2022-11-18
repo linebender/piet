@@ -6,7 +6,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, windows-2019, ubuntu-latest]
+        os: [macOS-11, windows-2019, ubuntu-latest]
     name: compare snapshots
     steps:
       - name: checkout
