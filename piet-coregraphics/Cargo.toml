@@ -14,11 +14,11 @@ categories = ["rendering::graphics-api"]
 piet = { version = "=0.6.0", path = "../piet" }
 
 foreign-types = "0.3.2"
-core-graphics = "0.22.2"
-core-text = "19.0.0"
-core-foundation = "0.9"
-core-foundation-sys = "0.8"
-associative-cache = "1.0"
+core-graphics = "0.22.3"
+core-text = "19.2.0"
+core-foundation = "0.9.3"
+core-foundation-sys = "0.8.3"
+associative-cache = "1.0.1"
 
 [dev-dependencies]
 piet = { version = "=0.6.0", path = "../piet", features = ["samples"] }

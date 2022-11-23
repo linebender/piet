@@ -35,8 +35,8 @@ serde = ["piet/serde"]
 [dependencies]
 piet = { version = "=0.6.0", path = "../piet" }
 piet-web = { version = "=0.6.0", path = "../piet-web", optional = true }
-cfg-if = "1.0"
-png = { version = "0.17", optional = true }
+cfg-if = "1.0.0"
+png = { version = "0.17.5", optional = true }
 
 [target.'cfg(any(target_os="linux", target_os="openbsd", target_os="freebsd", target_os="netbsd"))'.dependencies]
 piet-cairo = { version = "=0.6.0", path = "../piet-cairo" }
@@ -45,21 +45,21 @@ cairo-sys-rs = { version = "0.16.3" }
 
 [target.'cfg(any(target_os="macos", target_os="ios"))'.dependencies]
 piet-coregraphics = { version = "=0.6.0", path = "../piet-coregraphics" }
-core-graphics = { version = "0.22.2" }
+core-graphics = { version = "0.22.3" }
 
 [target.'cfg(target_os="windows")'.dependencies]
 piet-direct2d = { version = "=0.6.0", path = "../piet-direct2d" }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 piet-web = { version = "=0.6.0", path = "../piet-web" }
-wasm-bindgen = "0.2.59"
+wasm-bindgen = "0.2.80"
 
 [target.'cfg(target_arch="wasm32")'.dev-dependencies]
-getrandom = { version = "0.2.3", features = ["js"] }
-wasm-bindgen-test = "0.3.13"
+getrandom = { version = "0.2.6", features = ["js"] }
+wasm-bindgen-test = "0.3.30"
 
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
-version = "0.3.36"
+version = "0.3.57"
 features = [
     "console",
     "Window",
@@ -76,5 +76,5 @@ features = [
 
 [dev-dependencies]
 static_assertions = "1.1.0"
-rand = "0.8.4"
-rand_distr = "0.4.1"
+rand = "0.8.5"
+rand_distr = "0.4.3"
