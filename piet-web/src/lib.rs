@@ -218,7 +218,7 @@ impl RenderContext for WebRenderContext<'_> {
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_brush(&*brush, true);
+        self.set_brush(&brush, true);
         self.ctx
             .fill_with_canvas_winding_rule(CanvasWindingRule::Nonzero);
     }
@@ -226,7 +226,7 @@ impl RenderContext for WebRenderContext<'_> {
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_brush(&*brush, true);
+        self.set_brush(&brush, true);
         self.ctx
             .fill_with_canvas_winding_rule(CanvasWindingRule::Evenodd);
     }

@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macOS-latest, windows-2019, ubuntu-latest]
+        os: [macOS-11, windows-2019, ubuntu-latest]
     name: cargo clippy+test
     steps:
       - uses: actions/checkout@v2
@@ -140,7 +140,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, windows-2019, ubuntu-latest]
+        os: [macOS-11, windows-2019, ubuntu-latest]
     name: cargo clippy+test (wasm32)
     steps:
       - uses: actions/checkout@v2
@@ -211,7 +211,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, windows-2019, ubuntu-latest]
+        os: [macOS-11, windows-2019, ubuntu-latest]
     name: cargo test nightly
     steps:
       - uses: actions/checkout@v2
@@ -276,7 +276,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-latest, windows-2019, ubuntu-latest]
+        os: [macOS-11, windows-2019, ubuntu-latest]
     steps:
       - uses: actions/checkout@v2
         with:

@@ -123,7 +123,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     fn fill(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_brush(&*brush);
+        self.set_brush(&brush);
         self.ctx.set_fill_rule(cairo::FillRule::Winding);
         self.error = self.ctx.fill();
     }
@@ -131,7 +131,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
     fn fill_even_odd(&mut self, shape: impl Shape, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
-        self.set_brush(&*brush);
+        self.set_brush(&brush);
         self.ctx.set_fill_rule(cairo::FillRule::EvenOdd);
         self.error = self.ctx.fill();
     }
@@ -146,7 +146,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, None);
-        self.set_brush(&*brush);
+        self.set_brush(&brush);
         self.error = self.ctx.stroke();
     }
 
@@ -160,7 +160,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let brush = brush.make_brush(self, || shape.bounding_box());
         self.set_path(shape);
         self.set_stroke(width, Some(style));
-        self.set_brush(&*brush);
+        self.set_brush(&brush);
         self.error = self.ctx.stroke();
     }
 
@@ -373,7 +373,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         let brush = brush.make_brush(self, || rect);
         match compute_blurred_rect(rect, blur_radius) {
             Ok((image, origin)) => {
-                self.set_brush(&*brush);
+                self.set_brush(&brush);
                 self.error = self
                     .ctx
                     .mask_surface(&image, origin.x, origin.y)
@@ -573,7 +573,7 @@ fn compute_blurred_rect(rect: Rect, radius: f64) -> Result<(ImageSurface, Point)
             //      Or the surface is finished (it isnt, we know because we dont finish it).
             // Since we know none of these cases should happen, we know that this should not panic.
             let mut data = image.data().unwrap();
-            let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut *data);
+            let rect_exp = piet::util::compute_blurred_rect(rect, radius, stride, &mut data);
             std::mem::drop(data);
             let origin = rect_exp.origin();
             Ok((image, origin))

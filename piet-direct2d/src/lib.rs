@@ -573,7 +573,7 @@ impl<'a> D2DRenderContext<'a> {
             }
         };
         let width = width;
-        self.rt.draw_geometry(&geom, &*brush, width, style);
+        self.rt.draw_geometry(&geom, &brush, width, style);
     }
 
     // This is split out to unify error reporting, as there are lots of opportunities for
