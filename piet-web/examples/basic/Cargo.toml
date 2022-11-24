@@ -14,9 +14,9 @@ default = ["console_error_panic_hook"]
 piet = { path = "../../../piet", features = ["samples"] }
 piet-web = { path = "../.." }
 
-wasm-bindgen = "0.2.30"
-console_error_panic_hook = { version = "0.1.6", optional = true }
+wasm-bindgen = "0.2.80"
+console_error_panic_hook = { version = "0.1.7", optional = true }
 
 [dependencies.web-sys]
-version = "0.3.10"
+version = "0.3.57"
 features = ["console", "CanvasRenderingContext2d", "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement"]

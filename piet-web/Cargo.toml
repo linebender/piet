@@ -1,6 +1,6 @@
 [package]
 name = "piet-web"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Web canvas backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -14,24 +14,24 @@ categories = ["rendering::graphics-api", "wasm"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-piet = { version = "=0.5.0", path = "../piet" }
+piet = { version = "=0.6.0", path = "../piet" }
 
-unicode-segmentation = "1.6.0"
+unicode-segmentation = "1.9.0"
 xi-unicode = "0.3.0"
-wasm-bindgen = "0.2.70"
-js-sys = "0.3.47"
+wasm-bindgen = "0.2.80"
+js-sys = "0.3.57"
 
 [dependencies.web-sys]
-version = "0.3.47"
+version = "0.3.57"
 features = ["Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
             "Document", "DomMatrix", "Element", "HtmlCanvasElement", "ImageBitmap",
             "ImageData", "TextMetrics"]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.0"
+wasm-bindgen-test = "0.3.30"
 
 [dev-dependencies.web-sys]
-version = "0.3.47"
+version = "0.3.57"
 features = ["console", "Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
             "Document", "DomMatrix", "Element", "HtmlCanvasElement", "ImageBitmap", "ImageData",
             "TextMetrics"]

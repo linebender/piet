@@ -1,6 +1,6 @@
 [package]
 name = "piet-svg"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Benjamin Saunders <ben.e.saunders@gmail.com>"]
 description = "SVG backend for piet 2D graphics abstraction."
 edition = "2018"
@@ -17,10 +17,10 @@ evcxr = ["evcxr_runtime"]
 base64 = "0.13.0"
 evcxr_runtime = { version = "1.1.0", optional = true }
 font-kit = "0.10.1"
-image = { version = "0.24.0", default-features = false, features = ["png"] }
-piet = { version = "=0.5.0", path = "../piet" }
+image = { version = "0.24.2", default-features = false, features = ["png"] }
+piet = { version = "=0.6.0", path = "../piet" }
 rustybuzz = "0.4.0"
 svg = "0.10.0"
 
 [dev-dependencies]
-piet = { version = "=0.5.0", path = "../piet", features = ["samples"] }
+piet = { version = "=0.6.0", path = "../piet", features = ["samples"] }
