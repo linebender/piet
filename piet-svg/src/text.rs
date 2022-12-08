@@ -32,10 +32,9 @@ pub struct Text {
     pub(crate) seen_fonts: Arc<Mutex<HashSet<FontFace>>>,
 }
 
-impl Text {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Text {
+impl Default for Text {
+    fn default() -> Self {
+        Self {
             source: Arc::new(Mutex::new(MultiSource::from_sources(vec![
                 Box::new(SystemSource::new()),
                 Box::new(MemSource::empty()),
@@ -43,7 +42,9 @@ impl Text {
             seen_fonts: Arc::new(Mutex::new(HashSet::new())),
         }
     }
+}
 
+impl Text {
     pub(crate) fn font_data(&self, face: &FontFace) -> Result<Arc<Vec<u8>>> {
         let handle = self
             .source
