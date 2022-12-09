@@ -45,6 +45,10 @@ impl Default for Text {
 }
 
 impl Text {
+    pub fn new() -> Self {
+        Seld::default()
+    }
+
     pub(crate) fn font_data(&self, face: &FontFace) -> Result<Arc<Vec<u8>>> {
         let handle = self
             .source

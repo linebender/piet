@@ -44,7 +44,7 @@ impl RenderContext {
             state: State::default(),
             doc: svg::Document::new(),
             next_id: 0,
-            text: Text::default(),
+            text: Text::new(),
         }
     }
 
