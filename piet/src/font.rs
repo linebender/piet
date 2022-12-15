@@ -141,7 +141,7 @@ impl FontWeight {
     ///
     /// Values will be clamped to the range 1..=1000.
     pub fn new(raw: u16) -> FontWeight {
-        let raw = raw.min(1000).max(1);
+        let raw = raw.clamp(1, 1000);
         FontWeight(raw)
     }
 

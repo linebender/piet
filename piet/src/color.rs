@@ -89,10 +89,10 @@ impl Color {
     /// The interpretation is the same as rgba32, and no greater precision is
     /// (currently) assumed.
     pub fn rgba(r: f64, g: f64, b: f64, a: f64) -> Color {
-        let r = (r.max(0.0).min(1.0) * 255.0).round() as u32;
-        let g = (g.max(0.0).min(1.0) * 255.0).round() as u32;
-        let b = (b.max(0.0).min(1.0) * 255.0).round() as u32;
-        let a = (a.max(0.0).min(1.0) * 255.0).round() as u32;
+        let r = (r.clamp(0.0, 1.0) * 255.0).round() as u32;
+        let g = (g.clamp(0.0, 1.0) * 255.0).round() as u32;
+        let b = (b.clamp(0.0, 1.0) * 255.0).round() as u32;
+        let a = (a.clamp(0.0, 1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | a)
     }
 
@@ -101,9 +101,9 @@ impl Color {
     /// The interpretation is the same as rgb8, and no greater precision is
     /// (currently) assumed.
     pub fn rgb(r: f64, g: f64, b: f64) -> Color {
-        let r = (r.max(0.0).min(1.0) * 255.0).round() as u32;
-        let g = (g.max(0.0).min(1.0) * 255.0).round() as u32;
-        let b = (b.max(0.0).min(1.0) * 255.0).round() as u32;
+        let r = (r.clamp(0.0, 1.0) * 255.0).round() as u32;
+        let g = (g.clamp(0.0, 1.0) * 255.0).round() as u32;
+        let b = (b.clamp(0.0, 1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((r << 24) | (g << 16) | (b << 8) | 0xff)
     }
 
@@ -183,7 +183,7 @@ impl Color {
     ///
     /// The `a` value represents alpha in the range 0.0 to 1.0.
     pub fn with_alpha(self, a: f64) -> Color {
-        let a = (a.max(0.0).min(1.0) * 255.0).round() as u32;
+        let a = (a.clamp(0.0, 1.0) * 255.0).round() as u32;
         Color::from_rgba32_u32((self.as_rgba_u32() & !0xff) | a)
     }
 

@@ -317,7 +317,7 @@ impl TextLayout {
             let mut ptr = null_mut();
             let hr = dwrite.0.CreateTextLayout(
                 text.as_ptr(),
-                len as u32,
+                len,
                 format.0.as_raw(),
                 width,
                 MAX_LAYOUT_CONSTRAINT,
@@ -465,7 +465,7 @@ impl TextLayout {
         };
 
         unsafe {
-            let hr = self.0.SetMaxWidth(max_width as f32);
+            let hr = self.0.SetMaxWidth(max_width);
 
             if SUCCEEDED(hr) {
                 Ok(())
