@@ -443,7 +443,7 @@ fn hit_test_line_position(ctx: &CanvasRenderingContext2d, text: &str, idx: usize
         return 0.0;
     }
 
-    if idx as usize >= text_len {
+    if idx >= text_len {
         return text_width(text, ctx);
     }
 

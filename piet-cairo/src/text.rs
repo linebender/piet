@@ -411,7 +411,7 @@ impl TextLayout for CairoTextLayout {
         let line_text = self.line_text(line_number).unwrap();
         let line_start_idx = self.line_metric(line_number).unwrap().start_offset;
 
-        let hitpos = line.x_to_index(x as i32);
+        let hitpos = line.x_to_index(x);
         let rel_idx = if hitpos.is_inside() {
             let idx = hitpos.index() as usize - line_start_idx;
             let trailing_len: usize = line_text[idx..]

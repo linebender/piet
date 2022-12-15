@@ -287,7 +287,7 @@ fn compare_files(
         one_info.color_type, two_info.color_type,
         "color types should always match"
     );
-    let err_write_path = p2.with_file_name(&get_filename(prefix, scale, number, true));
+    let err_write_path = p2.with_file_name(get_filename(prefix, scale, number, true));
     compare_pngs(one_info, &one, &two, err_write_path)
 }
 
@@ -394,12 +394,12 @@ fn write_os_info(base_dir: &Path, env_info: Option<&str>) -> std::io::Result<()>
             buf.push('\n');
         }
     }
-    std::fs::write(&path, buf.as_bytes())
+    std::fs::write(path, buf.as_bytes())
 }
 
 fn read_os_info(base_dir: &Path) -> std::io::Result<String> {
     let path = base_dir.join(GENERATED_BY);
-    std::fs::read_to_string(&path)
+    std::fs::read_to_string(path)
 }
 
 /// Get info about the system used to create these samples.
