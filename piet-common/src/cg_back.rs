@@ -112,8 +112,8 @@ impl<'a> BitmapTarget<'a> {
     // really a mutation, so we'll keep the name. Consider using interior mutability in the future.
     #[allow(clippy::wrong_self_convention)]
     pub fn to_image_buf(&mut self, fmt: ImageFormat) -> Result<ImageBuf, piet::Error> {
-        let width = self.ctx.width() as usize;
-        let height = self.ctx.height() as usize;
+        let width = self.ctx.width();
+        let height = self.ctx.height();
         let mut buf = vec![0; width * height * 4];
         self.copy_raw_pixels(fmt, &mut buf)?;
         Ok(ImageBuf::from_raw(buf, fmt, width, height))
@@ -134,8 +134,8 @@ impl<'a> BitmapTarget<'a> {
             return Err(Error::NotSupported);
         }
 
-        let width = self.ctx.width() as usize;
-        let height = self.ctx.height() as usize;
+        let width = self.ctx.width();
+        let height = self.ctx.height();
         let stride = self.ctx.bytes_per_row();
         let data = self.ctx.data();
         let size = width * height * 4;
@@ -160,8 +160,8 @@ impl<'a> BitmapTarget<'a> {
     /// Save bitmap to RGBA PNG file
     #[cfg(feature = "png")]
     pub fn save_to_file<P: AsRef<Path>>(mut self, path: P) -> Result<(), piet::Error> {
-        let width = self.ctx.width() as usize;
-        let height = self.ctx.height() as usize;
+        let width = self.ctx.width();
+        let height = self.ctx.height();
         let mut data = vec![0; width * height * 4];
         self.copy_raw_pixels(ImageFormat::RgbaPremul, &mut data)?;
         util::unpremultiply_rgba(&mut data);
