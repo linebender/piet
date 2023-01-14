@@ -24,4 +24,4 @@ piet = { version = "=0.6.0", path = "../piet", features = ["samples"] }
 piet-common = { version = "=0.6.0", path = "../piet-common", features = ["png"] }
 
 [package.metadata.docs.rs]
-targets = ["x86_64-pc-windows-msvc"]
+default-target = "x86_64-pc-windows-msvc"
