@@ -961,13 +961,13 @@ mod test {
         println!("lm: {:#?}", full_layout.line_metrics);
         println!("layout width: {:#?}", full_layout.size().width);
 
-        println!("'pie': {}", pie_width);
-        println!("'piet': {}", piet_width);
-        println!("'piet ': {}", piet_space_width);
-        println!("'text': {}", text_width);
-        println!("'tex': {}", tex_width);
-        println!("'te': {}", te_width);
-        println!("'t': {}", t_width);
+        println!("'pie': {pie_width}");
+        println!("'piet': {piet_width}");
+        println!("'piet ': {piet_space_width}");
+        println!("'text': {text_width}");
+        println!("'tex': {tex_width}");
+        println!("'te': {te_width}");
+        println!("'t': {t_width}");
 
         // NOTE these heights are representative of baseline-to-baseline measures
         let line_zero_metric = full_layout.line_metric(0).unwrap();

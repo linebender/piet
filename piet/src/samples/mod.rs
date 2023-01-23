@@ -62,7 +62,7 @@ pub fn get<R: RenderContext>(number: usize) -> Result<SamplePicture<R>, BoxErr> 
         14 => SamplePicture::new(picture_14::SIZE, picture_14::draw),
         15 => SamplePicture::new(picture_15::SIZE, picture_15::draw),
         16 => SamplePicture::new(picture_16::SIZE, picture_16::draw),
-        _ => return Err(format!("No sample #{} exists", number).into()),
+        _ => return Err(format!("No sample #{number} exists").into()),
     })
 }
 
@@ -128,14 +128,14 @@ pub fn samples_main(
                 let info_one = read_os_info(compare_dir)?;
                 let info_two = read_os_info(&args.out_dir)?;
                 println!("Compared {} snapshots", results.len());
-                print!("base:\n{}", info_one);
-                println!("rev:\n{}", info_two);
+                print!("base:\n{info_one}");
+                println!("rev:\n{info_two}");
             }
 
             for (number, result) in results.iter() {
-                print!("Image {:02}: ", number);
+                print!("Image {number:02}: ");
                 match result {
-                    Some(failure) => println!("{}", failure),
+                    Some(failure) => println!("{failure}"),
                     None => println!("Ok"),
                 }
             }
@@ -151,10 +151,10 @@ pub fn samples_main(
     };
 
     if let Err(e) = inner() {
-        eprintln!("error generating sample: {}", e);
+        eprintln!("error generating sample: {e}");
         let mut e = &*e;
         while let Some(err) = e.source() {
-            eprintln!("caused by: {}", err);
+            eprintln!("caused by: {err}");
             e = err;
         }
         print_help_text();
@@ -219,7 +219,7 @@ fn run_all(f: impl Fn(usize) -> Result<(), BoxErr>) -> Result<(), BoxErr> {
         Ok(())
     } else {
         for (sample, err) in &errs {
-            eprintln!("error in sample {}: '{}'", sample, err);
+            eprintln!("error in sample {sample}: '{err}'");
         }
         Err(errs.remove(0).1)
     }
@@ -231,8 +231,8 @@ fn get_filename(prefix: &str, scale: f64, number: usize, diff: bool) -> String {
     // prefix-05-1.00.png
     // prefix-05-2.00.png
     match diff {
-        false => format!("{}-{:0>2}-{:.2}.png", prefix, number, scale),
-        true => format!("{}-{:0>2}-{:.2}-diff.png", prefix, number, scale),
+        false => format!("{prefix}-{number:0>2}-{scale:.2}.png"),
+        true => format!("{prefix}-{number:0>2}-{scale:.2}-diff.png"),
     }
 }
 
@@ -364,7 +364,7 @@ fn compare_pngs(
 
 fn get_sample_files(in_dir: &Path, scale: f64) -> Result<BTreeMap<usize, PathBuf>, BoxErr> {
     let mut out = BTreeMap::new();
-    let stem_suffix = format!("-{:.2}", scale);
+    let stem_suffix = format!("-{scale:.2}");
     for entry in std::fs::read_dir(in_dir)? {
         let path = entry?.path();
         if let Some(number) = extract_number(&path, &stem_suffix) {
@@ -437,7 +437,7 @@ impl std::fmt::Display for FailureReason {
                 diff_path.to_string_lossy(),
             ),
             FailureReason::WrongSize { base, rev } => {
-                write!(f, "Mismatched sizes, base {}, revision {}", base, rev)
+                write!(f, "Mismatched sizes, base {base}, revision {rev}")
             }
         }
     }

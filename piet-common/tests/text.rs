@@ -379,7 +379,7 @@ fn debug_impl_exists() {
     let text = "";
     let layout_builder = factory.new_text_layout(text);
     let layout = factory.new_text_layout(text).build().unwrap();
-    let _args = format_args!("{:?} {:?} {:?}", text, layout_builder, layout);
+    let _args = format_args!("{text:?} {layout_builder:?} {layout:?}");
 }
 
 #[test]

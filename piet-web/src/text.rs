@@ -124,7 +124,7 @@ impl WebFont {
             FontStyle::Normal => Cow::from("normal"),
             FontStyle::Italic => Cow::from("italic"),
             FontStyle::Oblique(None) => Cow::from("italic"),
-            FontStyle::Oblique(Some(angle)) => Cow::from(format!("oblique {}deg", angle)),
+            FontStyle::Oblique(Some(angle)) => Cow::from(format!("oblique {angle}deg")),
         };
         format!(
             "{} {} {}px \"{}\"",
@@ -511,7 +511,7 @@ pub(crate) mod test {
     fn assert_close_to(x: f64, target: f64, tolerance: f64) {
         let min = target - tolerance;
         let max = target + tolerance;
-        println!("x: {}, target: {}", x, target);
+        println!("x: {x}, target: {target}");
         assert!(x <= max && x >= min);
     }
 
@@ -975,13 +975,13 @@ pub(crate) mod test {
         println!("lm: {:#?}", full_layout.line_metrics);
         println!("layout width: {:#?}", full_layout.size().width);
 
-        println!("'pie': {}", pie_width);
-        println!("'piet': {}", piet_width);
-        println!("'piet ': {}", piet_space_width);
-        println!("'text': {}", text_width);
-        println!("'tex': {}", tex_width);
-        println!("'te': {}", te_width);
-        println!("'t': {}", t_width);
+        println!("'pie': {pie_width}");
+        println!("'piet': {piet_width}");
+        println!("'piet ': {piet_space_width}");
+        println!("'text': {text_width}");
+        println!("'tex': {tex_width}");
+        println!("'te': {te_width}");
+        println!("'t': {t_width}");
 
         // NOTE these heights are representative of baseline-to-baseline measures
         let line_zero_baseline = 0.0;
