@@ -154,16 +154,12 @@ impl StrokeStyle {
     }
 
     /// Builder-style method to set the [`LineJoin`].
-    ///
-    /// [`LineJoin`]: enum.LineJoin.html
     pub const fn line_join(mut self, line_join: LineJoin) -> Self {
         self.line_join = line_join;
         self
     }
 
     /// Builder-style method to set the [`LineCap`].
-    ///
-    /// [`LineCap`]: enum.LineCap.html
     pub const fn line_cap(mut self, line_cap: LineCap) -> Self {
         self.line_cap = line_cap;
         self
@@ -183,8 +179,8 @@ impl StrokeStyle {
     /// do not have a static slice, you may use [`set_dash_pattern`] instead,
     /// which does allocate.
     ///
-    /// [`dash_pattern`]: #structfield.dash_pattern
-    /// [`set_dash_pattern`]: #method.set_dash_pattern
+    /// [`dash_pattern`]: StrokeStyle#structfield.dash_pattern
+    /// [`set_dash_pattern`]: StrokeStyle::set_dash_pattern
     pub const fn dash_pattern(mut self, lengths: &'static [f64]) -> Self {
         self.dash_pattern.slice = lengths;
         self
@@ -210,7 +206,7 @@ impl StrokeStyle {
     /// This method always allocates. To construct without allocating, use the
     /// [`dash_pattern`] builder method.
     ///
-    /// [`dash_pattern`]: #method.dash_pattern
+    /// [`dash_pattern`]: StrokeStyle::dash_pattern()
     pub fn set_dash_pattern(&mut self, lengths: impl Into<Rc<[f64]>>) {
         self.dash_pattern.alloc = Some(lengths.into());
     }

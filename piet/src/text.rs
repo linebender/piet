@@ -11,13 +11,9 @@ use crate::{Color, Error, FontFamily, FontStyle, FontWeight};
 /// management and text layout.
 pub trait Text: Clone {
     /// A concrete type that implements the [`TextLayoutBuilder`] trait.
-    ///
-    /// [`TextLayoutBuilder`]: trait.TextLayoutBuilder.html
     type TextLayoutBuilder: TextLayoutBuilder<Out = Self::TextLayout>;
 
     /// A concrete type that implements the [`TextLayout`] trait.
-    ///
-    /// [`TextLayout`]: trait.TextLayout.html
     type TextLayout: TextLayout;
 
     /// Query the platform for a font with a given name, and return a [`FontFamily`]
@@ -35,8 +31,6 @@ pub trait Text: Clone {
     ///     .or_else(|| text.font_family("Garamond"))
     ///     .unwrap_or(FontFamily::SERIF);
     /// ```
-    ///
-    /// [`FontFamily`]: struct.FontFamily.html
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily>;
 
     /// Load the provided font data and make it available for use.
@@ -87,9 +81,6 @@ pub trait Text: Clone {
     ///     .range_attribute(6.., FontWeight::BOLD);
     ///
     /// ```
-    ///
-    /// [`TextLayout`]: trait.TextLayout.html
-    /// [`FontFamily`]: struct.FontFamily.html
     fn load_font(&mut self, data: &[u8]) -> Result<FontFamily, Error>;
 
     /// Create a new layout object to display the provided `text`.
@@ -102,8 +93,6 @@ pub trait Text: Clone {
     /// (which is likely also owned elsewhere in your application) you can pass
     /// a type such as `Rc<str>` or `Rc<String>`; alternatively you can just use
     /// `String` or `&static str`.
-    ///
-    /// [`TextLayoutBuilder`]: trait.TextLayoutBuilder.html
     fn new_text_layout(&mut self, text: impl TextStorage) -> Self::TextLayoutBuilder;
 }
 
@@ -130,8 +119,6 @@ pub trait TextStorage: 'static {
     ///
     /// In practice, these types should be using a [`TextLayout`] object
     /// per paragraph, and in general a separate buffer will be unnecessary.
-    ///
-    /// [`TextLayout`]: trait.TextLayout.html
     fn as_str(&self) -> &str;
 }
 
@@ -149,13 +136,11 @@ pub enum TextAttribute {
     FontFamily(FontFamily),
     /// The font size, in points.
     FontSize(f64),
-    /// The [`FontWeight`](struct.FontWeight.html).
+    /// The [`FontWeight`].
     Weight(FontWeight),
     /// The foreground color of the text.
     TextColor(crate::Color),
     /// The [`FontStyle`]; either regular or italic.
-    ///
-    /// [`FontStyle`]: enum.FontStyle.html
     Style(FontStyle),
     /// Underline.
     Underline(bool),
@@ -178,8 +163,6 @@ pub trait TextLayoutBuilder: Sized {
     fn max_width(self, width: f64) -> Self;
 
     /// Set the [`TextAlignment`] to be used for this layout.
-    ///
-    /// [`TextAlignment`]: enum.TextAlignment.html
     fn alignment(self, alignment: TextAlignment) -> Self;
 
     /// A convenience method for setting the default font family and size.
@@ -224,8 +207,7 @@ pub trait TextLayoutBuilder: Sized {
     /// You must set default attributes before setting range attributes,
     /// or the implementation is free to ignore them.
     ///
-    /// [`TextAttribute`]: enum.TextAttribute.html
-    /// [`range_attribute`]: #tymethod.range_attribute
+    /// [`range_attribute`]: TextLayoutBuilder::range_attribute
     fn default_attribute(self, attribute: impl Into<TextAttribute>) -> Self;
 
     /// Add a [`TextAttribute`] to a range of this layout.
@@ -268,9 +250,6 @@ pub trait TextLayoutBuilder: Sized {
     ///     .range_attribute(20.., TextAttribute::TextColor(Color::rgb(1.0, 0., 0.,)))
     ///     .build();
     /// ```
-    ///
-    /// [`TextAttribute`]: enum.TextAttribute.html
-    /// [`FontWeight`]: struct.FontWeight.html
     fn range_attribute(
         self,
         range: impl RangeBounds<usize>,
@@ -284,8 +263,6 @@ pub trait TextLayoutBuilder: Sized {
 }
 
 /// The alignment of text in a [`TextLayout`].
-///
-/// [`TextLayout`]: trait.TextLayout.html
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextAlignment {
     /// Text is aligned to the left edge in left-to-right scripts, and the
@@ -322,8 +299,6 @@ pub enum TextAlignment {
 /// - The end of a line is a valid text position. e.g. `text.len()` is a valid text position.
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
 /// occur.
-///
-/// [`LineMetric`]: struct.LineMetric.html
 pub trait TextLayout: Clone {
     /// The total size of this `TextLayout`.
     ///
@@ -376,8 +351,6 @@ pub trait TextLayout: Clone {
     /// returns some [`LineMetric`]; this will use the layout's default font to
     /// determine what the expected height of the first line would be, which is
     /// necessary for things like cursor drawing.
-    ///
-    /// [`LineMetric`]: struct.LineMetric.html
     fn line_metric(&self, line_number: usize) -> Option<LineMetric>;
 
     /// Returns total number of lines in the text layout.
@@ -399,9 +372,6 @@ pub trait TextLayout: Clone {
     /// the bounds of the layout, it will return the nearest text position.
     ///
     /// For more on text positions, see docs for the [`TextLayout`] trait.
-    ///
-    /// [`HitTestPoint`]: struct.HitTestPoint.html
-    /// [`TextLayout`]: ../piet/trait.TextLayout.html
     fn hit_test_point(&self, point: Point) -> HitTestPoint;
 
     /// Given a grapheme boundary in the string used to create this [`TextLayout`],
@@ -419,9 +389,6 @@ pub trait TextLayout: Clone {
     /// ## Panics:
     ///
     /// This method will panic if the text position is not a character boundary,
-    ///
-    /// [`HitTestPosition`]: struct.HitTestPosition.html
-    /// [`TextLayout`]: ../piet/trait.TextLayout.html
     fn hit_test_text_position(&self, idx: usize) -> HitTestPosition;
 
     /// Returns a vector of `Rect`s that cover the region of the text indicated
@@ -485,8 +452,6 @@ pub trait TextLayout: Clone {
 pub struct LineMetric {
     /// The start index of this line in the underlying `String` used to create the
     /// [`TextLayout`] to which this line belongs.
-    ///
-    /// [`TextLayout`]: trait.TextLayout.html
     pub start_offset: usize,
 
     /// The end index of this line in the underlying `String` used to create the
@@ -495,8 +460,6 @@ pub struct LineMetric {
     /// This is the end of an exclusive range; this index is not part of the line.
     ///
     /// Includes trailing whitespace.
-    ///
-    /// [`TextLayout`]: trait.TextLayout.html
     pub end_offset: usize,
 
     /// The length of the trailing whitespace at the end of this line, in utf-8
@@ -529,8 +492,6 @@ pub struct LineMetric {
 impl LineMetric {
     /// The utf-8 range in the underlying `String` used to create the
     /// [`TextLayout`] to which this line belongs.
-    ///
-    /// [`TextLayout`]: trait.TextLayout.html
     #[inline]
     pub fn range(&self) -> Range<usize> {
         self.start_offset..self.end_offset
@@ -540,9 +501,6 @@ impl LineMetric {
 /// Result of hit testing a point in a [`TextLayout`].
 ///
 /// This type is returned by [`TextLayout::hit_test_point`].
-///
-/// [`TextLayout`]: ../piet/trait.TextLayout.html
-/// [`TextLayout::hit_test_point`]: ../piet/trait.TextLayout.html#tymethod.hit_test_point
 #[derive(Debug, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct HitTestPoint {
@@ -560,9 +518,6 @@ pub struct HitTestPoint {
 /// Result of hit testing a text position in a [`TextLayout`].
 ///
 /// This type is returned by [`TextLayout::hit_test_text_position`].
-///
-/// [`TextLayout`]: ../piet/trait.TextLayout.html
-/// [`TextLayout::hit_test_text_position`]: ../piet/trait.TextLayout.html#tymethod.hit_test_text_position
 #[derive(Debug, Default)]
 #[non_exhaustive]
 pub struct HitTestPosition {
@@ -577,9 +532,6 @@ pub struct HitTestPosition {
     ///
     /// This value can be used to retrieve the [`LineMetric`] for this line,
     /// via the [`TextLayout::line_metric`] method.
-    ///
-    /// [`LineMetric`]: struct.LineMetric.html
-    /// [`TextLayout::line_metric`]: trait.TextLayout.html#tymethod.line_metric
     pub line: usize,
 }
 
