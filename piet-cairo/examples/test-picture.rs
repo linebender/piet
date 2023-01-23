@@ -43,7 +43,7 @@ fn additional_system_info() -> String {
 
 fn append_lib_version(package_name: &str, buf: &mut String) {
     let version = get_version_from_apt(package_name);
-    write!(buf, "{:16}", package_name).expect("Failed to write package name to string");
+    write!(buf, "{package_name:16}").expect("Failed to write package name to string");
     buf.push_str(version.as_deref().unwrap_or("not found"));
     buf.push('\n')
 }
@@ -57,7 +57,7 @@ fn get_version_from_apt(package: &str) -> Option<String> {
     {
         Ok(output) => output,
         Err(e) => {
-            eprintln!("failed to get package version: '{}'", e);
+            eprintln!("failed to get package version: '{e}'");
             return None;
         }
     };

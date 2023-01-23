@@ -35,7 +35,7 @@ pub fn bench_make_image(c: &mut Criterion) {
         let mut data = vec![0; usize::try_from(bytes).expect("Should fit into usize")];
         fill_random(&mut data[..]);
 
-        c.bench_function(&format!("make_image_{}_{:?}", name, format), |b| {
+        c.bench_function(&format!("make_image_{name}_{format:?}"), |b| {
             let unused_surface =
                 ImageSurface::create(Format::ARgb32, 1, 1).expect("Can't create surface");
             let cr = Context::new(&unused_surface).unwrap();
