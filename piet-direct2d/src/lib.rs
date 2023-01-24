@@ -507,7 +507,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
     fn blurred_rect(&mut self, rect: Rect, blur_radius: f64, brush: &impl IntoBrush<Self>) {
         let brush = brush.make_brush(self, || rect);
         if let Err(e) = self.blurred_rect_raw(rect, blur_radius, brush) {
-            eprintln!("error in drawing blurred rect: {:?}", e);
+            eprintln!("error in drawing blurred rect: {e:?}");
         }
     }
 }

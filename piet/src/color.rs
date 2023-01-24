@@ -321,9 +321,9 @@ impl Debug for Color {
 impl std::fmt::Display for ColorParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ColorParseError::WrongSize(n) => write!(f, "Input string has invalid length {}", n),
+            ColorParseError::WrongSize(n) => write!(f, "Input string has invalid length {n}"),
             ColorParseError::NotHex { idx, byte } => {
-                write!(f, "byte {:X} at index {} is not valid hex digit", byte, idx)
+                write!(f, "byte {byte:X} at index {idx} is not valid hex digit")
             }
         }
     }

@@ -39,7 +39,7 @@ impl fmt::Display for Error {
                 f,
                 "This functionality is not yet implemented for this backend"
             ),
-            Error::MissingFeature(feature) => write!(f, "Missing feature '{}'", feature),
+            Error::MissingFeature(feature) => write!(f, "Missing feature '{feature}'"),
             Error::BackendError(e) => {
                 write!(f, "Backend error: ")?;
                 e.fmt(f)
