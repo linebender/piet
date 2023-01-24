@@ -18,10 +18,6 @@
 //! anywhere you can use the fixed ones, and they will be automatically
 //! resolved appropriately.
 //!
-//! [`LinearGradient`]: struct.LinearGradient.html
-//! [`RadialGradient`]: struct.RadialGradient.html
-//! [`FixedLinearGradient`]: struct.FixedLinearGradient.html
-//! [`FixedRadialGradient`]: struct.FixedRadialGradient.html
 //! [unit square]: https://en.wikipedia.org/wiki/Unit_square
 
 use std::borrow::Cow;
@@ -38,8 +34,6 @@ use crate::Color;
 /// This specification is in terms of image-space coordinates. In many
 /// cases, it is better to specify coordinates relative to the `Rect`
 /// of the item being drawn; for these, use [`LinearGradient`] instead.
-///
-/// [`LinearGradient`]: struct.LinearGradient.html
 #[derive(Debug, Clone)]
 pub struct FixedLinearGradient {
     /// The start point (corresponding to pos 0.0).
@@ -57,8 +51,6 @@ pub struct FixedLinearGradient {
 /// This specification is in terms of image-space coordinates. In many
 /// cases, it is better to specify coordinates relative to the `Rect`
 /// of the item being drawn; for these, use [`RadialGradient`] instead.
-///
-/// [`RadialGradient`]: struct.RadialGradient.html
 #[derive(Debug, Clone)]
 pub struct FixedRadialGradient {
     /// The center.
@@ -69,7 +61,7 @@ pub struct FixedRadialGradient {
     ///
     /// The circle with this radius from the center corresponds to pos 1.0.
     pub radius: f64,
-    /// The stops (see similar field in [`LinearGradient`](struct.LinearGradient.html)).
+    /// The stops (see similar field in [`LinearGradient`]).
     pub stops: Vec<GradientStop>,
 }
 
@@ -79,9 +71,6 @@ pub struct FixedRadialGradient {
 /// accept both [`FixedLinearGradient`] and [`FixedRadialGradient`].
 /// You should not construct this type dirctly; rather construct one of those
 /// types, both of which impl `Into<FixedGradient>`.
-///
-/// [`FixedLinearGradient`]: struct.FixedLinearGradient.html
-/// [`FixedRadialGradient`]: struct.FixedRadialGradient.html
 #[derive(Debug, Clone)]
 pub enum FixedGradient {
     /// A linear gradient.
@@ -116,9 +105,6 @@ pub trait GradientStops {
 /// which are then resolved to image-space coordinates for any given concrete `Rect`.
 ///
 /// When the fixed coordinates are known, use [`FixedLinearGradient`] instead.
-///
-/// [`UnitPoint`]: struct.UnitPoint.html
-/// [`FixedLinearGradient`]: struct.FixedLinearGradient.html
 #[derive(Debug, Clone)]
 pub struct LinearGradient {
     start: UnitPoint,
@@ -148,11 +134,9 @@ pub struct LinearGradient {
 /// be changed with the [`with_scale_mode`] builder method.
 ///
 /// [config]: https://docs.microsoft.com/en-us/windows/win32/direct2d/direct2d-brushes-overview#configuring-a-radial-gradient
-/// [`UnitPoint`]: struct.UnitPoint.html
-/// [`ScaleMode`]: enum.ScaleMode.html
-/// [`with_center`]: struct.RadialGradient.html#method.with_center
-/// [`with_origin`]: struct.RadialGradient.html#method.with_origin
-/// [`with_scale_mode`]: struct.RadialGradient.html#method.with_scale_mode
+/// [`with_center`]: RadialGradient::with_center
+/// [`with_origin`]: RadialGradient::with_origin
+/// [`with_scale_mode`]: RadialGradient::with_scale_mode
 #[derive(Debug, Clone)]
 pub struct RadialGradient {
     center: UnitPoint,
@@ -308,8 +292,6 @@ impl LinearGradient {
     /// );
     /// render_ctx.fill(circle, &gradient);
     /// ```
-    ///
-    /// [`UnitPoint`]: struct.UnitPoint.html
     pub fn new(start: UnitPoint, end: UnitPoint, stops: impl GradientStops) -> LinearGradient {
         LinearGradient {
             start,
@@ -322,8 +304,6 @@ impl LinearGradient {
     // sure there's a clear use, so keeping them private for now.
     /// Generate a [`FixedLinearGradient`] by mapping points in the unit square
     /// onto points in `rect`.
-    ///
-    /// [`FixedLinearGradient`]: struct.FixedLinearGradient.html
     fn resolve(&self, rect: Rect) -> FixedLinearGradient {
         FixedLinearGradient {
             start: self.start.resolve(rect),
@@ -339,10 +319,9 @@ impl RadialGradient {
     /// modified with the [`with_center`], [`with_origin`],
     /// and [`with_scale_mode`] builder methods.
     ///
-    /// [`ScaleMode`]: enum.ScaleMode.html
-    /// [`with_center`]: struct.RadialGradient.html#method.with_center
-    /// [`with_origin`]: struct.RadialGradient.html#method.with_origin
-    /// [`with_scale_mode`]: struct.RadialGradient.html#method.with_scale_mode
+    /// [`with_center`]: RadialGradient::with_center
+    /// [`with_origin`]: RadialGradient::with_origin
+    /// [`with_scale_mode`]: RadialGradient::with_scale_mode
     pub fn new(radius: f64, stops: impl GradientStops) -> Self {
         RadialGradient {
             center: UnitPoint::CENTER,
@@ -358,8 +337,6 @@ impl RadialGradient {
     /// both values.
     ///
     /// See the main [`RadialGradient`] docs for an explanation of center vs. origin.
-    ///
-    /// [`RadialGradient`]: struct.RadialGradient.html
     pub fn with_center(mut self, center: UnitPoint) -> Self {
         self.center = center;
         self
@@ -368,16 +345,12 @@ impl RadialGradient {
     /// A builder-style method for changing the origin of the gradient.
     ///
     /// See the main [`RadialGradient`] docs for an explanation of center vs. origin.
-    ///
-    /// [`RadialGradient`]: struct.RadialGradient.html
     pub fn with_origin(mut self, origin: UnitPoint) -> Self {
         self.origin = origin;
         self
     }
 
     /// A builder-style method for changing the [`ScaleMode`] of the gradient.
-    ///
-    /// [`ScaleMode`]: enum.ScaleMode.html
     pub fn with_scale_mode(mut self, scale_mode: ScaleMode) -> Self {
         self.scale_mode = scale_mode;
         self
@@ -385,8 +358,6 @@ impl RadialGradient {
 
     /// Generate a [`FixedRadialGradient`] by mapping points in the unit square
     /// onto points in `rect`.
-    ///
-    /// [`FixedRadialGradient`]: struct.FixedRadialGradient.html
     fn resolve(&self, rect: Rect) -> FixedRadialGradient {
         let scale_len = match self.scale_mode {
             ScaleMode::Fill => rect.width().max(rect.height()),

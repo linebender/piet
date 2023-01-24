@@ -118,7 +118,7 @@ where
     /// modes, at which point it will be easier to just use [`fill`] for
     /// everything.
     ///
-    /// [`fill`]: #method.fill
+    /// [`fill`]: RenderContext::fill
     fn clear(&mut self, region: impl Into<Option<Rect>>, color: Color);
 
     /// Stroke a [`Shape`], using the default [`StrokeStyle`].
@@ -145,8 +145,10 @@ where
 
     /// Clip to a [`Shape`].
     ///
-    /// All subsequent drawing operations up to the next [`restore`](#method.restore)
+    /// All subsequent drawing operations up to the next [`restore`]
     /// are clipped by the shape.
+    ///
+    /// [`restore`]: RenderContext::restore
     fn clip(&mut self, shape: impl Shape);
 
     /// Returns a reference to a shared [`Text`] object.
@@ -158,31 +160,39 @@ where
     ///
     /// The `pos` parameter specifies the upper-left corner of the layout object
     /// (even for right-to-left text). To draw on a baseline, you can use
-    /// [TextLayout::line_metric] to get the baseline position of a specific line.
+    /// [`TextLayout::line_metric`] to get the baseline position of a specific line.
     fn draw_text(&mut self, layout: &Self::TextLayout, pos: impl Into<Point>);
 
     /// Save the context state.
     ///
     /// Pushes the current context state onto a stack, to be popped by
-    /// [`restore`](#method.restore).
+    /// [`restore`].
     ///
-    /// Prefer [`with_save`](#method.with_save) if possible, as that statically
+    /// Prefer [`with_save`] if possible, as that statically
     /// enforces balance of save/restore pairs.
     ///
     /// The context state currently consists of a clip region and an affine
     /// transform, but is expected to grow in the near future.
+    ///
+    /// [`restore`]: RenderContext::restore
+    /// [`with_save`]: RenderContext::with_save
     fn save(&mut self) -> Result<(), Error>;
 
     /// Restore the context state.
     ///
-    /// Pop a context state that was pushed by [`save`](#method.save). See
+    /// Pop a context state that was pushed by [`save`]. See
     /// that method for details.
+    ///
+    /// [`save`]: RenderContext::save
     fn restore(&mut self) -> Result<(), Error>;
 
     /// Do graphics operations with the context state saved and then restored.
     ///
-    /// Equivalent to [`save`](#method.save), calling `f`, then
-    /// [`restore`](#method.restore). See those methods for more details.
+    /// Equivalent to [`save`], calling `f`, then
+    /// [`restore`]. See those methods for more details.
+    ///
+    /// [`restore`]: RenderContext::restore
+    /// [`save`]: RenderContext::save
     fn with_save(&mut self, f: impl FnOnce(&mut Self) -> Result<(), Error>) -> Result<(), Error> {
         self.save()?;
         // Always try to restore the stack, even if `f` errored.
@@ -199,7 +209,9 @@ where
     /// Apply a transform.
     ///
     /// Apply an affine transformation. The transformation remains in effect
-    /// until a [`restore`](#method.restore) operation.
+    /// until a [`restore`] operation.
+    ///
+    /// [`restore`]: RenderContext::restore
     fn transform(&mut self, transform: Affine);
 
     /// Create a new [`Image`] from a pixel buffer.
@@ -217,9 +229,9 @@ where
     /// If you are trying to create an image from the contents of this
     /// [`RenderContext`], see [`capture_image_area`].
     ///
-    /// [`draw_image`]: #method.draw_image
-    /// [`draw_image_area`]: #method.draw_image_area
-    /// [`capture_image_area`]: #method.capture_image_area
+    /// [`draw_image`]: RenderContext::draw_image
+    /// [`draw_image_area`]: RenderContext::draw_image_area
+    /// [`capture_image_area`]: RenderContext::capture_image_area
     fn make_image(
         &mut self,
         width: usize,
@@ -271,7 +283,7 @@ where
 
 /// A trait for various types that can be used as brushes.
 ///
-/// These include backend-independent types such `Color` and `LinearGradient`,
+/// These include backend-independent types such [`Color`] and [`LinearGradient`],
 /// as well as the types used to represent these on a specific backend.
 ///
 /// This is an internal trait that you should not have to implement or think about.

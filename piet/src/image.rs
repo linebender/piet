@@ -34,9 +34,7 @@ pub trait Image: Clone {
 
 /// An in-memory pixel buffer.
 ///
-/// Contains raw bytes, dimensions, and image format ([`piet::ImageFormat`]).
-///
-/// [`piet::ImageFormat`]: ../piet/enum.ImageFormat.html
+/// Contains raw bytes, dimensions, and image format ([`ImageFormat`]).
 #[derive(Clone)]
 pub struct ImageBuf {
     pixels: Arc<[u8]>,
@@ -134,8 +132,6 @@ impl ImageBuf {
     }
 
     /// Converts this buffer an image that is optimized for drawing into a [`RenderContext`].
-    ///
-    /// [`RenderContext`]: ../piet/trait.RenderContext.html
     pub fn to_image<Ctx: RenderContext>(&self, ctx: &mut Ctx) -> Ctx::Image {
         ctx.make_image(self.width(), self.height(), &self.pixels, self.format)
             .unwrap()

@@ -13,9 +13,9 @@ use std::sync::Arc;
 ///
 /// To use a specific font family you should not construct this type directly;
 /// instead you should verify that the desired family exists, via the
-/// [`Text::font`] API.
+/// [`Text::font_family`] API.
 ///
-/// [`Text::font`]: trait.Text.html#tymethod.font
+/// [`Text::font_family`]: crate::Text::font_family
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FontFamily(FontFamilyInner);
 
@@ -72,7 +72,7 @@ impl FontFamily {
     /// by calling the [`Text::font_family`] method, which verifies that the
     /// family name exists.
     ///
-    /// [`Text::font_family`]: trait.Text.html#tymethod.font_family
+    /// [`Text::font_family`]: crate::Text::font_family
     pub fn new_unchecked(s: impl Into<Arc<str>>) -> Self {
         FontFamily(FontFamilyInner::Named(s.into()))
     }
