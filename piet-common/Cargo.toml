@@ -36,7 +36,7 @@ serde = ["piet/serde"]
 piet = { version = "=0.6.0", path = "../piet" }
 piet-web = { version = "=0.6.0", path = "../piet-web", optional = true }
 cfg-if = "1.0.0"
-png = { version = "0.17.5", optional = true }
+png = { version = "0.17.7", optional = true }
 
 [target.'cfg(any(target_os="linux", target_os="openbsd", target_os="freebsd", target_os="netbsd"))'.dependencies]
 piet-cairo = { version = "=0.6.0", path = "../piet-cairo" }
@@ -52,14 +52,14 @@ piet-direct2d = { version = "=0.6.0", path = "../piet-direct2d" }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 piet-web = { version = "=0.6.0", path = "../piet-web" }
-wasm-bindgen = "0.2.80"
+wasm-bindgen = "0.2.83"
 
 [target.'cfg(target_arch="wasm32")'.dev-dependencies]
-getrandom = { version = "0.2.6", features = ["js"] }
-wasm-bindgen-test = "0.3.30"
+getrandom = { version = "0.2.8", features = ["js"] }
+wasm-bindgen-test = "0.3.33"
 
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
-version = "0.3.57"
+version = "0.3.60"
 features = [
     "console",
     "Window",
