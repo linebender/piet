@@ -1,6 +1,6 @@
 [package]
 name = "piet-web"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Web canvas backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -14,7 +14,7 @@ categories = ["rendering::graphics-api", "wasm"]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-piet = { version = "=0.6.0", path = "../piet" }
+piet = { version = "=0.6.1", path = "../piet" }
 
 unicode-segmentation = "1.10.0"
 xi-unicode = "0.3.0"
