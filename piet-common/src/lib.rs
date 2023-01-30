@@ -2,7 +2,7 @@
 //!
 //! This crate reexports the [piet crate][piet], alongside an appropriate backend
 //! for the given platform. It also exposes [kurbo], which defines shape and
-//! curve types useful in drawing.
+//! curve types useful in drawing, and [image] for image manipulation.
 //!
 //! The intention of this crate is to provide a single dependency that handles
 //! the common piet use-case. If you have more complicated needs (such as
@@ -22,6 +22,7 @@
 //!
 //! [piet]: https://crates.io/crates/piet
 //! [kurbo]: https://crates.io/crates/kurbo
+//! [image]: https://crates.io/crates/image
 //! [piet-cairo]: https://crates.io/crates/piet-cairo
 
 #![deny(clippy::trivially_copy_pass_by_ref)]
@@ -30,6 +31,10 @@ pub use piet::*;
 
 #[doc(hidden)]
 pub use piet::kurbo;
+
+#[doc(hidden)]
+#[cfg(feature = "image")]
+pub use piet::image_crate;
 
 cfg_if::cfg_if! {
      if #[cfg(any(feature = "web", target_arch = "wasm32"))] {

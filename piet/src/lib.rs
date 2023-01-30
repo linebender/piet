@@ -26,6 +26,9 @@
 
 pub use kurbo;
 
+#[cfg(feature = "image")]
+pub use ::image as image_crate;
+
 /// utilities shared by various backends
 pub mod util;
 
