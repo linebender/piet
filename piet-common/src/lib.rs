@@ -29,13 +29,6 @@
 
 pub use piet::*;
 
-#[doc(hidden)]
-pub use piet::kurbo;
-
-#[doc(hidden)]
-#[cfg(feature = "image")]
-pub use piet::image_crate;
-
 cfg_if::cfg_if! {
      if #[cfg(any(feature = "web", target_arch = "wasm32"))] {
         #[path = "web_back.rs"]
