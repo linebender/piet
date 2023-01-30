@@ -1,6 +1,6 @@
 [package]
 name = "piet-coregraphics"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Jeff Muizelaar <jrmuizel@gmail.com>, Raph Levien <raph.levien@gmail.com>, Colin Rofls <colin.rofls@gmail.com>"]
 description = "CoreGraphics backend for piet 2D graphics abstraction."
 license = "MIT/Apache-2.0"
@@ -11,7 +11,7 @@ keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
 
 [dependencies]
-piet = { version = "=0.6.1", path = "../piet" }
+piet = { version = "=0.6.2", path = "../piet" }
 
 foreign-types = "0.3.2"
 core-graphics = "0.22.3"
@@ -21,8 +21,8 @@ core-foundation-sys = "0.8.3"
 associative-cache = "1.0.1"
 
 [dev-dependencies]
-piet = { version = "=0.6.1", path = "../piet", features = ["samples"] }
-piet-common = { version = "=0.6.1", path = "../piet-common", features = ["png"] }
+piet = { version = "=0.6.2", path = "../piet", features = ["samples"] }
+piet-common = { version = "=0.6.2", path = "../piet-common", features = ["png"] }
 
 [package.metadata.docs.rs]
 default-target = "x86_64-apple-darwin"
