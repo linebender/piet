@@ -238,6 +238,17 @@ where
         height: usize,
         buf: &[u8],
         format: ImageFormat,
+    ) -> Result<Self::Image, Error> {
+        self.make_image_with_stride(width, height, width * format.bytes_per_pixel(), buf, format)
+    }
+
+    fn make_image_with_stride(
+        &mut self,
+        width: usize,
+        height: usize,
+        stride: usize,
+        buf: &[u8],
+        format: ImageFormat,
     ) -> Result<Self::Image, Error>;
 
     /// Draw an [`Image`] into the provided [`Rect`].
