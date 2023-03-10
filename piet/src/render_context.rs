@@ -228,6 +228,14 @@ where
     ///
     /// If you are trying to create an image from the contents of this
     /// [`RenderContext`], see [`capture_image_area`].
+    /// 
+    /// # Arguments
+    /// 
+    /// * `width` - The width of the image in pixels.
+    /// * `height` - The height of the image in pixels.
+    /// * `buf` - The pixel data. The length of this buffer must be at least
+    ///   `width * height * format.bytes_per_pixel()`.
+    /// * `format` - The format of the pixel data.
     ///
     /// [`draw_image`]: RenderContext::draw_image
     /// [`draw_image_area`]: RenderContext::draw_image_area
@@ -242,6 +250,22 @@ where
         self.make_image_with_stride(width, height, width * format.bytes_per_pixel(), buf, format)
     }
 
+    /// Create a new [`Image`] from a pixel buffer with a specified row stride.
+    /// This has the same semantics as [`make_image`], but allows the caller to
+    /// specify the stride of the image data and is useful for images that are
+    /// not tightly packed.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `width` - The width of the image in pixels.
+    /// * `height` - The height of the image in pixels.
+    /// * `stride` - The number of bytes between the start of one row of pixels
+    ///   and the start of the next row of pixels.
+    /// * `buf` - The pixel data for the image. The length of this buffer must
+    ///   be at least `stride * height`.
+    /// * `format` - The format of the pixel data.
+    /// 
+    /// [`make_image`]: RenderContext::make_image
     fn make_image_with_stride(
         &mut self,
         width: usize,
