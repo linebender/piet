@@ -251,8 +251,9 @@ where
     }
 
     /// Create a new [`Image`] from a pixel buffer with a specified row stride.
+    /// 
     /// This has the same semantics as [`make_image`], but allows the caller to
-    /// specify the stride of the image data and is useful for images that are
+    /// specify the stride of the image data. It is useful for images that are
     /// not tightly packed.
     /// 
     /// # Arguments
