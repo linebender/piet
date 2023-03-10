@@ -312,10 +312,11 @@ impl RenderContext for WebRenderContext<'_> {
         matrix_to_affine(self.ctx.get_transform().unwrap())
     }
 
-    fn make_image(
+    fn make_image_with_stride(
         &mut self,
         width: usize,
         height: usize,
+        stride: usize,
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
@@ -326,35 +327,58 @@ impl RenderContext for WebRenderContext<'_> {
         canvas.set_height(height as u32);
         let mut new_buf: Vec<u8>;
         let buf = match format {
-            ImageFormat::RgbaSeparate => buf,
+            ImageFormat::RgbaSeparate => {
+                if stride == width * format.bytes_per_pixel() {
+                    buf
+                } else {
+                    new_buf = vec![0; width * height * 4];
+                    for y in 0..height {
+                        let src = &buf[y * stride..(y + 1) * stride];
+                        let dst = &mut new_buf[y * width * 4..(y + 1) * width * 4];
+                        dst.copy_from_slice(src);
+                    }
+                    new_buf.as_slice()
+                }
+            }
             ImageFormat::RgbaPremul => {
                 new_buf = vec![0; width * height * 4];
-                for i in 0..width * height {
-                    let a = buf[i * 4 + 3];
-                    new_buf[i * 4 + 0] = unpremul(buf[i * 4 + 0], a);
-                    new_buf[i * 4 + 1] = unpremul(buf[i * 4 + 1], a);
-                    new_buf[i * 4 + 2] = unpremul(buf[i * 4 + 2], a);
-                    new_buf[i * 4 + 3] = a;
+                for y in 0..height {
+                    for x in 0..width {
+                        let src_offset = y * stride + x * 4;
+                        let dst_offset = y * width * 4 + x * 4;
+                        let a = buf[src_offset + 3];
+                        new_buf[dst_offset + 0] = unpremul(buf[src_offset + 0], a);
+                        new_buf[dst_offset + 1] = unpremul(buf[src_offset + 1], a);
+                        new_buf[dst_offset + 2] = unpremul(buf[src_offset + 2], a);
+                    }
                 }
                 new_buf.as_slice()
             }
             ImageFormat::Rgb => {
                 new_buf = vec![0; width * height * 4];
-                for i in 0..width * height {
-                    new_buf[i * 4 + 0] = buf[i * 3 + 0];
-                    new_buf[i * 4 + 1] = buf[i * 3 + 1];
-                    new_buf[i * 4 + 2] = buf[i * 3 + 2];
-                    new_buf[i * 4 + 3] = 255;
+                for y in 0..height {
+                    for x in 0..width {
+                        let src_offset = y * stride + x * 3;
+                        let dst_offset = y * width * 4 + x * 4;
+                        new_buf[dst_offset + 0] = buf[src_offset + 0];
+                        new_buf[dst_offset + 1] = buf[src_offset + 1];
+                        new_buf[dst_offset + 2] = buf[src_offset + 2];
+                        new_buf[dst_offset + 3] = 255;
+                    }
                 }
                 new_buf.as_slice()
             }
             ImageFormat::Grayscale => {
                 new_buf = vec![0; width * height * 4];
-                for i in 0..width * height {
-                    new_buf[i * 4 + 0] = buf[i];
-                    new_buf[i * 4 + 1] = buf[i];
-                    new_buf[i * 4 + 2] = buf[i];
-                    new_buf[i * 4 + 3] = 255;
+                for y in 0..height {
+                    for x in 0..width {
+                        let src_offset = y * stride + x;
+                        let dst_offset = y * width * 4 + x * 4;
+                        new_buf[dst_offset + 0] = buf[src_offset];
+                        new_buf[dst_offset + 1] = buf[src_offset];
+                        new_buf[dst_offset + 2] = buf[src_offset];
+                        new_buf[dst_offset + 3] = 255;
+                    }
                 }
                 new_buf.as_slice()
             }
