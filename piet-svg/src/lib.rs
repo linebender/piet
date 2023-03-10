@@ -387,26 +387,28 @@ impl piet::RenderContext for RenderContext {
         self.state.xf
     }
 
-    fn make_image(
+    fn make_image_with_stride(
         &mut self,
         width: usize,
         height: usize,
+        stride: usize,
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image> {
+        let buf = convert_image_buffer(buf, width, height, stride, format);
         Ok(SvgImage(match format {
             ImageFormat::Grayscale => {
-                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                let image = ImageBuffer::from_raw(width as _, height as _, buf)
                     .ok_or(Error::InvalidInput)?;
                 DynamicImage::ImageLuma8(image)
             }
             ImageFormat::Rgb => {
-                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                let image = ImageBuffer::from_raw(width as _, height as _, buf)
                     .ok_or(Error::InvalidInput)?;
                 DynamicImage::ImageRgb8(image)
             }
             ImageFormat::RgbaSeparate => {
-                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                let image = ImageBuffer::from_raw(width as _, height as _, buf)
                     .ok_or(Error::InvalidInput)?;
                 DynamicImage::ImageRgba8(image)
             }
@@ -415,7 +417,7 @@ impl piet::RenderContext for RenderContext {
                 use piet::util::unpremul;
 
                 let mut image =
-                    ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf.to_owned())
+                    ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf)
                         .ok_or(Error::InvalidInput)?;
                 for px in image.pixels_mut() {
                     px[0] = unpremul(px[0], px[3]);
@@ -709,4 +711,24 @@ impl From<Id> for svg::node::Value {
     fn from(x: Id) -> Self {
         x.to_string().into()
     }
+}
+
+
+fn convert_image_buffer(buff: &[u8], width: usize, height: usize, stride: usize, format: ImageFormat) -> Vec<u8> {
+    let mut new_buff = vec![255u8; width * height * 4];
+
+    let bytes_per_pixel = format.bytes_per_pixel();
+
+    // TODO (performance): this could be much faster using std::ptr::copy_nonoverlapping
+    for y in 0..height {
+        for x in 0..width {
+            let src_offset = y * stride + x * bytes_per_pixel;
+            let dst_offset = (y * width + x) * bytes_per_pixel;
+            for i in 0..bytes_per_pixel {
+                new_buff[dst_offset + i] = buff[src_offset + i];
+            }
+        }
+    }
+
+    new_buff
 }
