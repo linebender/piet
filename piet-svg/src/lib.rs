@@ -416,9 +416,8 @@ impl piet::RenderContext for RenderContext {
                 use image::Rgba;
                 use piet::util::unpremul;
 
-                let mut image =
-                    ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf)
-                        .ok_or(Error::InvalidInput)?;
+                let mut image = ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf)
+                    .ok_or(Error::InvalidInput)?;
                 for px in image.pixels_mut() {
                     px[0] = unpremul(px[0], px[3]);
                     px[1] = unpremul(px[1], px[3]);

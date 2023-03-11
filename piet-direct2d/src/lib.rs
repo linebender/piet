@@ -420,9 +420,11 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 if stride == width * format.bytes_per_pixel() {
                     Cow::from(buf)
                 } else {
-                    Cow::from(piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format))
+                    Cow::from(piet::util::image_buffer_to_tightly_packed(
+                        buf, width, height, stride, format,
+                    ))
                 }
-            },
+            }
             ImageFormat::Grayscale => {
                 // it seems like there's no good way to create a 1-channel bitmap
                 // here? I am not alone:

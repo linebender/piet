@@ -324,7 +324,9 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             return Ok(CoreGraphicsImage::Empty);
         }
         assert!(!buf.is_empty() && buf.len() <= format.bytes_per_pixel() * width * height);
-        let data = Arc::new(piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format));
+        let data = Arc::new(piet::util::image_buffer_to_tightly_packed(
+            buf, width, height, stride, format,
+        ));
         let data_provider = CGDataProvider::from_buffer(data);
         let (colorspace, bitmap_info, bytes) = match format {
             ImageFormat::Rgb => (CGColorSpace::create_device_rgb(), 0, 3),
