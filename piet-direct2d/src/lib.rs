@@ -388,7 +388,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 for y in 0..height {
                     for x in 0..width {
                         let src_offset = y * stride + x * 3;
-                        let dst_offset = y * width * 4 + x * 4;
+                        let dst_offset = (y * width + x) * 4;
                         new_buf[dst_offset + 0] = buf[src_offset + 0];
                         new_buf[dst_offset + 1] = buf[src_offset + 1];
                         new_buf[dst_offset + 2] = buf[src_offset + 2];
@@ -406,7 +406,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 for y in 0..height {
                     for x in 0..width {
                         let src_offset = y * stride + x * 4;
-                        let dst_offset = y * width * 4 + x * 4;
+                        let dst_offset = (y * width + x) * 4;
                         let a = buf[src_offset + 3];
                         new_buf[dst_offset + 0] = premul(buf[src_offset + 0], a);
                         new_buf[dst_offset + 1] = premul(buf[src_offset + 1], a);
@@ -433,7 +433,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 for y in 0..height {
                     for x in 0..width {
                         let src_offset = y * stride + x;
-                        let dst_offset = y * width * 4 + x * 4;
+                        let dst_offset = (y * width + x) * 4;
                         new_buf[dst_offset + 0] = buf[src_offset];
                         new_buf[dst_offset + 1] = buf[src_offset];
                         new_buf[dst_offset + 2] = buf[src_offset];
