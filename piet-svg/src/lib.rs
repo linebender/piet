@@ -724,9 +724,11 @@ fn convert_image_buffer(buff: &[u8], width: usize, height: usize, stride: usize,
         for x in 0..width {
             let src_offset = y * stride + x * bytes_per_pixel;
             let dst_offset = (y * width + x) * bytes_per_pixel;
-            for i in 0..bytes_per_pixel {
-                new_buff[dst_offset + i] = buff[src_offset + i];
-            }
+
+            let src_slice = &buff[src_offset..(src_offset + bytes_per_pixel)];
+            let dst_slice = &mut new_buff[dst_offset..(dst_offset + bytes_per_pixel)];
+
+            dst_slice.copy_from_slice(src_slice);
         }
     }
 
