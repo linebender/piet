@@ -108,9 +108,10 @@ impl LineJoin {
 }
 
 /// Options for the cap of stroked lines.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum LineCap {
     /// The stroke is squared off at the endpoint of the path.
+    #[default]
     Butt,
     /// The stroke ends in a semicircular arc with a diameter equal to the line width.
     Round,
@@ -225,12 +226,6 @@ impl Default for LineJoin {
         LineJoin::Miter {
             limit: LineJoin::DEFAULT_MITER_LIMIT,
         }
-    }
-}
-
-impl Default for LineCap {
-    fn default() -> Self {
-        LineCap::Butt
     }
 }
 
