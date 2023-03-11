@@ -263,10 +263,11 @@ pub trait TextLayoutBuilder: Sized {
 }
 
 /// The alignment of text in a [`TextLayout`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextAlignment {
     /// Text is aligned to the left edge in left-to-right scripts, and the
     /// right edge in right-to-left scripts.
+    #[default]
     Start,
     /// Text is aligned to the right edge in left-to-right scripts, and the
     /// left edge in right-to-left scripts.
@@ -566,12 +567,6 @@ impl From<FontWeight> for TextAttribute {
 impl From<FontStyle> for TextAttribute {
     fn from(src: FontStyle) -> TextAttribute {
         TextAttribute::Style(src)
-    }
-}
-
-impl Default for TextAlignment {
-    fn default() -> Self {
-        TextAlignment::Start
     }
 }
 

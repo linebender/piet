@@ -44,9 +44,10 @@ pub enum FontFamilyInner {
 pub struct FontWeight(u16);
 
 /// A font style, which may be italic or regular.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FontStyle {
     /// Prefer the regular style for the current font family, if available.
+    #[default]
     Regular,
     /// Prefer the italic style for the current font family, if available.
     ///
@@ -160,11 +161,5 @@ impl Default for FontFamily {
 impl Default for FontWeight {
     fn default() -> Self {
         FontWeight::REGULAR
-    }
-}
-
-impl Default for FontStyle {
-    fn default() -> Self {
-        FontStyle::Regular
     }
 }
