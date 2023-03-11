@@ -236,12 +236,12 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
 
         // Confident no borrow errors because we just created it.
-        let stride = image.stride() as usize;
+        let image_stride = image.stride() as usize;
         {
             let mut data = image.data().map_err(|e| Error::BackendError(Box::new(e)))?;
             for y in 0..height {
                 let src_off = y * stride;
-                let data = &mut data[y * stride..];
+                let data = &mut data[y * image_stride..];
                 match format {
                     ImageFormat::Rgb => {
                         for x in 0..width {
