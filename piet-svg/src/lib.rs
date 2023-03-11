@@ -395,7 +395,7 @@ impl piet::RenderContext for RenderContext {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image> {
-        let buf = convert_image_buffer(buf, width, height, stride, format);
+        let buf = piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format);
         Ok(SvgImage(match format {
             ImageFormat::Grayscale => {
                 let image = ImageBuffer::from_raw(width as _, height as _, buf)
@@ -711,26 +711,4 @@ impl From<Id> for svg::node::Value {
     fn from(x: Id) -> Self {
         x.to_string().into()
     }
-}
-
-
-fn convert_image_buffer(buff: &[u8], width: usize, height: usize, stride: usize, format: ImageFormat) -> Vec<u8> {
-    let mut new_buff = vec![255u8; width * height * 4];
-
-    let bytes_per_pixel = format.bytes_per_pixel();
-
-    // TODO (performance): this could be much faster using std::ptr::copy_nonoverlapping
-    for y in 0..height {
-        for x in 0..width {
-            let src_offset = y * stride + x * bytes_per_pixel;
-            let dst_offset = (y * width + x) * bytes_per_pixel;
-
-            let src_slice = &buff[src_offset..(src_offset + bytes_per_pixel)];
-            let dst_slice = &mut new_buff[dst_offset..(dst_offset + bytes_per_pixel)];
-
-            dst_slice.copy_from_slice(src_slice);
-        }
-    }
-
-    new_buff
 }

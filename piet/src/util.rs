@@ -254,3 +254,28 @@ mod tests {
         assert_eq!(count_until_utf16("", 0), None);
     }
 }
+
+/// Converts a image buffer to tightly packed owned buffer.
+pub fn image_buffer_to_tightly_packed(buff: &[u8], width: usize, height: usize, stride: usize, format: crate::ImageFormat) -> Vec<u8> {
+    let bytes_per_pixel = format.bytes_per_pixel();
+    let row_size = width * bytes_per_pixel;
+
+    if stride == row_size {
+        // nothing to do, just return the buffer as is
+        return buff.to_vec();
+    }
+    
+    let mut new_buff = vec![0u8; width * height * bytes_per_pixel];
+
+    for y in 0..height {
+        let src_row_start = y * stride;
+        let dst_row_start = y * width * bytes_per_pixel;
+
+        let src_row_slice = &buff[src_row_start..(src_row_start + row_size)];
+        let dst_row_slice = &mut new_buff[dst_row_start..(dst_row_start + row_size)];
+
+        dst_row_slice.copy_from_slice(src_row_slice);
+    }
+
+    new_buff
+}
