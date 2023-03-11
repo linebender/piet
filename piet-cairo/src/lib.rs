@@ -212,10 +212,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
 
     // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
     #[allow(clippy::identity_op)]
-    fn make_image(
+    fn make_image_with_stride(
         &mut self,
         width: usize,
         height: usize,
+        stride: usize,
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
@@ -235,13 +236,11 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         }
 
         // Confident no borrow errors because we just created it.
-        let bytes_per_pixel = format.bytes_per_pixel();
-        let bytes_per_row = width * bytes_per_pixel;
         let stride = image.stride() as usize;
         {
             let mut data = image.data().map_err(|e| Error::BackendError(Box::new(e)))?;
             for y in 0..height {
-                let src_off = y * bytes_per_row;
+                let src_off = y * stride;
                 let data = &mut data[y * stride..];
                 match format {
                     ImageFormat::Rgb => {
