@@ -419,21 +419,8 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             ImageFormat::RgbaPremul => {
                 if stride == width * format.bytes_per_pixel() {
                     Cow::from(buf)
-                }
-                else {
-                    let mut new_buf = vec![255; width * height * 4];
-                    // TODO (performance): this could be much faster using std::ptr::copy_nonoverlapping
-                    for y in 0..height {
-                        for x in 0..width {
-                            let src_offset = y * stride + x * 4;
-                            let dst_offset = y * width * 4 + x * 4;
-                            new_buf[dst_offset + 0] = buf[src_offset + 0];
-                            new_buf[dst_offset + 1] = buf[src_offset + 1];
-                            new_buf[dst_offset + 2] = buf[src_offset + 2];
-                            new_buf[dst_offset + 3] = buf[src_offset + 3];
-                        }
-                    }
-                    Cow::from(new_buf)
+                } else {
+                    Cow::from(piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format))
                 }
             },
             ImageFormat::Grayscale => {
