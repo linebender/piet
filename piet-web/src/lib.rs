@@ -331,7 +331,9 @@ impl RenderContext for WebRenderContext<'_> {
                 if stride == width * format.bytes_per_pixel() {
                     buf
                 } else {
-                    new_buf = piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format);
+                    new_buf = piet::util::image_buffer_to_tightly_packed(
+                        buf, width, height, stride, format,
+                    );
                     new_buf.as_slice()
                 }
             }
