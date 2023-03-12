@@ -395,7 +395,7 @@ impl piet::RenderContext for RenderContext {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image> {
-        let buf = piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format);
+        let buf = piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format)?;
         Ok(SvgImage(match format {
             ImageFormat::Grayscale => {
                 let image = ImageBuffer::from_raw(width as _, height as _, buf)

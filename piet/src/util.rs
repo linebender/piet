@@ -3,7 +3,7 @@
 use std::ops::{Bound, Range, RangeBounds};
 
 use crate::kurbo::{Rect, Size};
-use crate::{Color, FontFamily, FontStyle, FontWeight, LineMetric, TextAttribute};
+use crate::{Color, Error, FontFamily, FontStyle, FontWeight, LineMetric, TextAttribute};
 
 use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
 
@@ -231,6 +231,54 @@ pub fn first_strong_rtl(text: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Converts a image buffer to tightly packed owned buffer.
+///
+/// # Notes
+///
+/// * strides less than `width * bytes_per_pixel` are **allowed**
+/// * if the buffer is too small, [`InvalidInput`] is returned
+///
+/// [`InvalidInput`]: Error::InvalidInput
+pub fn image_buffer_to_tightly_packed(
+    buff: &[u8],
+    width: usize,
+    height: usize,
+    stride: usize,
+    format: crate::ImageFormat,
+) -> Result<Vec<u8>, Error> {
+    if width == 0 || height == 0 {
+        // empty image
+        return Ok(vec![]);
+    }
+
+    let bytes_per_pixel = format.bytes_per_pixel();
+    let row_size = width * bytes_per_pixel;
+    let expected_size = stride * (height - 1) + row_size;
+
+    if buff.len() < expected_size {
+        return Err(Error::InvalidInput);
+    }
+
+    if stride == row_size {
+        // nothing to do, just return the buffer as is
+        return Ok(buff.to_vec());
+    }
+
+    let mut new_buff = vec![0u8; width * height * bytes_per_pixel];
+
+    for y in 0..height {
+        let src_row_start = y * stride;
+        let dst_row_start = y * width * bytes_per_pixel;
+
+        let src_row_slice = &buff[src_row_start..(src_row_start + row_size)];
+        let dst_row_slice = &mut new_buff[dst_row_start..(dst_row_start + row_size)];
+
+        dst_row_slice.copy_from_slice(src_row_slice);
+    }
+
+    Ok(new_buff)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -253,35 +301,75 @@ mod tests {
 
         assert_eq!(count_until_utf16("", 0), None);
     }
-}
 
-/// Converts a image buffer to tightly packed owned buffer.
-pub fn image_buffer_to_tightly_packed(
-    buff: &[u8],
-    width: usize,
-    height: usize,
-    stride: usize,
-    format: crate::ImageFormat,
-) -> Vec<u8> {
-    let bytes_per_pixel = format.bytes_per_pixel();
-    let row_size = width * bytes_per_pixel;
+    #[test]
+    fn test_image_buffer_to_tightly_packed() {
+        let w: u16 = 7;
+        let h: u16 = 11;
+        let format = crate::ImageFormat::RgbaSeparate;
+        let bpp = format.bytes_per_pixel();
 
-    if stride == row_size {
-        // nothing to do, just return the buffer as is
-        return buff.to_vec();
+        let make_buffer_with_stride = |stride: usize| -> Vec<u8> {
+            let mut buff = vec![0u8; stride * h as usize];
+
+            let split_u16 = |x: u16| -> (u8, u8) {
+                let most_significant = (x >> 8) as u8;
+                let least_significant = (x & 0xff) as u8;
+                (most_significant, least_significant)
+            };
+
+            for y in 0..h {
+                for x in 0..w {
+                    let i: usize = y as usize * stride + x as usize * bpp;
+                    let (r, g) = split_u16(x);
+                    let (b, a) = split_u16(y);
+                    buff[i] = r;
+                    buff[i + 1] = g;
+                    buff[i + 2] = b;
+                    buff[i + 3] = a;
+                }
+            }
+
+            buff
+        };
+
+        // a buffer with the correct stride should be returned as is
+        let tightly_packed_buffer = make_buffer_with_stride(w as usize * bpp);
+        let result = image_buffer_to_tightly_packed(
+            &tightly_packed_buffer,
+            w as usize,
+            h as usize,
+            w as usize * bpp,
+            format,
+        );
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result, tightly_packed_buffer);
+
+        // a buffer with a larger stride should be converted to tightly packed
+        let buff = make_buffer_with_stride(w as usize * bpp + 1);
+        let result = image_buffer_to_tightly_packed(
+            &buff,
+            w as usize,
+            h as usize,
+            w as usize * bpp + 1,
+            format,
+        );
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result, tightly_packed_buffer);
+
+        // a buffer that is too small should return an error
+        let small_buff = tightly_packed_buffer[..(tightly_packed_buffer.len() - 1)].to_vec();
+        let result = image_buffer_to_tightly_packed(
+            &small_buff,
+            w as usize,
+            h as usize,
+            w as usize * bpp,
+            format,
+        );
+        assert!(result.is_err());
+        let result = result.unwrap_err();
+        assert_eq!(result.to_string(), Error::InvalidInput.to_string());
     }
-
-    let mut new_buff = vec![0u8; width * height * bytes_per_pixel];
-
-    for y in 0..height {
-        let src_row_start = y * stride;
-        let dst_row_start = y * width * bytes_per_pixel;
-
-        let src_row_slice = &buff[src_row_start..(src_row_start + row_size)];
-        let dst_row_slice = &mut new_buff[dst_row_start..(dst_row_start + row_size)];
-
-        dst_row_slice.copy_from_slice(src_row_slice);
-    }
-
-    new_buff
 }

@@ -422,7 +422,7 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                 } else {
                     Cow::from(piet::util::image_buffer_to_tightly_packed(
                         buf, width, height, stride, format,
-                    ))
+                    )?)
                 }
             }
             ImageFormat::Grayscale => {
