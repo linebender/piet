@@ -320,6 +320,15 @@ impl RenderContext for WebRenderContext<'_> {
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
+        if buf.len()
+            < piet::util::expected_image_buffer_size(
+                format.bytes_per_pixel() * width,
+                height,
+                stride,
+            )
+        {
+            return Err(Error::InvalidInput);
+        }
         let document = self.window.document().unwrap();
         let element = document.create_element("canvas").unwrap();
         let canvas = element.dyn_into::<HtmlCanvasElement>().unwrap();

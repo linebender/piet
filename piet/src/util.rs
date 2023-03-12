@@ -231,6 +231,15 @@ pub fn first_strong_rtl(text: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Returns the number of bytes needed to be read from the image buffer.
+pub fn expected_image_buffer_size(row_size: usize, height: usize, stride: usize) -> usize {
+    if height == 0 {
+        return 0;
+    }
+
+    stride * (height - 1) + row_size
+}
+
 /// Converts a image buffer to tightly packed owned buffer.
 ///
 /// # Notes
@@ -253,9 +262,8 @@ pub fn image_buffer_to_tightly_packed(
 
     let bytes_per_pixel = format.bytes_per_pixel();
     let row_size = width * bytes_per_pixel;
-    let expected_size = stride * (height - 1) + row_size;
 
-    if buff.len() < expected_size {
+    if buff.len() < expected_image_buffer_size(row_size, height, stride) {
         return Err(Error::InvalidInput);
     }
 

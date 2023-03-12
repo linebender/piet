@@ -376,6 +376,16 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
             return Ok(self.rt.create_empty_bitmap()?);
         }
 
+        if buf.len()
+            < piet::util::expected_image_buffer_size(
+                format.bytes_per_pixel() * width,
+                height,
+                stride,
+            )
+        {
+            return Err(Error::InvalidInput);
+        }
+
         // TODO: this method _really_ needs error checking, so much can go wrong...
         let alpha_mode = match format {
             ImageFormat::Rgb | ImageFormat::Grayscale => D2D1_ALPHA_MODE_IGNORE,
