@@ -238,7 +238,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         // Confident no borrow errors because we just created it.
         let image_stride = image.stride() as usize;
         {
-            if buff.len() < piet::util::expected_image_buffer_size(image_stride, height, stride) {
+            if buf.len() < piet::util::expected_image_buffer_size(image_stride, height, stride) {
                 return Err(Error::InvalidInput);
             }
 
