@@ -240,7 +240,7 @@ pub fn expected_image_buffer_size(row_size: usize, height: usize, stride: usize)
     stride * (height - 1) + row_size
 }
 
-/// Converts a image buffer to tightly packed owned buffer.
+/// Converts an image buffer to a tightly packed owned buffer.
 ///
 /// # Notes
 ///
@@ -272,11 +272,11 @@ pub fn image_buffer_to_tightly_packed(
         return Ok(buff.to_vec());
     }
 
-    let mut new_buff = vec![0u8; width * height * bytes_per_pixel];
+    let mut new_buff = vec![0u8; height * row_size];
 
     for y in 0..height {
         let src_row_start = y * stride;
-        let dst_row_start = y * width * bytes_per_pixel;
+        let dst_row_start = y * row_size;
 
         let src_row_slice = &buff[src_row_start..(src_row_start + row_size)];
         let dst_row_slice = &mut new_buff[dst_row_start..(dst_row_start + row_size)];
