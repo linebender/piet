@@ -101,10 +101,11 @@ impl RenderContext for NullRenderContext {
         Ok(NullImage)
     }
 
-    fn make_image(
+    fn make_image_with_stride(
         &mut self,
         _width: usize,
         _height: usize,
+        _stride: usize,
         _buf: &[u8],
         _format: ImageFormat,
     ) -> Result<Self::Image, Error> {

@@ -361,10 +361,11 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         self.ctx_stack.last().unwrap().transform
     }
 
-    fn make_image(
+    fn make_image_with_stride(
         &mut self,
         width: usize,
         height: usize,
+        stride: usize,
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
@@ -373,6 +374,16 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         // better solution.
         if width == 0 || height == 0 {
             return Ok(self.rt.create_empty_bitmap()?);
+        }
+
+        if buf.len()
+            < piet::util::expected_image_buffer_size(
+                format.bytes_per_pixel() * width,
+                height,
+                stride,
+            )
+        {
+            return Err(Error::InvalidInput);
         }
 
         // TODO: this method _really_ needs error checking, so much can go wrong...
@@ -384,10 +395,14 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         let buf = match format {
             ImageFormat::Rgb => {
                 let mut new_buf = vec![255; width * height * 4];
-                for i in 0..width * height {
-                    new_buf[i * 4 + 0] = buf[i * 3 + 0];
-                    new_buf[i * 4 + 1] = buf[i * 3 + 1];
-                    new_buf[i * 4 + 2] = buf[i * 3 + 2];
+                for y in 0..height {
+                    for x in 0..width {
+                        let src_offset = y * stride + x * 3;
+                        let dst_offset = (y * width + x) * 4;
+                        new_buf[dst_offset + 0] = buf[src_offset + 0];
+                        new_buf[dst_offset + 1] = buf[src_offset + 1];
+                        new_buf[dst_offset + 2] = buf[src_offset + 2];
+                    }
                 }
                 Cow::from(new_buf)
             }
@@ -398,25 +413,41 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
                     let y = (x as u16) * (a as u16);
                     ((y + (y >> 8) + 0x80) >> 8) as u8
                 }
-                for i in 0..width * height {
-                    let a = buf[i * 4 + 3];
-                    new_buf[i * 4 + 0] = premul(buf[i * 4 + 0], a);
-                    new_buf[i * 4 + 1] = premul(buf[i * 4 + 1], a);
-                    new_buf[i * 4 + 2] = premul(buf[i * 4 + 2], a);
-                    new_buf[i * 4 + 3] = a;
+                for y in 0..height {
+                    for x in 0..width {
+                        let src_offset = y * stride + x * 4;
+                        let dst_offset = (y * width + x) * 4;
+                        let a = buf[src_offset + 3];
+                        new_buf[dst_offset + 0] = premul(buf[src_offset + 0], a);
+                        new_buf[dst_offset + 1] = premul(buf[src_offset + 1], a);
+                        new_buf[dst_offset + 2] = premul(buf[src_offset + 2], a);
+                        new_buf[dst_offset + 3] = a;
+                    }
                 }
                 Cow::from(new_buf)
             }
-            ImageFormat::RgbaPremul => Cow::from(buf),
+            ImageFormat::RgbaPremul => {
+                if stride == width * format.bytes_per_pixel() {
+                    Cow::from(buf)
+                } else {
+                    Cow::from(piet::util::image_buffer_to_tightly_packed(
+                        buf, width, height, stride, format,
+                    )?)
+                }
+            }
             ImageFormat::Grayscale => {
                 // it seems like there's no good way to create a 1-channel bitmap
                 // here? I am not alone:
                 // https://stackoverflow.com/questions/44270215/direct2d-fails-when-drawing-a-single-channel-bitmap
                 let mut new_buf = vec![255; width * height * 4];
-                for i in 0..width * height {
-                    new_buf[i * 4 + 0] = buf[i];
-                    new_buf[i * 4 + 1] = buf[i];
-                    new_buf[i * 4 + 2] = buf[i];
+                for y in 0..height {
+                    for x in 0..width {
+                        let src_offset = y * stride + x;
+                        let dst_offset = (y * width + x) * 4;
+                        new_buf[dst_offset + 0] = buf[src_offset];
+                        new_buf[dst_offset + 1] = buf[src_offset];
+                        new_buf[dst_offset + 2] = buf[src_offset];
+                    }
                 }
                 Cow::from(new_buf)
             }

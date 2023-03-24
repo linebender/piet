@@ -312,10 +312,11 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         self.ctx.concat_ctm(to_cgaffine(transform));
     }
 
-    fn make_image(
+    fn make_image_with_stride(
         &mut self,
         width: usize,
         height: usize,
+        stride: usize,
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image, Error> {
@@ -323,7 +324,9 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
             return Ok(CoreGraphicsImage::Empty);
         }
         assert!(!buf.is_empty() && buf.len() <= format.bytes_per_pixel() * width * height);
-        let data = Arc::new(buf.to_owned());
+        let data = Arc::new(piet::util::image_buffer_to_tightly_packed(
+            buf, width, height, stride, format,
+        )?);
         let data_provider = CGDataProvider::from_buffer(data);
         let (colorspace, bitmap_info, bytes) = match format {
             ImageFormat::Rgb => (CGColorSpace::create_device_rgb(), 0, 3),

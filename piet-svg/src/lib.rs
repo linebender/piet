@@ -387,26 +387,28 @@ impl piet::RenderContext for RenderContext {
         self.state.xf
     }
 
-    fn make_image(
+    fn make_image_with_stride(
         &mut self,
         width: usize,
         height: usize,
+        stride: usize,
         buf: &[u8],
         format: ImageFormat,
     ) -> Result<Self::Image> {
+        let buf = piet::util::image_buffer_to_tightly_packed(buf, width, height, stride, format)?;
         Ok(SvgImage(match format {
             ImageFormat::Grayscale => {
-                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                let image = ImageBuffer::from_raw(width as _, height as _, buf)
                     .ok_or(Error::InvalidInput)?;
                 DynamicImage::ImageLuma8(image)
             }
             ImageFormat::Rgb => {
-                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                let image = ImageBuffer::from_raw(width as _, height as _, buf)
                     .ok_or(Error::InvalidInput)?;
                 DynamicImage::ImageRgb8(image)
             }
             ImageFormat::RgbaSeparate => {
-                let image = ImageBuffer::from_raw(width as _, height as _, buf.to_owned())
+                let image = ImageBuffer::from_raw(width as _, height as _, buf)
                     .ok_or(Error::InvalidInput)?;
                 DynamicImage::ImageRgba8(image)
             }
@@ -414,9 +416,8 @@ impl piet::RenderContext for RenderContext {
                 use image::Rgba;
                 use piet::util::unpremul;
 
-                let mut image =
-                    ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf.to_owned())
-                        .ok_or(Error::InvalidInput)?;
+                let mut image = ImageBuffer::<Rgba<u8>, _>::from_raw(width as _, height as _, buf)
+                    .ok_or(Error::InvalidInput)?;
                 for px in image.pixels_mut() {
                     px[0] = unpremul(px[0], px[3]);
                     px[1] = unpremul(px[1], px[3]);
