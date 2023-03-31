@@ -1,6 +1,6 @@
 //! Options for drawing paths.
 
-use std::rc::Rc;
+use alloc::rc::Rc;
 
 /// Options for drawing stroked lines.
 ///
@@ -229,7 +229,7 @@ impl Default for LineJoin {
     }
 }
 
-impl std::ops::Deref for StrokeDash {
+impl core::ops::Deref for StrokeDash {
     type Target = [f64];
     fn deref(&self) -> &Self::Target {
         self.alloc.as_deref().unwrap_or(self.slice)

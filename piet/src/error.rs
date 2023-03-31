@@ -1,6 +1,6 @@
 //! The common error type for piet operations.
 
-use std::fmt;
+use core::fmt;
 
 /// An error that can occur while rendering 2D graphics.
 #[derive(Debug)]
@@ -17,6 +17,7 @@ pub enum Error {
     /// A stack pop failed.
     StackUnbalance,
     /// The backend failed unexpectedly.
+    #[cfg(feature = "std")]
     BackendError(Box<dyn std::error::Error>),
     /// A font could not be found.
     MissingFont,
@@ -40,6 +41,7 @@ impl fmt::Display for Error {
                 "This functionality is not yet implemented for this backend"
             ),
             Error::MissingFeature(feature) => write!(f, "Missing feature '{feature}'"),
+            #[cfg(feature = "std")]
             Error::BackendError(e) => {
                 write!(f, "Backend error: ")?;
                 e.fmt(f)
@@ -50,8 +52,10 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for Error {}
 
+#[cfg(feature = "std")]
 impl From<Box<dyn std::error::Error>> for Error {
     fn from(e: Box<dyn std::error::Error>) -> Error {
         Error::BackendError(e)

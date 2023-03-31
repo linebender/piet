@@ -23,6 +23,9 @@
 
 #![warn(missing_docs)]
 #![deny(clippy::trivially_copy_pass_by_ref, rustdoc::broken_intra_doc_links)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
 
 pub use kurbo;
 

@@ -20,8 +20,10 @@
 //!
 //! [unit square]: https://en.wikipedia.org/wiki/Unit_square
 
-use std::borrow::Cow;
-use std::hash::{Hash, Hasher};
+use alloc::borrow::{Cow, ToOwned};
+use alloc::vec::Vec;
+
+use core::hash::{Hash, Hasher};
 
 use kurbo::{Point, Rect, Size, Vec2};
 

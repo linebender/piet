@@ -1,6 +1,7 @@
 //! Traits for fonts and text handling.
 
-use std::ops::{Range, RangeBounds};
+use alloc::vec::Vec;
+use core::ops::{Deref, Range, RangeBounds};
 
 use crate::kurbo::{Point, Rect, Size};
 use crate::{Color, Error, FontFamily, FontStyle, FontWeight};
@@ -122,7 +123,7 @@ pub trait TextStorage: 'static {
     fn as_str(&self) -> &str;
 }
 
-impl std::ops::Deref for dyn TextStorage {
+impl Deref for dyn TextStorage {
     type Target = str;
     fn deref(&self) -> &Self::Target {
         self.as_str()
@@ -570,31 +571,31 @@ impl From<FontStyle> for TextAttribute {
     }
 }
 
-impl TextStorage for std::sync::Arc<str> {
+impl TextStorage for alloc::sync::Arc<str> {
     fn as_str(&self) -> &str {
         self
     }
 }
 
-impl TextStorage for std::rc::Rc<str> {
+impl TextStorage for alloc::rc::Rc<str> {
     fn as_str(&self) -> &str {
         self
     }
 }
 
-impl TextStorage for String {
+impl TextStorage for alloc::string::String {
     fn as_str(&self) -> &str {
         self.as_str()
     }
 }
 
-impl TextStorage for std::sync::Arc<String> {
+impl TextStorage for alloc::sync::Arc<alloc::string::String> {
     fn as_str(&self) -> &str {
         self
     }
 }
 
-impl TextStorage for std::rc::Rc<String> {
+impl TextStorage for alloc::rc::Rc<alloc::string::String> {
     fn as_str(&self) -> &str {
         self
     }

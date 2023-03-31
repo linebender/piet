@@ -1,6 +1,6 @@
 //! Font families, weights, etcetera
 
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 /// A reference to a font family.
 ///

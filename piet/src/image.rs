@@ -14,11 +14,11 @@
 
 //! Types for working with images
 
+use alloc::sync::Arc;
 #[cfg(feature = "image")]
 use std::error::Error;
 #[cfg(feature = "image")]
 use std::path::Path;
-use std::sync::Arc;
 
 use crate::kurbo::Size;
 use crate::util::unpremul;
@@ -205,8 +205,8 @@ impl ImageBuf {
     }
 }
 
-impl std::fmt::Debug for ImageBuf {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Debug for ImageBuf {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         f.debug_struct("ImageBuf")
             .field("size", &self.pixels.len())
             .field("width", &self.width)
