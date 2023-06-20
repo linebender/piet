@@ -292,6 +292,7 @@ pub fn image_buffer_to_tightly_packed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
 
     #[test]
     fn test_count_until_utf16() {
