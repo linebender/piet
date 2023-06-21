@@ -93,7 +93,7 @@ struct Args {
 ///   testing environment, such as the versions of various dependencies; this
 ///   will be appended to the GENERATED_BY file.
 pub fn samples_main(
-    f: fn(usize, f64, &Path) -> Result<(), BoxErr>,
+    f: impl Fn(usize, f64, &Path) -> Result<(), BoxErr>,
     prefix: &str,
     env_info: Option<&str>,
 ) -> ! {
