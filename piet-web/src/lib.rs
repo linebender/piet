@@ -544,7 +544,7 @@ impl WebRenderContext<'_> {
     fn set_stroke(&mut self, width: f64, style: Option<&StrokeStyle>) {
         let default_style = StrokeStyle::default();
         let style = style.unwrap_or(&default_style);
-        let mut canvas_state = self.canvas_states.last_mut().unwrap();
+        let canvas_state = self.canvas_states.last_mut().unwrap();
 
         if width != canvas_state.line_width {
             self.ctx.set_line_width(width);
