@@ -1,7 +1,7 @@
 //! A render context that does nothing.
 
-use std::borrow::Cow;
-use std::ops::RangeBounds;
+use alloc::borrow::Cow;
+use core::ops::RangeBounds;
 
 use kurbo::{Affine, Point, Rect, Shape, Size};
 
@@ -223,7 +223,7 @@ impl IntoBrush<NullRenderContext> for NullBrush {
         &'b self,
         _piet: &mut NullRenderContext,
         _bbox: impl FnOnce() -> Rect,
-    ) -> std::borrow::Cow<'b, NullBrush> {
+    ) -> Cow<'b, NullBrush> {
         Cow::Borrowed(self)
     }
 }

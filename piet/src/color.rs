@@ -1,6 +1,6 @@
 //! A simple representation of color
 
-use std::fmt::{Debug, Formatter};
+use core::fmt::{Debug, Formatter};
 
 /// A datatype representing color.
 ///
@@ -138,7 +138,7 @@ impl Color {
                 3. * d * d * (t - 4. / 29.)
             }
         }
-        let th = h * (std::f64::consts::PI / 180.);
+        let th = h * (core::f64::consts::PI / 180.);
         let a = c * th.cos();
         let b = c * th.sin();
         let ll = (L + 16.) * (1. / 116.);
@@ -341,13 +341,13 @@ const fn hex_from_ascii_byte(b: u8) -> Result<u8, u8> {
 }
 
 impl Debug for Color {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         write!(f, "#{:08x}", self.as_rgba_u32())
     }
 }
 
-impl std::fmt::Display for ColorParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl core::fmt::Display for ColorParseError {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         match self {
             ColorParseError::WrongSize(n) => write!(f, "Input string has invalid length {n}"),
             ColorParseError::NotHex { idx, byte } => {
@@ -357,6 +357,7 @@ impl std::fmt::Display for ColorParseError {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for ColorParseError {}
 #[cfg(test)]
 mod tests {

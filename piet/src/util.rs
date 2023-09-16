@@ -1,6 +1,8 @@
 //! Code useful for multiple backends
 
-use std::ops::{Bound, Range, RangeBounds};
+use alloc::vec;
+use alloc::vec::Vec;
+use core::ops::{Bound, Range, RangeBounds};
 
 use crate::kurbo::{Rect, Size};
 use crate::{Color, Error, FontFamily, FontStyle, FontWeight, LineMetric, TextAttribute};
@@ -143,7 +145,7 @@ pub fn compute_blurred_rect(rect: Rect, radius: f64, stride: usize, buf: &mut [u
 // See https://raphlinus.github.io/audio/2018/09/05/sigmoid.html for a little
 // explanation of this approximation to the erf function.
 fn compute_erf7(x: f64) -> f64 {
-    let x = x * std::f64::consts::FRAC_2_SQRT_PI;
+    let x = x * core::f64::consts::FRAC_2_SQRT_PI;
     let xx = x * x;
     let x = x + (0.24295 + (0.03395 + 0.0104 * xx) * xx) * (x * xx);
     x / (1.0 + x * x).sqrt()
@@ -290,6 +292,7 @@ pub fn image_buffer_to_tightly_packed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::ToString;
 
     #[test]
     fn test_count_until_utf16() {

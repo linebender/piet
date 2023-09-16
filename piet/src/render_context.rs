@@ -1,6 +1,6 @@
 //! The main render context trait.
 
-use std::borrow::Cow;
+use alloc::borrow::{Cow, ToOwned};
 
 use kurbo::{Affine, Point, Rect, Shape};
 

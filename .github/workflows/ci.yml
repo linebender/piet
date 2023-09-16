@@ -63,6 +63,12 @@ jobs:
           command: clippy
           args: --manifest-path=piet/Cargo.toml --all-targets --all-features -- -D warnings
 
+      - name: cargo clippy piet with no default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path=piet/Cargo.toml --all-targets --no-default-features --features libm -- -D warnings
+
       - name: cargo clippy piet-cairo
         uses: actions-rs/cargo@v1
         with:
@@ -102,6 +108,12 @@ jobs:
         with:
           command: test
           args: --manifest-path=piet/Cargo.toml --all-features
+
+      - name: cargo test piet with no default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet/Cargo.toml --no-default-features --features libm
 
       - name: cargo test piet-cairo
         uses: actions-rs/cargo@v1
@@ -232,6 +244,12 @@ jobs:
         with:
           command: test
           args: --manifest-path=piet/Cargo.toml --all-features
+
+      - name: cargo test piet with no default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path=piet/Cargo.toml --no-default-features --features libm
 
       - name: cargo test piet-cairo
         uses: actions-rs/cargo@v1
