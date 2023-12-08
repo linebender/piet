@@ -1,10 +1,10 @@
 //! Text related stuff for the coregraphics backend
 
+use std::cell::RefCell;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::{DerefMut, Range, RangeBounds};
 use std::rc::Rc;
-use std::sync::{Arc, Mutex};
 
 use associative_cache::{AssociativeCache, Capacity64, HashFourWay, RoundRobinReplacement};
 use core_foundation::base::TCFType;
@@ -45,7 +45,7 @@ pub struct CoreGraphicsText {
 /// like caching fonts.
 #[derive(Clone)]
 struct SharedTextState {
-    inner: Arc<Mutex<TextState>>,
+    inner: Rc<RefCell<TextState>>,
 }
 
 type Cache<K, V> = AssociativeCache<K, V, Capacity64, HashFourWay, RoundRobinReplacement>;
@@ -468,7 +468,7 @@ impl CoreGraphicsText {
     /// In general this should be created once and then cloned and passed around.
     pub fn new_with_unique_state() -> CoreGraphicsText {
         let collection = FontCollection::new_with_all_fonts();
-        let inner = Arc::new(Mutex::new(TextState {
+        let inner = Rc::new(RefCell::new(TextState {
             collection,
             family_cache: Default::default(),
             font_cache: Default::default(),
@@ -509,7 +509,7 @@ impl SharedTextState {
     ///
     /// This hits a cache before doing a lookup with the system.
     fn get_font_family(&self, family_name: &str) -> Option<FontFamily> {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.borrow_mut();
         let obj = inner.deref_mut();
         let family_cache = &mut obj.family_cache;
         let collection = &mut obj.collection;
@@ -526,7 +526,7 @@ impl SharedTextState {
     ///
     /// This hits a cache before creating the CTFont.
     fn get_ct_font(&self, key: &CoreTextFontKey) -> CTFont {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.borrow_mut();
         inner
             .font_cache
             .entry(key)

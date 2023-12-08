@@ -603,7 +603,6 @@ impl<'a> D2DRenderContext<'a> {
                 return;
             }
         };
-        let width = width;
         self.rt.draw_geometry(&geom, &brush, width, style);
     }
 
