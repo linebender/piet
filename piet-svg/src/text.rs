@@ -1,9 +1,11 @@
 //! Text functionality for Piet svg backend
 
 use std::{
+    cell::RefCell,
     collections::HashSet,
     fs, io,
     ops::RangeBounds,
+    rc::Rc,
     sync::{Arc, Mutex},
 };
 
@@ -24,7 +26,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// SVG text (partially implemented)
 #[derive(Clone)]
 pub struct Text {
-    source: Arc<Mutex<MultiSource>>,
+    source: Rc<RefCell<MultiSource>>,
     /// Fonts we have seen this frame, and so need to embed in the SVG.
     ///
     /// We only include named font families - system defaults like SANS_SERIF are assumed to be
@@ -36,7 +38,7 @@ impl Text {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Text {
-            source: Arc::new(Mutex::new(MultiSource::from_sources(vec![
+            source: Rc::new(RefCell::new(MultiSource::from_sources(vec![
                 Box::new(SystemSource::new()),
                 Box::new(MemSource::empty()),
             ]))),
@@ -47,8 +49,7 @@ impl Text {
     pub(crate) fn font_data(&self, face: &FontFace) -> Result<Arc<Vec<u8>>> {
         let handle = self
             .source
-            .lock()
-            .unwrap()
+            .borrow()
             .select_best_match(&[face.to_fk_family()], &face.to_props())
             .map_err(|_| Error::FontLoadingFailed)?;
         load_font_data(handle).map_err(|_| Error::FontLoadingFailed)
@@ -64,8 +65,7 @@ impl piet::Text for Text {
 
         if self
             .source
-            .lock()
-            .unwrap()
+            .borrow()
             .select_best_match(&[FamilyName::Title(family_name.into())], &Properties::new())
             .is_ok()
         {
@@ -76,7 +76,7 @@ impl piet::Text for Text {
     }
 
     fn load_font(&mut self, data: &[u8]) -> Result<FontFamily> {
-        let mut multi_source = self.source.lock().unwrap();
+        let mut multi_source = self.source.borrow_mut();
         let source = multi_source
             .find_source_mut::<MemSource>()
             .expect("mem source");
@@ -189,9 +189,7 @@ impl TextLayout {
     /// will depend on available fonts, conformance of renderer, DPI, etc), but it is the best we
     /// can do.
     fn from_builder(builder: TextLayoutBuilder) -> Result<Self> {
-        let face_bytes = builder
-            .font_face
-            .load(&*builder.ctx.source.lock().unwrap())?;
+        let face_bytes = builder.font_face.load(&*builder.ctx.source.borrow())?;
         let mut face = Face::from_slice(&face_bytes, 0).ok_or(Error::FontLoadingFailed)?;
         // number of pixels in a point
         // I think we're OK to assume 96 DPI, because the actual SVG renderer will scale for HIDPI
