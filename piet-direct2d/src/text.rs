@@ -9,7 +9,6 @@ use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
 use std::sync::Arc;
 
-pub use d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
 pub use dwrite::DwriteFactory;
 use dwrote::{CustomFontCollectionLoaderImpl, FontCollection, FontFile};
 use winapi::um::d2d1::D2D1_DRAW_TEXT_OPTIONS_NONE;
