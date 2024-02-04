@@ -22,7 +22,6 @@ use piet::{
 };
 
 use crate::conv;
-use crate::d2d;
 use crate::dwrite::{self, TextFormat, Utf16Range};
 use crate::D2DRenderContext;
 
