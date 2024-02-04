@@ -235,7 +235,7 @@ impl TextLayout for WebTextLayout {
         // this assumes that all heights/baselines are the same.
         // Uses line bounding box to do hit testpoint, but with coordinates starting at 0.0 at
         // first baseline
-        let first_baseline = self.line_metrics.get(0).map(|l| l.baseline).unwrap_or(0.0);
+        let first_baseline = self.line_metrics.first().map(|l| l.baseline).unwrap_or(0.0);
 
         // check out of bounds above top
         // out of bounds on bottom during iteration
