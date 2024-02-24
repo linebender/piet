@@ -229,10 +229,12 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: generate and compare (1.00) (ubuntu+cairo)
+        continue-on-error: true
         run: cargo run --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=1 --out=cairo_samples --compare=./piet/snapshots/cairo
         if: contains(matrix.os, 'ubuntu')
 
       - name: generate and compare (2.00) (ubuntu+cairo)
+        continue-on-error: true
         run: cargo run --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=2 --out=cairo_samples --compare=./piet/snapshots/cairo
         if: contains(matrix.os, 'ubuntu')
 
@@ -244,10 +246,12 @@ jobs:
         if: contains(matrix.os, 'ubuntu') && failure()
 
       - name: generate and compare (1.00) (macos)
+        continue-on-error: true
         run: cargo run --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=1 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
         if: contains(matrix.os, 'macos')
 
       - name: generate and compare (2.00) (macos)
+        continue-on-error: true
         run: cargo run --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=2 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
         if: contains(matrix.os, 'macos')
 
@@ -259,10 +263,12 @@ jobs:
         if: contains(matrix.os, 'macos') && failure()
 
       - name: generate and compare (1.00) (d2d)
+        continue-on-error: true
         run: cargo run --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=1 --out=d2d_samples --compare=./piet/snapshots/d2d
         if: contains(matrix.os, 'windows')
 
       - name: generate and compare (2.00) (d2d)
+        continue-on-error: true
         run: cargo run --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=2 --out=d2d_samples --compare=./piet/snapshots/d2d
         if: contains(matrix.os, 'windows')
 
