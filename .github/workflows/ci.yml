@@ -199,3 +199,76 @@ jobs:
 
       - name: cargo doc piet-web
         run: cargo doc --manifest-path=piet-web/Cargo.toml --all-features --document-private-items --target wasm32-unknown-unknown
+
+  compare-snapshots:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    name: compare snapshots
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+            submodules: 'true'
+
+      - name: install additional linux dependencies
+        run: |
+          sudo apt update
+          sudo apt install libgtk-3-dev
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: install stable toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          components: clippy
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: generate and compare (1.00) (ubuntu+cairo)
+        run: cargo run --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=1 --out=cairo_samples --compare=./piet/snapshots/cairo
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: generate and compare (2.00) (ubuntu+cairo)
+        run: cargo run --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=2 --out=cairo_samples --compare=./piet/snapshots/cairo
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: upload failures (ubuntu+cairo)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cairo-failure
+          path: cairo_samples
+        if: contains(matrix.os, 'ubuntu') && failure()
+
+      - name: generate and compare (1.00) (macos)
+        run: cargo run --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=1 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
+        if: contains(matrix.os, 'macos')
+
+      - name: generate and compare (2.00) (macos)
+        run: cargo run --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=2 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
+        if: contains(matrix.os, 'macos')
+
+      - name: upload failures (macos)
+        uses: actions/upload-artifact@v4
+        with:
+          name: coregraphics-failure
+          path: coregraphics_samples
+        if: contains(matrix.os, 'macos') && failure()
+
+      - name: generate and compare (1.00) (d2d)
+        run: cargo run --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=1 --out=d2d_samples --compare=./piet/snapshots/d2d
+        if: contains(matrix.os, 'windows')
+
+      - name: generate and compare (2.00) (d2d)
+        run: cargo run --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=2 --out=d2d_samples --compare=./piet/snapshots/d2d
+        if: contains(matrix.os, 'windows')
+
+      - name: upload failures (d2d)
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2d-failure
+          path: d2d_samples
+        if: contains(matrix.os, 'windows') && failure()
