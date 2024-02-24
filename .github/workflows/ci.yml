@@ -172,6 +172,7 @@ jobs:
         #       Right now that breaks the build due to pathfinder_simd 0.5.2 not compiling with nightly.
         #       The issue seems to have been fixed in https://github.com/servo/pathfinder/pull/548
         #       However there is no new published crate version containing that fix, yet.
+        #       See more at https://github.com/linebender/piet/issues/566
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2024-02-01
