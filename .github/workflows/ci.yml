@@ -168,7 +168,11 @@ jobs:
         if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        # NOTE: Currently pinned to 2024-02-01. Move to just 'nightly' when possible.
+        #       Right now that breaks the build due to pathfinder_simd 0.5.2 not compiling with nightly.
+        #       The issue seems to have been fixed in https://github.com/servo/pathfinder/pull/548
+        #       However there is no new published crate version containing that fix, yet.
+        uses: dtolnay/rust-toolchain@nightly-2024-02-01
         with:
           targets: wasm32-unknown-unknown
 
