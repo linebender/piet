@@ -206,7 +206,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         match brush.as_ref() {
             Brush::Solid(color) => {
                 self.set_fill_color(*color);
-                self.ctx.fill_path();
+                self.ctx.eo_fill_path();
             }
             Brush::Gradient(grad) => {
                 self.ctx.save();
