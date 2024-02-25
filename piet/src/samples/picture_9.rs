@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Verifying line metrics and text layout geometry behave as intended.
 
 use crate::kurbo::{Line, Size, Vec2};

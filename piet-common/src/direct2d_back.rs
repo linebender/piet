@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Support for piet Direct2D back-end.
 
 #[cfg(feature = "png")]

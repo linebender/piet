@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Convenience wrappers for Direct2D objects.
 //!
 //! These also function as safety boundaries (though determining the

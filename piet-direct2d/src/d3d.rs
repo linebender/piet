@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use std::ptr::null_mut;
 
 // TODO figure out whether to export this or to move `raw_pixels` into this module.

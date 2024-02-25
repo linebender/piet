@@ -1,3 +1,6 @@
+// Copyright 2021 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Helpers to make the SVG output of `piet-svg` easier to use from within `evcxr_jupyter`.
 //!
 //! [`evcxr`] is a Rust REPL. It also provides a Rust kernel for the [Jupyter Notebook] through

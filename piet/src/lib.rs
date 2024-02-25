@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! A 2D graphics abstraction.
 //!
 //! This crate contains types and interfaces that represent a traditional 2D

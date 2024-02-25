@@ -1,3 +1,6 @@
+// Copyright 2021 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! This example implements a generative algorithm for making pictures like
 //! Piet Mondrian's squares.
 // TODO: Remove all the wasm32 cfg guards once this compiles with piet-web

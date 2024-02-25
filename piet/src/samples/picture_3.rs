@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Rendering stroke styles.
 
 use crate::kurbo::{Affine, BezPath, Line, Size};

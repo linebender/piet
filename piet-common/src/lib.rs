@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! A piet backend appropriate for the current platform.
 //!
 //! This crate reexports the [piet crate][piet], alongside an appropriate backend

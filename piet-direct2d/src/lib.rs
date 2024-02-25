@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #![cfg(windows)]
 // allows for nice formatting for e.g. new_buf[i * 4 + 0] = premul(buf[i * 4 + 0, a)
 #![allow(clippy::identity_op)]

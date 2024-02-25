@@ -1,3 +1,6 @@
+// Copyright 2021 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Clipping and clearing.
 //!
 //! This tests interactions between clipping, transforms, and the clear method.

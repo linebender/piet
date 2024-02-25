@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Convenience wrappers for DirectWrite objects.
 
 // TODO: get rid of this when we actually do use everything

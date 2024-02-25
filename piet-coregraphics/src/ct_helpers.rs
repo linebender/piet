@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Wrappers around CF/CT types, with nice interfaces.
 
 #![allow(clippy::upper_case_acronyms)]
