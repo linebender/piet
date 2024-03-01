@@ -1,338 +1,282 @@
+env:
+  # We aim to always test with the latest stable Rust toolchain, however we pin to a specific
+  # version like 1.70. Note that we only specify MAJOR.MINOR and not PATCH so that bugfixes still
+  # come automatically. If the version specified here is no longer the latest stable version,
+  # then please feel free to submit a PR that adjusts it along with the potential clippy fixes.
+  RUST_STABLE_VER: "1.76" # In quotes because otherwise 1.70 would be interpreted as 1.7
+
+name: CI
+
 on:
-  push:
-    branches:
-      - master
   pull_request:
+  merge_group:
 
 jobs:
   rustfmt:
     runs-on: ubuntu-latest
     name: cargo fmt
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'true'
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          profile: minimal
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: rustfmt
-          override: true
-
-      - name: install rustfmt
-        run: rustup component add rustfmt
 
       - name: cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all --check
 
   test-stable:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        os: [macOS-11, windows-2019, ubuntu-latest]
-    name: cargo clippy+test
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    name: cargo clippy + test
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'true'
 
-      - name: install libgtk-dev
+      - name: install additional linux dependencies
         run: |
           sudo apt update
           sudo apt install libgtk-3-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: ${{ env.RUST_STABLE_VER }}
           components: clippy
-          profile: minimal
-          override: true
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
 
       # Clippy packages in deeper-to-higher dependency order
       - name: cargo clippy piet
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet/Cargo.toml --all-targets --all-features -- -D warnings
+        run: cargo clippy --manifest-path=piet/Cargo.toml --all-targets --all-features -- -D warnings
 
       - name: cargo clippy piet-cairo
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet-cairo/Cargo.toml --all-targets --all-features -- -D warnings
+        run: cargo clippy --manifest-path=piet-cairo/Cargo.toml --all-targets --all-features -- -D warnings
         if: contains(matrix.os, 'ubuntu')
 
       - name: cargo clippy piet-coregraphics
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet-coregraphics/Cargo.toml --all-targets --all-features -- -D warnings
-        if: contains(matrix.os, 'macOS')
+        run: cargo clippy --manifest-path=piet-coregraphics/Cargo.toml --all-targets --all-features -- -D warnings
+        if: contains(matrix.os, 'macos')
 
       - name: cargo clippy piet-direct2d
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet-direct2d/Cargo.toml --all-targets --all-features -- -D warnings
+        run: cargo clippy --manifest-path=piet-direct2d/Cargo.toml --all-targets --all-features -- -D warnings
         if: contains(matrix.os, 'windows')
 
       - name: cargo clippy piet-svg
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet-svg/Cargo.toml --all-targets --all-features -- -D warnings
+        run: cargo clippy --manifest-path=piet-svg/Cargo.toml --all-targets --all-features -- -D warnings
 
       - name: cargo clippy piet-common
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet-common/Cargo.toml --all-targets --features=png -- -D warnings
+        run: cargo clippy --manifest-path=piet-common/Cargo.toml --all-targets --features=png -- -D warnings
 
       # Test packages in deeper-to-higher dependency order
       - name: cargo test piet
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet/Cargo.toml --all-features
+        run: cargo test --manifest-path=piet/Cargo.toml --all-features
 
       - name: cargo test piet-cairo
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-cairo/Cargo.toml --all-features
+        run: cargo test --manifest-path=piet-cairo/Cargo.toml --all-features
         if: contains(matrix.os, 'ubuntu')
 
       - name: cargo test piet-coregraphics
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-coregraphics/Cargo.toml --all-features
-        if: contains(matrix.os, 'macOS')
+        run: cargo test --manifest-path=piet-coregraphics/Cargo.toml --all-features
+        if: contains(matrix.os, 'macos')
 
       - name: cargo test piet-direct2d
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-direct2d/Cargo.toml --all-features
+        run: cargo test --manifest-path=piet-direct2d/Cargo.toml --all-features
         if: contains(matrix.os, 'windows')
 
       - name: cargo test piet-svg
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-svg/Cargo.toml --all-features
+        run: cargo test --manifest-path=piet-svg/Cargo.toml --all-features
 
       - name: cargo test piet-common
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-common/Cargo.toml --features=png
+        run: cargo test --manifest-path=piet-common/Cargo.toml --features=png
 
   test-stable-wasm:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-11, windows-2019, ubuntu-latest]
-    name: cargo clippy+test (wasm32)
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    name: cargo clippy + test (wasm32)
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'true'
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          targets: wasm32-unknown-unknown
           components: clippy
-          profile: minimal
-          override: true
+          
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
 
       # Clippy packages in deeper-to-higher dependency order
       - name: cargo clippy piet
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy --manifest-path=piet/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo clippy piet-web
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet-web/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy --manifest-path=piet-web/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
 
       - name: cargo clippy piet-common
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path=piet-common/Cargo.toml --all-targets --features=png --target wasm32-unknown-unknown -- -D warnings
+        run: cargo clippy --manifest-path=piet-common/Cargo.toml --all-targets --features=png --target wasm32-unknown-unknown -- -D warnings
 
       # Test packages in deeper-to-higher dependency order
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
       - name: cargo test piet
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=piet/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
 
       - name: cargo test piet-web
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-web/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=piet-web/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
 
       - name: cargo test piet-common
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-common/Cargo.toml --features=png --no-run --target wasm32-unknown-unknown
+        run: cargo test --manifest-path=piet-common/Cargo.toml --features=png --no-run --target wasm32-unknown-unknown
 
-      - name: Install wasm-pack
+      - name: install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: test chrome
         run: wasm-pack test --headless --chrome piet-common
+
       - name: test firefox
         run: wasm-pack test --headless --firefox piet-common
 
-  test-nightly:
+  docs:
+    name: cargo doc
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macOS-11, windows-2019, ubuntu-latest]
-    name: cargo test nightly
+        os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           submodules: 'true'
 
-      - name: install libgtk-dev
+      - name: install additional linux dependencies
         run: |
           sudo apt update
           sudo apt install libgtk-3-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install nightly toolchain
-        uses: actions-rs/toolchain@v1
+        # NOTE: Currently pinned to 2024-02-01 with '@master'. Move to just '@nightly' when possible.
+        #       Right now that breaks the build due to pathfinder_simd 0.5.2 not compiling with nightly.
+        #       The issue seems to have been fixed in https://github.com/servo/pathfinder/pull/548
+        #       However there is no new published crate version containing that fix, yet.
+        #       See more at https://github.com/linebender/piet/issues/566
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
-          profile: minimal
-          override: true
+          toolchain: nightly-2024-02-01
+          targets: wasm32-unknown-unknown
 
-      # Test packages in deeper-to-higher dependency order
-      - name: cargo test piet
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet/Cargo.toml --all-features
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
 
-      - name: cargo test piet-cairo
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-cairo/Cargo.toml --all-features
+      # Doc packages in deeper-to-higher dependency order
+      - name: cargo doc piet
+        run: cargo doc --manifest-path=piet/Cargo.toml --all-features --document-private-items
+
+      - name: cargo doc piet-cairo
+        run: cargo doc --manifest-path=piet-cairo/Cargo.toml --all-features --document-private-items
         if: contains(matrix.os, 'ubuntu')
 
-      - name: cargo test piet-coregraphics
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-coregraphics/Cargo.toml --all-features
-        if: contains(matrix.os, 'macOS')
+      - name: cargo doc piet-coregraphics
+        run: cargo doc --manifest-path=piet-coregraphics/Cargo.toml --all-features --document-private-items
+        if: contains(matrix.os, 'macos')
 
-      - name: cargo test piet-direct2d
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-direct2d/Cargo.toml --all-features
+      - name: cargo doc piet-direct2d
+        run: cargo doc --manifest-path=piet-direct2d/Cargo.toml --all-features --document-private-items
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test piet-svg
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-svg/Cargo.toml --all-features
+      - name: cargo doc piet-svg
+        run: cargo doc --manifest-path=piet-svg/Cargo.toml --all-features --document-private-items
 
-      - name: cargo test piet-common
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --manifest-path=piet-common/Cargo.toml --features=png
+      - name: cargo doc piet-common
+        run: cargo doc --manifest-path=piet-common/Cargo.toml --features=png --document-private-items
 
-  check-docs:
-    name: Docs
+      - name: cargo doc piet-web
+        run: cargo doc --manifest-path=piet-web/Cargo.toml --all-features --document-private-items --target wasm32-unknown-unknown
+
+  compare-snapshots:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [macOS-11, windows-2019, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    name: compare snapshots
     steps:
-      - uses: actions/checkout@v2
+      - name: checkout
+        uses: actions/checkout@v4
         with:
-          submodules: 'true'
+            submodules: 'true'
 
-      - name: install libgtk-dev
+      - name: install additional linux dependencies
         run: |
           sudo apt update
           sudo apt install libgtk-3-dev
         if: contains(matrix.os, 'ubuntu')
 
       - name: install stable toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          profile: minimal
-          override: true
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          components: clippy
 
-      # Doc packages in deeper-to-higher dependency order
-      - name: cargo doc piet
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=piet/Cargo.toml --all-features --document-private-items
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
 
-      - name: cargo doc piet-cairo
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=piet-cairo/Cargo.toml --all-features --document-private-items
-        if: contains(matrix.os, 'ubuntu')
+      # The user of always() allows for multiple scale factor steps to always run even if one of them fails.
 
-      - name: cargo doc piet-coregraphics
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=piet-coregraphics/Cargo.toml --all-features --document-private-items
-        if: contains(matrix.os, 'macOS')
+      - name: generate and compare (1.00) (ubuntu+cairo)
+        run: cargo run --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=1 --out=cairo_samples --compare=./piet/snapshots/cairo
+        if: contains(matrix.os, 'ubuntu') && always()
 
-      - name: cargo doc piet-direct2d
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=piet-direct2d/Cargo.toml --all-features --document-private-items
-        if: contains(matrix.os, 'windows')
+      - name: generate and compare (2.00) (ubuntu+cairo)
+        run: cargo run --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=2 --out=cairo_samples --compare=./piet/snapshots/cairo
+        if: contains(matrix.os, 'ubuntu') && always()
 
-      - name: cargo doc piet-svg
-        uses: actions-rs/cargo@v1
+      - name: upload failures (ubuntu+cairo)
+        uses: actions/upload-artifact@v4
         with:
-          command: doc
-          args: --manifest-path=piet-svg/Cargo.toml --all-features --document-private-items
+          name: cairo-failure
+          path: cairo_samples
+        if: contains(matrix.os, 'ubuntu') && failure()
 
-      - name: cargo doc piet-common
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --manifest-path=piet-common/Cargo.toml --features=png --document-private-items
+      - name: generate and compare (1.00) (macos)
+        run: cargo run --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=1 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
+        if: contains(matrix.os, 'macos') && always()
 
-      - name: cargo doc piet-web
-        uses: actions-rs/cargo@v1
+      - name: generate and compare (2.00) (macos)
+        run: cargo run --manifest-path=piet-coregraphics/Cargo.toml --example=test-picture -- --all --scale=2 --out=coregraphics_samples --compare=./piet/snapshots/coregraphics
+        if: contains(matrix.os, 'macos') && always()
+
+      - name: upload failures (macos)
+        uses: actions/upload-artifact@v4
         with:
-          command: doc
-          args: --manifest-path=piet-web/Cargo.toml --all-features --document-private-items --target wasm32-unknown-unknown
+          name: coregraphics-failure
+          path: coregraphics_samples
+        if: contains(matrix.os, 'macos') && failure()
+
+      - name: generate and compare (1.00) (d2d)
+        run: cargo run --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=1 --out=d2d_samples --compare=./piet/snapshots/d2d
+        if: contains(matrix.os, 'windows') && always()
+
+      - name: generate and compare (2.00) (d2d)
+        run: cargo run --manifest-path=piet-direct2d/Cargo.toml --example=test-picture -- --all --scale=2 --out=d2d_samples --compare=./piet/snapshots/d2d
+        if: contains(matrix.os, 'windows') && always()
+
+      - name: upload failures (d2d)
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2d-failure
+          path: d2d_samples
+        if: contains(matrix.os, 'windows') && failure()
