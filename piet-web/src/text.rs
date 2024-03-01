@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Text functionality for Piet web backend
 
 mod grapheme;

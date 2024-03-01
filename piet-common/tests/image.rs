@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use kurbo::{Rect, Size};
 use piet_common::*;
 

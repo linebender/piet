@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // currently basically copied and pasted from cairo backend, except cairo::ScaledFont is replaced
 // by web_sys::CanvasRenderingContext2d
 //

@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! range attributes should override default attributes
 
 use crate::kurbo::{Size, Vec2};

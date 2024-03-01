@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! A wide assortment of graphics meant to show off many different uses of piet
 
 use crate::kurbo::{Affine, BezPath, Line, Point, Rect, RoundedRect, Size, Vec2};

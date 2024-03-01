@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Setting font weight when a variable font has a 'wght' axis
 
 use crate::kurbo::{Size, Vec2};

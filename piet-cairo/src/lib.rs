@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
 #![deny(clippy::trivially_copy_pass_by_ref)]

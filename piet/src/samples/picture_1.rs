@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Rendering a cubic Bézier curve with its control points and handles
 
 use crate::kurbo::{BezPath, Line, Point, Size};

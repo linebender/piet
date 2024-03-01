@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Conversions of types into Direct2D
 
 use winapi::um::d2d1::{

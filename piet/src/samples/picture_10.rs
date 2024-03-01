@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Show the relationship between the layout rect and the inking/image rect.
 
 use crate::kurbo::{Size, Vec2};

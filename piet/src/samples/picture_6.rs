@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Gradients.
 
 use crate::kurbo::{Circle, Point, Rect, RoundedRect, Size, Vec2};

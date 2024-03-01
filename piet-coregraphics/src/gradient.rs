@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 #![allow(non_upper_case_globals)]
 
 //! core graphics gradient support

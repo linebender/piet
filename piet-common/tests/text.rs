@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Basic conformance testing for text.
 
 #[cfg(target_arch = "wasm32")]

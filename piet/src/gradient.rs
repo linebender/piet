@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Gradient specifications.
 //!
 //! We provide both linear and radial gradients; and for each flavor

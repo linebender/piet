@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Run the piet-test examples with the coregraphics backend.
 
 use std::path::Path;

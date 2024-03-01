@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! SVG output support for piet
 
 #![deny(clippy::trivially_copy_pass_by_ref)]

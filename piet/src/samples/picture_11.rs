@@ -1,3 +1,6 @@
+// Copyright 2020 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! Visualize results of hit-testing
 
 use crate::kurbo::{Circle, Line, Point, Size};

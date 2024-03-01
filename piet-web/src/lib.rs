@@ -1,3 +1,6 @@
+// Copyright 2019 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
 #![allow(clippy::identity_op)]
 #![deny(clippy::trivially_copy_pass_by_ref)]

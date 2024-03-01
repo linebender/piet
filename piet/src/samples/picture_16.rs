@@ -1,3 +1,6 @@
+// Copyright 2022 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 //! capture_image_rect
 //!
 //! This tests makes sure that copying part of an image works

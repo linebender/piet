@@ -1,3 +1,6 @@
+// Copyright 2021 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 use cairo::{Context, Format, ImageSurface};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use piet::{ImageFormat, RenderContext};
