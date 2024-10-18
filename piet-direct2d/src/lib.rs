@@ -674,7 +674,7 @@ fn draw_image<'a>(
     dst_rect: Rect,
     interp: InterpolationMode,
 ) {
-    if dst_rect.is_empty() || image.empty_image {
+    if dst_rect.is_zero_area() || image.empty_image {
         // source or destination are empty
         return;
     }
