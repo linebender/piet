@@ -157,6 +157,12 @@ jobs:
 
       - name: test firefox
         run: wasm-pack test --headless --firefox piet-common
+        # macOS 14 CI runners don't have Firefox installed
+        if: contains(matrix.os, 'macos') == false
+
+      - name: test safari
+        run: wasm-pack test --headless --safari piet-common
+        if: contains(matrix.os, 'macos')
 
   docs:
     name: cargo doc
