@@ -648,10 +648,10 @@ impl DeviceContext {
         unsafe {
             let params = D2D1_LAYER_PARAMETERS {
                 contentBounds: D2D1_RECT_F {
-                    left: std::f32::NEG_INFINITY,
-                    top: std::f32::NEG_INFINITY,
-                    right: std::f32::INFINITY,
-                    bottom: std::f32::INFINITY,
+                    left: f32::NEG_INFINITY,
+                    top: f32::NEG_INFINITY,
+                    right: f32::INFINITY,
+                    bottom: f32::INFINITY,
                 },
                 geometricMask: mask.0.as_raw(),
                 maskAntialiasMode: D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,

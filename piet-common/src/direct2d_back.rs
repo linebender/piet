@@ -72,10 +72,6 @@ pub struct BitmapTarget<'a> {
     context: D2DDeviceContext,
 }
 
-trait WrapError<T> {
-    fn wrap(self) -> Result<T, piet::Error>;
-}
-
 impl Device {
     /// Create a new device.
     ///
