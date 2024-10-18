@@ -165,7 +165,7 @@ impl DwriteFactory {
 impl FontCollection {
     pub(crate) fn font_family(&self, name: &str) -> Option<PietFontFamily> {
         let wname = name.to_wide_null();
-        let mut idx = u32::max_value();
+        let mut idx = u32::MAX;
         let mut exists = 0_i32;
 
         let family = unsafe {

@@ -302,7 +302,7 @@ pub enum TextAlignment {
 /// - The beginning of a line has text position `0`.
 /// - The end of a line is a valid text position. e.g. `text.len()` is a valid text position.
 /// - If the text position is not at a code point or grapheme boundary, undesirable behavior may
-/// occur.
+///   occur.
 pub trait TextLayout: Clone {
     /// The total size of this `TextLayout`.
     ///
