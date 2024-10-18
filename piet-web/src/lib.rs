@@ -530,8 +530,10 @@ impl WebRenderContext<'_> {
     fn set_brush(&mut self, brush: &Brush, is_fill: bool) {
         let value = self.brush_value(brush);
         if is_fill {
+            #[allow(deprecated)]
             self.ctx.set_fill_style(&value);
         } else {
+            #[allow(deprecated)]
             self.ctx.set_stroke_style(&value);
         }
     }
