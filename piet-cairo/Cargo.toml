@@ -13,9 +13,9 @@ categories = ["rendering::graphics-api"]
 [dependencies]
 piet = { version = "=0.6.2", path = "../piet" }
 
-cairo-rs = { version = "0.19.0", default-features = false } # We don't need glib
-pango = { version = "0.19.0", features = ["v1_44"] }
-pangocairo = "0.19.0"
+cairo-rs = { version = "0.20.1", default-features = false } # We don't need glib
+pango = { version = "0.20.1", features = ["v1_44"] }
+pangocairo = "0.20.1"
 unicode-segmentation = "1.10.0"
 xi-unicode = "0.3.0"
 
