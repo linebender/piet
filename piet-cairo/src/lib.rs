@@ -503,7 +503,7 @@ impl<'a> CairoRenderContext<'a> {
         };
         // Cairo returns an error if we try to paint an empty image, causing us to panic. We check if
         // either the source or destination is empty, and early-return if so.
-        if src_rect.is_empty() || dst_rect.is_empty() {
+        if src_rect.is_zero_area() || dst_rect.is_zero_area() {
             return;
         }
 

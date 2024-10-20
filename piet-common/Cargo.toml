@@ -40,8 +40,8 @@ png = { version = "0.17.7", optional = true }
 
 [target.'cfg(any(target_os="linux", target_os="openbsd", target_os="freebsd", target_os="netbsd"))'.dependencies]
 piet-cairo = { version = "=0.6.2", path = "../piet-cairo" }
-cairo-rs = { version = "0.19.0", default_features = false }
-cairo-sys-rs = { version = "0.19.0" }
+cairo-rs = { version = "0.20.1", default-features = false }
+cairo-sys-rs = { version = "0.20.0" }
 
 [target.'cfg(any(target_os="macos", target_os="ios"))'.dependencies]
 piet-coregraphics = { version = "=0.6.2", path = "../piet-coregraphics" }

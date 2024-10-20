@@ -72,10 +72,6 @@ pub struct BitmapTarget<'a> {
     context: D2DDeviceContext,
 }
 
-trait WrapError<T> {
-    fn wrap(self) -> Result<T, piet::Error>;
-}
-
 impl Device {
     /// Create a new device.
     ///
@@ -207,6 +203,8 @@ impl<'a> BitmapTarget<'a> {
                 std::ptr::copy_nonoverlapping(src, dst, self.width * 4);
             }
         }
+
+        self.context.begin_draw();
         Ok(size)
     }
 

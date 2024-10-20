@@ -316,7 +316,7 @@ impl WebTextLayout {
         // various functions like `text_width` are stateful, and require
         // the context to be configured correcttly.
         self.ctx.set_font(&self.font.get_font_string());
-        let new_width = new_width.into().unwrap_or(std::f64::INFINITY);
+        let new_width = new_width.into().unwrap_or(f64::INFINITY);
         let mut line_metrics =
             lines::calculate_line_metrics(&self.text, &self.ctx, new_width, self.font.size);
 
@@ -630,7 +630,7 @@ pub(crate) mod test {
 
         //let mut text_layout = D2DText::new();
         //let font = text_layout.new_font_by_name("sans-serif", 12.0).build().unwrap();
-        //let layout = text_layout.new_text_layout(&font, input, std::f64::INFINITY).build().unwrap();
+        //let layout = text_layout.new_text_layout(&font, input, f64::INFINITY).build().unwrap();
 
         //assert_eq!(input.graphemes(true).count(), 1);
         //assert_eq!(layout.hit_test_text_position(0, true).map(|p| p.point_x as f64), Some(layout.size().width));
