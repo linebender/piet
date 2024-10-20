@@ -203,6 +203,8 @@ impl<'a> BitmapTarget<'a> {
                 std::ptr::copy_nonoverlapping(src, dst, self.width * 4);
             }
         }
+
+        self.context.begin_draw();
         Ok(size)
     }
 
