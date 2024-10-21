@@ -219,9 +219,11 @@ pub fn unpremultiply_rgba(data: &mut [u8]) {
     }
 }
 
-/// A heurstic for text direction; returns `true` if, while enumerating characters
-/// in this string, a character in the 'R' (strong right-to-left) category is
-/// encountered before any character in the 'L' (strong left-to-right) category is.
+/// A heurstic for text direction.
+///
+/// Returns `true` if, while enumerating characters in this string, a character in the
+/// 'R' (strong right-to-left) category is encountered before any character in the 'L'
+/// (strong left-to-right) category is.
 ///
 /// See [Unicode technical report 9](https://unicode.org/reports/tr9/#Table_Bidirectional_Character_Types).
 pub fn first_strong_rtl(text: &str) -> bool {
