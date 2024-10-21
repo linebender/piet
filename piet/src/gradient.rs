@@ -72,7 +72,7 @@ pub struct FixedRadialGradient {
 ///
 /// This is provided as a convenience, so that we can provide API that
 /// accept both [`FixedLinearGradient`] and [`FixedRadialGradient`].
-/// You should not construct this type dirctly; rather construct one of those
+/// You should not construct this type directly; rather construct one of those
 /// types, both of which impl `Into<FixedGradient>`.
 #[derive(Debug, Clone)]
 pub enum FixedGradient {

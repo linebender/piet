@@ -530,7 +530,7 @@ pub struct HitTestPosition {
     /// to the baseline of the line containing that grapheme cluster.
     //FIXME: maybe we should communicate more about this position? for instance
     //instead of returning an x/y point, we could return the x offset, the line's y_offset,
-    //and the line height (everything tou would need to draw a cursor)
+    //and the line height (everything you would need to draw a cursor)
     pub point: Point,
     /// The number of the line containing this position.
     ///

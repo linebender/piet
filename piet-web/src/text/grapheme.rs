@@ -13,7 +13,7 @@ use super::hit_test_line_position;
 // code in `piet` core doesn't really make sense as it's implementation specific.
 //
 /// get grapheme boundaries, intended to act on a line of text, not a full text layout that has
-/// both horizontal and vertial components
+/// both horizontal and vertical components
 pub(crate) fn get_grapheme_boundaries(
     ctx: &CanvasRenderingContext2d,
     text: &str,

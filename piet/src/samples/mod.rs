@@ -85,7 +85,7 @@ struct Args {
     scale: f64,
 }
 
-/// A shared `main` fn for diferent backends.
+/// A shared `main` fn for different backends.
 ///
 /// The important thing here is the fn argument; this should be a method that
 /// takes a number and a path, executes the corresponding sample, and saves a

@@ -110,7 +110,7 @@ where
     /// The region can be omitted, in which case it will apply to the entire
     /// canvas.
     ///
-    /// This operation ignores any existing clipping and transforations.
+    /// This operation ignores any existing clipping and transformations.
     ///
     /// # Note:
     ///

@@ -13,7 +13,7 @@ pub const SIZE: Size = Size::new(240., 280.);
 static TEXT: &str = r#"The idea of "structurelessness," however, has moved from a healthy counter to those tendencies to becoming a goddess in its own right. The idea is as little examined as the term is much used, but it has become an intrinsic and unquestioned part of women's liberation ideology. For the early development of the movement this did not much matter."#;
 
 const SELECTION_COLOR: Color = Color::rgb8(165, 205, 255);
-const HILIGHT_COLOR: Color = Color::rgba8(255, 242, 54, 96);
+const HIGHLIGHT_COLOR: Color = Color::rgba8(255, 242, 54, 96);
 
 pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.clear(None, Color::WHITE);
@@ -40,7 +40,7 @@ pub fn draw<R: RenderContext>(rc: &mut R) -> Result<(), Error> {
     rc.draw_text(&layout, text_pos.to_point());
 
     for rect in sel_two {
-        rc.fill(rect + text_pos, &HILIGHT_COLOR);
+        rc.fill(rect + text_pos, &HIGHLIGHT_COLOR);
     }
 
     Ok(())

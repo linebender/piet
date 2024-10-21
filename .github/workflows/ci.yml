@@ -216,6 +216,15 @@ jobs:
       - name: cargo doc piet-web
         run: cargo doc --manifest-path=piet-web/Cargo.toml --all-features --document-private-items --target wasm32-unknown-unknown
 
+  # If this fails, consider changing your text or adding something to .typos.toml
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: check typos
+        uses: crate-ci/typos@v1.26.0
+
   compare-snapshots:
     runs-on: ${{ matrix.os }}
     strategy:
