@@ -50,11 +50,11 @@ fn main() {
 /// Generate a Piet Mondrian-style picture.
 ///
 /// Obviously we cannot recreate the genius of an artist with a simple random
-/// generation, but the following makes something plausable (heavily influenced by
+/// generation, but the following makes something plausible (heavily influenced by
 /// https://generativeartistry.com/tutorials/piet-mondrian/):
 ///
 ///  1. Start with a single rectangle covering the whole picture.
-///  2. Choose a number `n`. Choose `n` coordinates in the rectange.
+///  2. Choose a number `n`. Choose `n` coordinates in the rectangle.
 ///  3. For each coordinate `p`: split any rectangles who are intersected by the
 ///     vertical or horizontal lines that cross `p`. Skip if this would create a
 ///     very thin rectangle, or randomly some of the time.

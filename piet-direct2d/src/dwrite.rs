@@ -395,7 +395,7 @@ impl TextLayout {
         }
     }
 
-    pub(crate) fn set_foregound_brush(&mut self, range: Utf16Range, brush: Brush) {
+    pub(crate) fn set_foreground_brush(&mut self, range: Utf16Range, brush: Brush) {
         unsafe {
             self.0
                 .SetDrawingEffect(brush.as_raw() as *mut IUnknown, range.into());

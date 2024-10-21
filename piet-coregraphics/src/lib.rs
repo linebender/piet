@@ -58,11 +58,11 @@ pub struct CoreGraphicsContext<'a> {
 impl<'a> CoreGraphicsContext<'a> {
     /// Create a new context with the y-origin at the top-left corner.
     ///
-    /// This is not the default for CoreGraphics; but it is the defualt for piet.
+    /// This is not the default for CoreGraphics; but it is the default for piet.
     /// To map between the two coordinate spaces you must also pass an explicit
     /// height argument.
     ///
-    /// The optional `text` argument can be a reuseable `CoreGraphicsText` struct;
+    /// The optional `text` argument can be a reusable `CoreGraphicsText` struct;
     /// a new one will be constructed if `None` is passed.
     pub fn new_y_up(
         ctx: &mut CGContextRef,
@@ -76,7 +76,7 @@ impl<'a> CoreGraphicsContext<'a> {
     ///
     /// This is the default for core graphics, but not for piet.
     ///
-    /// The optional `text` argument can be a reuseable `CoreGraphicsText` struct;
+    /// The optional `text` argument can be a reusable `CoreGraphicsText` struct;
     /// a new one will be constructed if `None` is passed.
     pub fn new_y_down(
         ctx: &mut CGContextRef,

@@ -314,7 +314,7 @@ impl WebTextLayout {
 
     fn update_width(&mut self, new_width: impl Into<Option<f64>>) {
         // various functions like `text_width` are stateful, and require
-        // the context to be configured correcttly.
+        // the context to be configured correctly.
         self.ctx.set_font(&self.font.get_font_string());
         let new_width = new_width.into().unwrap_or(f64::INFINITY);
         let mut line_metrics =
