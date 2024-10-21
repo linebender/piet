@@ -12,7 +12,7 @@ use std::sync::Arc;
 ///
 /// ## Defaults
 ///
-/// Currently, the style (and its various consituent parts) have [`Default`]
+/// Currently, the style (and its various constituent parts) have [`Default`]
 /// impls that conform to the defaults described in the
 /// [Postscript Language Manual, 3rd Edition][PLRMv3]; that document is the
 /// basis for the choice of these types, and can be consulted for detailed
@@ -25,7 +25,7 @@ use std::sync::Arc;
 /// ```
 /// use piet::{LineJoin, StrokeStyle};
 ///
-/// const CONST_STLYE: StrokeStyle = StrokeStyle::new()
+/// const CONST_STYLE: StrokeStyle = StrokeStyle::new()
 ///     .dash_pattern(&[5.0, 1.0, 2.0])
 ///     .line_join(LineJoin::Round);
 ///

@@ -12,7 +12,7 @@ categories = ["rendering::graphics-api"]
 include = ["src/**/*", "Cargo.toml", "snapshots/resources/*"]
 
 [dependencies]
-image = { version = "0.24.5", optional = true, default-features = false }
+image = { version = "0.25.4", optional = true, default-features = false }
 kurbo = "0.11.1"
 pico-args = { version = "0.4.2", optional = true }
 png = { version = "0.17.7", optional = true }
@@ -26,7 +26,6 @@ samples = ["pico-args", "png", "os_info"]
 # support decoding, and thats al we use `Image` for.
 image_png = ["image/png", "image"]
 jpeg = ["image/jpeg", "image"]
-jpeg_rayon = ["image/jpeg_rayon", "image"]
 gif = ["image/gif", "image"]
 bmp = ["image/bmp", "image"]
 ico = ["image/ico", "image"]
@@ -35,8 +34,6 @@ webp = ["image/webp", "image"]
 pnm = ["image/pnm", "image"]
 dds = ["image/dds", "image"]
 tga = ["image/tga", "image"]
-farbfeld = ["image/farbfeld", "image"]
-dxt = ["image/dxt", "image"]
 hdr = ["image/hdr", "image"]
 
 serde = ["kurbo/serde"]

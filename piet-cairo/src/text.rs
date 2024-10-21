@@ -167,7 +167,7 @@ impl Text for CairoText {
     type TextLayoutBuilder = CairoTextLayoutBuilder;
 
     fn font_family(&mut self, family_name: &str) -> Option<FontFamily> {
-        //TODO: Veryify that a family exists with the requested name
+        //TODO: Verify that a family exists with the requested name
         Some(FontFamily::new_unchecked(family_name))
     }
 

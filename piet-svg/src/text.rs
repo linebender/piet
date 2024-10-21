@@ -286,7 +286,7 @@ impl piet::TextLayout for TextLayout {
     }
 }
 
-/// All the info required to indentify a font face. Basically, everythinge except the size.
+/// All the info required to identify a font face. Basically, everythinge except the size.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub(crate) struct FontFace {
     pub family: FontFamily,

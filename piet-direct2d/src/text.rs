@@ -271,7 +271,7 @@ impl D2DTextLayoutBuilder {
                         layout.set_font_collection(utf16_range, loaded.collection());
                     } else if !self.loaded_fonts.inner.borrow().is_empty() {
                         // if we are using custom fonts we also need to set the collection
-                        // back to the system collection explicity as needed
+                        // back to the system collection explicitly as needed
                         layout.set_font_collection(utf16_range, &FontCollection::system());
                     }
                     let family_name = resolve_family_name(&font);
@@ -468,7 +468,7 @@ impl D2DTextLayout {
         if self.needs_to_set_colors.replace(false) {
             for (range, color) in self.colors.as_ref() {
                 let brush = ctx.solid_brush(*color);
-                self.layout.borrow_mut().set_foregound_brush(*range, brush)
+                self.layout.borrow_mut().set_foreground_brush(*range, brush)
             }
         }
     }

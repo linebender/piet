@@ -280,7 +280,7 @@ impl piet::RenderContext for RenderContext {
         //
         // `dominant-baseline` gets us most of the way (to the top of the ascender), so we add a
         // small fiddle factor in to cover the difference between the top of the line and the top
-        // of the ascender (currently 6% of the font height, calcuated by eye).
+        // of the ascender (currently 6% of the font height, calculated by eye).
         let y = pos.y + 0.06 * layout.size().height;
         let mut text = svg::node::element::Text::new()
             .set("x", x)
@@ -483,7 +483,7 @@ fn draw_image(
             image.0.as_bytes(),
             image.0.width(),
             image.0.height(),
-            image.0.color(),
+            image.0.color().into(),
         )
         .unwrap();
 
