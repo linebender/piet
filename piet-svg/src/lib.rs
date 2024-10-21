@@ -483,7 +483,7 @@ fn draw_image(
             image.0.as_bytes(),
             image.0.width(),
             image.0.height(),
-            image.0.color(),
+            image.0.color().into(),
         )
         .unwrap();
 
