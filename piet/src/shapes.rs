@@ -3,7 +3,7 @@
 
 //! Options for drawing paths.
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Options for drawing stroked lines.
 ///
@@ -73,7 +73,7 @@ pub struct StrokeStyle {
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct StrokeDash {
     slice: &'static [f64],
-    alloc: Option<Rc<[f64]>>,
+    alloc: Option<Arc<[f64]>>,
 }
 
 /// Options for angled joins in strokes.
@@ -211,8 +211,8 @@ impl StrokeStyle {
     /// [`dash_pattern`] builder method.
     ///
     /// [`dash_pattern`]: StrokeStyle::dash_pattern()
-    pub fn set_dash_pattern(&mut self, lengths: impl Into<Rc<[f64]>>) {
-        self.dash_pattern.alloc = Some(lengths.into());
+    pub fn set_dash_pattern(&mut self, lengths: impl Into<Arc<[f64]>>) {
+        self.dash_pattern.alloc = Some(lengths.into())
     }
 
     /// If the current [`LineJoin`] is [`LineJoin::Miter`] return the miter limit.
