@@ -168,11 +168,11 @@ impl<'a> BitmapTarget<'a> {
         fmt: ImageFormat,
         buf: &mut [u8],
     ) -> Result<usize, piet::Error> {
-        self.context.end_draw()?;
         // TODO: convert other formats.
         if fmt != ImageFormat::RgbaPremul {
             return Err(piet::Error::NotSupported);
         }
+        let draw_restarter = self.context.end_draw_temporarily()?;
         let temp_texture = self
             .d3d
             .create_texture(self.width as u32, self.height as u32, TextureMode::Read)
@@ -204,7 +204,7 @@ impl<'a> BitmapTarget<'a> {
             }
         }
 
-        self.context.begin_draw();
+        drop(draw_restarter); // Make sure the restarter lives until this point for the happy path
         Ok(size)
     }
 
@@ -263,5 +263,43 @@ mod tests {
         piet.finish().unwrap();
         std::mem::drop(piet);
         target.to_image_buf(ImageFormat::RgbaPremul).unwrap();
+    }
+
+    #[test]
+    fn copy_raw_pixels_and_continue() {
+        let mut device = Device::new().unwrap();
+        let mut bitmap = device.bitmap_target(64, 64, 1.0).unwrap();
+        {
+            let mut rc = bitmap.render_context();
+            let rect = Rect::new(4.0, 4.0, 8.0, 8.0);
+            rc.fill(rect, &Color::RED);
+            rc.finish().unwrap();
+        }
+        let mut data = vec![0; 64 * 64 * 4];
+        if !matches!(
+            bitmap.copy_raw_pixels(ImageFormat::RgbaSeparate, &mut data),
+            Err(Error::NotSupported)
+        ) {
+            panic!("Expected image format to not be supported, but something else happened.")
+        }
+        let mut invalid_data = vec![0; 1];
+        if !matches!(
+            bitmap.copy_raw_pixels(ImageFormat::RgbaPremul, &mut invalid_data),
+            Err(Error::InvalidInput)
+        ) {
+            panic!("Expected invalid input error, but something else happened.")
+        }
+        bitmap
+            .copy_raw_pixels(ImageFormat::RgbaPremul, &mut data)
+            .unwrap();
+        {
+            let mut rc = bitmap.render_context();
+            let rect = Rect::new(6.0, 6.0, 10.0, 10.0);
+            rc.fill(rect, &Color::GREEN);
+            rc.finish().unwrap();
+        }
+        bitmap
+            .copy_raw_pixels(ImageFormat::RgbaPremul, &mut data)
+            .unwrap();
     }
 }

@@ -134,6 +134,21 @@ pub struct Effect(ComPtr<ID2D1Effect>);
 // piet-common direct2d_back, but the use cases are somewhat different.
 pub struct BitmapRenderTarget(ComPtr<ID2D1BitmapRenderTarget>);
 
+/// Restarts drawing when dropped.
+///
+/// Specifically, this struct's `Drop` implementation calls [`DeviceContext::begin_draw`].
+///
+/// This is useful when you need to restart drawing but have multiple return paths.
+pub struct DrawRestarter<'a> {
+    context: &'a mut DeviceContext,
+}
+
+impl<'a> Drop for DrawRestarter<'a> {
+    fn drop(&mut self) {
+        self.context.begin_draw();
+    }
+}
+
 impl From<HRESULT> for Error {
     fn from(hr: HRESULT) -> Error {
         Error::WinapiError(hr)
@@ -461,6 +476,12 @@ impl DeviceContext {
             let hr = self.0.EndDraw(&mut tag1, &mut tag2);
             wrap_unit(hr)
         }
+    }
+
+    /// End drawing and return a [`DrawRestarter`] which will restart drawing when dropped.
+    pub fn end_draw_temporarily(&mut self) -> Result<DrawRestarter, Error> {
+        self.end_draw()?;
+        Ok(DrawRestarter { context: self })
     }
 
     /// Clip axis aligned clip
