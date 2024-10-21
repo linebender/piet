@@ -136,6 +136,14 @@ impl RenderContext for NullRenderContext {
     fn current_transform(&self) -> Affine {
         Affine::default()
     }
+
+    fn blur_image(
+        &mut self,
+        _image: &Self::Image,
+        _blur_radius: f64,
+    ) -> Result<Self::Image, Error> {
+        Ok(NullImage)
+    }
 }
 
 impl Text for NullText {
