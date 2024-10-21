@@ -49,20 +49,20 @@ appropriate implementation for the current target.*
 #### `piet-cairo` [![crates.io](https://img.shields.io/crates/v/piet-cairo)](https://crates.io/crates/piet-cairo)
 
 The `piet-cairo` crate depends on the [cairo library][]. A simple test of the cairo
-backend is to run `cargo run --example test-picture 0`, which should
-produce an image file called `cairo-test-0.png`.
+backend is to run `cargo run --example test-picture 0` in the `piet-cairo` directory,
+which should produce an image file called `cairo-test-00-2.00.png`.
 
 #### `piet-coregraphics` [![crates.io](https://img.shields.io/crates/v/piet-coregraphics)](https://crates.io/crates/piet-coregraphics)
 
 The `piet-coregraphics` crate works on macOS only. A simple test of the coregraphics
-backend is to run `cargo run --example test-picture 0`, which should
-produce an image file called `coregraphics-test-0.png`.
+backend is to run `cargo run --example test-picture 0` in the `piet-coregraphics` directory,
+which should produce an image file called `coregraphics-test-00-2.00.png`.
 
 #### `piet-direct2d` [![crates.io](https://img.shields.io/crates/v/piet-direct2d)](https://crates.io/crates/piet-direct2d)
 
 The `piet-direct2d` crate works on Windows only. A simple test of the direct2d
-backend is to run `cargo run --example test-picture 0`, which should
-produce an image called `d2d-test-0.png`.
+backend is to run `cargo run --example test-picture 0` in the `piet-direct2d` directory,
+which should produce an image called `d2d-test-00-2.00.png`.
 
 #### `piet-svg` [![crates.io](https://img.shields.io/crates/v/piet-svg)](https://crates.io/crates/piet-svg)
 #### `piet-web` [![crates.io](https://img.shields.io/crates/v/piet-web)](https://crates.io/crates/piet-web)
