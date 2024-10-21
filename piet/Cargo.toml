@@ -40,5 +40,3 @@ dxt = ["image/dxt", "image"]
 hdr = ["image/hdr", "image"]
 
 serde = ["kurbo/serde"]
-
-sync = []

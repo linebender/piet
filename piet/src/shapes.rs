@@ -3,9 +3,6 @@
 
 //! Options for drawing paths.
 
-#[cfg(not(feature = "sync"))]
-use std::rc::Rc;
-#[cfg(feature = "sync")]
 use std::sync::Arc;
 
 /// Options for drawing stroked lines.
@@ -76,9 +73,6 @@ pub struct StrokeStyle {
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct StrokeDash {
     slice: &'static [f64],
-    #[cfg(not(feature = "sync"))]
-    alloc: Option<Rc<[f64]>>,
-    #[cfg(feature = "sync")]
     alloc: Option<Arc<[f64]>>,
 }
 
@@ -217,18 +211,6 @@ impl StrokeStyle {
     /// [`dash_pattern`] builder method.
     ///
     /// [`dash_pattern`]: StrokeStyle::dash_pattern()
-    #[cfg(not(feature = "sync"))]
-    pub fn set_dash_pattern(&mut self, lengths: impl Into<Rc<[f64]>>) {
-        self.dash_pattern.alloc = Some(lengths.into());
-    }
-
-    /// Set the dash pattern.
-    ///
-    /// This method always allocates. To construct without allocating, use the
-    /// [`dash_pattern`] builder method.
-    ///
-    /// [`dash_pattern`]: StrokeStyle::dash_pattern()
-    #[cfg(feature = "sync")]
     pub fn set_dash_pattern(&mut self, lengths: impl Into<Arc<[f64]>>) {
         self.dash_pattern.alloc = Some(lengths.into())
     }
