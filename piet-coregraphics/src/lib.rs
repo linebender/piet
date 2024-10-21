@@ -21,7 +21,6 @@ use core_graphics::data_provider::CGDataProvider;
 use core_graphics::geometry::{CGAffineTransform, CGPoint, CGRect, CGSize};
 use core_graphics::gradient::CGGradientDrawingOptions;
 use core_graphics::image::CGImage;
-use foreign_types::ForeignTypeRef;
 
 use piet::kurbo::{Affine, PathEl, Point, QuadBez, Rect, Shape, Size};
 
@@ -155,9 +154,7 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         // save cannot fail
         let _ = self.save();
         // remove any existing clip
-        unsafe {
-            CGContextResetClip(self.ctx.as_ptr());
-        }
+        self.ctx.reset_clip();
         // remove the current transform
         let current_xform = self.current_transform();
         let xform = current_xform.inverse();
@@ -664,11 +661,6 @@ fn to_cgrect(rect: impl Into<Rect>) -> CGRect {
 fn to_cgaffine(affine: Affine) -> CGAffineTransform {
     let [a, b, c, d, tx, ty] = affine.as_coeffs();
     CGAffineTransform::new(a, b, c, d, tx, ty)
-}
-
-#[link(name = "CoreGraphics", kind = "framework")]
-extern "C" {
-    fn CGContextResetClip(c: core_graphics::sys::CGContextRef);
 }
 
 #[cfg(test)]
