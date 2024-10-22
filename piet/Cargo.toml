@@ -1,6 +1,6 @@
 [package]
 name = "piet"
-version = "0.6.2"
+version = "0.7.0"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "An abstraction for 2D graphics."
 license = "Apache-2.0 OR MIT"
