@@ -20,7 +20,7 @@ font-kit = "0.14.2"
 image = { version = "0.25.4", default-features = false, features = ["png"] }
 piet = { version = "=0.6.2", path = "../piet" }
 rustybuzz = "0.20.0"
-svg = "0.13.1"
+svg = "0.18.0"
 
 [dev-dependencies]
 piet = { version = "=0.6.2", path = "../piet", features = ["samples"] }
