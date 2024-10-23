@@ -22,7 +22,7 @@ xi-unicode = "0.3.0"
 [dev-dependencies]
 piet = { version = "=0.6.2", path = "../piet", features = ["samples"] }
 piet-common = { version = "=0.6.2", path = "../piet-common", features = ["png"] }
-criterion = "0.3.6"
+criterion = "0.5.1"
 
 [[bench]]
 name = "make_image"
