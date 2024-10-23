@@ -282,7 +282,7 @@ impl piet::RenderContext for RenderContext {
         // small fiddle factor in to cover the difference between the top of the line and the top
         // of the ascender (currently 6% of the font height, calculated by eye).
         let y = pos.y + 0.06 * layout.size().height;
-        let mut text = svg::node::element::Text::new()
+        let mut text = svg::node::element::Text::new(layout.text())
             .set("x", x)
             .set("y", y)
             .set("dominant-baseline", "hanging")
@@ -312,8 +312,7 @@ impl piet::RenderContext for RenderContext {
                     color,
                     anchor,
                 ),
-            )
-            .add(svg::node::Text::new(layout.text()));
+            );
 
         let affine = self.current_transform();
         if affine != Affine::IDENTITY {
