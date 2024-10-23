@@ -2,7 +2,7 @@
 name = "piet-web-example"
 version = "0.0.2"
 authors = ["Ryan Levick <ryan.levick@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [lib]
 crate-type = ["cdylib"]
