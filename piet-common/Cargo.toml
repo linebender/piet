@@ -6,7 +6,7 @@ description = "Selection of a single preferred back-end for piet"
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/linebender/piet"
 readme = "README.md"
-edition = "2018"
+edition = "2021"
 keywords = ["graphics", "2d"]
 
 [features]
