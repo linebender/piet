@@ -29,6 +29,6 @@ or @raphlinus (or another administrator) to set it up for you.
 `piet-snapshots`. Rebasing would cause the revision to be rewritten, which would
 mean that the commit referenced by the submodule would no longer exist.
 
-[`samples`]: https://github.com/linebender/piet/tree/master/piet/src/samples
+[`samples`]: https://github.com/linebender/piet/tree/main/piet/src/samples
 [`piet-snapshots`]: https://github.com/linebender/piet-snapshots
 [persisting workflow data using artifacts]: https://docs.github.com/en/actions/configuring-and-managing-workflows/persisting-workflow-data-using-artifacts
