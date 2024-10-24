@@ -1,6 +1,6 @@
 [package]
 name = "piet-common"
-version = "0.7.0"
+version = "0.7.0-cairo18"
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Selection of a single preferred back-end for piet"
 license = "Apache-2.0 OR MIT"
@@ -30,25 +30,25 @@ hdr = ["piet/hdr"]
 serde = ["piet/serde"]
 
 [dependencies]
-piet = { version = "=0.7.0", path = "../piet" }
-piet-web = { version = "=0.7.0", path = "../piet-web", optional = true }
+piet = { version = "=0.7.0-cairo18", path = "../piet" }
+piet-web = { version = "=0.7.0-cairo18", path = "../piet-web", optional = true }
 cfg-if = "1.0.0"
 png = { version = "0.17.14", optional = true }
 
 [target.'cfg(any(target_os="linux", target_os="openbsd", target_os="freebsd", target_os="netbsd"))'.dependencies]
-piet-cairo = { version = "=0.7.0", path = "../piet-cairo" }
+piet-cairo = { version = "=0.7.0-cairo18", path = "../piet-cairo" }
 cairo-rs = { version = "0.18.5", default-features = false }
 cairo-sys-rs = { version = "0.18.2" }
 
 [target.'cfg(any(target_os="macos", target_os="ios"))'.dependencies]
-piet-coregraphics = { version = "=0.7.0", path = "../piet-coregraphics" }
+piet-coregraphics = { version = "=0.7.0-cairo18", path = "../piet-coregraphics" }
 core-graphics = { version = "0.24.0" }
 
 [target.'cfg(target_os="windows")'.dependencies]
-piet-direct2d = { version = "=0.7.0", path = "../piet-direct2d" }
+piet-direct2d = { version = "=0.7.0-cairo18", path = "../piet-direct2d" }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-piet-web = { version = "=0.7.0", path = "../piet-web" }
+piet-web = { version = "=0.7.0-cairo18", path = "../piet-web" }
 wasm-bindgen = "0.2.95"
 
 [target.'cfg(target_arch="wasm32")'.dev-dependencies]
