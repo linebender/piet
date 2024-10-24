@@ -1,9 +1,20 @@
 ![image of piet logo](./misc/piet-logo.png)
 
-# Piet: a 2D graphics abstraction
-[![Crates.io](https://img.shields.io/crates/v/piet)](https://crates.io/crates/piet)
-[![Documentation](https://docs.rs/piet/badge.svg)](https://docs.rs/piet)
-[![Build Status](https://travis-ci.com/linebender/piet.svg?branch=master)](https://travis-ci.com/linebender/piet)
+<div align="center">
+
+# Piet
+
+**A 2D graphics abstraction**
+
+[![Latest published version.](https://img.shields.io/crates/v/piet.svg)](https://crates.io/crates/piet)
+[![Documentation build status.](https://img.shields.io/docsrs/piet.svg)](https://docs.rs/piet)
+[![Apache 2.0 or MIT license.](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue.svg)](#license)
+
+[![Linebender Zulip chat.](https://img.shields.io/badge/Linebender-%23piet-blue?logo=Zulip)](https://xi.zulipchat.com/#narrow/channel/259397-piet)
+[![GitHub Actions CI status.](https://img.shields.io/github/actions/workflow/status/linebender/piet/ci.yml?logo=github&label=CI)](https://github.com/linebender/piet/actions)
+[![Dependency staleness status.](https://deps.rs/repo/github/linebender/piet/status.svg)](https://deps.rs/repo/github/linebender/piet)
+
+</div>
 
 Cross-platform 2D graphics.
 
