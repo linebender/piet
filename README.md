@@ -12,7 +12,7 @@
 
 [![Linebender Zulip chat.](https://img.shields.io/badge/Linebender-%23piet-blue?logo=Zulip)](https://xi.zulipchat.com/#narrow/channel/259397-piet)
 [![GitHub Actions CI status.](https://img.shields.io/github/actions/workflow/status/linebender/piet/ci.yml?logo=github&label=CI)](https://github.com/linebender/piet/actions)
-[![Dependency staleness status.](https://deps.rs/crate/piet/latest/status.svg)](https://deps.rs/crate/piet)
+[![Dependency staleness status.](https://deps.rs/repo/github/linebender/piet/status.svg)](https://deps.rs/repo/github/linebender/piet)
 
 </div>
 
