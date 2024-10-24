@@ -23,15 +23,9 @@ js-sys = "0.3.72"
 
 [dependencies.web-sys]
 version = "0.3.72"
-features = ["Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
+features = ["console", "Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
             "Document", "DomMatrix", "Element", "HtmlCanvasElement", "ImageBitmap",
             "ImageData", "TextMetrics"]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.45"
-
-[dev-dependencies.web-sys]
-version = "0.3.72"
-features = ["console", "Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
-            "Document", "DomMatrix", "Element", "HtmlCanvasElement", "ImageBitmap", "ImageData",
-            "TextMetrics"]
