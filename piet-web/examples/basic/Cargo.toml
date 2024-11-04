@@ -1,8 +1,10 @@
 [package]
 name = "piet-web-example"
-version = "0.0.2"
+publish = false
 authors = ["Ryan Levick <ryan.levick@gmail.com>"]
-edition = "2021"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [lib]
 crate-type = ["cdylib"]

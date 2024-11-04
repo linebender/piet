@@ -1,17 +1,18 @@
 [package]
 name = "piet-coregraphics"
-version = "0.7.0"
+version.workspace = true
 authors = ["Jeff Muizelaar <jrmuizel@gmail.com>, Raph Levien <raph.levien@gmail.com>, Colin Rofls <colin.rofls@gmail.com>"]
-description = "CoreGraphics backend for piet 2D graphics abstraction."
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/linebender/piet"
-readme = "../README.md"
-edition = "2021"
-keywords = ["graphics", "2d"]
+description = "CoreGraphics backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api"]
+keywords = ["graphics", "2d"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../README.md"
 
 [dependencies]
-piet = { version = "=0.7.0", path = "../piet" }
+piet = { workspace = true }
 
 foreign-types = "0.5.0"
 core-graphics = "0.24.0"
@@ -21,8 +22,8 @@ core-foundation-sys = "0.8.7"
 associative-cache = "2.0.0"
 
 [dev-dependencies]
-piet = { version = "=0.7.0", path = "../piet", features = ["samples"] }
-piet-common = { version = "=0.7.0", path = "../piet-common", features = ["png"] }
+piet = { workspace = true, features = ["samples"] }
+piet-common = { workspace = true, features = ["png"] }
 
 [package.metadata.docs.rs]
 default-target = "x86_64-apple-darwin"

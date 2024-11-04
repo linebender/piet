@@ -1,13 +1,15 @@
 [package]
 name = "piet-common"
-version = "0.7.0"
+version.workspace = true
 authors = ["Raph Levien <raph.levien@gmail.com>"]
-description = "Selection of a single preferred back-end for piet"
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/linebender/piet"
-readme = "README.md"
-edition = "2021"
+description = "Selection of a single preferred backend for Piet."
+categories = ["rendering::graphics-api"]
 keywords = ["graphics", "2d"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
 
 [features]
 # passing on all the image features. AVIF is not supported because it does not
@@ -28,24 +30,24 @@ hdr = ["piet/hdr"]
 serde = ["piet/serde"]
 
 [dependencies]
-piet = { version = "=0.7.0", path = "../piet" }
+piet = { workspace = true }
 cfg-if = "1.0.0"
 png = { version = "0.17.14", optional = true }
 
 [target.'cfg(any(target_os="linux", target_os="openbsd", target_os="freebsd", target_os="netbsd"))'.dependencies]
-piet-cairo = { version = "=0.7.0", path = "../piet-cairo" }
+piet-cairo = { workspace = true }
 cairo-rs = { version = "0.20.1", default-features = false }
 cairo-sys-rs = { version = "0.20.0" }
 
 [target.'cfg(any(target_os="macos", target_os="ios"))'.dependencies]
-piet-coregraphics = { version = "=0.7.0", path = "../piet-coregraphics" }
+piet-coregraphics = { workspace = true }
 core-graphics = { version = "0.24.0" }
 
 [target.'cfg(target_os="windows")'.dependencies]
-piet-direct2d = { version = "=0.7.0", path = "../piet-direct2d" }
+piet-direct2d = { workspace = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
-piet-web = { version = "=0.7.0", path = "../piet-web" }
+piet-web = { workspace = true }
 wasm-bindgen = "0.2.95"
 
 [target.'cfg(target_arch="wasm32")'.dev-dependencies]

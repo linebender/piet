@@ -1,14 +1,15 @@
 [package]
 name = "piet"
-version = "0.7.0"
+version.workspace = true
 authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "An abstraction for 2D graphics."
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/linebender/piet"
-readme = "../README.md"
-edition = "2021"
-keywords = ["graphics", "2d"]
 categories = ["rendering::graphics-api"]
+keywords = ["graphics", "2d"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../README.md"
 include = ["src/**/*", "Cargo.toml", "snapshots/resources/*"]
 
 [dependencies]

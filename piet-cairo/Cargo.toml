@@ -1,17 +1,18 @@
 [package]
 name = "piet-cairo"
-version = "0.7.0"
+version.workspace = true
 authors = ["Raph Levien <raph.levien@gmail.com>"]
-description = "Cairo backend for piet 2D graphics abstraction."
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/linebender/piet"
-readme = "../README.md"
-edition = "2021"
-keywords = ["graphics", "2d"]
+description = "Cairo backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api"]
+keywords = ["graphics", "2d"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../README.md"
 
 [dependencies]
-piet = { version = "=0.7.0", path = "../piet" }
+piet = { workspace = true }
 
 cairo-rs = { version = "0.20.1", default-features = false } # We don't need glib
 pango = { version = "0.20.4", features = ["v1_44"] }
@@ -20,8 +21,8 @@ unicode-segmentation = "1.12.0"
 xi-unicode = "0.3.0"
 
 [dev-dependencies]
-piet = { version = "=0.7.0", path = "../piet", features = ["samples"] }
-piet-common = { version = "=0.7.0", path = "../piet-common", features = ["png"] }
+piet = { workspace = true, features = ["samples"] }
+piet-common = { workspace = true, features = ["png"] }
 criterion = "0.5.1"
 
 [[bench]]
