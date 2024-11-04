@@ -320,6 +320,8 @@ jobs:
 
       - name: install nightly toolchain
         uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: wasm32-unknown-unknown
 
       - name: install native dependencies
         if: matrix.os == 'ubuntu-latest'
