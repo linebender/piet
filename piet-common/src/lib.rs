@@ -33,7 +33,7 @@
 pub use piet::*;
 
 cfg_if::cfg_if! {
-     if #[cfg(any(feature = "web", target_arch = "wasm32"))] {
+     if #[cfg(target_arch = "wasm32")] {
         #[path = "web_back.rs"]
         mod backend;
     } else if #[cfg(any(target_os = "linux", target_os = "openbsd", target_os = "freebsd", target_os = "netbsd"))] {

@@ -10,8 +10,6 @@ edition = "2021"
 keywords = ["graphics", "2d"]
 
 [features]
-web = ["piet-web"]
-
 # passing on all the image features. AVIF is not supported because it does not
 # support decoding, and that's all we use `Image` for.
 image = ["piet/image"]
@@ -31,7 +29,6 @@ serde = ["piet/serde"]
 
 [dependencies]
 piet = { version = "=0.7.0", path = "../piet" }
-piet-web = { version = "=0.7.0", path = "../piet-web", optional = true }
 cfg-if = "1.0.0"
 png = { version = "0.17.14", optional = true }
 
