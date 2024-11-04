@@ -91,6 +91,8 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -141,6 +143,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -173,6 +177,8 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -205,6 +211,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -238,6 +246,8 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: install msrv toolchain
         uses: dtolnay/rust-toolchain@master
@@ -275,6 +285,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: install msrv toolchain
         uses: dtolnay/rust-toolchain@master
@@ -303,6 +315,8 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
       - name: install nightly toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -350,8 +364,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
             submodules: 'true'
 
