@@ -11,6 +11,12 @@ license.workspace = true
 repository.workspace = true
 readme = "../README.md"
 
+[package.metadata.docs.rs]
+all-features = true
+# There are no platform specific docs.
+default-target = "wasm32-unknown-unknown"
+targets = []
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 

@@ -11,6 +11,12 @@ license.workspace = true
 repository.workspace = true
 readme = "../README.md"
 
+[package.metadata.docs.rs]
+all-features = true
+# There are no platform specific docs.
+default-target = "x86_64-apple-darwin"
+targets = []
+
 [dependencies]
 piet = { workspace = true }
 
@@ -24,6 +30,3 @@ associative-cache = "2.0.0"
 [dev-dependencies]
 piet = { workspace = true, features = ["samples"] }
 piet-common = { workspace = true, features = ["png"] }
-
-[package.metadata.docs.rs]
-default-target = "x86_64-apple-darwin"

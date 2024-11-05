@@ -332,31 +332,39 @@ jobs:
         with:
           save-if: ${{ github.event_name != 'merge_group' }}
 
-      # We test documentation using nightly to match docs.rs. This prevents potential breakages
+      # We test documentation using nightly to match docs.rs.
       - name: cargo doc (windows)
-        run: cargo doc --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
         if: contains(matrix.os, 'windows')
 
       - name: cargo doc (macos)
-        run: cargo doc --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
         if: contains(matrix.os, 'macos')
 
       - name: cargo doc (ubuntu)
-        run: cargo doc --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples
+        run: cargo doc --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
         if: contains(matrix.os, 'ubuntu')
 
       - name: cargo doc (wasm32)
-        run: cargo doc --workspace ${{ env.NO_WASM_PKGS }} --locked --all-features --no-deps --document-private-items -Zunstable-options -Zrustdoc-scrape-examples --target wasm32-unknown-unknown
+        run: cargo doc --workspace ${{ env.NO_WASM_PKGS }} --locked --all-features --no-deps --document-private-items --target wasm32-unknown-unknown
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
         if: contains(matrix.os, 'ubuntu')
 
-  # If this fails, consider changing your text or adding something to .typos.toml
+  # If this fails, consider changing your text or adding something to .typos.toml.
   typos:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: check typos
-        uses: crate-ci/typos@v1.26.0
+        uses: crate-ci/typos@v1.27.0
 
   compare-snapshots:
     name: compare snapshots

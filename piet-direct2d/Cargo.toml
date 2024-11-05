@@ -11,6 +11,12 @@ license.workspace = true
 repository.workspace = true
 readme = "../README.md"
 
+[package.metadata.docs.rs]
+all-features = true
+# There are no platform specific docs.
+default-target = "x86_64-pc-windows-msvc"
+targets = []
+
 [dependencies]
 piet = { workspace = true }
 utf16_lit = "2.0.2"
@@ -23,6 +29,3 @@ dwrote = { version = "0.11.2", default-features = false }
 [dev-dependencies]
 piet = { workspace = true, features = ["samples"] }
 piet-common = { workspace = true, features = ["png"] }
-
-[package.metadata.docs.rs]
-default-target = "x86_64-pc-windows-msvc"
