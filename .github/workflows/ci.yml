@@ -40,6 +40,10 @@ env:
 # Using cargo-hack also allows us to more easily test the feature matrix of our packages.
 # We use --each-feature & --optional-deps which will run a separate check for every feature.
 #
+# We use cargo-nextest, which has a faster concurrency model for running tests.
+# However cargo-nextest does not support running doc tests, so we also have a cargo test --doc step.
+# For more information see https://github.com/nextest-rs/nextest/issues/16
+#
 # The MSRV jobs run only cargo check because different clippy versions can disagree on goals and
 # running tests introduces dev dependencies which may require a higher MSRV than the bare package.
 #
@@ -189,21 +193,38 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get update; sudo apt-get install libgtk-3-dev
 
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
       - name: restore cache
         uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.event_name != 'merge_group' }}
 
-      - name: cargo test (windows)
-        run: cargo test --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features
+      - name: cargo nextest (windows)
+        run: cargo nextest run --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-fail-fast
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test (macos)
-        run: cargo test --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features
+      - name: cargo nextest (macos)
+        run: cargo nextest run --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-fail-fast
         if: contains(matrix.os, 'macos')
 
-      - name: cargo test (ubuntu)
-        run: cargo test --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features
+      - name: cargo nextest (ubuntu)
+        run: cargo nextest run --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: cargo test --doc (windows)
+        run: cargo test --doc --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo test --doc (macos)
+        run: cargo test --doc --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'macos')
+
+      - name: cargo test --doc (ubuntu)
+        run: cargo test --doc --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-fail-fast
         if: contains(matrix.os, 'ubuntu')
 
   test-stable-wasm:
