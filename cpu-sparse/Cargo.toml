@@ -1,0 +1,13 @@
+[package]
+name = "cpu-sparse"
+version = "0.1.0"
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "An experimental CPU 2D renderer based on sparse strips"
+license = "Apache-2.0 OR MIT"
+edition = "2021"
+keywords = ["graphics", "2d"]
+categories = ["graphics"]
+
+[dependencies]
+piet-next = { path = "../piet-next" }
+flatten = { git = "https://github.com/linebender/gpu-stroke-expansion-paper", rev = "827ccf6" }

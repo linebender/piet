@@ -6,6 +6,8 @@ use std::{
     sync::{atomic::AtomicU64, Arc},
 };
 
+pub use peniko;
+
 use peniko::{
     kurbo::{Affine, BezPath, Rect, Stroke},
     BrushRef, Font, StyleRef,
