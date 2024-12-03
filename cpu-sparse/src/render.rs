@@ -1,0 +1,234 @@
+// Copyright 2024 the Piet Authors
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
+use piet_next::{
+    peniko::{
+        color::{palette, AlphaColor, Srgb},
+        kurbo::Affine,
+        BrushRef,
+    },
+    GenericRecorder, RenderCtx, ResourceCtx,
+};
+
+use crate::{
+    strip::{self, Strip, Tile},
+    tiling::{self, FlatLine},
+    wide_tile::{Cmd, CmdStrip, WideTile, STRIP_HEIGHT, WIDE_TILE_WIDTH},
+};
+
+pub struct CsRenderCtx {
+    width: usize,
+    height: usize,
+    tiles: Vec<WideTile>,
+    alphas: Vec<u32>,
+
+    /// These are all scratch buffers, to be used for path rendering. They're here solely
+    /// so the allocations can be reused.
+    line_buf: Vec<FlatLine>,
+    tile_buf: Vec<Tile>,
+    strip_buf: Vec<Strip>,
+}
+
+pub struct CsResourceCtx;
+
+impl CsRenderCtx {
+    pub fn new(width: usize, height: usize) -> Self {
+        let width_tiles = (width + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
+        let height_tiles = (height + STRIP_HEIGHT - 1) / STRIP_HEIGHT;
+        let tiles = (0..width_tiles * height_tiles)
+            .map(|_| WideTile::default())
+            .collect();
+        let alphas = vec![];
+        let line_buf = vec![];
+        let tile_buf = vec![];
+        let strip_buf = vec![];
+        Self {
+            width,
+            height,
+            tiles,
+            alphas,
+            line_buf,
+            tile_buf,
+            strip_buf,
+        }
+    }
+
+    /// Render a path, which has already been flattened into `line_buf`.
+    fn render_path(&mut self, brush: BrushRef) {
+        // TODO: need to make sure tiles contained in viewport - we'll likely
+        // panic otherwise.
+        tiling::make_tiles(&self.line_buf, &mut self.tile_buf);
+        self.tile_buf.sort_by(Tile::cmp);
+        strip::render_strips(&self.tile_buf, &mut self.strip_buf, &mut self.alphas);
+        let color = brush_to_color(brush);
+        let width_tiles = (self.width + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
+        for i in 0..self.strip_buf.len() - 1 {
+            let strip = &self.strip_buf[i];
+            let next_strip = &self.strip_buf[i + 1];
+            let x0 = strip.x();
+            let y = strip.strip_y();
+            let row_start = y as usize * width_tiles;
+            let strip_width = next_strip.col - strip.col;
+            let x1 = x0 + strip_width;
+            let xtile0 = x0 as usize / WIDE_TILE_WIDTH;
+            let xtile1 = (x1 as usize + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
+            let mut x = x0;
+            let mut col = strip.col;
+            for xtile in xtile0..xtile1 {
+                let x_tile_rel = x % WIDE_TILE_WIDTH as u32;
+                let width = x1.min(((xtile + 1) * WIDE_TILE_WIDTH) as u32) - x;
+                let cmd = CmdStrip {
+                    x: x_tile_rel,
+                    width,
+                    alpha_ix: col as usize,
+                    color,
+                };
+                x += width;
+                col += width;
+                self.tiles[row_start + xtile].push(Cmd::Strip(cmd));
+            }
+            if next_strip.winding != 0 && y == next_strip.strip_y() {
+                x = x1;
+                let x2 = next_strip.x();
+                let fxt0 = x1 as usize / WIDE_TILE_WIDTH;
+                let fxt1 = (x2 as usize + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
+                for xtile in fxt0..fxt1 {
+                    let x_tile_rel = x % WIDE_TILE_WIDTH as u32;
+                    let width = x2.min(((xtile + 1) * WIDE_TILE_WIDTH) as u32) - x;
+                    x += width;
+                    self.tiles[row_start + xtile].fill(x_tile_rel, width, color);
+                }
+            }
+        }
+    }
+
+    pub fn debug_dump(&self) {
+        let width_tiles = (self.width + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
+        for (i, tile) in self.tiles.iter().enumerate() {
+            if !tile.cmds.is_empty() || tile.bg.components[3] != 0.0 {
+                let x = i % width_tiles;
+                let y = i / width_tiles;
+                println!("tile {x}, {y} bg {}", tile.bg.to_rgba8());
+                for cmd in &tile.cmds {
+                    println!("{cmd:?}")
+                }
+            }
+        }
+    }
+}
+
+impl RenderCtx for CsRenderCtx {
+    type Resource = CsResourceCtx;
+
+    fn playback(
+        &mut self,
+        recording: &std::sync::Arc<<Self::Resource as piet_next::ResourceCtx>::Recording>,
+    ) {
+        recording.play(self);
+    }
+
+    fn fill(&mut self, path: &piet_next::Path, brush: BrushRef) {
+        let affine = Affine::default(); // TODO: graphics state
+        crate::flatten::fill(&path.path, affine, &mut self.line_buf);
+        self.render_path(brush);
+    }
+
+    fn stroke(
+        &mut self,
+        path: &piet_next::Path,
+        stroke: &piet_next::peniko::kurbo::Stroke,
+        brush: BrushRef,
+    ) {
+        todo!()
+    }
+
+    fn draw_image(
+        &mut self,
+        image: &<Self::Resource as piet_next::ResourceCtx>::Image,
+        dst_rect: piet_next::peniko::kurbo::Rect,
+        interp: piet_next::InterpolationMode,
+    ) {
+        todo!()
+    }
+
+    fn clip(&mut self, path: &piet_next::Path) {
+        todo!()
+    }
+
+    fn save(&mut self) {
+        todo!()
+    }
+
+    fn restore(&mut self) {
+        todo!()
+    }
+
+    fn transform(&mut self, affine: piet_next::peniko::kurbo::Affine) {
+        todo!()
+    }
+
+    fn begin_draw_glyphs(&mut self, font: &piet_next::peniko::Font) {
+        todo!()
+    }
+
+    fn font_size(&mut self, size: f32) {
+        todo!()
+    }
+
+    fn hint(&mut self, hint: bool) {
+        todo!()
+    }
+
+    fn glyph_brush(&mut self, brush: BrushRef) {
+        todo!()
+    }
+
+    fn draw_glyphs(
+        &mut self,
+        style: piet_next::peniko::StyleRef,
+        glyphs: &dyn Iterator<Item = piet_next::Glyph>,
+    ) {
+        todo!()
+    }
+
+    fn end_draw_glyphs(&mut self) {
+        todo!()
+    }
+}
+
+impl ResourceCtx for CsResourceCtx {
+    type Image = ();
+
+    type Recording = GenericRecorder<CsRenderCtx>;
+
+    type Record = GenericRecorder<CsRenderCtx>;
+
+    fn record(&mut self) -> Self::Record {
+        GenericRecorder::new()
+    }
+
+    fn make_image_with_stride(
+        &mut self,
+        width: usize,
+        height: usize,
+        stride: usize,
+        buf: &[u8],
+        format: piet_next::ImageFormat,
+    ) -> Result<Self::Image, piet_next::Error> {
+        todo!()
+    }
+}
+
+/// Get the color from the brush.
+///
+/// This is a hacky function that will go away when we implement
+/// other brushes. The general form is to match on whether it's a
+/// solid color. If not, then issue a cmd to render the brush into
+/// a brush buffer, then fill/strip as needed to composite into
+/// the main buffer.
+fn brush_to_color(brush: BrushRef) -> AlphaColor<Srgb> {
+    match brush {
+        BrushRef::Solid(c) => c,
+        _ => palette::css::MAGENTA,
+    }
+}

@@ -9,25 +9,17 @@ const TILE_HEIGHT: u32 = 4;
 const TILE_SCALE_X: f32 = 1.0 / TILE_WIDTH as f32;
 const TILE_SCALE_Y: f32 = 1.0 / TILE_HEIGHT as f32;
 
-// Copied from vello_encoding path.rs
+/// This is just Line but f32
 #[derive(Clone, Copy)]
-pub struct LineSoup {
-    pub path_ix: u32,
-    pub _padding: u32,
+pub struct FlatLine {
     // should these be vec2?
     pub p0: [f32; 2],
     pub p1: [f32; 2],
 }
 
-impl LineSoup {
-    pub fn new(path_ix: u32, p0: [f32; 2], p1: [f32; 2]) -> Self {
-        let _padding = Default::default();
-        LineSoup {
-            path_ix,
-            _padding,
-            p0,
-            p1,
-        }
+impl FlatLine {
+    pub fn new(p0: [f32; 2], p1: [f32; 2]) -> Self {
+        Self { p0, p1 }
     }
 }
 
@@ -93,8 +85,8 @@ const ONE_MINUS_ULP: f32 = 0.99999994;
 
 pub(crate) const ROBUST_EPSILON: f32 = 2e-7;
 
-pub fn make_tiles(lines: &[LineSoup]) -> Vec<Tile> {
-    let mut tiles = Vec::new();
+pub fn make_tiles(lines: &[FlatLine], tile_buf: &mut Vec<Tile>) {
+    tile_buf.clear();
     for line in lines {
         let p0 = Vec2::from_array(line.p0);
         let p1 = Vec2::from_array(line.p1);
@@ -226,16 +218,27 @@ pub fn make_tiles(lines: &[LineSoup]) -> Vec<Tile> {
             debug_assert!(p1.x >= 0.0 && p1.x <= TILE_WIDTH as f32);
             debug_assert!(p1.y >= 0.0 && p1.y <= TILE_HEIGHT as f32);
             let tile = Tile {
-                path_id: line.path_ix,
                 x: x as u16,
                 y: y as u16,
                 p0: p0.pack(),
                 p1: p1.pack(),
             };
-            tiles.push(tile);
+            tile_buf.push(tile);
 
             last_z = z;
         }
     }
-    tiles
+    // This particular choice of sentinel tiles generates a sentinel strip.
+    tile_buf.push(Tile {
+        x: 0x3ffd,
+        y: 0x3fff,
+        p0: 0,
+        p1: 0,
+    });
+    tile_buf.push(Tile {
+        x: 0x3fff,
+        y: 0x3fff,
+        p0: 0,
+        p1: 0,
+    });
 }

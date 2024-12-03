@@ -1,18 +1,20 @@
 // Copyright 2024 the Piet Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-// CPU implementation of sparse strip rendering
+//! CPU implementation of sparse strip rendering
+//!
+//! This is copied from the most recent GPU implementation, but has
+//! path_id stripped out, as on CPU we'll be doing one path at a time.
+//! That decision makes sense to some extent even when uploading to
+//! GPU, though some mechanism is required to tie the strips to paint.
+//!
+//! If there becomes a single, unified code base for this, then the
+//! path_id type should probably become a generic parameter.
 
-use piet_next::peniko::color::PremulRgba8;
-
-use crate::{
-    flatten::SoupBowl,
-    tiling::{make_tiles, Vec2},
-};
+use crate::{tiling::Vec2, wide_tile::STRIP_HEIGHT};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Loc {
-    path_id: u32,
     x: u16,
     y: u16,
 }
@@ -20,8 +22,6 @@ struct Loc {
 struct Footprint(u32);
 
 pub struct Tile {
-    // TODO: use loc inline?
-    pub path_id: u32,
     pub x: u16,
     pub y: u16,
     pub p0: u32, // packed
@@ -34,8 +34,8 @@ impl std::fmt::Debug for Tile {
         let p1 = Vec2::unpack(self.p1);
         write!(
             f,
-            "Tile {{ path_id: {}, xy: ({}, {}), p0: ({:.4}, {:.4}), p1: ({:.4}, {:.4}) }}",
-            self.path_id, self.x, self.y, p0.x, p0.y, p1.x, p1.y
+            "Tile {{ xy: ({}, {}), p0: ({:.4}, {:.4}), p1: ({:.4}, {:.4}) }}",
+            self.x, self.y, p0.x, p0.y, p1.x, p1.y
         )
     }
 }
@@ -43,7 +43,6 @@ impl std::fmt::Debug for Tile {
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct Strip {
-    pub path_id: u32,
     pub xy: u32, // this could be u16's on the Rust side
     pub col: u32,
     pub winding: i32,
@@ -55,7 +54,7 @@ impl Loc {
     }
 
     fn same_row(&self, other: &Self) -> bool {
-        self.path_id == other.path_id && self.y == other.y
+        self.y == other.y
     }
 }
 
@@ -66,7 +65,6 @@ impl Tile {
         let p0 = (delta == -1) as u32 * 65536 + footprint.0.trailing_zeros() * 8192;
         let p1 = (delta == 1) as u32 * 65536 + (32 - footprint.0.leading_zeros()) * 8192;
         Tile {
-            path_id: loc.path_id,
             x: loc.x,
             y: loc.y,
             p0,
@@ -76,7 +74,6 @@ impl Tile {
 
     fn loc(&self) -> Loc {
         Loc {
-            path_id: self.path_id,
             x: self.x,
             y: self.y,
         }
@@ -101,20 +98,20 @@ impl Tile {
     pub fn cmp(&self, b: &Tile) -> std::cmp::Ordering {
         let xya = ((self.y as u32) << 16) + (self.x as u32);
         let xyb = ((b.y as u32) << 16) + (b.x as u32);
-        (self.path_id, xya).cmp(&(b.path_id, xyb))
+        xya.cmp(&xyb)
     }
 }
 
-fn render_strips(tiles: &[Tile]) -> (Vec<Strip>, Vec<u32>) {
-    let mut strips = vec![];
-    let mut out = vec![];
+pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut Vec<u32>) {
+    strip_buf.clear();
     let mut strip_start = true;
-    let mut cols = 0;
+    let mut cols = alpha_buf.len() as u32;
     let mut prev_tile = &tiles[0];
     let mut fp = prev_tile.footprint().0;
     let mut seg_start = 0;
     let mut delta = 0;
-    // Note: add a sentinel tile in input
+    // Note: the input should contain a sentinel tile, to avoid having
+    // logic here to process the final strip.
     for i in 1..tiles.len() {
         let tile = &tiles[i];
         //println!("{tile:?}");
@@ -171,17 +168,16 @@ fn render_strips(tiles: &[Tile]) -> (Vec<Strip>, Vec<u32>) {
                     let area_u8 = (area.abs().min(1.0) * 255.0).round() as u32;
                     alphas += area_u8 << (y * 8);
                 }
-                out.push(alphas);
+                alpha_buf.push(alphas);
             }
             if strip_start {
                 let xy = (1 << 18) * prev_tile.y as u32 + 4 * prev_tile.x as u32 + x0;
                 let strip = Strip {
-                    path_id: tile.path_id,
                     xy,
                     col: cols,
                     winding: start_delta,
                 };
-                strips.push(strip);
+                strip_buf.push(strip);
             }
             cols += x1 - x0;
             fp = if same_strip { 1 } else { 0 };
@@ -194,30 +190,14 @@ fn render_strips(tiles: &[Tile]) -> (Vec<Strip>, Vec<u32>) {
         fp |= tile.footprint().0;
         prev_tile = tile;
     }
-    (strips, out)
 }
 
-pub fn make_strips(lines: SoupBowl) -> (Vec<Strip>, Vec<u32>, Vec<PremulRgba8>) {
-    let mut tiles = make_tiles(&lines.lines);
-    tiles.sort_by(Tile::cmp);
-    // This particular choice of sentinel tiles generates a sentinel strip.
-    tiles.push(Tile {
-        path_id: !1,
-        x: 0x3fff,
-        y: 0x3fff,
-        p0: 0,
-        p1: 0,
-    });
-    tiles.push(Tile {
-        path_id: !0,
-        x: 0x3fff,
-        y: 0x3fff,
-        p0: 0,
-        p1: 0,
-    });
-    // for tile in &tiles {
-    //     println!("{tile:?}");
-    // }
-    let (strips, alpha) = render_strips(&tiles);
-    (strips, alpha, lines.colors)
+impl Strip {
+    pub fn x(&self) -> u32 {
+        self.xy & 0xffff
+    }
+
+    pub fn strip_y(&self) -> u32 {
+        self.xy / ((1 << 16) * STRIP_HEIGHT as u32)
+    }
 }

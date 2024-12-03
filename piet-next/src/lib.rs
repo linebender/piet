@@ -134,3 +134,10 @@ impl Id {
         }
     }
 }
+
+impl From<BezPath> for Path {
+    fn from(path: BezPath) -> Self {
+        let id = Id::get();
+        Self { id, path }
+    }
+}
