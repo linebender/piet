@@ -11,3 +11,6 @@ categories = ["graphics"]
 [dependencies]
 piet-next = { path = "../piet-next" }
 flatten = { git = "https://github.com/linebender/gpu-stroke-expansion-paper", rev = "827ccf6" }
+
+[dev-dependencies]
+png = "0.17.14"

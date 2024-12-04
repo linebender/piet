@@ -19,9 +19,9 @@ pub(crate) enum Cmd {
 
 #[derive(Debug)]
 pub(crate) struct CmdFill {
-    x: u32,
-    width: u32,
-    color: AlphaColor<Srgb>,
+    pub(crate) x: u32,
+    pub(crate) width: u32,
+    pub(crate) color: AlphaColor<Srgb>,
 }
 
 #[derive(Debug)]

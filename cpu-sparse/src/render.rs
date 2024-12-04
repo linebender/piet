@@ -11,9 +11,11 @@ use piet_next::{
 };
 
 use crate::{
+    fine::Fine,
     strip::{self, Strip, Tile},
     tiling::{self, FlatLine},
     wide_tile::{Cmd, CmdStrip, WideTile, STRIP_HEIGHT, WIDE_TILE_WIDTH},
+    Pixmap,
 };
 
 pub struct CsRenderCtx {
@@ -50,6 +52,22 @@ impl CsRenderCtx {
             line_buf,
             tile_buf,
             strip_buf,
+        }
+    }
+
+    pub fn render_to_pixmap(&self, pixmap: &mut Pixmap) {
+        let mut fine = Fine::new(pixmap.width, pixmap.height, &mut pixmap.buf);
+        let width_tiles = (self.width + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
+        let height_tiles = (self.height + STRIP_HEIGHT - 1) / STRIP_HEIGHT;
+        for y in 0..height_tiles {
+            for x in 0..width_tiles {
+                let tile = &self.tiles[y * width_tiles + x];
+                fine.clear(tile.bg.components);
+                for cmd in &tile.cmds {
+                    fine.run_cmd(cmd, &self.alphas);
+                }
+                fine.pack_scalar(x, y);
+            }
         }
     }
 
