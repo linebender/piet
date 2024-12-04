@@ -3,7 +3,10 @@
 
 //! SIMD speedups
 
-use crate::fine::Fine;
+use crate::{
+    fine::Fine,
+    strip::{Strip, Tile},
+};
 
 #[cfg(target_arch = "aarch64")]
 mod neon;
@@ -48,6 +51,16 @@ impl<'a> Fine<'a> {
             }
         }
     }
+}
+
+#[cfg(target_arch = "aarch64")]
+pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut Vec<u32>) {
+    neon::render_strips_simd(tiles, strip_buf, alpha_buf);
+}
+
+#[cfg(not(target_arch = "aarch64"))]
+pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut Vec<u32>) {
+    crate::strip::render_strips_scalar(tiles, strip_buf, alpha_buf);
 }
 
 // This block is the fallback, no SIMD

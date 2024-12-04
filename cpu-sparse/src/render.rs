@@ -100,7 +100,7 @@ impl CsRenderCtx {
         // panic otherwise.
         tiling::make_tiles(&self.line_buf, &mut self.tile_buf);
         self.tile_buf.sort_by(Tile::cmp);
-        strip::render_strips(&self.tile_buf, &mut self.strip_buf, &mut self.alphas);
+        crate::simd::render_strips(&self.tile_buf, &mut self.strip_buf, &mut self.alphas);
         let color = brush_to_color(brush);
         let width_tiles = (self.width + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
         for i in 0..self.strip_buf.len() - 1 {

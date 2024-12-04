@@ -14,12 +14,12 @@
 use crate::{tiling::Vec2, wide_tile::STRIP_HEIGHT};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-struct Loc {
+pub(crate) struct Loc {
     x: u16,
     y: u16,
 }
 
-struct Footprint(u32);
+pub(crate) struct Footprint(pub(crate) u32);
 
 pub struct Tile {
     pub x: u16,
@@ -49,11 +49,11 @@ pub struct Strip {
 }
 
 impl Loc {
-    fn same_strip(&self, other: &Self) -> bool {
+    pub(crate) fn same_strip(&self, other: &Self) -> bool {
         self.same_row(other) && (other.x - self.x) / 2 == 0
     }
 
-    fn same_row(&self, other: &Self) -> bool {
+    pub(crate) fn same_row(&self, other: &Self) -> bool {
         self.y == other.y
     }
 }
@@ -72,14 +72,14 @@ impl Tile {
         }
     }
 
-    fn loc(&self) -> Loc {
+    pub(crate) fn loc(&self) -> Loc {
         Loc {
             x: self.x,
             y: self.y,
         }
     }
 
-    fn footprint(&self) -> Footprint {
+    pub(crate) fn footprint(&self) -> Footprint {
         let x0 = (self.p0 & 0xffff) as f32 * (1.0 / 8192.0);
         let x1 = (self.p1 & 0xffff) as f32 * (1.0 / 8192.0);
         // On CPU, might be better to do this as fixed point
@@ -88,7 +88,7 @@ impl Tile {
         Footprint((1 << xmax) - (1 << xmin))
     }
 
-    fn delta(&self) -> i32 {
+    pub(crate) fn delta(&self) -> i32 {
         ((self.p1 >> 16) == 0) as i32 - ((self.p0 >> 16) == 0) as i32
     }
 
@@ -102,7 +102,10 @@ impl Tile {
     }
 }
 
-pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut Vec<u32>) {
+// This can be unused when SIMD is selected. Probably a good idea to make it
+// selectable at runtime; will be needed for AVX2.
+#[allow(unused)]
+pub fn render_strips_scalar(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut Vec<u32>) {
     strip_buf.clear();
     let mut strip_start = true;
     let mut cols = alpha_buf.len() as u32;
@@ -114,7 +117,6 @@ pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut
     // logic here to process the final strip.
     for i in 1..tiles.len() {
         let tile = &tiles[i];
-        //println!("{tile:?}");
         if prev_tile.loc() != tile.loc() {
             let start_delta = delta;
             let same_strip = prev_tile.loc().same_strip(&tile.loc());
@@ -123,17 +125,13 @@ pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut
             }
             let x0 = fp.trailing_zeros();
             let x1 = 32 - fp.leading_zeros();
+            let mut areas = [[start_delta as f32; 4]; 4];
             for tile in &tiles[seg_start..i] {
                 delta += tile.delta();
-            }
-            // (x0..x1) is range of columns we need to render
-            for x in x0..x1 {
-                let mut areas = [start_delta as f32; 4];
-                // probably want to reorder loops for efficiency
-                for tile in &tiles[seg_start..i] {
-                    let p0 = Vec2::unpack(tile.p0);
-                    let p1 = Vec2::unpack(tile.p1);
-                    let slope = (p1.x - p0.x) / (p1.y - p0.y);
+                let p0 = Vec2::unpack(tile.p0);
+                let p1 = Vec2::unpack(tile.p1);
+                let slope = (p1.x - p0.x) / (p1.y - p0.y);
+                for x in x0..x1 {
                     let startx = p0.x - x as f32;
                     for y in 0..4 {
                         let starty = p0.y - y as f32;
@@ -141,7 +139,8 @@ pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut
                         let y1 = (p1.y - y as f32).clamp(0.0, 1.0);
                         let dy = y0 - y1;
                         // Note: getting rid of this predicate might help with
-                        // auto-vectorization.
+                        // auto-vectorization. That said, just getting rid of
+                        // it causes artifacts (which may be divide by zero).
                         if dy != 0.0 {
                             let xx0 = startx + (y0 - starty) * slope;
                             let xx1 = startx + (y1 - starty) * slope;
@@ -152,24 +151,27 @@ pub fn render_strips(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf: &mut
                             let c = b.max(0.0);
                             let d = xmin.max(0.0);
                             let a = (b + 0.5 * (d * d - c * c) - xmin) / (xmax - xmin);
-                            areas[y] += a * dy;
+                            areas[x as usize][y] += a * dy;
                         }
                         if p0.x == 0.0 {
-                            areas[y] += (y as f32 - p0.y + 1.0).clamp(0.0, 1.0);
+                            areas[x as usize][y] += (y as f32 - p0.y + 1.0).clamp(0.0, 1.0);
                         } else if p1.x == 0.0 {
-                            areas[y] -= (y as f32 - p1.y + 1.0).clamp(0.0, 1.0);
+                            areas[x as usize][y] -= (y as f32 - p1.y + 1.0).clamp(0.0, 1.0);
                         }
                     }
                 }
+            }
+            for x in x0..x1 {
                 let mut alphas = 0u32;
                 for y in 0..4 {
-                    let area = areas[y];
+                    let area = areas[x as usize][y];
                     // nonzero winding number rule
                     let area_u8 = (area.abs().min(1.0) * 255.0).round() as u32;
                     alphas += area_u8 << (y * 8);
                 }
                 alpha_buf.push(alphas);
             }
+
             if strip_start {
                 let xy = (1 << 18) * prev_tile.y as u32 + 4 * prev_tile.x as u32 + x0;
                 let strip = Strip {
