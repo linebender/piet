@@ -4,6 +4,8 @@
 // Lots of unused arguments from todo methods. Remove when all methods are implemented.
 #![allow(unused)]
 
+use std::collections::BTreeMap;
+
 use piet_next::{
     peniko::{
         color::{palette, AlphaColor, Srgb},
@@ -58,6 +60,13 @@ impl CsRenderCtx {
         }
     }
 
+    pub fn reset(&mut self) {
+        for tile in &mut self.tiles {
+            tile.bg = AlphaColor::TRANSPARENT;
+            tile.cmds.clear();
+        }
+    }
+
     pub fn render_to_pixmap(&self, pixmap: &mut Pixmap) {
         let mut fine = Fine::new(pixmap.width, pixmap.height, &mut pixmap.buf);
         let width_tiles = (self.width + WIDE_TILE_WIDTH - 1) / WIDE_TILE_WIDTH;
@@ -72,6 +81,17 @@ impl CsRenderCtx {
                 fine.pack_scalar(x, y);
             }
         }
+    }
+
+    pub fn tile_stats(&self) {
+        let mut histo = BTreeMap::new();
+        let mut total = 0;
+        for tile in &self.tiles {
+            let count = tile.cmds.len();
+            total += count;
+            *histo.entry(count).or_insert(0) += 1;
+        }
+        println!("total = {total}, {histo:?}");
     }
 
     /// Render a path, which has already been flattened into `line_buf`.
