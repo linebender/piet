@@ -8,14 +8,21 @@ use crate::wide_tile::{Cmd, STRIP_HEIGHT, WIDE_TILE_WIDTH};
 const STRIP_HEIGHT_F32: usize = STRIP_HEIGHT * 4;
 
 pub(crate) struct Fine<'a> {
-    width: usize,
-    height: usize,
+    pub(crate) width: usize,
+    pub(crate) height: usize,
     // rgba pixels
-    out_buf: &'a mut [u8],
+    pub(crate) out_buf: &'a mut [u8],
     // f32 RGBA pixels
     // That said, if we use u8, then this is basically a block of
     // untyped memory.
-    scratch: [f32; WIDE_TILE_WIDTH * STRIP_HEIGHT * 4],
+    pub(crate) scratch: [f32; WIDE_TILE_WIDTH * STRIP_HEIGHT * 4],
+    /// Whether to use SIMD
+    ///
+    /// This is useful to toggle for performance evaluation reasons. It also
+    /// *must* be false if runtime detection fails, otherwise we have safety
+    /// problems. This is important for x86_64, as we'll be targeting Haswell
+    /// as the minimum.
+    pub(crate) use_simd: bool,
 }
 
 impl<'a> Fine<'a> {
@@ -26,10 +33,11 @@ impl<'a> Fine<'a> {
             height,
             out_buf,
             scratch,
+            use_simd: true,
         }
     }
 
-    pub(crate) fn clear(&mut self, color: [f32; 4]) {
+    pub(crate) fn clear_scalar(&mut self, color: [f32; 4]) {
         for z in self.scratch.chunks_exact_mut(4) {
             z.copy_from_slice(&color);
         }
@@ -55,16 +63,16 @@ impl<'a> Fine<'a> {
     pub(crate) fn run_cmd(&mut self, cmd: &Cmd, alphas: &[u32]) {
         match cmd {
             Cmd::Fill(f) => {
-                self.fill_scalar(f.x as usize, f.width as usize, f.color.components);
+                self.fill(f.x as usize, f.width as usize, f.color.components);
             }
             Cmd::Strip(s) => {
                 let aslice = &alphas[s.alpha_ix..];
-                self.strip_scalar(s.x as usize, s.width as usize, aslice, s.color.components);
+                self.strip(s.x as usize, s.width as usize, aslice, s.color.components);
             }
         }
     }
 
-    fn fill_scalar(&mut self, x: usize, width: usize, color: [f32; 4]) {
+    pub(crate) fn fill_scalar(&mut self, x: usize, width: usize, color: [f32; 4]) {
         if color[3] == 1.0 {
             for z in
                 self.scratch[x * STRIP_HEIGHT_F32..][..STRIP_HEIGHT_F32 * width].chunks_exact_mut(4)
@@ -87,7 +95,7 @@ impl<'a> Fine<'a> {
         }
     }
 
-    fn strip_scalar(&mut self, x: usize, width: usize, alphas: &[u32], color: [f32; 4]) {
+    pub(crate) fn strip_scalar(&mut self, x: usize, width: usize, alphas: &[u32], color: [f32; 4]) {
         debug_assert!(alphas.len() >= width);
         let cs = color.map(|x| x * (1.0 / 255.0));
         for (z, a) in self.scratch[x * STRIP_HEIGHT_F32..][..STRIP_HEIGHT_F32 * width]

@@ -78,7 +78,7 @@ impl CsRenderCtx {
                 for cmd in &tile.cmds {
                     fine.run_cmd(cmd, &self.alphas);
                 }
-                fine.pack_scalar(x, y);
+                fine.pack(x, y);
             }
         }
     }

@@ -5,6 +5,7 @@ mod fine;
 mod flatten;
 mod pixmap;
 mod render;
+mod simd;
 mod strip;
 mod tiling;
 mod wide_tile;
