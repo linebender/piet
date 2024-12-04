@@ -1,6 +1,9 @@
 // Copyright 2024 the Piet Authors
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
+// Lots of unused arguments from todo methods. Remove when all methods are implemented.
+#![allow(unused)]
+
 use piet_next::{
     peniko::{
         color::{palette, AlphaColor, Srgb},
@@ -133,6 +136,11 @@ impl CsRenderCtx {
             }
         }
     }
+
+    fn get_affine(&self) -> Affine {
+        // TODO: get from graphics state
+        Affine::scale(5.0)
+    }
 }
 
 impl RenderCtx for CsRenderCtx {
@@ -146,7 +154,7 @@ impl RenderCtx for CsRenderCtx {
     }
 
     fn fill(&mut self, path: &piet_next::Path, brush: BrushRef) {
-        let affine = Affine::default(); // TODO: graphics state
+        let affine = self.get_affine();
         crate::flatten::fill(&path.path, affine, &mut self.line_buf);
         self.render_path(brush);
     }
@@ -157,7 +165,9 @@ impl RenderCtx for CsRenderCtx {
         stroke: &piet_next::peniko::kurbo::Stroke,
         brush: BrushRef,
     ) {
-        todo!()
+        let affine = self.get_affine();
+        crate::flatten::stroke(&path.path, stroke, affine, &mut self.line_buf);
+        self.render_path(brush);
     }
 
     fn draw_image(

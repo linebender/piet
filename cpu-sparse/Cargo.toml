@@ -14,3 +14,4 @@ flatten = { git = "https://github.com/linebender/gpu-stroke-expansion-paper", re
 
 [dev-dependencies]
 png = "0.17.14"
+roxmltree = "0.20.0"
