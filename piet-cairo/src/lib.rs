@@ -3,6 +3,7 @@
 
 //! The Cairo backend for the Piet 2D graphics abstraction.
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
 mod text;

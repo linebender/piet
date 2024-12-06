@@ -24,6 +24,7 @@
 //! [`piet-coregraphics`]: https://crates.io/crates/piet-coregraphics
 //! [`piet-direct2d`]: https://crates.io/crates/piet-direct2d
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![warn(missing_docs)]
 #![deny(clippy::trivially_copy_pass_by_ref, rustdoc::broken_intra_doc_links)]
 

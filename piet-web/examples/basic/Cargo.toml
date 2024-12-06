@@ -1,8 +1,9 @@
 [package]
 name = "piet-web-example"
-version = "0.0.2"
-authors = ["Ryan Levick <ryan.levick@gmail.com>"]
-edition = "2021"
+publish = false
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [lib]
 crate-type = ["cdylib"]
@@ -14,7 +15,7 @@ default = ["console_error_panic_hook"]
 piet = { path = "../../../piet", features = ["samples"] }
 piet-web = { path = "../.." }
 
-wasm-bindgen = "0.2.95"
+wasm-bindgen = "0.2.97"
 console_error_panic_hook = { version = "0.1.7", optional = true }
 
 [dependencies.web-sys]

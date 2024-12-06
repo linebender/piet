@@ -78,15 +78,52 @@ which should produce an image called `d2d-test-00-2.00.png`.
 #### `piet-svg` [![crates.io](https://img.shields.io/crates/v/piet-svg)](https://crates.io/crates/piet-svg)
 #### `piet-web` [![crates.io](https://img.shields.io/crates/v/piet-web)](https://crates.io/crates/piet-web)
 
+## Minimum supported Rust Version (MSRV)
+
+This version of Piet has been verified to compile with **Rust 1.77** and later.
+
+Future versions of Piet might increase the Rust version requirement.
+It will not be treated as a breaking change and as such can even happen with small patch releases.
+
+<details>
+<summary>Click here if compiling fails.</summary>
+
+As time has passed, some of Piet's dependencies could have released versions with a higher Rust requirement.
+If you encounter a compilation issue due to a dependency and don't want to upgrade your Rust toolchain, then you could downgrade the dependency.
+
+```sh
+# Use the problematic dependency's name and version
+cargo update -p package_name --precise 0.1.1
+```
+
+</details>
+
+## Community
+
+Discussion of Piet development happens in the [Linebender Zulip](https://xi.zulipchat.com/), specifically the [#piet stream](https://xi.zulipchat.com/#narrow/channel/259397-piet).
+All public content can be read without logging in.
+
+Contributions are welcome by pull request.
+The [Rust code of conduct] applies.
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache 2.0 license, shall be licensed as noted in the [License](#license) section, without any additional terms or conditions.
+
 ## Inspirations
 
-Piet's interface is largely inspired by the [Skia Graphics Library] as well as
-the [C++ 2D graphics api proposal] although piet aims to be much more lightweight and modular.
+Piet's interface is largely inspired by the [Skia Graphics Library] as well as the [C++ 2D graphics api proposal] although piet aims to be much more lightweight and modular.
 
 ## The Name
 
-The library is named after [Piet Mondrian]. It is abstract and intended to
-be used for drawing lots of rectangles.
+The library is named after [Piet Mondrian]. It is abstract and intended to be used for drawing lots of rectangles.
+
+## License
+
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+
+at your option.
 
 [blog post]: https://raphlinus.github.io/rust/graphics/2018/10/11/2d-graphics.html
 [Druid]: https://github.com/xi-editor/druid
@@ -97,3 +134,4 @@ be used for drawing lots of rectangles.
 [Piet Mondrian]: https://en.wikipedia.org/wiki/Piet_Mondrian
 [`piet-common`]: https://crates.io/crates/piet-common
 [cairo library]: https://www.cairographics.org/download/
+[Rust code of conduct]: https://www.rust-lang.org/policies/code-of-conduct

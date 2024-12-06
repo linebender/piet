@@ -3,6 +3,7 @@
 
 // allows e.g. raw_data[dst_off + x * 4 + 2] = buf[src_off + x * 4 + 0];
 #![allow(clippy::identity_op)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
 //! The Web Canvas backend for the Piet 2D graphics abstraction.

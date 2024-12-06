@@ -139,7 +139,6 @@ impl Default for ImageBuf {
 }
 
 #[cfg(feature = "image")]
-#[cfg_attr(docsrs, doc(cfg(feature = "image")))]
 impl ImageBuf {
     /// Load an image from a DynamicImage from the image crate
     pub fn from_dynamic_image(image_data: image::DynamicImage) -> ImageBuf {

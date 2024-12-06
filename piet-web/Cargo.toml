@@ -1,24 +1,30 @@
 [package]
 name = "piet-web"
-version = "0.7.0"
-authors = ["Raph Levien <raph.levien@gmail.com>"]
-description = "Web canvas backend for piet 2D graphics abstraction."
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/linebender/piet"
-readme = "../README.md"
-edition = "2021"
-keywords = ["graphics", "2d"]
+version.workspace = true
+description = "Web canvas backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api", "wasm"]
+keywords = ["graphics", "2d"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../README.md"
+
+[package.metadata.docs.rs]
+all-features = true
+# There are no platform specific docs.
+default-target = "wasm32-unknown-unknown"
+targets = []
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-piet = { version = "=0.7.0", path = "../piet" }
+piet = { workspace = true }
 
 unicode-segmentation = "1.12.0"
 xi-unicode = "0.3.0"
-wasm-bindgen = "0.2.95"
+wasm-bindgen = "0.2.97"
 js-sys = "0.3.72"
 
 [dependencies.web-sys]
