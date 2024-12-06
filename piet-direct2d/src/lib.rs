@@ -17,14 +17,25 @@ mod text;
 
 use std::borrow::Cow;
 use std::ops::Deref;
+use std::ptr::null_mut;
 
 use associative_cache::{AssociativeCache, Capacity1024, HashFourWay, RoundRobinReplacement};
 
 use winapi::um::d2d1::{
-    D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
-    D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
+    ID2D1Image, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+    D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
+    D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES,
 };
-use winapi::um::d2d1_1::{D2D1_COMPOSITE_MODE_SOURCE_OVER, D2D1_INTERPOLATION_MODE_LINEAR};
+use winapi::um::d2d1_1::{
+    D2D1_COMPOSITE_MODE_SOURCE_COPY, D2D1_COMPOSITE_MODE_SOURCE_OVER,
+    D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_INTERPOLATION_MODE_LINEAR, D2D1_PROPERTY_TYPE_FLOAT,
+    D2D1_PROPERTY_TYPE_UNKNOWN,
+};
+use winapi::um::d2d1effects::{
+    CLSID_D2D1GaussianBlur, D2D1_BORDER_MODE_HARD, D2D1_DIRECTIONALBLUR_OPTIMIZATION_SPEED,
+    D2D1_GAUSSIANBLUR_PROP_BORDER_MODE, D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION,
+    D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION,
+};
 use winapi::um::dcommon::{D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED};
 
 use piet::kurbo::{Affine, PathEl, Point, Rect, Shape, Size};
@@ -33,6 +44,7 @@ use piet::{
     Color, Error, FixedGradient, Image, ImageFormat, InterpolationMode, IntoBrush, RenderContext,
     StrokeStyle,
 };
+use wio::com::ComPtr;
 
 use crate::d2d::{wrap_unit, Layer};
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
@@ -544,6 +556,127 @@ impl<'a> RenderContext for D2DRenderContext<'a> {
         if let Err(e) = self.blurred_rect_raw(rect, blur_radius, brush) {
             eprintln!("error in drawing blurred rect: {e:?}");
         }
+    }
+
+    fn blur_image(
+        &mut self,
+        _image: &Self::Image,
+        _blur_radius: f64,
+    ) -> Result<Self::Image, Error> {
+        // Create image size objects
+        let image_size_raw = _image.get_size();
+        let (dpi_scale, _) = self.rt.get_dpi_scale();
+        let image_size = Rect::new(
+            0.0,
+            0.0,
+            (image_size_raw.width * dpi_scale) as f64,
+            (image_size_raw.height * dpi_scale) as f64,
+        );
+
+        // Create a blank target bitmap to receive the blurred image
+        let bitmap_target = self.rt.create_blank_bitmap(
+            image_size.width() as usize,
+            image_size.height() as usize,
+            dpi_scale,
+        )?;
+
+        unsafe {
+            {
+                // Get reference to ID2D1Device
+                let mut device_raw = null_mut();
+                self.rt.get_comptr().GetDevice(&mut device_raw);
+                let device_comptr = ComPtr::from_raw(device_raw);
+
+                // Create a new ID2D1DeviceContext
+                let mut device_context_raw = null_mut();
+                let _hr = device_comptr
+                    .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, &mut device_context_raw);
+                if _hr != 0x0 {
+                    return Err(Error::NotSupported);
+                }
+                let device_context_comptr = ComPtr::from_raw(device_context_raw);
+
+                // Set the device context target to the source
+                device_context_comptr
+                    .SetTarget(bitmap_target.get_comptr().as_raw() as *const ID2D1Image);
+
+                // Begin drawing operations
+                device_context_comptr.BeginDraw();
+
+                // Create ID2D1Effect
+                let mut blur_effect_raw = null_mut();
+                let _hr = device_context_comptr
+                    .CreateEffect(&CLSID_D2D1GaussianBlur, &mut blur_effect_raw);
+                if _hr != 0x0 {
+                    return Err(Error::NotSupported);
+                }
+                let blur_effect_comptr = ComPtr::from_raw(blur_effect_raw);
+
+                // Set blur radius
+                let blur_radius_f32 = _blur_radius as f32;
+                let _hr = blur_effect_comptr.SetValue(
+                    D2D1_GAUSSIANBLUR_PROP_STANDARD_DEVIATION,
+                    D2D1_PROPERTY_TYPE_FLOAT,
+                    &blur_radius_f32 as *const _ as *const _,
+                    std::mem::size_of_val(&blur_radius_f32) as u32,
+                );
+                if _hr != 0x0 {
+                    return Err(Error::NotSupported);
+                }
+
+                // Set blur optimization level to high
+                let blur_optimization_level = D2D1_DIRECTIONALBLUR_OPTIMIZATION_SPEED;
+                let _hr = blur_effect_comptr.SetValue(
+                    D2D1_GAUSSIANBLUR_PROP_OPTIMIZATION,
+                    D2D1_PROPERTY_TYPE_UNKNOWN,
+                    &blur_optimization_level as *const _ as *const _,
+                    std::mem::size_of_val(&blur_optimization_level) as u32,
+                );
+                if _hr != 0x0 {
+                    return Err(Error::NotSupported);
+                }
+
+                // Set blur border mode to wrapped
+                let blur_border_mode = D2D1_BORDER_MODE_HARD;
+                let _hr = blur_effect_comptr.SetValue(
+                    D2D1_GAUSSIANBLUR_PROP_BORDER_MODE,
+                    D2D1_PROPERTY_TYPE_UNKNOWN,
+                    &blur_border_mode as *const _ as *const _,
+                    std::mem::size_of_val(&blur_border_mode) as u32,
+                );
+                if _hr != 0x0 {
+                    return Err(Error::NotSupported);
+                }
+
+                // Set blur effect input to source image
+                blur_effect_comptr.SetInput(
+                    0,
+                    _image.get_comptr().as_raw() as *const ID2D1Image,
+                    winapi::shared::minwindef::TRUE,
+                );
+
+                // Request an ID2D1Image from the effect
+                let mut blur_effect_image_raw = null_mut();
+                blur_effect_comptr.GetOutput(&mut blur_effect_image_raw);
+                let blur_effect_image_comptr = ComPtr::from_raw(blur_effect_image_raw);
+
+                // Draw the now blurred image to the target bitmap
+                device_context_comptr.DrawImage(
+                    blur_effect_image_comptr.as_raw(),
+                    &to_point2f((0.0f32, 0.0f32)),
+                    &rect_to_rectf(image_size),
+                    D2D1_INTERPOLATION_MODE_LINEAR,
+                    D2D1_COMPOSITE_MODE_SOURCE_COPY,
+                );
+
+                // End drawing operations
+                let mut tag1 = 0;
+                let mut tag2 = 0;
+                device_context_comptr.EndDraw(&mut tag1, &mut tag2);
+            }
+        }
+
+        Ok(bitmap_target)
     }
 }
 
