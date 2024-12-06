@@ -1,0 +1,12 @@
+[package]
+name = "piet-next"
+version = "0.1.0"
+authors = ["Raph Levien <raph.levien@gmail.com>"]
+description = "A testbend for next-generation 2D renderer ideas"
+license = "Apache-2.0 OR MIT"
+edition = "2021"
+keywords = ["graphics", "2d"]
+categories = ["graphics"]
+
+[dependencies]
+peniko = { git = "https://github.com/linebender/peniko", rev = "aeded39" }
