@@ -1,7 +1,6 @@
 [package]
 name = "piet-web-example"
 publish = false
-authors = ["Ryan Levick <ryan.levick@gmail.com>"]
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

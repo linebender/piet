@@ -1,7 +1,6 @@
 [package]
 name = "piet-direct2d"
 version.workspace = true
-authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Direct2D backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api"]
 keywords = ["graphics", "2d"]

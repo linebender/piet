@@ -1,7 +1,6 @@
 [package]
 name = "piet-cairo"
 version.workspace = true
-authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Cairo backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api"]
 keywords = ["graphics", "2d"]

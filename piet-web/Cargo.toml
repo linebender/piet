@@ -1,7 +1,6 @@
 [package]
 name = "piet-web"
 version.workspace = true
-authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Web canvas backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api", "wasm"]
 keywords = ["graphics", "2d"]

@@ -1,7 +1,6 @@
 [package]
 name = "piet-svg"
 version.workspace = true
-authors = ["Benjamin Saunders <ben.e.saunders@gmail.com>"]
 description = "SVG backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api"]
 keywords = ["graphics", "2d"]

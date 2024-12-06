@@ -1,7 +1,6 @@
 [package]
 name = "piet-common"
 version.workspace = true
-authors = ["Raph Levien <raph.levien@gmail.com>"]
 description = "Selection of a single preferred backend for Piet."
 categories = ["rendering::graphics-api"]
 keywords = ["graphics", "2d"]
