@@ -15,11 +15,11 @@ env:
   # List of packages that can not target Wasm.
   NO_WASM_PKGS: "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-direct2d --exclude piet-svg"
   # List of packages that can not target Windows.
-  NO_WINDOWS_PKGS: "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-web"
+  NO_WINDOWS_PKGS: "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-web --exclude piet-web-example"
   # List of packages that can not target macOS.
-  NO_MACOS_PKGS: "--exclude piet-cairo --exclude piet-direct2d --exclude piet-web"
+  NO_MACOS_PKGS: "--exclude piet-cairo --exclude piet-direct2d --exclude piet-web --exclude piet-web-example"
   # List of packages that can not target Ubuntu.
-  NO_UBUNTU_PKGS: "--exclude piet-coregraphics --exclude piet-direct2d --exclude piet-web"
+  NO_UBUNTU_PKGS: "--exclude piet-coregraphics --exclude piet-direct2d --exclude piet-web --exclude piet-web-example"
 
 
 # Rationale
