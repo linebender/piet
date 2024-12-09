@@ -27,6 +27,7 @@ enum Cmd<RC: RenderCtx> {
 }
 
 impl<RC: RenderCtx> GenericRecorder<RC> {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         let cmds = Vec::new();
         GenericRecorder { cmds }

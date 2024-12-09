@@ -121,7 +121,7 @@ pub fn render_strips_simd(tiles: &[Tile], strip_buf: &mut Vec<Strip>, alpha_buf:
         // Note: the input should contain a sentinel tile, to avoid having
         // logic here to process the final strip.
         const IOTA: [f32; 4] = [0.0, 1.0, 2.0, 3.0];
-        let iota = vld1q_f32(IOTA.as_ptr() as *const f32);
+        let iota = vld1q_f32(IOTA.as_ptr());
         for i in 1..tiles.len() {
             let tile = &tiles[i];
             if prev_tile.loc() != tile.loc() {
