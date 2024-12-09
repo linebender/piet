@@ -3,6 +3,7 @@
 
 //! SVG output support for piet
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
 #[cfg(feature = "evcxr")]

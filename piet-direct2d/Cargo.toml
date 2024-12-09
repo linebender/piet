@@ -1,17 +1,23 @@
 [package]
 name = "piet-direct2d"
-version = "0.7.0"
-authors = ["Raph Levien <raph.levien@gmail.com>"]
-description = "Direct2D backend for piet 2D graphics abstraction."
-license = "Apache-2.0 OR MIT"
-repository = "https://github.com/linebender/piet"
-readme = "../README.md"
-edition = "2021"
-keywords = ["graphics", "2d"]
+version.workspace = true
+description = "Direct2D backend for Piet 2D graphics abstraction."
 categories = ["rendering::graphics-api"]
+keywords = ["graphics", "2d"]
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../README.md"
+
+[package.metadata.docs.rs]
+all-features = true
+# There are no platform specific docs.
+default-target = "x86_64-pc-windows-msvc"
+targets = []
 
 [dependencies]
-piet = { version = "=0.7.0", path = "../piet" }
+piet = { workspace = true }
 utf16_lit = "2.0.2"
 associative-cache = "2.0.0"
 
@@ -20,8 +26,5 @@ winapi = { version = "0.3.9", features = ["d2d1", "d2d1_1", "d2d1effects", "d2db
 dwrote = { version = "0.11.2", default-features = false }
 
 [dev-dependencies]
-piet = { version = "=0.7.0", path = "../piet", features = ["samples"] }
-piet-common = { version = "=0.7.0", path = "../piet-common", features = ["png"] }
-
-[package.metadata.docs.rs]
-default-target = "x86_64-pc-windows-msvc"
+piet = { workspace = true, features = ["samples"] }
+piet-common = { workspace = true, features = ["png"] }

@@ -3,22 +3,72 @@ env:
   # version like 1.70. Note that we only specify MAJOR.MINOR and not PATCH so that bugfixes still
   # come automatically. If the version specified here is no longer the latest stable version,
   # then please feel free to submit a PR that adjusts it along with the potential clippy fixes.
-  RUST_STABLE_VER: "1.82" # In quotes because otherwise 1.70 would be interpreted as 1.7
+  RUST_STABLE_VER: "1.82" # In quotes because otherwise (e.g.) 1.70 would be interpreted as 1.7
+  # The purpose of checking with the minimum supported Rust toolchain is to detect its staleness.
+  # If the compilation fails, then the version specified here needs to be bumped up to reality.
+  # Be sure to also update the rust-version property in the workspace Cargo.toml file,
+  # plus all the README.md files of the affected packages.
+  RUST_MIN_VER: "1.77"
+  # List of packages that will be checked with the minimum supported Rust version.
+  # This should be limited to packages that are intended for publishing.
+  RUST_MIN_VER_PKGS: "-p piet -p piet-common -p piet-cairo -p piet-coregraphics -p piet-direct2d -p piet-svg -p piet-web"
+  # List of packages that can not target Wasm.
+  NO_WASM_PKGS: "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-direct2d --exclude piet-svg"
+  # List of packages that can not target Windows.
+  NO_WINDOWS_PKGS: "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-web --exclude piet-web-example"
+  # List of packages that can not target macOS.
+  NO_MACOS_PKGS: "--exclude piet-cairo --exclude piet-direct2d --exclude piet-web --exclude piet-web-example"
+  # List of packages that can not target Ubuntu.
+  NO_UBUNTU_PKGS: "--exclude piet-coregraphics --exclude piet-direct2d --exclude piet-web --exclude piet-web-example"
+
+
+# Rationale
+#
+# We don't run clippy with --all-targets because then even --lib and --bins are compiled with
+# dev dependencies enabled, which does not match how they would be compiled by users.
+# A dev dependency might enable a feature that we need for a regular dependency,
+# and checking with --all-targets would not find our feature requirements lacking.
+# This problem still applies to cargo resolver version 2.
+# Thus we split all the targets into two steps, one with --lib --bins
+# and another with --tests --benches --examples.
+# Also, we can't give --lib --bins explicitly because then cargo will error on binary-only packages.
+# Luckily the default behavior of cargo with no explicit targets is the same but without the error.
+#
+# We use cargo-hack for a similar reason. Cargo's --workspace will do feature unification across
+# the whole workspace. While cargo-hack will instead check each workspace package separately.
+#
+# Using cargo-hack also allows us to more easily test the feature matrix of our packages.
+# We use --each-feature & --optional-deps which will run a separate check for every feature.
+#
+# We use cargo-nextest, which has a faster concurrency model for running tests.
+# However cargo-nextest does not support running doc tests, so we also have a cargo test --doc step.
+# For more information see https://github.com/nextest-rs/nextest/issues/16
+#
+# The MSRV jobs run only cargo check because different clippy versions can disagree on goals and
+# running tests introduces dev dependencies which may require a higher MSRV than the bare package.
+#
+# We don't save caches in the merge-group cases, because those caches will never be re-used (apart
+# from the very rare cases where there are multiple PRs in the merge queue).
+# This is because GitHub doesn't share caches between merge queues and the main branch.
 
 name: CI
 
 on:
   pull_request:
   merge_group:
+  # We run on push, even though the commit is the same as when we ran in merge_group.
+  # This allows the cache to be primed.
+  # See https://github.com/orgs/community/discussions/66430
+  push:
+    branches:
+      - main
 
 jobs:
-  rustfmt:
+  fmt:
+    name: formatting
     runs-on: ubuntu-latest
-    name: cargo fmt
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: 'true'
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -37,22 +87,16 @@ jobs:
       - name: check copyright headers
         run: bash .github/copyright.sh
 
-  test-stable:
+  clippy-stable:
+    name: cargo clippy
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
-    name: cargo clippy + test
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
-
-      - name: install additional linux dependencies
-        run: |
-          sudo apt update
-          sudo apt install libgtk-3-dev
-        if: contains(matrix.os, 'ubuntu')
+            submodules: 'true'
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -60,63 +104,51 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
           components: clippy
 
+      - name: install cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+
+      - name: install native dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update; sudo apt-get install libgtk-3-dev
+
       - name: restore cache
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
 
-      # Clippy packages in deeper-to-higher dependency order
-      - name: cargo clippy piet
-        run: cargo clippy --manifest-path=piet/Cargo.toml --all-targets --all-features -- -D warnings
-
-      - name: cargo clippy piet-cairo
-        run: cargo clippy --manifest-path=piet-cairo/Cargo.toml --all-targets --all-features -- -D warnings
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo clippy piet-coregraphics
-        run: cargo clippy --manifest-path=piet-coregraphics/Cargo.toml --all-targets --all-features -- -D warnings
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo clippy piet-direct2d
-        run: cargo clippy --manifest-path=piet-direct2d/Cargo.toml --all-targets --all-features -- -D warnings
+      - name: cargo clippy (windows)
+        run: cargo hack clippy --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --optional-deps --each-feature -- -D warnings
         if: contains(matrix.os, 'windows')
 
-      - name: cargo clippy piet-svg
-        run: cargo clippy --manifest-path=piet-svg/Cargo.toml --all-targets --all-features -- -D warnings
-
-      - name: cargo clippy piet-common
-        run: cargo clippy --manifest-path=piet-common/Cargo.toml --all-targets --features=png -- -D warnings
-
-      # Test packages in deeper-to-higher dependency order
-      - name: cargo test piet
-        run: cargo test --manifest-path=piet/Cargo.toml --all-features
-
-      - name: cargo test piet-cairo
-        run: cargo test --manifest-path=piet-cairo/Cargo.toml --all-features
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo test piet-coregraphics
-        run: cargo test --manifest-path=piet-coregraphics/Cargo.toml --all-features
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo test piet-direct2d
-        run: cargo test --manifest-path=piet-direct2d/Cargo.toml --all-features
+      - name: cargo clippy (auxiliary) (windows)
+        run: cargo hack clippy --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --optional-deps --each-feature --tests --benches --examples -- -D warnings
         if: contains(matrix.os, 'windows')
 
-      - name: cargo test piet-svg
-        run: cargo test --manifest-path=piet-svg/Cargo.toml --all-features
+      - name: cargo clippy (macos)
+        run: cargo hack clippy --workspace ${{ env.NO_MACOS_PKGS }} --locked --optional-deps --each-feature -- -D warnings
+        if: contains(matrix.os, 'macos')
 
-      - name: cargo test piet-common
-        run: cargo test --manifest-path=piet-common/Cargo.toml --features=png
+      - name: cargo clippy (auxiliary) (macos)
+        run: cargo hack clippy --workspace ${{ env.NO_MACOS_PKGS }} --locked --optional-deps --each-feature --tests --benches --examples -- -D warnings
+        if: contains(matrix.os, 'macos')
 
-  test-stable-wasm:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
-    name: cargo clippy + test (wasm32)
+      - name: cargo clippy (ubuntu)
+        run: cargo hack clippy --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --optional-deps --each-feature -- -D warnings
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: cargo clippy (auxiliary) (ubuntu)
+        run: cargo hack clippy --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --optional-deps --each-feature --tests --benches --examples -- -D warnings
+        if: contains(matrix.os, 'ubuntu')
+
+  clippy-stable-wasm:
+    name: cargo clippy (wasm32)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
+            submodules: 'true'
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -124,43 +156,179 @@ jobs:
           toolchain: ${{ env.RUST_STABLE_VER }}
           targets: wasm32-unknown-unknown
           components: clippy
-          
+
+      - name: install cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+
       - name: restore cache
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
 
-      # Clippy packages in deeper-to-higher dependency order
-      - name: cargo clippy piet
-        run: cargo clippy --manifest-path=piet/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy
+        run: cargo hack clippy --workspace ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature -- -D warnings
 
-      - name: cargo clippy piet-web
-        run: cargo clippy --manifest-path=piet-web/Cargo.toml --all-targets --all-features --target wasm32-unknown-unknown -- -D warnings
+      - name: cargo clippy (auxiliary)
+        run: cargo hack clippy --workspace ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature --tests --benches --examples -- -D warnings
 
-      - name: cargo clippy piet-common
-        run: cargo clippy --manifest-path=piet-common/Cargo.toml --all-targets --features=png --target wasm32-unknown-unknown -- -D warnings
+  test-stable:
+    name: cargo test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
 
-      # Test packages in deeper-to-higher dependency order
-      # TODO: Find a way to make tests work. Until then the tests are merely compiled.
-      - name: cargo test piet
-        run: cargo test --manifest-path=piet/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
+      - name: install stable toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
 
-      - name: cargo test piet-web
-        run: cargo test --manifest-path=piet-web/Cargo.toml --all-features --no-run --target wasm32-unknown-unknown
+      - name: install native dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update; sudo apt-get install libgtk-3-dev
 
-      - name: cargo test piet-common
-        run: cargo test --manifest-path=piet-common/Cargo.toml --features=png --no-run --target wasm32-unknown-unknown
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: cargo nextest (windows)
+        run: cargo nextest run --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo nextest (macos)
+        run: cargo nextest run --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'macos')
+
+      - name: cargo nextest (ubuntu)
+        run: cargo nextest run --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'ubuntu')
+
+      - name: cargo test --doc (windows)
+        run: cargo test --doc --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo test --doc (macos)
+        run: cargo test --doc --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'macos')
+
+      - name: cargo test --doc (ubuntu)
+        run: cargo test --doc --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-fail-fast
+        if: contains(matrix.os, 'ubuntu')
+
+  test-stable-wasm:
+    name: cargo test (wasm32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
+
+      - name: install stable toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_STABLE_VER }}
+          targets: wasm32-unknown-unknown
 
       - name: install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      # TODO: Find a way to make tests work. Until then the tests are merely compiled.
+      - name: cargo test compile
+        run: cargo test --workspace ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --all-features --no-run
 
       - name: test chrome
         run: wasm-pack test --headless --chrome piet-common
 
       - name: test firefox
         run: wasm-pack test --headless --firefox piet-common
-        # macOS 14 CI runners don't have Firefox installed
-        if: contains(matrix.os, 'macos') == false
 
-  docs:
+  check-msrv:
+    name: cargo check (msrv)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
+
+      - name: install msrv toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_MIN_VER }}
+
+      - name: install cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+
+      - name: install native dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update; sudo apt-get install libgtk-3-dev
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: cargo check (windows)
+        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_WINDOWS_PKGS }} --locked --optional-deps --each-feature
+        if: contains(matrix.os, 'windows')
+
+      - name: cargo check (macos)
+        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_MACOS_PKGS }} --locked --optional-deps --each-feature
+        if: contains(matrix.os, 'macos')
+
+      - name: cargo check (ubuntu)
+        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_UBUNTU_PKGS }} --locked --optional-deps --each-feature
+        if: contains(matrix.os, 'ubuntu')
+
+  check-msrv-wasm:
+    name: cargo check (msrv) (wasm32)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+            submodules: 'true'
+
+      - name: install msrv toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_MIN_VER }}
+          targets: wasm32-unknown-unknown
+
+      - name: install cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+
+      - name: restore cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
+
+      - name: cargo check
+        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature
+
+  doc:
     name: cargo doc
     runs-on: ${{ matrix.os }}
     strategy:
@@ -169,85 +337,83 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: 'true'
-
-      - name: install additional linux dependencies
-        run: |
-          sudo apt update
-          sudo apt install libgtk-3-dev
-        if: contains(matrix.os, 'ubuntu')
+            submodules: 'true'
 
       - name: install nightly toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
           targets: wasm32-unknown-unknown
 
+      - name: install native dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update; sudo apt-get install libgtk-3-dev
+
       - name: restore cache
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
 
-      # Doc packages in deeper-to-higher dependency order
-      - name: cargo doc piet
-        run: cargo doc --manifest-path=piet/Cargo.toml --all-features --document-private-items
-
-      - name: cargo doc piet-cairo
-        run: cargo doc --manifest-path=piet-cairo/Cargo.toml --all-features --document-private-items
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo doc piet-coregraphics
-        run: cargo doc --manifest-path=piet-coregraphics/Cargo.toml --all-features --document-private-items
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo doc piet-direct2d
-        run: cargo doc --manifest-path=piet-direct2d/Cargo.toml --all-features --document-private-items
+      # We test documentation using nightly to match docs.rs.
+      - name: cargo doc (windows)
+        run: cargo doc --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
         if: contains(matrix.os, 'windows')
 
-      - name: cargo doc piet-svg
-        run: cargo doc --manifest-path=piet-svg/Cargo.toml --all-features --document-private-items
+      - name: cargo doc (macos)
+        run: cargo doc --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
+        if: contains(matrix.os, 'macos')
 
-      - name: cargo doc piet-common
-        run: cargo doc --manifest-path=piet-common/Cargo.toml --features=png --document-private-items
+      - name: cargo doc (ubuntu)
+        run: cargo doc --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
+        if: contains(matrix.os, 'ubuntu')
 
-      - name: cargo doc piet-web
-        run: cargo doc --manifest-path=piet-web/Cargo.toml --all-features --document-private-items --target wasm32-unknown-unknown
+      - name: cargo doc (wasm32)
+        run: cargo doc --workspace ${{ env.NO_WASM_PKGS }} --locked --all-features --no-deps --document-private-items --target wasm32-unknown-unknown
+        env:
+          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
+        if: contains(matrix.os, 'ubuntu')
 
-  # If this fails, consider changing your text or adding something to .typos.toml
+  # If this fails, consider changing your text or adding something to .typos.toml.
   typos:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: check typos
-        uses: crate-ci/typos@v1.26.0
+        uses: crate-ci/typos@v1.27.0
 
   compare-snapshots:
+    name: compare snapshots
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
-    name: compare snapshots
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
             submodules: 'true'
 
-      - name: install additional linux dependencies
-        run: |
-          sudo apt update
-          sudo apt install libgtk-3-dev
-        if: contains(matrix.os, 'ubuntu')
+      - name: install native dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update; sudo apt-get install libgtk-3-dev
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_STABLE_VER }}
-          components: clippy
 
       - name: restore cache
         uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.event_name != 'merge_group' }}
 
-      # The user of always() allows for multiple scale factor steps to always run even if one of them fails.
+      # The use of always() allows for multiple scale factor steps to always run even if one of them fails.
 
       - name: generate and compare (1.00) (ubuntu+cairo)
         run: cargo run --manifest-path=piet-cairo/Cargo.toml --example=test-picture -- --all --scale=1 --out=cairo_samples --compare=./piet/snapshots/cairo

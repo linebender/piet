@@ -28,12 +28,13 @@
 //! [image]: https://crates.io/crates/image
 //! [piet-cairo]: https://crates.io/crates/piet-cairo
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
 pub use piet::*;
 
 cfg_if::cfg_if! {
-     if #[cfg(any(feature = "web", target_arch = "wasm32"))] {
+     if #[cfg(target_arch = "wasm32")] {
         #[path = "web_back.rs"]
         mod backend;
     } else if #[cfg(any(target_os = "linux", target_os = "openbsd", target_os = "freebsd", target_os = "netbsd"))] {

@@ -1,8 +1,6 @@
 target/
 **/*.rs.bk
-Cargo.lock
 .DS_Store
-.cargo
 *.png
 
 ## Intellij Idea project configuration files
