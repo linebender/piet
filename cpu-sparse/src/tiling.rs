@@ -201,7 +201,7 @@ pub fn make_tiles(lines: &[FlatLine], tile_buf: &mut Vec<Tile>) {
             let signx = (s1.x - s0.x).signum();
             let recip_dy = 1.0 / (s1.y - s0.y);
             let signy = (s1.y - s0.y).signum();
-            // t parameter for next intesection with a vertical grid line
+            // t parameter for next intersection with a vertical grid line
             let mut t_clipx = (x - s0.x) * recip_dx;
             let xclip = if signx > 0.0 {
                 t_clipx += recip_dx;
@@ -209,7 +209,7 @@ pub fn make_tiles(lines: &[FlatLine], tile_buf: &mut Vec<Tile>) {
             } else {
                 0
             };
-            // t parameter for next intesection with a horizontal grid line
+            // t parameter for next intersection with a horizontal grid line
             let mut t_clipy = (y - s0.y) * recip_dy;
             let yclip = if signy > 0.0 {
                 t_clipy += recip_dy;
