@@ -12,14 +12,14 @@ env:
   # List of packages that will be checked with the minimum supported Rust version.
   # This should be limited to packages that are intended for publishing.
   RUST_MIN_VER_PKGS: "-p piet -p piet-common -p piet-cairo -p piet-coregraphics -p piet-direct2d -p piet-svg -p piet-web"
-  # List of packages that can not target Wasm.
-  NO_WASM_PKGS: "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-direct2d --exclude piet-svg"
-  # List of packages that can not target Windows.
-  NO_WINDOWS_PKGS: "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-web --exclude piet-web-example"
-  # List of packages that can not target macOS.
-  NO_MACOS_PKGS: "--exclude piet-cairo --exclude piet-direct2d --exclude piet-web --exclude piet-web-example"
-  # List of packages that can not target Ubuntu.
-  NO_UBUNTU_PKGS: "--exclude piet-coregraphics --exclude piet-direct2d --exclude piet-web --exclude piet-web-example"
+  # List of packages that can not target a specific platform.
+  EXCLUDE_PKGS: |
+    {
+      "Windows": "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-web --exclude piet-web-example",
+      "macOS":   "--exclude piet-cairo --exclude piet-direct2d --exclude piet-web --exclude piet-web-example",
+      "Linux":   "--exclude piet-coregraphics --exclude piet-direct2d --exclude piet-web --exclude piet-web-example",
+      "Wasm":    "--exclude piet-cairo --exclude piet-coregraphics --exclude piet-direct2d --exclude piet-svg"
+    }
 
 
 # Rationale
@@ -118,29 +118,11 @@ jobs:
         with:
           save-if: ${{ github.event_name != 'merge_group' }}
 
-      - name: cargo clippy (windows)
-        run: cargo hack clippy --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --optional-deps --each-feature -- -D warnings
-        if: contains(matrix.os, 'windows')
+      - name: cargo clippy
+        run: cargo hack clippy --workspace ${{ fromJson(env.EXCLUDE_PKGS)[runner.os] }} --locked --optional-deps --each-feature -- -D warnings
 
-      - name: cargo clippy (auxiliary) (windows)
-        run: cargo hack clippy --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --optional-deps --each-feature --tests --benches --examples -- -D warnings
-        if: contains(matrix.os, 'windows')
-
-      - name: cargo clippy (macos)
-        run: cargo hack clippy --workspace ${{ env.NO_MACOS_PKGS }} --locked --optional-deps --each-feature -- -D warnings
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo clippy (auxiliary) (macos)
-        run: cargo hack clippy --workspace ${{ env.NO_MACOS_PKGS }} --locked --optional-deps --each-feature --tests --benches --examples -- -D warnings
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo clippy (ubuntu)
-        run: cargo hack clippy --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --optional-deps --each-feature -- -D warnings
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo clippy (auxiliary) (ubuntu)
-        run: cargo hack clippy --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --optional-deps --each-feature --tests --benches --examples -- -D warnings
-        if: contains(matrix.os, 'ubuntu')
+      - name: cargo clippy (auxiliary)
+        run: cargo hack clippy --workspace ${{ fromJson(env.EXCLUDE_PKGS)[runner.os] }} --locked --optional-deps --each-feature --tests --benches --examples -- -D warnings
 
   clippy-stable-wasm:
     name: cargo clippy (wasm32)
@@ -168,10 +150,10 @@ jobs:
           save-if: ${{ github.event_name != 'merge_group' }}
 
       - name: cargo clippy
-        run: cargo hack clippy --workspace ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature -- -D warnings
+        run: cargo hack clippy --workspace ${{ fromJson(env.EXCLUDE_PKGS)['Wasm'] }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature -- -D warnings
 
       - name: cargo clippy (auxiliary)
-        run: cargo hack clippy --workspace ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature --tests --benches --examples -- -D warnings
+        run: cargo hack clippy --workspace ${{ fromJson(env.EXCLUDE_PKGS)['Wasm'] }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature --tests --benches --examples -- -D warnings
 
   test-stable:
     name: cargo test
@@ -203,29 +185,11 @@ jobs:
         with:
           save-if: ${{ github.event_name != 'merge_group' }}
 
-      - name: cargo nextest (windows)
-        run: cargo nextest run --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-fail-fast
-        if: contains(matrix.os, 'windows')
+      - name: cargo nextest
+        run: cargo nextest run --workspace ${{ fromJson(env.EXCLUDE_PKGS)[runner.os] }} --locked --all-features --no-fail-fast
 
-      - name: cargo nextest (macos)
-        run: cargo nextest run --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-fail-fast
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo nextest (ubuntu)
-        run: cargo nextest run --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-fail-fast
-        if: contains(matrix.os, 'ubuntu')
-
-      - name: cargo test --doc (windows)
-        run: cargo test --doc --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-fail-fast
-        if: contains(matrix.os, 'windows')
-
-      - name: cargo test --doc (macos)
-        run: cargo test --doc --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-fail-fast
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo test --doc (ubuntu)
-        run: cargo test --doc --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-fail-fast
-        if: contains(matrix.os, 'ubuntu')
+      - name: cargo test --doc
+        run: cargo test --doc --workspace ${{ fromJson(env.EXCLUDE_PKGS)[runner.os] }} --locked --all-features --no-fail-fast
 
   test-stable-wasm:
     name: cargo test (wasm32)
@@ -251,7 +215,7 @@ jobs:
 
       # TODO: Find a way to make tests work. Until then the tests are merely compiled.
       - name: cargo test compile
-        run: cargo test --workspace ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --all-features --no-run
+        run: cargo test --workspace ${{ fromJson(env.EXCLUDE_PKGS)['Wasm'] }} --locked --target wasm32-unknown-unknown --all-features --no-run
 
       - name: test chrome
         run: wasm-pack test --headless --chrome piet-common
@@ -289,17 +253,8 @@ jobs:
         with:
           save-if: ${{ github.event_name != 'merge_group' }}
 
-      - name: cargo check (windows)
-        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_WINDOWS_PKGS }} --locked --optional-deps --each-feature
-        if: contains(matrix.os, 'windows')
-
-      - name: cargo check (macos)
-        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_MACOS_PKGS }} --locked --optional-deps --each-feature
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo check (ubuntu)
-        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_UBUNTU_PKGS }} --locked --optional-deps --each-feature
-        if: contains(matrix.os, 'ubuntu')
+      - name: cargo check
+        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ fromJson(env.EXCLUDE_PKGS)[runner.os] }} --locked --optional-deps --each-feature
 
   check-msrv-wasm:
     name: cargo check (msrv) (wasm32)
@@ -326,7 +281,7 @@ jobs:
           save-if: ${{ github.event_name != 'merge_group' }}
 
       - name: cargo check
-        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ env.NO_WASM_PKGS }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature
+        run: cargo hack check ${{ env.RUST_MIN_VER_PKGS }} ${{ fromJson(env.EXCLUDE_PKGS)['Wasm'] }} --locked --target wasm32-unknown-unknown --optional-deps --each-feature
 
   doc:
     name: cargo doc
@@ -354,26 +309,13 @@ jobs:
           save-if: ${{ github.event_name != 'merge_group' }}
 
       # We test documentation using nightly to match docs.rs.
-      - name: cargo doc (windows)
-        run: cargo doc --workspace ${{ env.NO_WINDOWS_PKGS }} --locked --all-features --no-deps --document-private-items
+      - name: cargo doc
+        run: cargo doc --workspace ${{ fromJson(env.EXCLUDE_PKGS)[runner.os] }} --locked --all-features --no-deps --document-private-items
         env:
           RUSTDOCFLAGS: '--cfg docsrs -D warnings'
-        if: contains(matrix.os, 'windows')
-
-      - name: cargo doc (macos)
-        run: cargo doc --workspace ${{ env.NO_MACOS_PKGS }} --locked --all-features --no-deps --document-private-items
-        env:
-          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
-        if: contains(matrix.os, 'macos')
-
-      - name: cargo doc (ubuntu)
-        run: cargo doc --workspace ${{ env.NO_UBUNTU_PKGS }} --locked --all-features --no-deps --document-private-items
-        env:
-          RUSTDOCFLAGS: '--cfg docsrs -D warnings'
-        if: contains(matrix.os, 'ubuntu')
 
       - name: cargo doc (wasm32)
-        run: cargo doc --workspace ${{ env.NO_WASM_PKGS }} --locked --all-features --no-deps --document-private-items --target wasm32-unknown-unknown
+        run: cargo doc --workspace ${{ fromJson(env.EXCLUDE_PKGS)['Wasm'] }} --locked --all-features --no-deps --document-private-items --target wasm32-unknown-unknown
         env:
           RUSTDOCFLAGS: '--cfg docsrs -D warnings'
         if: contains(matrix.os, 'ubuntu')
