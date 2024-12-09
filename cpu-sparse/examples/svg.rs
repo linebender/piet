@@ -27,7 +27,7 @@ pub fn main() {
     for i in 0..200 {
         ctx.reset();
         let start = std::time::Instant::now();
-        render_svg(&mut ctx, &parsed.items, 1.0);
+        render_svg(&mut ctx, &parsed.items);
         let coarse_time = start.elapsed();
         ctx.render_to_pixmap(&mut pixmap);
         if i % 100 == 0 {
@@ -46,7 +46,7 @@ pub fn main() {
     writer.write_image_data(pixmap.data()).unwrap();
 }
 
-fn render_svg(ctx: &mut impl RenderCtx, items: &[Item], scale: f64) {
+fn render_svg(ctx: &mut impl RenderCtx, items: &[Item]) {
     for item in items {
         match item {
             Item::Fill(fill_item) => ctx.fill(&fill_item.path, fill_item.color.into()),
@@ -54,7 +54,10 @@ fn render_svg(ctx: &mut impl RenderCtx, items: &[Item], scale: f64) {
                 let style = Stroke::new(stroke_item.width);
                 ctx.stroke(&stroke_item.path, &style, stroke_item.color.into());
             }
-            Item::Group(group_item) => render_svg(ctx, &group_item.children, scale),
+            Item::Group(group_item) => {
+                // TODO: apply transform from group
+                render_svg(ctx, &group_item.children);
+            }
         }
     }
 }
