@@ -83,7 +83,7 @@ pub trait RenderCtx {
 
     /// Start a glyph drawing operation
     ///
-    /// The glyph drawing operation ends with [`end_draw_glyphs`]
+    /// The glyph drawing operation ends with [`RenderCtx::end_draw_glyphs`]
     fn begin_draw_glyphs(&mut self, font: &Font);
 
     // Following methods are borrowed from Vello's DrawGlyph

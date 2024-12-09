@@ -22,6 +22,9 @@ pub(crate) struct Fine<'a> {
     /// *must* be false if runtime detection fails, otherwise we have safety
     /// problems. This is important for x86_64, as we'll be targeting Haswell
     /// as the minimum.
+    #[allow(unused)]
+    // The allow(unused) lint exception is because some platforms may not have
+    // a SIMD implementation, and thus won't check the field.
     pub(crate) use_simd: bool,
 }
 
