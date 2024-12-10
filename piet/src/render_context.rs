@@ -318,6 +318,10 @@ where
 
     /// Returns the transformations currently applied to the context.
     fn current_transform(&self) -> Affine;
+
+    /// Returns a blurred copy of the provided image.
+    fn blur_image(&mut self, _image: &Self::Image, _blur_radius: f64)
+        -> Result<Self::Image, Error>;
 }
 
 /// A trait for various types that can be used as brushes.
