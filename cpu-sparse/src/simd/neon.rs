@@ -4,6 +4,7 @@
 //! SIMD speedups for Neon
 
 use core::arch::aarch64::*;
+use std::arch::asm;
 
 use crate::{
     fine::Fine,
@@ -13,6 +14,7 @@ use crate::{
 };
 
 impl<'a> Fine<'a> {
+    #[inline(never)]
     pub unsafe fn clear_simd(&mut self, color: [f32; 4]) {
         let v_color = vld1q_f32(color.as_ptr());
         let v_color_4 = float32x4x4_t(v_color, v_color, v_color, v_color);
@@ -21,6 +23,7 @@ impl<'a> Fine<'a> {
         }
     }
 
+    #[inline(never)]
     pub fn pack_simd(&mut self, x: usize, y: usize) {
         unsafe fn cvt(v: float32x4_t) -> uint8x16_t {
             let clamped = vminq_f32(vmaxq_f32(v, vdupq_n_f32(0.0)), vdupq_n_f32(1.0));
@@ -63,6 +66,8 @@ impl<'a> Fine<'a> {
         }
     }
 
+    #[inline(never)]
+    #[allow(unused)]
     pub unsafe fn fill_simd(&mut self, x: usize, width: usize, color: [f32; 4]) {
         let v_color = vld1q_f32(color.as_ptr());
         let alpha = color[3];
@@ -85,6 +90,28 @@ impl<'a> Fine<'a> {
         }
     }
 
+    // This one only does opaque fills, it was something of a test.
+    #[inline(never)]
+    pub unsafe fn fill_simd_asm(&mut self, x: usize, width: usize, color: [f32; 4]) {
+        let v_color = vld1q_f32(color.as_ptr());
+        asm!(
+            "add x9, x9, x1, lsl #6",
+            "mov.16b v1, v0",
+            "mov.16b v2, v0",
+            "mov.16b v3, v0",
+            "2:",
+            "st1.4s {{ v0, v1, v2, v3 }}, [x9], #64",
+            "subs x2, x2, #1",
+            "b.ne 2b",
+            in("x1") x,
+            inout("x2") width => _,
+            inout("x9") &mut self.scratch => _,
+            in("q0") v_color,
+            options(nostack),
+        )
+    }
+
+    #[inline(never)]
     pub unsafe fn strip_simd(&mut self, x: usize, width: usize, alphas: &[u32], color: [f32; 4]) {
         debug_assert!(alphas.len() >= width);
         let v_color = vmulq_f32(vld1q_f32(color.as_ptr()), vdupq_n_f32(1.0 / 255.0));
