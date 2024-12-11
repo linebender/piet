@@ -10,7 +10,7 @@ members = [
     "piet-web",
     "piet-web/examples/basic",
     "piet-svg"
-]
+, "piet-next", "cpu-sparse"]
 
 default-members = [
     "piet",
