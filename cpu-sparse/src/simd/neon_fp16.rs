@@ -8,13 +8,10 @@ use std::arch::asm;
 
 use crate::{
     fine::Fine,
-    strip::{Strip, Tile},
-    tiling::Vec2,
     wide_tile::{STRIP_HEIGHT, WIDE_TILE_WIDTH},
 };
 
 impl<'a> Fine<'a> {
-    #[inline(never)]
     pub unsafe fn clear_simd_f16(&mut self, color: [f32; 4]) {
         let v_color = vld1q_f32(color.as_ptr());
         asm!(
@@ -35,7 +32,6 @@ impl<'a> Fine<'a> {
     }
 
     // only opaque fills
-    #[inline(never)]
     pub unsafe fn fill_simd_f16(&mut self, x: usize, width: usize, color: [f32; 4]) {
         let v_color = vld1q_f32(color.as_ptr());
         asm!(
@@ -73,36 +69,20 @@ impl<'a> Fine<'a> {
             "2:",
             "ld4.2d {{ v4, v5, v6, v7 }}, [x4], #64",
             "ld4.2d {{ v8, v9, v10, v11 }}, [x4], #64",
-            "fmax.8h v4, v4, v0",
-            "fmin.8h v4, v4, v1",
             "fmul.8h v4, v4, v2",
             "fcvtnu.8h v4, v4",
-            "fmax.8h v5, v5, v0",
-            "fmin.8h v5, v5, v1",
             "fmul.8h v5, v5, v2",
             "fcvtnu.8h v5, v5",
-            "fmax.8h v6, v6, v0",
-            "fmin.8h v6, v6, v1",
             "fmul.8h v6, v6, v2",
             "fcvtnu.8h v6, v6",
-            "fmax.8h v7, v7, v0",
-            "fmin.8h v7, v7, v1",
             "fmul.8h v7, v7, v2",
             "fcvtnu.8h v7, v7",
-            "fmax.8h v8, v8, v0",
-            "fmin.8h v8, v8, v1",
             "fmul.8h v8, v8, v2",
             "fcvtnu.8h v8, v8",
-            "fmax.8h v9, v9, v0",
-            "fmin.8h v9, v9, v1",
             "fmul.8h v9, v9, v2",
             "fcvtnu.8h v9, v9",
-            "fmax.8h v10, v10, v0",
-            "fmin.8h v10, v10, v1",
             "fmul.8h v10, v10, v2",
             "fcvtnu.8h v10, v10",
-            "fmax.8h v11, v11, v0",
-            "fmin.8h v11, v11, v1",
             "fmul.8h v11, v11, v2",
             "fcvtnu.8h v11, v11",
             "uzp1.16b v4, v4, v8",
@@ -124,7 +104,6 @@ impl<'a> Fine<'a> {
         )
     }
 
-    #[inline(never)]
     pub unsafe fn strip_simd_f16(&mut self, x: usize, width: usize, alphas: &[u32], color: [f32; 4]) {
         let v_color = vmulq_f32(vld1q_f32(color.as_ptr()), vdupq_n_f32(1.0 / 255.0));
         const PERM: [u8; 16] = [0, 16, 0, 16, 1, 16, 1, 16,

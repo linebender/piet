@@ -14,13 +14,16 @@ mod neon;
 #[cfg(all(target_arch = "aarch64", target_feature = "fp16"))]
 mod neon_fp16;
 
+#[cfg(target_arch = "aarch64")]
+mod neon_u8;
+
 // This block is when we have SIMD
 #[cfg(target_arch = "aarch64")]
 impl<'a> Fine<'a> {
     pub(crate) fn pack(&mut self, x: usize, y: usize) {
         if self.use_simd {
             unsafe {
-                self.pack_simd_f16(x, y);
+                self.pack_simd_u8(x, y);
             }
         } else {
             self.pack_scalar(x, y);
@@ -30,7 +33,7 @@ impl<'a> Fine<'a> {
     pub(crate) fn clear(&mut self, color: [f32; 4]) {
         if self.use_simd {
             unsafe {
-                self.clear_simd_f16(color);
+                self.clear_simd_u8(color);
             }
         } else {
             self.clear_scalar(color);
@@ -40,7 +43,7 @@ impl<'a> Fine<'a> {
     pub(crate) fn fill(&mut self, x: usize, width: usize, color: [f32; 4]) {
         if self.use_simd {
             unsafe {
-                self.fill_simd_f16(x, width, color);
+                self.fill_simd_u8(x, width, color);
             }
         } else {
             self.fill_scalar(x, width, color);
@@ -50,7 +53,7 @@ impl<'a> Fine<'a> {
     pub(crate) fn strip(&mut self, x: usize, width: usize, alphas: &[u32], color: [f32; 4]) {
         if self.use_simd {
             unsafe {
-                self.strip_simd_f16(x, width, alphas, color);
+                self.strip_simd_u8(x, width, alphas, color);
             }
         } else {
             self.strip_scalar(x, width, alphas, color);
