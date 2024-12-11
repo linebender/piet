@@ -44,11 +44,11 @@ impl<'a> Fine<'a> {
 
     pub(crate) fn strip(&mut self, x: usize, width: usize, alphas: &[u32], color: [f32; 4]) {
         if self.use_simd {
-            self.strip_scalar(x, width, alphas, color);
-        } else {
             unsafe {
                 self.strip_simd(x, width, alphas, color);
             }
+        } else {
+            self.strip_scalar(x, width, alphas, color);
         }
     }
 }

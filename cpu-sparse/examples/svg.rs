@@ -24,7 +24,7 @@ pub fn main() {
     let parsed = PicoSvg::load(&svg, 1.0).expect("error parsing SVG");
     let mut pixmap = Pixmap::new(WIDTH, HEIGHT);
     // Hacky code for crude measurements; change this to arg parsing
-    for i in 0..200 {
+    for i in 0..1000 {
         ctx.reset();
         let start = std::time::Instant::now();
         render_svg(&mut ctx, &parsed.items);
