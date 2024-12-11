@@ -57,7 +57,7 @@ impl<'a> Fine<'a> {
             for i in 0..WIDE_TILE_WIDTH {
                 let mut rgba_f32 = [0.0; 4];
                 rgba_f32.copy_from_slice(&self.scratch[(i * STRIP_HEIGHT + j) * 4..][..4]);
-                let rgba_u8 = rgba_f32.map(|x| (x.clamp(0., 1.) * 255.0).round() as u8);
+                let rgba_u8 = rgba_f32.map(|x| (x * 255.0).round() as u8);
                 self.out_buf[line_ix + i * 4..][..4].copy_from_slice(&rgba_u8);
             }
         }

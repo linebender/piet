@@ -23,7 +23,7 @@ impl<'a> Fine<'a> {
 
     pub fn pack_simd(&mut self, x: usize, y: usize) {
         unsafe fn cvt(v: float32x4_t) -> uint8x16_t {
-            let clamped = vminq_f32(vmaxq_f32(v, vdupq_n_f32(0.0)), vdupq_n_f32(1.0));
+            let clamped = vminq_f32(v, vdupq_n_f32(1.0));
             let scaled = vmulq_f32(clamped, vdupq_n_f32(255.0));
             vreinterpretq_u8_u32(vcvtnq_u32_f32(scaled))
         }
