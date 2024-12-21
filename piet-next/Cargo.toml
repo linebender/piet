@@ -9,4 +9,4 @@ keywords = ["graphics", "2d"]
 categories = ["graphics"]
 
 [dependencies]
-peniko = { git = "https://github.com/linebender/peniko", rev = "aeded39" }
+peniko = "0.3.0"
