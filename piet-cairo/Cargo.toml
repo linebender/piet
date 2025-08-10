@@ -19,9 +19,9 @@ targets = []
 [dependencies]
 piet = { workspace = true }
 
-cairo-rs = { version = "0.20.1", default-features = false } # We don't need glib
-pango = { version = "0.20.4", features = ["v1_44"] }
-pangocairo = "0.20.4"
+cairo-rs = { version = "0.21.1", default-features = false } # We don't need glib
+pango = { version = "0.21.1", features = ["v1_44"] }
+pangocairo = "0.21.1"
 unicode-segmentation = "1.12.0"
 xi-unicode = "0.3.0"
 
