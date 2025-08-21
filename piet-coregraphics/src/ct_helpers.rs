@@ -394,7 +394,7 @@ pub(crate) fn make_font(desc: &CTFontDescriptor, pt_size: f64, affine: Affine) -
 }
 
 #[link(name = "CoreText", kind = "framework")]
-extern "C" {
+unsafe extern "C" {
     static kCTFontFamilyNameKey: CFStringRef;
 
     pub static kCTFontVariationAxisIdentifierKey: CFStringRef;

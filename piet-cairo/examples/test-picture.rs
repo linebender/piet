@@ -75,5 +75,5 @@ fn get_version_from_apt(package: &str) -> Option<String> {
     output
         .lines()
         .find(|s| s.trim().starts_with("Version"))
-        .and_then(|line| line.split(':').last().map(|s| s.trim().to_owned()))
+        .and_then(|line| line.split(':').next_back().map(|s| s.trim().to_owned()))
 }

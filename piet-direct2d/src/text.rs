@@ -221,7 +221,8 @@ impl TextLayoutBuilder for D2DTextLayoutBuilder {
     }
 
     fn build(self) -> Result<Self::Out, Error> {
-        let (default_line_height, default_baseline) = self.get_default_line_height_and_baseline();
+        let (default_line_height, default_baseline) =
+            self.get_default_line_height_and_baseline()?;
         let layout = self.layout?;
 
         let mut layout = D2DTextLayout {
@@ -288,7 +289,7 @@ impl D2DTextLayoutBuilder {
         }
     }
 
-    fn get_default_line_height_and_baseline(&self) -> (f64, f64) {
+    fn get_default_line_height_and_baseline(&self) -> Result<(f64, f64), Error> {
         let family_name = resolve_family_name(&self.default_font);
         let is_custom = self
             .loaded_fonts
@@ -297,22 +298,25 @@ impl D2DTextLayoutBuilder {
             .contains(&self.default_font);
         let family = if is_custom {
             let mut loaded = self.loaded_fonts.inner.borrow_mut();
-            loaded.collection().get_font_family_by_name(family_name)
+            loaded.collection().font_family_by_name(family_name)
         } else {
-            FontCollection::system().get_font_family_by_name(family_name)
+            FontCollection::system().font_family_by_name(family_name)
         };
 
         let family = match family {
-            Some(family) => family,
+            Ok(Some(family)) => family,
             // absolute fallback; use font size as line height
-            None => return (self.default_font_size, self.default_font_size * 0.8),
+            Ok(None) => return Ok((self.default_font_size, self.default_font_size * 0.8)),
+            Err(_) => return Err(Error::FontLoadingFailed),
         };
 
-        let font = family.get_first_matching_font(
-            dwrote::FontWeight::Regular,
-            dwrote::FontStretch::Normal,
-            dwrote::FontStyle::Normal,
-        );
+        let font = family
+            .first_matching_font(
+                dwrote::FontWeight::Regular,
+                dwrote::FontStretch::Normal,
+                dwrote::FontStyle::Normal,
+            )
+            .map_err(|_| Error::FontLoadingFailed)?;
         let metrics = font.metrics().metrics0();
         let ascent = metrics.ascent as f64;
         let vert_metrics = ascent + metrics.descent as f64 + metrics.lineGap as f64;
@@ -322,7 +326,7 @@ impl D2DTextLayoutBuilder {
         let line_height = self.default_font_size * vert_fraction;
         let baseline = self.default_font_size * ascent_fraction;
 
-        (line_height, baseline)
+        Ok((line_height, baseline))
     }
 }
 
@@ -494,10 +498,17 @@ impl LoadedFontsInner {
         let mut families = collection.families_iter();
         let first_fam_name = families
             .next()
-            .map(|f| f.name())
+            .and_then(|f| f.family_name().ok())
             .ok_or(Error::FontLoadingFailed)?;
         // just being defensive:
-        if families.any(|f| f.name() != first_fam_name) {
+        let remaining_family_names = families
+            .map(|f| f.family_name())
+            .collect::<Result<Vec<String>, i32>>()
+            .map_err(|_| Error::FontLoadingFailed)?;
+        if remaining_family_names
+            .into_iter()
+            .any(|n| n != first_fam_name)
+        {
             eprintln!("loaded font contains multiple family names");
         }
 

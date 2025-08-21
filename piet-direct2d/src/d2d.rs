@@ -213,7 +213,7 @@ where
     T: Interface,
 {
     if SUCCEEDED(hr) {
-        Ok(f(ComPtr::from_raw(ptr)))
+        Ok(f(unsafe { ComPtr::from_raw(ptr) }))
     } else {
         Err(hr.into())
     }
@@ -266,8 +266,10 @@ impl D2DFactory {
     /// TODO
     pub unsafe fn create_device(&self, dxgi_device: *mut IDXGIDevice) -> Result<D2DDevice, Error> {
         let mut ptr = null_mut();
-        let hr = self.0.CreateDevice(dxgi_device, &mut ptr);
-        wrap(hr, ptr, D2DDevice)
+        unsafe {
+            let hr = self.0.CreateDevice(dxgi_device, &mut ptr);
+            wrap(hr, ptr, D2DDevice)
+        }
     }
 
     /// Get the raw pointer
@@ -418,15 +420,17 @@ impl DeviceContext {
             bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET,
             colorContext: null_mut(),
         };
-        let hr = self
-            .0
-            .CreateBitmapFromDxgiSurface(dxgi.as_raw(), &props, &mut ptr);
-        wrap(hr, ptr, |ptr| Bitmap {
-            inner: ptr,
-            // I'm pretty sure an empty dxgi surface will be invalid, so we can be sure the image
-            // is not empty.
-            empty_image: false,
-        })
+        unsafe {
+            let hr = self
+                .0
+                .CreateBitmapFromDxgiSurface(dxgi.as_raw(), &props, &mut ptr);
+            wrap(hr, ptr, |ptr| Bitmap {
+                inner: ptr,
+                // I'm pretty sure an empty dxgi surface will be invalid, so we can be sure the image
+                // is not empty.
+                empty_image: false,
+            })
+        }
     }
 
     /// Set the target for the device context.

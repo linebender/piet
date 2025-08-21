@@ -122,7 +122,7 @@ where
     T: Interface,
 {
     if SUCCEEDED(hr) {
-        Ok(f(ComPtr::from_raw(ptr)))
+        Ok(f(unsafe { ComPtr::from_raw(ptr) }))
     } else {
         Err(hr.into())
     }
@@ -158,7 +158,7 @@ impl DwriteFactory {
     /// # Safety
     /// TODO
     pub unsafe fn from_raw(raw: *mut IDWriteFactory) -> Self {
-        Self(ComPtr::from_raw(raw))
+        Self(unsafe { ComPtr::from_raw(raw) })
     }
 }
 

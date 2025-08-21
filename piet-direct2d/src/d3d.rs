@@ -72,7 +72,7 @@ where
     T: Interface,
 {
     if SUCCEEDED(hr) {
-        Ok(f(ComPtr::from_raw(ptr)))
+        Ok(f(unsafe { ComPtr::from_raw(ptr) }))
     } else {
         Err(Error(hr))
     }
