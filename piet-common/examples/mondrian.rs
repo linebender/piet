@@ -5,9 +5,9 @@
 //! Piet Mondrian's squares.
 // TODO: Remove all the wasm32 cfg guards once this compiles with piet-web
 
-use piet::{kurbo::Rect, Color, RenderContext};
-use piet_common::kurbo::{Point, Size};
+use piet::{Color, RenderContext, kurbo::Rect};
 use piet_common::Device;
+use piet_common::kurbo::{Point, Size};
 use rand::{prelude::*, random};
 use rand_distr::Normal;
 
@@ -91,8 +91,8 @@ impl Mondrian {
         // Split the rectangle `split_count` times.
         for _ in 0..self.split_count {
             let coord = Point {
-                x: rng.gen::<f64>() * size.width,
-                y: rng.gen::<f64>() * size.height,
+                x: rng.r#gen::<f64>() * size.width,
+                y: rng.r#gen::<f64>() * size.height,
             };
 
             rects = rects

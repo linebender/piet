@@ -25,9 +25,9 @@ use piet::{
     TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
 };
 
+use crate::D2DRenderContext;
 use crate::conv;
 use crate::dwrite::{self, TextFormat, Utf16Range};
-use crate::D2DRenderContext;
 
 #[derive(Clone)]
 pub struct D2DText {
@@ -548,9 +548,7 @@ mod test {
             }
         }};
 
-        ($val:expr, $target:expr, $tolerance:expr,) => {{
-            assert_close!($val, $target, $tolerance)
-        }};
+        ($val:expr, $target:expr, $tolerance:expr,) => {{ assert_close!($val, $target, $tolerance) }};
     }
 
     #[test]

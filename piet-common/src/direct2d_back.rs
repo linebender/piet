@@ -18,7 +18,7 @@ use piet::util;
 use piet::{ImageBuf, ImageFormat};
 use piet_direct2d::d2d::{Bitmap, Brush as D2DBrush};
 use piet_direct2d::d3d::{
-    D3D11Device, D3D11DeviceContext, D3D11Texture2D, TextureMode, DXGI_MAP_READ,
+    D3D11Device, D3D11DeviceContext, D3D11Texture2D, DXGI_MAP_READ, TextureMode,
 };
 #[doc(hidden)]
 pub use piet_direct2d::*;

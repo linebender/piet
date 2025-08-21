@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use cairo::{Context, Format, ImageSurface};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use piet::{ImageFormat, RenderContext};
 use piet_cairo::CairoRenderContext;
 use std::convert::{TryFrom, TryInto};

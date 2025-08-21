@@ -16,8 +16,8 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
-    util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder, TextStorage,
+    Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder, TextStorage, util,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -478,7 +478,7 @@ pub(crate) mod test {
     use piet::kurbo::Point;
     use piet::{Text, TextLayout, TextLayoutBuilder};
     use wasm_bindgen_test::*;
-    use web_sys::{console, window, HtmlCanvasElement};
+    use web_sys::{HtmlCanvasElement, console, window};
 
     use crate::*;
 

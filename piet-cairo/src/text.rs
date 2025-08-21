@@ -14,8 +14,8 @@ use pangocairo::FontMap;
 
 use piet::kurbo::{Point, Rect, Size, Vec2};
 use piet::{
-    util, Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text,
-    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
+    Error, FontFamily, FontStyle, HitTestPoint, HitTestPosition, LineMetric, Text, TextAlignment,
+    TextAttribute, TextLayout, TextLayoutBuilder, TextStorage, util,
 };
 
 type PangoLayout = pango::Layout;
@@ -604,9 +604,7 @@ mod test {
             }
         }};
 
-        ($val:expr, $target:expr, $tolerance:expr,) => {{
-            assert_close!($val, $target, $tolerance)
-        }};
+        ($val:expr, $target:expr, $tolerance:expr,) => {{ assert_close!($val, $target, $tolerance) }};
     }
 
     #[test]

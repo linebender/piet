@@ -28,8 +28,8 @@ use core_text::{
 
 use piet::kurbo::{Affine, Point, Rect, Size};
 use piet::{
-    util, Error, FontFamily, FontStyle, FontWeight, HitTestPoint, HitTestPosition, LineMetric,
-    Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
+    Error, FontFamily, FontStyle, FontWeight, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage, util,
 };
 
 use crate::ct_helpers::{self, AttributedString, FontCollection, Frame, Framesetter, Line};
@@ -1045,9 +1045,7 @@ mod tests {
             }
         }};
 
-        ($val:expr, $target:expr, $tolerance:expr,) => {{
-            assert_close!($val, $target, $tolerance)
-        }};
+        ($val:expr, $target:expr, $tolerance:expr,) => {{ assert_close!($val, $target, $tolerance) }};
     }
 
     #[test]
@@ -1207,9 +1205,11 @@ mod tests {
 
     #[test]
     fn missing_font_is_missing() {
-        assert!(CoreGraphicsText::new_with_unique_state()
-            .font_family("Segoe UI")
-            .is_none());
+        assert!(
+            CoreGraphicsText::new_with_unique_state()
+                .font_family("Segoe UI")
+                .is_none()
+        );
     }
 
     #[test]

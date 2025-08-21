@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use piet::{samples, RenderContext};
+use piet::{RenderContext, samples};
 use piet_common::Device;
 
 const FILE_PREFIX: &str = "d2d-test";

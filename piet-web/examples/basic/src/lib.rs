@@ -3,11 +3,11 @@
 
 //! Basic example of rendering in the browser
 
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{window, HtmlCanvasElement};
+use wasm_bindgen::prelude::*;
+use web_sys::{HtmlCanvasElement, window};
 
-use piet::{samples, RenderContext};
+use piet::{RenderContext, samples};
 use piet_web::WebRenderContext;
 
 //TODO: figure out how to dynamically select the sample?

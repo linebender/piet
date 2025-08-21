@@ -30,8 +30,8 @@ use core_graphics::{
 };
 use core_text::{
     font::{
-        self, kCTFontSystemFontType, kCTFontUserFixedPitchFontType, CTFont, CTFontRef,
-        CTFontUIFontType,
+        self, CTFont, CTFontRef, CTFontUIFontType, kCTFontSystemFontType,
+        kCTFontUserFixedPitchFontType,
     },
     font_collection::{self, CTFontCollection, CTFontCollectionRef},
     font_descriptor::{self, CTFontDescriptor, CTFontDescriptorRef},
@@ -43,7 +43,7 @@ use core_text::{
 use foreign_types::{ForeignType, ForeignTypeRef};
 
 use piet::kurbo::{Affine, Rect};
-use piet::{util, Color, FontFamily, FontFamilyInner, TextAlignment};
+use piet::{Color, FontFamily, FontFamilyInner, TextAlignment, util};
 
 #[derive(Clone)]
 pub(crate) struct AttributedString {

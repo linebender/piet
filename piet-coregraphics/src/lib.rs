@@ -14,7 +14,7 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use core_graphics::base::{
-    kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault, CGFloat,
+    CGFloat, kCGImageAlphaLast, kCGImageAlphaPremultipliedLast, kCGRenderingIntentDefault,
 };
 use core_graphics::color_space::CGColorSpace;
 use core_graphics::context::{CGContextRef, CGInterpolationQuality, CGLineCap, CGLineJoin};
@@ -743,15 +743,18 @@ mod tests {
         let mut ctx = make_context((400.0, 400.0));
         let mut piet = CoreGraphicsContext::new_y_down(&mut ctx, None);
 
-        assert!(piet
-            .capture_image_area(Rect::new(0.0, 0.0, 0.0, 0.0))
-            .is_err());
-        assert!(piet
-            .capture_image_area(Rect::new(0.0, 0.0, 500.0, 400.0))
-            .is_err());
-        assert!(piet
-            .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
-            .is_ok());
+        assert!(
+            piet.capture_image_area(Rect::new(0.0, 0.0, 0.0, 0.0))
+                .is_err()
+        );
+        assert!(
+            piet.capture_image_area(Rect::new(0.0, 0.0, 500.0, 400.0))
+                .is_err()
+        );
+        assert!(
+            piet.capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))
+                .is_ok()
+        );
 
         let copy = piet
             .capture_image_area(Rect::new(100.0, 100.0, 200.0, 200.0))

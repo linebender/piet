@@ -7,7 +7,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::process::Command;
 
-use piet::{samples, RenderContext};
+use piet::{RenderContext, samples};
 use piet_common::Device;
 
 const FILE_PREFIX: &str = "cairo-test";

@@ -6,18 +6,18 @@ use std::ptr::null_mut;
 // TODO figure out whether to export this or to move `raw_pixels` into this module.
 pub use winapi::shared::dxgi::DXGI_MAP_READ;
 
+use winapi::Interface;
 use winapi::shared::dxgi::{IDXGIDevice, IDXGISurface};
 use winapi::shared::dxgiformat::DXGI_FORMAT_R8G8B8A8_UNORM;
 use winapi::shared::dxgitype::DXGI_SAMPLE_DESC;
 use winapi::shared::winerror::{HRESULT, SUCCEEDED};
 use winapi::um::d3d11::{
-    D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D, D3D11_BIND_FLAG,
-    D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_FLAG,
+    D3D11_BIND_FLAG, D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_FLAG,
     D3D11_CPU_ACCESS_READ, D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_SDK_VERSION,
-    D3D11_TEXTURE2D_DESC, D3D11_USAGE, D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING,
+    D3D11_TEXTURE2D_DESC, D3D11_USAGE, D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING, D3D11CreateDevice,
+    ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
 };
 use winapi::um::d3dcommon::D3D_DRIVER_TYPE_HARDWARE;
-use winapi::Interface;
 
 use wio::com::ComPtr;
 

@@ -14,22 +14,22 @@ use std::ptr::null_mut;
 use std::sync::Arc;
 
 use dwrote::FontCollection as DWFontCollection;
+use winapi::Interface;
 use winapi::shared::minwindef::{FALSE, TRUE};
 use winapi::shared::ntdef::LOCALE_NAME_MAX_LENGTH;
-use winapi::shared::winerror::{HRESULT, SUCCEEDED, S_OK};
+use winapi::shared::winerror::{HRESULT, S_OK, SUCCEEDED};
 use winapi::um::dwrite::{
-    DWriteCreateFactory, IDWriteFactory, IDWriteFontCollection, IDWriteFontFamily,
-    IDWriteLocalizedStrings, IDWriteTextFormat, IDWriteTextLayout, DWRITE_FACTORY_TYPE_SHARED,
-    DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE, DWRITE_FONT_STYLE_ITALIC,
-    DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_FONT_WEIGHT_NORMAL,
-    DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS, DWRITE_OVERHANG_METRICS,
-    DWRITE_READING_DIRECTION_RIGHT_TO_LEFT, DWRITE_TEXT_ALIGNMENT_CENTER,
+    DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE,
+    DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT,
+    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_HIT_TEST_METRICS, DWRITE_LINE_METRICS,
+    DWRITE_OVERHANG_METRICS, DWRITE_READING_DIRECTION_RIGHT_TO_LEFT, DWRITE_TEXT_ALIGNMENT_CENTER,
     DWRITE_TEXT_ALIGNMENT_JUSTIFIED, DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_TEXT_ALIGNMENT_TRAILING,
-    DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
+    DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE, DWriteCreateFactory, IDWriteFactory,
+    IDWriteFontCollection, IDWriteFontFamily, IDWriteLocalizedStrings, IDWriteTextFormat,
+    IDWriteTextLayout,
 };
 use winapi::um::unknwnbase::IUnknown;
 use winapi::um::winnls::GetUserDefaultLocaleName;
-use winapi::Interface;
 
 use wio::com::ComPtr;
 use wio::wide::{FromWide, ToWide};

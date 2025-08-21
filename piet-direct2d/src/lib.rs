@@ -34,8 +34,8 @@ use piet::{
     StrokeStyle,
 };
 
-use crate::d2d::{wrap_unit, Layer};
 pub use crate::d2d::{D2DDevice, D2DFactory, DeviceContext as D2DDeviceContext};
+use crate::d2d::{Layer, wrap_unit};
 pub use crate::dwrite::DwriteFactory;
 pub use crate::text::{D2DLoadedFonts, D2DText, D2DTextLayout, D2DTextLayoutBuilder};
 

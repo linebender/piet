@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 use crate::dwrite;
-use piet::{util, LineMetric};
+use piet::{LineMetric, util};
 
 pub(crate) fn fetch_line_metrics(text: &str, layout: &dwrite::TextLayout) -> Vec<LineMetric> {
     let mut raw_line_metrics = Vec::new();

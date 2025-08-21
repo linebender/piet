@@ -5,7 +5,7 @@
 
 use std::io;
 
-use piet::{samples, RenderContext};
+use piet::{RenderContext, samples};
 
 fn main() {
     let test_picture_number = std::env::args()

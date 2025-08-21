@@ -9,7 +9,7 @@
 //! [`evcxr`]: https://github.com/google/evcxr
 //! [Jupyter Notebook]: https://jupyter-notebook.readthedocs.io/en/stable/notebook.html
 
-use piet::{kurbo::Size, RenderContext};
+use piet::{RenderContext, kurbo::Size};
 
 impl evcxr_runtime::Display for crate::RenderContext {
     fn evcxr_display(&self) {
