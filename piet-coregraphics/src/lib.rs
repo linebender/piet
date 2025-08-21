@@ -68,7 +68,7 @@ impl<'a> CoreGraphicsContext<'a> {
         ctx: &mut CGContextRef,
         height: f64,
         text: Option<CoreGraphicsText>,
-    ) -> CoreGraphicsContext {
+    ) -> CoreGraphicsContext<'_> {
         Self::new_impl(ctx, Some(height), text, false)
     }
 
@@ -81,7 +81,7 @@ impl<'a> CoreGraphicsContext<'a> {
     pub fn new_y_down(
         ctx: &mut CGContextRef,
         text: Option<CoreGraphicsText>,
-    ) -> CoreGraphicsContext {
+    ) -> CoreGraphicsContext<'_> {
         Self::new_impl(ctx, None, text, true)
     }
 
@@ -90,7 +90,7 @@ impl<'a> CoreGraphicsContext<'a> {
         height: Option<f64>,
         text: Option<CoreGraphicsText>,
         y_down: bool,
-    ) -> CoreGraphicsContext {
+    ) -> CoreGraphicsContext<'_> {
         ctx.save();
         if let Some(height) = height {
             let xform = Affine::FLIP_Y * Affine::translate((0.0, -height));

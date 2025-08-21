@@ -173,14 +173,14 @@ impl GradientStops for Vec<GradientStop> {
     }
 }
 
-impl<'a> GradientStops for &'a [GradientStop] {
+impl GradientStops for &[GradientStop] {
     fn to_vec(self) -> Vec<GradientStop> {
         self.to_owned()
     }
 }
 
 // Generate equally-spaced stops.
-impl<'a> GradientStops for &'a [Color] {
+impl GradientStops for &[Color] {
     fn to_vec(self) -> Vec<GradientStop> {
         if self.is_empty() {
             Vec::new()

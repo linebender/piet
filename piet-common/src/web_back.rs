@@ -77,7 +77,7 @@ impl Device {
         width: usize,
         height: usize,
         pix_scale: f64,
-    ) -> Result<BitmapTarget, piet::Error> {
+    ) -> Result<BitmapTarget<'_>, piet::Error> {
         let document = web_sys::window().unwrap().document().unwrap();
         let canvas = document
             .create_element("canvas")
@@ -105,7 +105,7 @@ impl Device {
 
 impl<'a> BitmapTarget<'a> {
     /// Get a piet `RenderContext` for the bitmap.
-    pub fn render_context(&mut self) -> WebRenderContext {
+    pub fn render_context(&mut self) -> WebRenderContext<'_> {
         WebRenderContext::new(self.context.clone(), web_sys::window().unwrap())
     }
 

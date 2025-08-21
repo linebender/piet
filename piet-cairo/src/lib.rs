@@ -387,10 +387,7 @@ impl<'a> RenderContext for CairoRenderContext<'a> {
         match compute_blurred_rect(rect, blur_radius) {
             Ok((image, origin)) => {
                 self.set_brush(&brush);
-                self.error = self
-                    .ctx
-                    .mask_surface(&image, origin.x, origin.y)
-                    .map_err(cairo::Error::into);
+                self.error = self.ctx.mask_surface(&image, origin.x, origin.y);
             }
             Err(err) => self.error = Err(err),
         }
@@ -419,7 +416,7 @@ impl<'a> CairoRenderContext<'a> {
     /// At the moment, it uses the "toy text API" for text layout, but when
     /// we change to a more sophisticated text layout approach, we'll probably
     /// need a factory for that as an additional argument.
-    pub fn new(ctx: &Context) -> CairoRenderContext {
+    pub fn new(ctx: &Context) -> CairoRenderContext<'_> {
         CairoRenderContext {
             ctx,
             text: CairoText::new(),

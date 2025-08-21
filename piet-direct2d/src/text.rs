@@ -10,6 +10,7 @@ use std::convert::TryInto;
 use std::fmt;
 use std::ops::{Range, RangeBounds};
 use std::rc::Rc;
+use std::slice;
 use std::sync::Arc;
 
 pub use dwrite::DwriteFactory;
@@ -488,7 +489,7 @@ impl LoadedFontsInner {
     fn add(&mut self, font_data: &[u8]) -> Result<FontFamily, Error> {
         let font_data: Arc<Vec<u8>> = Arc::new(font_data.to_owned());
         let font_file = FontFile::new_from_buffer(font_data).ok_or(Error::FontLoadingFailed)?;
-        let collection_loader = CustomFontCollectionLoaderImpl::new(&[font_file.clone()]);
+        let collection_loader = CustomFontCollectionLoaderImpl::new(slice::from_ref(&font_file));
         let collection = FontCollection::from_loader(collection_loader);
         let mut families = collection.families_iter();
         let first_fam_name = families

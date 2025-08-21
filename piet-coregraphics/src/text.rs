@@ -795,7 +795,7 @@ impl CoreGraphicsTextLayout {
         self.x_offsets = layout_metrics.x_offsets.into();
         self.trailing_ws_width = layout_metrics.trailing_whitespace;
         self.frame_size = layout_metrics.layout_size;
-        assert!(self.line_metrics.len() > 0);
+        assert!(!self.line_metrics.is_empty());
 
         self.bonus_height = if self.text.is_empty() || util::trailing_nlf(&self.text).is_some() {
             self.line_metrics.last().unwrap().height

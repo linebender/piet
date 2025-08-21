@@ -102,7 +102,7 @@ impl Device {
         width: usize,
         height: usize,
         pix_scale: f64,
-    ) -> Result<BitmapTarget, piet::Error> {
+    ) -> Result<BitmapTarget<'_>, piet::Error> {
         let mut context = self.device.create_device_context().unwrap();
 
         // Create a texture to render to
@@ -141,7 +141,7 @@ impl<'a> BitmapTarget<'a> {
     ///
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
-    pub fn render_context(&mut self) -> D2DRenderContext {
+    pub fn render_context(&mut self) -> D2DRenderContext<'_> {
         let text = D2DText::new_with_shared_fonts(self.dwrite.clone(), None);
         D2DRenderContext::new(self.d2d, text, &mut self.context)
     }

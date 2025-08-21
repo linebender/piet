@@ -243,7 +243,7 @@ impl TextLayout for WebTextLayout {
         // check out of bounds above top
         // out of bounds on bottom during iteration
         let mut is_y_inside = true;
-        if point.y < -1.0 * first_baseline {
+        if point.y < -first_baseline {
             is_y_inside = false
         };
 

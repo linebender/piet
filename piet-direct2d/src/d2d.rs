@@ -479,7 +479,7 @@ impl DeviceContext {
     }
 
     /// End drawing and return a [`DrawRestarter`] which will restart drawing when dropped.
-    pub fn end_draw_temporarily(&mut self) -> Result<DrawRestarter, Error> {
+    pub fn end_draw_temporarily(&mut self) -> Result<DrawRestarter<'_>, Error> {
         self.end_draw()?;
         Ok(DrawRestarter { context: self })
     }
@@ -984,7 +984,7 @@ impl DeviceContext {
 }
 
 impl PathGeometry {
-    pub fn open(&mut self) -> Result<GeometrySink, Error> {
+    pub fn open(&mut self) -> Result<GeometrySink<'_>, Error> {
         unsafe {
             let mut ptr = null_mut();
             let hr = (self.0).Open(&mut ptr);

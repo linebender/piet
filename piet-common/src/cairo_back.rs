@@ -82,7 +82,7 @@ impl Device {
         width: usize,
         height: usize,
         pix_scale: f64,
-    ) -> Result<BitmapTarget, piet::Error> {
+    ) -> Result<BitmapTarget<'_>, piet::Error> {
         let surface = ImageSurface::create(Format::ARgb32, width as i32, height as i32).unwrap();
         let cr = Context::new(&surface).unwrap();
         cr.scale(pix_scale, pix_scale);
@@ -100,7 +100,7 @@ impl<'a> BitmapTarget<'a> {
     ///
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
-    pub fn render_context(&mut self) -> CairoRenderContext {
+    pub fn render_context(&mut self) -> CairoRenderContext<'_> {
         CairoRenderContext::new(&self.cr)
     }
 
