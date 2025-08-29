@@ -1,4 +1,4 @@
-![image of piet logo](./misc/piet-logo.png)
+![image of piet logo](https://github.com/linebender/piet/raw/HEAD/misc/piet-logo.png)
 
 <div align="center">
 
