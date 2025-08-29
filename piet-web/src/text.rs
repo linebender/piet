@@ -16,8 +16,8 @@ use web_sys::CanvasRenderingContext2d;
 use piet::kurbo::{Point, Rect, Size};
 
 use piet::{
-    util, Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
-    TextLayout, TextLayoutBuilder, TextStorage,
+    Color, Error, FontFamily, HitTestPoint, HitTestPosition, LineMetric, Text, TextAttribute,
+    TextLayout, TextLayoutBuilder, TextStorage, util,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -243,7 +243,7 @@ impl TextLayout for WebTextLayout {
         // check out of bounds above top
         // out of bounds on bottom during iteration
         let mut is_y_inside = true;
-        if point.y < -1.0 * first_baseline {
+        if point.y < -first_baseline {
             is_y_inside = false
         };
 
@@ -478,7 +478,7 @@ pub(crate) mod test {
     use piet::kurbo::Point;
     use piet::{Text, TextLayout, TextLayoutBuilder};
     use wasm_bindgen_test::*;
-    use web_sys::{console, window, HtmlCanvasElement};
+    use web_sys::{HtmlCanvasElement, console, window};
 
     use crate::*;
 

@@ -80,7 +80,7 @@ which should produce an image called `d2d-test-00-2.00.png`.
 
 ## Minimum supported Rust Version (MSRV)
 
-This version of Piet has been verified to compile with **Rust 1.77** and later.
+This version of Piet has been verified to compile with **Rust 1.85** and later.
 
 Future versions of Piet might increase the Rust version requirement.
 It will not be treated as a breaking change and as such can even happen with small patch releases.

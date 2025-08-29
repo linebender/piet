@@ -11,7 +11,7 @@
 use web_sys::CanvasRenderingContext2d;
 use xi_unicode::LineBreakIterator;
 
-use super::{text_width, LineMetric};
+use super::{LineMetric, text_width};
 
 // NOTE font_size is used only for heuristic purposes, prefer actual web-api for height and
 // baseline when available.

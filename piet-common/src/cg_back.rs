@@ -79,7 +79,7 @@ impl Device {
         width: usize,
         height: usize,
         pix_scale: f64,
-    ) -> Result<BitmapTarget, piet::Error> {
+    ) -> Result<BitmapTarget<'_>, piet::Error> {
         let ctx = CGContext::create_bitmap_context(
             None,
             width,
@@ -104,7 +104,7 @@ impl<'a> BitmapTarget<'a> {
     ///
     /// Note: caller is responsible for calling `finish` on the render
     /// context at the end of rendering.
-    pub fn render_context(&mut self) -> CoreGraphicsContext {
+    pub fn render_context(&mut self) -> CoreGraphicsContext<'_> {
         CoreGraphicsContext::new_y_up(&mut self.ctx, self.height, None)
     }
 

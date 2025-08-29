@@ -23,10 +23,10 @@ evcxr = ["evcxr_runtime"]
 [dependencies]
 base64 = "0.13.1"
 evcxr_runtime = { version = "1.1.0", optional = true }
-font-kit = "0.14.2"
-image = { version = "0.25.4", default-features = false, features = ["png"] }
+font-kit = "0.14.3"
+image = { version = "0.25.6", default-features = false, features = ["png"] }
 piet = { workspace = true }
-rustybuzz = "0.20.0"
+rustybuzz = "0.20.1"
 svg = "0.18.0"
 
 [dev-dependencies]

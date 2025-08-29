@@ -24,14 +24,14 @@ piet = { workspace = true }
 
 unicode-segmentation = "1.12.0"
 xi-unicode = "0.3.0"
-wasm-bindgen = "0.2.97"
-js-sys = "0.3.72"
+wasm-bindgen = "0.2.100"
+js-sys = "0.3.77"
 
 [dependencies.web-sys]
-version = "0.3.72"
+version = "0.3.77"
 features = ["console", "Window", "CanvasGradient", "CanvasRenderingContext2d", "CanvasWindingRule",
             "Document", "DomMatrix", "Element", "HtmlCanvasElement", "ImageBitmap",
             "ImageData", "TextMetrics"]
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.45"
+wasm-bindgen-test = "0.3.50"

@@ -26,9 +26,7 @@ macro_rules! assert_close {
         }
     }};
 
-    ($val:expr, $target:expr, $tolerance:expr,) => {{
-        assert_close!($val, $target, $tolerance)
-    }};
+    ($val:expr, $target:expr, $tolerance:expr,) => {{ assert_close!($val, $target, $tolerance) }};
 }
 
 fn make_factory() -> PietText {

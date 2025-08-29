@@ -28,8 +28,8 @@ use core_text::{
 
 use piet::kurbo::{Affine, Point, Rect, Size};
 use piet::{
-    util, Error, FontFamily, FontStyle, FontWeight, HitTestPoint, HitTestPosition, LineMetric,
-    Text, TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage,
+    Error, FontFamily, FontStyle, FontWeight, HitTestPoint, HitTestPosition, LineMetric, Text,
+    TextAlignment, TextAttribute, TextLayout, TextLayoutBuilder, TextStorage, util,
 };
 
 use crate::ct_helpers::{self, AttributedString, FontCollection, Frame, Framesetter, Line};
@@ -795,7 +795,7 @@ impl CoreGraphicsTextLayout {
         self.x_offsets = layout_metrics.x_offsets.into();
         self.trailing_ws_width = layout_metrics.trailing_whitespace;
         self.frame_size = layout_metrics.layout_size;
-        assert!(self.line_metrics.len() > 0);
+        assert!(!self.line_metrics.is_empty());
 
         self.bonus_height = if self.text.is_empty() || util::trailing_nlf(&self.text).is_some() {
             self.line_metrics.last().unwrap().height
@@ -1045,9 +1045,7 @@ mod tests {
             }
         }};
 
-        ($val:expr, $target:expr, $tolerance:expr,) => {{
-            assert_close!($val, $target, $tolerance)
-        }};
+        ($val:expr, $target:expr, $tolerance:expr,) => {{ assert_close!($val, $target, $tolerance) }};
     }
 
     #[test]
@@ -1207,9 +1205,11 @@ mod tests {
 
     #[test]
     fn missing_font_is_missing() {
-        assert!(CoreGraphicsText::new_with_unique_state()
-            .font_family("Segoe UI")
-            .is_none());
+        assert!(
+            CoreGraphicsText::new_with_unique_state()
+                .font_family("Segoe UI")
+                .is_none()
+        );
     }
 
     #[test]
