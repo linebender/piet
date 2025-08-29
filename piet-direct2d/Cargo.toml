@@ -27,4 +27,4 @@ dwrote = { version = "0.11.4", default-features = false }
 
 [dev-dependencies]
 piet = { workspace = true, features = ["samples"] }
-piet-common = { workspace = true, features = ["png"] }
+piet-common = { path = "../piet-common", features = ["png"] }

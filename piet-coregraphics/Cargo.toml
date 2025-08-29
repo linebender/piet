@@ -28,4 +28,4 @@ associative-cache = "2.0.0"
 
 [dev-dependencies]
 piet = { workspace = true, features = ["samples"] }
-piet-common = { workspace = true, features = ["png"] }
+piet-common = { path = "../piet-common", features = ["png"] }
