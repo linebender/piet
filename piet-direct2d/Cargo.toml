@@ -23,7 +23,7 @@ associative-cache = "2.0.0"
 
 wio = "0.2.2"
 winapi = { version = "0.3.9", features = ["d2d1", "d2d1_1", "d2d1effects", "d2dbasetypes", "dcommon", "d3d11", "dxgi", "winnls"] }
-dwrote = { version = "0.11.2", default-features = false }
+dwrote = { version = "0.11.4", default-features = false }
 
 [dev-dependencies]
 piet = { workspace = true, features = ["samples"] }

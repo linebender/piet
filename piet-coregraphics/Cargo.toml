@@ -22,7 +22,7 @@ piet = { workspace = true }
 foreign-types = "0.5.0"
 core-graphics = "0.24.0"
 core-text = "21.0.0"
-core-foundation = "0.10.0"
+core-foundation = "0.10.1"
 core-foundation-sys = "0.8.7"
 associative-cache = "2.0.0"
 
