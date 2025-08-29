@@ -27,7 +27,7 @@ xi-unicode = "0.3.0"
 
 [dev-dependencies]
 piet = { workspace = true, features = ["samples"] }
-piet-common = { workspace = true, features = ["png"] }
+piet-common = { path = "../piet-common", features = ["png"] }
 criterion = "0.5.1"
 
 [[bench]]

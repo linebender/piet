@@ -37,7 +37,6 @@ repository = "https://github.com/linebender/piet"
 
 [workspace.dependencies]
 piet = { version = "=0.8.0", path = "piet" }
-piet-common = { version = "=0.8.0", path = "piet-common" }
 piet-cairo = { version = "=0.8.0", path = "piet-cairo" }
 piet-coregraphics = { version = "=0.8.0", path = "piet-coregraphics" }
 piet-direct2d = { version = "=0.8.0", path = "piet-direct2d" }
