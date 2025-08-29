@@ -27,7 +27,7 @@ default-members = [
 #
 # NOTE: When bumping this, remember to also bump the aforementioned other packages'
 #       version in the dependencies section at the bottom of this file.
-version = "0.7.0"
+version = "0.8.0"
 
 edition = "2024"
 # Keep in sync with RUST_MIN_VER in .github/workflows/ci.yml and with the relevant README.md files.
@@ -36,9 +36,9 @@ license = "Apache-2.0 OR MIT"
 repository = "https://github.com/linebender/piet"
 
 [workspace.dependencies]
-piet = { version = "=0.7.0", path = "piet" }
-piet-common = { version = "=0.7.0", path = "piet-common" }
-piet-cairo = { version = "=0.7.0", path = "piet-cairo" }
-piet-coregraphics = { version = "=0.7.0", path = "piet-coregraphics" }
-piet-direct2d = { version = "=0.7.0", path = "piet-direct2d" }
-piet-web = { version = "=0.7.0", path = "piet-web" }
+piet = { version = "=0.8.0", path = "piet" }
+piet-common = { version = "=0.8.0", path = "piet-common" }
+piet-cairo = { version = "=0.8.0", path = "piet-cairo" }
+piet-coregraphics = { version = "=0.8.0", path = "piet-coregraphics" }
+piet-direct2d = { version = "=0.8.0", path = "piet-direct2d" }
+piet-web = { version = "=0.8.0", path = "piet-web" }
