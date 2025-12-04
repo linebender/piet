@@ -8,7 +8,7 @@ use std::ops::{Bound, Range, RangeBounds};
 use crate::kurbo::{Rect, Size};
 use crate::{Color, Error, FontFamily, FontStyle, FontWeight, LineMetric, TextAttribute};
 
-use unic_bidi::bidi_class::{BidiClass, BidiClassCategory};
+use icu_properties::props::{BidiClass, EnumeratedProperty};
 
 /// The default point size for text in piet.
 pub const DEFAULT_FONT_SIZE: f64 = 12.0;
@@ -230,10 +230,20 @@ pub fn first_strong_rtl(text: &str) -> bool {
     text.chars()
         // an upper bound on how many chars we'll check
         .take(200)
-        .map(BidiClass::of)
-        .find(|c| c.category() == BidiClassCategory::Strong)
-        .map(|c| c.is_rtl())
+        .map(BidiClass::for_char)
+        .find(|c| is_strong_bidi_class(*c))
+        .map(is_strong_rtl_bidi_class)
         .unwrap_or(false)
+}
+
+fn is_strong_bidi_class(class: BidiClass) -> bool {
+    class == BidiClass::LeftToRight
+        || class == BidiClass::RightToLeft
+        || class == BidiClass::ArabicLetter
+}
+
+fn is_strong_rtl_bidi_class(class: BidiClass) -> bool {
+    class == BidiClass::RightToLeft || class == BidiClass::ArabicLetter
 }
 
 /// Returns the number of bytes needed to be read from the image buffer.
