@@ -412,14 +412,15 @@ impl<'a> RenderContext for CoreGraphicsContext<'a> {
         dst_rect: impl Into<Rect>,
         interp: InterpolationMode,
     ) {
-        if let CoreGraphicsImage::YDown(image) = image {
-            if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
-                self.draw_image(&CoreGraphicsImage::YDown(cropped), dst_rect, interp);
-            }
-        } else if let CoreGraphicsImage::YUp(image) = image {
-            if let Some(cropped) = image.cropped(to_cgrect(src_rect)) {
-                self.draw_image(&CoreGraphicsImage::YUp(cropped), dst_rect, interp);
-            }
+        let src_cgrect = to_cgrect(src_rect);
+        if let CoreGraphicsImage::YDown(image) = image
+            && let Some(cropped) = image.cropped(src_cgrect)
+        {
+            self.draw_image(&CoreGraphicsImage::YDown(cropped), dst_rect, interp);
+        } else if let CoreGraphicsImage::YUp(image) = image
+            && let Some(cropped) = image.cropped(src_cgrect)
+        {
+            self.draw_image(&CoreGraphicsImage::YUp(cropped), dst_rect, interp);
         }
     }
 
