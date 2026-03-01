@@ -28,7 +28,7 @@
 //! [image]: https://crates.io/crates/image
 //! [piet-cairo]: https://crates.io/crates/piet-cairo
 
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(clippy::trivially_copy_pass_by_ref)]
 
 pub use piet::*;
