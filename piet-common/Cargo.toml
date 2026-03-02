@@ -45,8 +45,8 @@ png = { version = "0.17.16", optional = true }
 
 [target.'cfg(any(target_os="linux", target_os="openbsd", target_os="freebsd", target_os="netbsd"))'.dependencies]
 piet-cairo = { workspace = true }
-cairo-rs = { version = "0.21.1", default-features = false }
-cairo-sys-rs = { version = "0.21.1" }
+cairo-rs = { version = "0.22.0", default-features = false }
+cairo-sys-rs = { version = "0.22.0" }
 
 [target.'cfg(any(target_os="macos", target_os="ios"))'.dependencies]
 piet-coregraphics = { workspace = true }
