@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 pub use dwrite::DwriteFactory;
 use dwrote::{CustomFontCollectionLoaderImpl, FontCollection, FontFile};
-use winapi::um::d2d1::D2D1_DRAW_TEXT_OPTIONS_NONE;
+use winapi::um::d2d1::D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT;
 use wio::wide::ToWide;
 
 use piet::kurbo::{Insets, Point, Rect, Size};
@@ -463,7 +463,7 @@ impl D2DTextLayout {
             self.resolve_colors_if_needed(ctx);
             let pos = conv::to_point2f(pos);
             let black_brush = ctx.solid_brush(Color::BLACK);
-            let text_options = D2D1_DRAW_TEXT_OPTIONS_NONE;
+            let text_options = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT;
             ctx.rt
                 .draw_text_layout(pos, &self.layout.borrow(), &black_brush, text_options);
         }
