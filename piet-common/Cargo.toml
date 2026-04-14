@@ -81,5 +81,5 @@ features = [
 
 [dev-dependencies]
 static_assertions = "1.1.0"
-rand = "0.8.5"
+rand = "0.9.3"
 rand_distr = "0.4.3"
