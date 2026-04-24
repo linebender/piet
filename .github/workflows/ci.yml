@@ -327,7 +327,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: check typos
-        uses: crate-ci/typos@v1.44.0
+        uses: crate-ci/typos@v1.45.1
 
   compare-snapshots:
     name: compare snapshots
