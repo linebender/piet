@@ -68,7 +68,7 @@ jobs:
     name: formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: install stable toolchain
         uses: dtolnay/rust-toolchain@master
@@ -94,7 +94,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
@@ -128,7 +128,7 @@ jobs:
     name: cargo clippy (wasm32)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
@@ -162,7 +162,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
@@ -195,7 +195,7 @@ jobs:
     name: cargo test (wasm32)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
@@ -230,7 +230,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
@@ -260,7 +260,7 @@ jobs:
     name: cargo check (msrv) (wasm32)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
@@ -290,7 +290,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
@@ -324,7 +324,7 @@ jobs:
   typos:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: check typos
         uses: crate-ci/typos@v1.45.1
@@ -337,7 +337,7 @@ jobs:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
             submodules: 'true'
 
