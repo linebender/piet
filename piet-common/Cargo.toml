@@ -40,8 +40,8 @@ serde = ["piet/serde"]
 
 [dependencies]
 piet = { workspace = true }
-cfg-if = "1.0.3"
-png = { version = "0.17.16", optional = true }
+cfg-if = "1.0.4"
+png = { version = "0.18.1", optional = true }
 
 [target.'cfg(any(target_os="linux", target_os="openbsd", target_os="freebsd", target_os="netbsd"))'.dependencies]
 piet-cairo = { workspace = true }
@@ -57,14 +57,14 @@ piet-direct2d = { workspace = true }
 
 [target.'cfg(target_arch="wasm32")'.dependencies]
 piet-web = { workspace = true }
-wasm-bindgen = "0.2.100"
+wasm-bindgen = "0.2.118"
 
 [target.'cfg(target_arch="wasm32")'.dev-dependencies]
-getrandom = { version = "0.2.16", features = ["js"] }
-wasm-bindgen-test = "0.3.50"
+getrandom = { version = "0.2.17", features = ["js"] }
+wasm-bindgen-test = "0.3.68"
 
 [target.'cfg(target_arch="wasm32")'.dependencies.web-sys]
-version = "0.3.77"
+version = "0.3.95"
 features = [
     "console",
     "Window",
@@ -81,5 +81,5 @@ features = [
 
 [dev-dependencies]
 static_assertions = "1.1.0"
-rand = "0.8.5"
+rand = "0.8.6"
 rand_distr = "0.4.3"

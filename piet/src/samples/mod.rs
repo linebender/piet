@@ -6,8 +6,8 @@
 #![allow(clippy::unnecessary_wraps)]
 
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::BufWriter;
+use std::fs::{self, File};
+use std::io::{BufWriter, Cursor};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -295,10 +295,11 @@ fn compare_files(
 }
 
 fn get_png_data(path: &Path) -> Result<(png::OutputInfo, Vec<u8>), BoxErr> {
-    let decoder = png::Decoder::new(File::open(path)?);
+    let bytes = fs::read(path)?;
+    let decoder = png::Decoder::new(Cursor::new(bytes));
     let mut reader = decoder.read_info()?;
     // Allocate the output buffer.
-    let mut buf = vec![0; reader.output_buffer_size()];
+    let mut buf = vec![0; reader.output_buffer_size().unwrap_or_default()];
     // Read the next frame. An APNG might contain multiple frames.
     let info = reader.next_frame(&mut buf)?;
     Ok((info, buf))
